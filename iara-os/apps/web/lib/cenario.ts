@@ -65,53 +65,61 @@ export function baseDoSprite(s: Sprite): number {
 //
 // Grid de 16px. Colunas 0..19, linhas 0..12. Parede = linhas 0..3, piso = 4..12.
 //
-//        0    32   64   96  128  160  192  224  256  288  320
-//   0    +---------+----------------+--------+---------+----+
-//        | quadro  |  C O P A       | janela |  metas  |rack|   parede
-//  64    +---------+----------------+--------+---------+----+
-//        |         |                        |               |
-//        | ARQUIVO |   O P E R A C I O N A L |  T E C H     |   piso
-// 128    | estante |   est.1     est.2      |  impressora   |
-//        | escriv. |   [cadeiras alinhadas] |  bancada      |
-// 176    +---------- C O R R E D O R  L I V R E ------------+
-// 208    +--------------------------------------------------+
+// CARGA DE PERÍMETRO — a regra que manda aqui. Móvel de corpo fechado
+// (armário, estante, impressora, rack) tem costas: precisa encostar numa
+// parede, senão lê como caixote largado no meio da sala. A sala tem três
+// paredes utilizáveis: a faixa de fundo (y<64) e as duas bordas laterais
+// (x=0 e x=320). O centro do piso não é parede — é circulação.
 //
-// Regras que o layout respeita:
-//   - Faixa y >= 176 fica vazia de ponta a ponta: é o corredor por onde a
-//     IARA caminha entre os postos.
-//   - Estações de trabalho compartilham a MESMA base (140) — mesas paralelas
-//     e alinhadas. As cadeiras também (160), sempre à frente das mesas.
-//   - Zona tech encostada na borda direita, sob o rack: o ruído visual de
-//     infraestrutura fica isolado num canto só.
-//   - Copa contígua na parede: pia, cafeteira e bebedouro no mesmo pano.
+//        0    32   64   96  128  160  192  224  256  288  320
+//   0    +--------+--------+-------+---------+-------+-----+
+//        | estante|  C O P A| bebe | janela  | metas |rack |  parede de fundo
+//  64    +--------+--------+-------+---------+-------+-----+
+//        |escriv. |                                 |print|
+//        |        |   est.1        est.2            |     |  piso
+// 144    |        | [cadeiras encostadas nas mesas] |banca|
+// 160    |--------+--- C O R R E D O R   L I V R E -+-----|
+// 208    | planta |                                 |plant|
+//        +-------------------------------------------------+
+//
+// Invariantes de layout:
+//   - Nada de corpo fechado no piso aberto. Só cadeiras, plantas e o par
+//     mesa/monitor vivem soltos, e cadeira sempre encostada na sua mesa.
+//   - Estações compartilham base ~145: mesas paralelas e alinhadas.
+//   - Cadeira = base da mesa + 6. Folga maior que isso lê como cadeira
+//     abandonada longe da mesa, não como posto de trabalho.
+//   - Monitor sobre mesa tem base na LINHA DA TAMPA, não no piso: assim a
+//     frente da mesa desenha por cima do pé do monitor.
+//   - Faixa y 160..208 vazia entre as bordas: é o corredor.
 
 /** Mobília e adereços. Nada aqui reage a dado — a luz é aplicada por cima. */
 export const MOBILIA: Sprite[] = [
-  // --- copa: balcão contíguo na parede ---
-  { arquivo: 'sink.png', largura: 64, altura: 64, x: 56, y: 20, ancora: 56 },
-  { arquivo: 'coffee-maker.png', largura: 64, altura: 64, x: 116, y: 20, luz: 'cafeteira', ancora: 56 },
-  { arquivo: 'water-cooler.png', largura: 16, altura: 32, x: 184, y: 48 },
+  // --- parede de fundo, esquerda para a direita ---
+  { arquivo: 'cabinet.png', largura: 64, altura: 64, x: 0, y: 8, luz: 'estante', ancora: 60 },
+  { arquivo: 'sink.png', largura: 64, altura: 64, x: 52, y: 8, ancora: 56 },
+  { arquivo: 'coffee-maker.png', largura: 64, altura: 64, x: 104, y: 8, luz: 'cafeteira', ancora: 56 },
+  { arquivo: 'water-cooler.png', largura: 16, altura: 32, x: 160, y: 32 },
 
-  // --- arquivo: coluna esquerda, estante em cima e escrivaninha embaixo ---
-  { arquivo: 'cabinet.png', largura: 64, altura: 64, x: 0, y: 68, luz: 'estante', ancora: 60 },
-  { arquivo: 'writing-table.png', largura: 64, altura: 64, x: 0, y: 136, luz: 'gaveteiro' },
+  // --- borda esquerda: escrivaninha de costas para a parede lateral ---
+  { arquivo: 'writing-table.png', largura: 64, altura: 64, x: 0, y: 96, luz: 'gaveteiro', ancora: 60 },
 
-  // --- operacional: duas estações paralelas, bases alinhadas em 140 ---
-  { arquivo: 'desk.png', largura: 64, altura: 32, x: 72, y: 108 },
-  { arquivo: 'PC1.png', largura: 32, altura: 32, x: 88, y: 92 },
-  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 96, y: 144 },
+  // --- borda direita: coluna tech inteira sob o rack ---
+  { arquivo: 'printer.png', largura: 64, altura: 32, x: 252, y: 104 },
+  { arquivo: 'stamping-table.png', largura: 64, altura: 32, x: 252, y: 148 },
+  { arquivo: 'Trash.png', largura: 16, altura: 16, x: 236, y: 152 },
 
-  { arquivo: 'desk-with-pc.png', largura: 64, altura: 64, x: 144, y: 76, luz: 'terminal' },
-  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 168, y: 144 },
+  // --- operacional: ilha central, duas estações paralelas ---
+  { arquivo: 'desk.png', largura: 64, altura: 32, x: 60, y: 112 },
+  // `ancora: 22` põe a base do monitor na tampa da mesa (112+6), não no piso.
+  { arquivo: 'PC1.png', largura: 32, altura: 32, x: 76, y: 96, ancora: 22 },
+  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 84, y: 134 },
 
-  // --- tech: coluna direita, sob o rack ---
-  { arquivo: 'printer.png', largura: 64, altura: 32, x: 248, y: 100 },
-  { arquivo: 'stamping-table.png', largura: 64, altura: 32, x: 248, y: 140 },
-  { arquivo: 'Trash.png', largura: 16, altura: 16, x: 232, y: 180 },
+  { arquivo: 'desk-with-pc.png', largura: 64, altura: 64, x: 140, y: 84, luz: 'terminal', ancora: 58 },
+  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 164, y: 132 },
 
-  // --- adereços: as duas plantas balizam o corredor vertical ---
-  { arquivo: 'plant.png', largura: 32, altura: 32, x: 212, y: 56, luz: 'planta' },
-  { arquivo: 'plant.png', largura: 32, altura: 32, x: 212, y: 176 },
+  // --- adereços: plantas nos dois cantos inferiores, fechando o corredor ---
+  { arquivo: 'plant.png', largura: 32, altura: 32, x: 0, y: 172, luz: 'planta' },
+  { arquivo: 'plant.png', largura: 32, altura: 32, x: 288, y: 176 },
 ];
 
 /**

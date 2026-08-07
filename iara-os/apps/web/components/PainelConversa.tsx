@@ -7,7 +7,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Fala } from '../hooks/useIaraSocket';
-import type { EstadoEscritorio } from '../lib/estado';
+import type { EstagioCognitivo } from '../lib/estado';
+import type { SnapshotCognitivo } from '../lib/snapshot';
 
 const ROTULO_DESTINO: Record<string, string> = {
   sistema_local: 'ação local',
@@ -16,7 +17,7 @@ const ROTULO_DESTINO: Record<string, string> = {
   recusa_sigilo: 'sigilo',
 };
 
-const ROTULO_ESTAGIO: Record<EstadoEscritorio['estagio'], string> = {
+const ROTULO_ESTAGIO: Record<EstagioCognitivo, string> = {
   ocioso: 'à disposição',
   escutando: 'ouvindo',
   executando: 'executando',
@@ -26,7 +27,7 @@ const ROTULO_ESTAGIO: Record<EstadoEscritorio['estagio'], string> = {
 };
 
 interface Props {
-  estado: EstadoEscritorio;
+  estado: SnapshotCognitivo;
   falas: Fala[];
   conectado: boolean;
   onEnviar: (texto: string) => boolean;

@@ -9,16 +9,19 @@
  *  2. CONSOLIDAR: na janela noturna, varre o shard de CADA operador em
  *     isolamento e grava `InsightRelacional` no shard privado dele.
  *
- * Cancelamento: `parar()` limpa o timer e sinaliza o AbortController. Qualquer
- * await interno checa o sinal — nada fica pendurado.
+ * Ele NÃO publica no barramento cognitivo: respirar não é um fato do turno do
+ * operador, é metabolismo. Ele apenas avisa que o estado mudou, e quem projeta
+ * decide o que fazer com isso.
  */
 
 import type { EstadoAtomico } from './EstadoAtomico';
 import type { MemoriaOperacional } from './MemoriaOperacional';
-import type { Emissor } from './MotorCognitivo';
 
 const INTERVALO_MS = 15_000;
 const HORA_CONSOLIDACAO = 3;
+
+/** Chamado quando o estado mudou por metabolismo e vale reprojetar. */
+export type AvisoDeMudanca = () => void;
 
 export class CicloAutonomo {
   private timer: NodeJS.Timeout | null = null;
@@ -29,7 +32,7 @@ export class CicloAutonomo {
     private readonly idUsuario: string,
     private readonly estado: EstadoAtomico,
     private readonly memoria: MemoriaOperacional,
-    private readonly emitir: Emissor,
+    private readonly avisar: AvisoDeMudanca,
   ) {}
 
   iniciar(): void {
@@ -62,18 +65,14 @@ export class CicloAutonomo {
       // Só respira quando de fato está ocioso — respirar durante um raciocínio
       // faria a UI mentir sobre o custo do turno.
       if (antes.estagio === 'ocioso') {
-        const depois = await this.estado.respirar();
-        this.emitir({ tipo: 'pulso', metricas: depois.metricas, leitura: depois.leitura });
+        await this.estado.respirar();
+        this.avisar();
       }
 
       await this.talvezConsolidar(sinal);
     } catch (erro) {
       if (!sinal.aborted) {
-        this.emitir({
-          tipo: 'log',
-          nivel: 'alerta',
-          texto: `Ciclo autônomo: ${(erro as Error).message}`,
-        });
+        console.warn(`[iara] ciclo autônomo: ${(erro as Error).message}`);
       }
     } finally {
       if (!sinal.aborted) this.agendar();
@@ -89,25 +88,16 @@ export class CicloAutonomo {
 
     const insight = await this.memoria.consolidar(this.idUsuario);
     if (sinal.aborted || !insight) return;
-
-    this.emitir({
-      tipo: 'log',
-      nivel: 'info',
-      texto: `Consolidação noturna: ${insight.titulo}. ${insight.detalhe}`,
-    });
+    console.log(
+      JSON.stringify({ canal: 'consolidacao', usuario: this.idUsuario, titulo: insight.titulo }),
+    );
   }
 
   /**
-   * Execução manual da consolidação — usada pelo `npm run dev` para validar o
-   * caminho sem esperar as 03:00.
+   * Execução manual da consolidação — usada para validar o caminho sem
+   * esperar as 03:00.
    */
   async consolidarAgora(): Promise<void> {
-    const insight = await this.memoria.consolidar(this.idUsuario);
-    if (!insight) return;
-    this.emitir({
-      tipo: 'log',
-      nivel: 'info',
-      texto: `Consolidação sob demanda: ${insight.titulo}. ${insight.detalhe}`,
-    });
+    await this.memoria.consolidar(this.idUsuario);
   }
 }

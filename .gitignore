@@ -16,6 +16,18 @@ __pycache__/
 dados/memoria/
 iara-os/apps/web/dados/memoria/
 
+# --- projeto MetaHuman / Unreal Engine ---
+# Assets de MetaHuman são licenciados para uso DENTRO da Unreal Engine. Versionar
+# ou redistribuir o pacote — inclusive exportado para .glb — está fora dessa
+# licença, e um repositório é redistribuição. Além disso é projeto de engine,
+# não código do produto: o Kernel não conhece renderizador.
+# Se a identidade 3D for adotada, o que entra aqui é só o arquivo final que a
+# licença permitir servir, em public/identidade_iara/.
+IDENTIDADE IARA/
+*.uasset
+*.umap
+*.pdb
+
 # --- packs de arte com licença restritiva ---
 # Modern Interiors Free v2.2 proíbe uso comercial; Modern Office 2D Props
 # proíbe deixar os arquivos originais baixáveis. Redistribuir qualquer um dos

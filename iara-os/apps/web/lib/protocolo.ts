@@ -1,19 +1,16 @@
 /**
  * Protocolo do barramento WebSocket.
  *
- * Todo pacote servidor→cliente carrega `seq` monotônico. O cliente descarta
- * qualquer pacote com `seq` menor ou igual ao último aplicado — é o que impede
- * a enxurrada retroativa (backpressure wave) de bagunçar a UI na reconexão.
+ * CONTRATO OFICIAL: só três coisas atravessam a fronteira do kernel —
+ * `snapshot`, `log` e `erro`. Nenhum objeto interno, nenhuma referência,
+ * nenhuma memória operacional.
+ *
+ * Todo pacote carrega `seq` monotônico. O cliente descarta qualquer pacote com
+ * `seq` menor ou igual ao último aplicado — é o que impede a enxurrada
+ * retroativa (backpressure wave) de bagunçar a UI na reconexão.
  */
 
-import type {
-  CapacidadeAtiva,
-  DestinoCognitivo,
-  EstadoEscritorio,
-  EstagioCognitivo,
-  LeituraOperador,
-  MetricasVitais,
-} from './estado';
+import type { SnapshotCognitivo } from './snapshot';
 
 export type NivelLog = 'traco' | 'info' | 'alerta';
 
@@ -21,46 +18,13 @@ export type NivelLog = 'traco' | 'info' | 'alerta';
 export type ChaveAglutinacao = string;
 
 export type PacoteServidor =
-  /** Estado consolidado. Enviado na conexão e em toda reconexão. */
-  | { tipo: 'hidratacao'; seq: number; instante: number; estado: EstadoEscritorio }
-  /** Marco de transição de estágio. Só marcos — micro-eventos não sobem. */
-  | {
-      tipo: 'transicao';
-      seq: number;
-      instante: number;
-      estagio: EstagioCognitivo;
-      capacidade: CapacidadeAtiva | null;
-      motivo: string;
-    }
-  /** Pulso de métricas, com throttle. Descartável na reconexão. */
-  | {
-      tipo: 'pulso';
-      seq: number;
-      instante: number;
-      metricas: MetricasVitais;
-      leitura: LeituraOperador;
-    }
-  | { tipo: 'fala_inicio'; seq: number; instante: number; id_mensagem: string }
-  | {
-      tipo: 'fala_delta';
-      seq: number;
-      instante: number;
-      id_mensagem: string;
-      texto: string;
-    }
-  | {
-      tipo: 'fala_fim';
-      seq: number;
-      instante: number;
-      id_mensagem: string;
-      texto: string;
-      destino: DestinoCognitivo;
-      latencia_ms: number;
-      tokens_entrada: number;
-      tokens_saida: number;
-      cache_lido: number;
-    }
-  /** Log técnico. Vai para o console, nunca para a sala. */
+  /**
+   * O estado cognitivo inteiro. Substitui hidratação, transição, pulso e
+   * fala — todos eram fatias de um mesmo estado, e mantê-los separados
+   * obrigava o cliente a remontar o que o servidor já sabia.
+   */
+  | { tipo: 'snapshot'; seq: number; instante: number; snapshot: SnapshotCognitivo }
+  /** Console técnico. Nunca vira animação na sala. */
   | { tipo: 'log'; seq: number; instante: number; nivel: NivelLog; texto: string }
   | { tipo: 'erro'; seq: number; instante: number; texto: string };
 
@@ -76,32 +40,22 @@ export type PacoteCliente =
 
 /**
  * Prioridade de descarte da fila de telemetria. Quanto menor, mais descartável.
- * `hidratacao`, `fala_*` e `transicao` nunca são descartados por pressão.
+ * `snapshot` e `erro` nunca são descartados por pressão — o snapshot É o
+ * estado, e perder o último significa a tela mentir até o próximo.
  */
 export const PRIORIDADE: Record<PacoteServidor['tipo'], number> = {
   log: 0,
-  pulso: 1,
-  transicao: 3,
-  fala_inicio: 3,
-  fala_delta: 3,
-  fala_fim: 3,
+  snapshot: 3,
   erro: 3,
-  hidratacao: 4,
 };
 
 /**
- * Pacotes com chave de aglutinação são substituídos, não empilhados: só o
- * estado mais recente sobrevive na fila.
+ * Snapshot aglutina: só o mais recente importa. É isto que transforma uma
+ * rajada de 40 atualizações numa única entrega, e o que faz a reconexão
+ * hidratar em vez de reproduzir o passado.
  */
 export function chaveDe(pacote: PacoteServidor): ChaveAglutinacao | null {
-  switch (pacote.tipo) {
-    case 'pulso':
-      return 'pulso';
-    case 'hidratacao':
-      return 'hidratacao';
-    default:
-      return null;
-  }
+  return pacote.tipo === 'snapshot' ? 'snapshot' : null;
 }
 
 export function ehDescartavel(pacote: PacoteServidor): boolean {

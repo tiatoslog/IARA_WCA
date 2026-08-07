@@ -1,0 +1,286 @@
+/**
+ * Compilador de Snapshot.
+ *
+ * Assina o barramento, acumula o que os eventos dizem e compila o
+ * `SnapshotCognitivo`. É o único lugar do kernel autorizado a produzir o
+ * objeto que sai para o mundo — e ele não tem referência a socket, a React,
+ * nem a renderizador nenhum.
+ *
+ * A regra de direção de arte continua valendo aqui, agora como código: uma
+ * capacidade só acende porque um evento disse que ela está em uso. Não existe
+ * caminho neste arquivo que acenda algo "para dar vida".
+ */
+
+import type { BarramentoEventos } from './BarramentoEventos';
+import type { EventoKernel } from './Evento';
+import type { MemoriaTrabalho } from './MemoriaTrabalho';
+import {
+  ESPACO_VAZIO,
+  EXPRESSAO_NEUTRA,
+  TELEMETRIA_ZERO,
+  type EspacoCognitivo,
+  type Expressao,
+  type FalaProjetada,
+  type PlanoProjetado,
+  type SnapshotCognitivo,
+  type TelemetriaSnapshot,
+} from '../../../lib/snapshot';
+import {
+  LUZES_APAGADAS,
+  OBJETO_DA_CAPACIDADE,
+  limitar,
+  type CapacidadeAtiva,
+  type EstadoEscritorio,
+  type MapaLuzes,
+} from '../../../lib/estado';
+
+/** Quanto uma capacidade decai por compilação quando nada a reforça. */
+const DECAIMENTO = 0.12;
+
+export class CompiladorSnapshot {
+  private capacidades: EspacoCognitivo = { ...ESPACO_VAZIO };
+  private telemetria: TelemetriaSnapshot = { ...TELEMETRIA_ZERO };
+  private passosConcluidos = new Set<number>();
+  private passoCorrente = -1;
+  private falhou = new Set<number>();
+  private textoEmCurso = '';
+  private fala: FalaProjetada | null = null;
+  private desassinar: () => void;
+
+  constructor(
+    private readonly barramento: BarramentoEventos,
+    private readonly memoria: MemoriaTrabalho,
+  ) {
+    this.desassinar = barramento.assinarTudo((e) => this.absorver(e));
+  }
+
+  encerrar(): void {
+    this.desassinar();
+  }
+
+  // -------------------------------------------------------------------------
+
+  private absorver(e: EventoKernel): void {
+    switch (e.tipo) {
+      case 'MENSAGEM_RECEBIDA':
+        this.passosConcluidos.clear();
+        this.falhou.clear();
+        this.passoCorrente = -1;
+        this.textoEmCurso = '';
+        this.telemetria = { ...TELEMETRIA_ZERO };
+        break;
+
+      case 'PERCEPCAO_CONCLUIDA':
+        // Perceber É usar percepção. O evento é o fato; a luz é a consequência.
+        this.acender('percepcao', 0.55);
+        break;
+
+      case 'DECISAO_TOMADA':
+        this.telemetria = { ...this.telemetria, rota: e.rota, custo: e.custo_estimado };
+        break;
+
+      case 'PLANO_CRIADO':
+        this.acender('raciocinio', e.plano.origem === 'emergente' ? 0.8 : 0.25);
+        break;
+
+      case 'PASSO_INICIADO':
+        this.passoCorrente = e.passo.indice;
+        break;
+
+      case 'PASSO_CONCLUIDO':
+        this.passosConcluidos.add(e.passo.indice);
+        break;
+
+      case 'HABILIDADE_INICIADA':
+        this.acender(e.capacidade, 1);
+        break;
+
+      case 'HABILIDADE_CONCLUIDA':
+        if (!e.ok && this.passoCorrente >= 0) this.falhou.add(this.passoCorrente);
+        break;
+
+      case 'RACIOCINIO_INICIADO':
+        this.acender('raciocinio', 1);
+        break;
+
+      case 'RACIOCINIO_CONCLUIDO':
+        this.telemetria = {
+          ...this.telemetria,
+          tokens_entrada: this.telemetria.tokens_entrada + e.tokens_entrada,
+          tokens_saida: this.telemetria.tokens_saida + e.tokens_saida,
+          cache_lido: this.telemetria.cache_lido + e.cache_lido,
+        };
+        break;
+
+      case 'RESPOSTA_TRECHO':
+        this.textoEmCurso = e.texto;
+        this.fala = {
+          id: e.id_mensagem,
+          texto: e.texto,
+          concluida: false,
+          destino: this.telemetria.rota,
+          latencia_ms: null,
+          cache_lido: this.telemetria.cache_lido,
+        };
+        break;
+
+      case 'TAREFA_CONCLUIDA':
+        this.telemetria = { ...this.telemetria, latencia_ms: e.ms };
+        this.textoEmCurso = '';
+        this.fala = {
+          id: e.id_mensagem,
+          texto: e.texto,
+          concluida: true,
+          destino: e.rota,
+          latencia_ms: e.ms,
+          cache_lido: this.telemetria.cache_lido,
+        };
+        break;
+
+      case 'TAREFA_CANCELADA':
+      case 'FALHA':
+        this.textoEmCurso = '';
+        // A fala parcial permanece: apagar o que já foi dito faria o texto
+        // sumir da tela e o operador achar que a IARA nunca respondeu.
+        if (this.fala && !this.fala.concluida) {
+          this.fala = { ...this.fala, concluida: true };
+        }
+        break;
+    }
+  }
+
+  private acender(capacidade: CapacidadeAtiva, intensidade: number): void {
+    this.capacidades = {
+      ...this.capacidades,
+      [capacidade]: Math.max(this.capacidades[capacidade], intensidade),
+    };
+  }
+
+  /** Decai tudo que nenhum evento reforçou desde a última compilação. */
+  private esfriar(): void {
+    const proximo = { ...this.capacidades };
+    for (const chave of Object.keys(proximo) as CapacidadeAtiva[]) {
+      proximo[chave] = limitar(proximo[chave] - DECAIMENTO);
+    }
+    this.capacidades = proximo;
+  }
+
+  // -------------------------------------------------------------------------
+
+  compilar(base: EstadoEscritorio, sessao: string, descartados: number): SnapshotCognitivo {
+    const retrato = this.memoria.retrato;
+
+    const plano: PlanoProjetado | null = retrato.plano
+      ? {
+          objetivo: retrato.plano.objetivo,
+          origem: retrato.plano.origem,
+          passo_atual: retrato.passo_atual,
+          passos: retrato.plano.passos.map((p) => ({
+            indice: p.indice,
+            descricao: p.descricao,
+            estado: this.falhou.has(p.indice)
+              ? ('falhou' as const)
+              : this.passosConcluidos.has(p.indice)
+                ? ('concluido' as const)
+                : p.indice === this.passoCorrente
+                  ? ('executando' as const)
+                  : ('pendente' as const),
+          })),
+        }
+      : null;
+
+    const snapshot: SnapshotCognitivo = {
+      sessao,
+      seq: base.seq,
+      instante: Date.now(),
+      traco: this.barramento.tracoAtual,
+      operador: base.operador,
+      estagio: base.estagio,
+      objetivo: retrato.objetivo,
+      plano,
+      capacidades: { ...this.capacidades },
+      metricas: base.metricas,
+      leitura: base.leitura,
+      expressao: this.expressar(base),
+      telemetria: { ...this.telemetria, eventos_no_traco: this.barramento.trilhaAtual().length, descartados },
+      luzes: this.projetarLuzes(base),
+      nuvem_indisponivel: base.nuvem_indisponivel,
+      fala: this.fala,
+    };
+
+    this.esfriar();
+    return snapshot;
+  }
+
+  /**
+   * Expressão derivada do estado, nunca escolhida à toa.
+   *
+   * Os visemas saem do texto em streaming: enquanto não há síntese de voz, é
+   * aproximação — e é honesto dizer isso aqui em vez de fingir lipsync de
+   * áudio que não existe. Quando a voz entrar, só esta função muda.
+   */
+  private expressar(base: EstadoEscritorio): Expressao {
+    const emocao: Expressao['emocao'] =
+      base.leitura.estado === 'frustrado' || base.leitura.estado === 'estressado'
+        ? 'solicita'
+        : base.estagio === 'pensando'
+          ? 'concentrada'
+          : base.estagio === 'escutando'
+            ? 'atenta'
+            : base.metricas.energia_cognitiva < 0.3
+              ? 'preocupada'
+              : 'neutra';
+
+    const intensidade =
+      base.estagio === 'ocioso' ? 0.2 : base.estagio === 'pensando' ? 0.9 : 0.6;
+
+    return {
+      ...EXPRESSAO_NEUTRA,
+      emocao,
+      intensidade,
+      // Pensando, a IARA desvia o olhar; falando, volta ao operador.
+      olhar: base.estagio === 'pensando' ? { x: -0.35, y: 0.2 } : { x: 0, y: 0 },
+      cabeca: { inclinacao: base.estagio === 'escutando' ? 4 : 0, giro: 0 },
+      visemas: this.visemasDe(this.textoEmCurso),
+    };
+  }
+
+  /** Aproximação de boca a partir da última sílaba emitida. */
+  private visemasDe(texto: string): Expressao['visemas'] {
+    if (!texto) return [];
+    const ultima = texto.trim().slice(-1).toLowerCase();
+    const grupo =
+      'aáà'.includes(ultima) ? 'AA'
+      : 'eé'.includes(ultima) ? 'E'
+      : 'ií'.includes(ultima) ? 'I'
+      : 'oó'.includes(ultima) ? 'O'
+      : 'uú'.includes(ultima) ? 'U'
+      : 'mbp'.includes(ultima) ? 'PP'
+      : 'fv'.includes(ultima) ? 'FF'
+      : 'sz'.includes(ultima) ? 'SS'
+      : null;
+    return grupo ? [{ id: grupo, peso: 0.7 }] : [];
+  }
+
+  /**
+   * Projeção espacial: capacidades viram luz na sala. Esta é a tradução do
+   * espaço cognitivo para o ambiente — e o único lugar onde ela acontece.
+   */
+  private projetarLuzes(base: EstadoEscritorio): MapaLuzes {
+    const luzes: MapaLuzes = { ...LUZES_APAGADAS };
+
+    luzes.janela = 0.25;
+    luzes.planta = 0.15 + base.metricas.paciencia_operacional * 0.2;
+    luzes.rack = 0.12 + base.metricas.carga_contextual * 0.35;
+    if (base.estagio === 'ocioso') luzes.quadro_metas = 0.2;
+
+    for (const [capacidade, valor] of Object.entries(this.capacidades) as Array<
+      [CapacidadeAtiva, number]
+    >) {
+      if (valor <= 0.03) continue;
+      const objeto = OBJETO_DA_CAPACIDADE[capacidade];
+      luzes[objeto] = Math.max(luzes[objeto], valor);
+    }
+    return luzes;
+  }
+}

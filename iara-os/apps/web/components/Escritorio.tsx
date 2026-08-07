@@ -29,7 +29,8 @@ import {
   profundidade,
   type Sprite,
 } from '../lib/cenario';
-import { OBJETO_DA_CAPACIDADE, type EstadoEscritorio, type IdObjeto } from '../lib/estado';
+import { OBJETO_DA_CAPACIDADE, type CapacidadeAtiva, type IdObjeto } from '../lib/estado';
+import type { SnapshotCognitivo } from '../lib/snapshot';
 import { ArquiteturaSala } from './ArquiteturaSala';
 
 const p = (n: number) => `${n * PIXEL}px`;
@@ -103,7 +104,7 @@ function SpriteArte({ sprite }: { sprite: Sprite }) {
   );
 }
 
-export function Escritorio({ estado }: { estado: EstadoEscritorio }) {
+export function Escritorio({ estado }: { estado: SnapshotCognitivo }) {
   const animacao = ANIMACOES[estado.estagio];
   const posto = postoDoEstagio(estado.estagio);
 
@@ -116,7 +117,17 @@ export function Escritorio({ estado }: { estado: EstadoEscritorio }) {
     [estado.luzes],
   );
 
-  const objetoAtivo = estado.capacidade ? OBJETO_DA_CAPACIDADE[estado.capacidade] : null;
+  /**
+   * O objeto que pulsa mais rápido é o da capacidade mais intensa. Com o
+   * espaço cognitivo sendo um vetor, "a capacidade ativa" virou "a de maior
+   * peso" — e um turno que usa duas faculdades acende as duas, em vez de a
+   * projeção ter que escolher uma e mentir.
+   */
+  const objetoAtivo = useMemo(() => {
+    const entradas = Object.entries(estado.capacidades) as Array<[CapacidadeAtiva, number]>;
+    const topo = entradas.reduce((a, b) => (b[1] > a[1] ? b : a), entradas[0]);
+    return topo && topo[1] > 0.5 ? OBJETO_DA_CAPACIDADE[topo[0]] : null;
+  }, [estado.capacidades]);
 
   return (
     <div

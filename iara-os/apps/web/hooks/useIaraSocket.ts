@@ -4,18 +4,22 @@
  * Barramento do lado do cliente.
  *
  * O React aqui é camada de projeção burra: ele não decide nada sobre o estado
- * da IARA, só desenha o último snapshot válido. Três garantias:
+ * da IARA, só desenha o último snapshot válido. Não existe redutor, não existe
+ * remontagem de estado a partir de fragmentos — o servidor já mandou pronto.
+ *
+ * Três garantias:
  *
  *  1. GUARDA DE SEQUÊNCIA — pacote com `seq` menor ou igual ao último aplicado
  *     é descartado. Sem isso, a enxurrada da reconexão faz a UI piscar.
- *  2. RECONEXÃO com backoff. A hidratação chega antes de qualquer telemetria.
- *  3. LOGS EM BUFFER LIMITADO — o console técnico nunca vira vazamento de
- *     memória numa aba aberta o dia inteiro.
+ *  2. RECONEXÃO com backoff e guarda de identidade por socket.
+ *  3. BUFFERS LIMITADOS — nem falas nem logs crescem sem teto numa aba aberta
+ *     o dia inteiro.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { estadoInicial, type EstadoEscritorio } from '../lib/estado';
 import type { NivelLog, PacoteServidor } from '../lib/protocolo';
+import { ESPACO_VAZIO, EXPRESSAO_NEUTRA, TELEMETRIA_ZERO, type SnapshotCognitivo } from '../lib/snapshot';
+import { LEITURA_INICIAL, LUZES_APAGADAS, METRICAS_INICIAIS } from '../lib/estado';
 import { enderecoBarramento } from '../lib/supabaseNavegador';
 
 export interface Fala {
@@ -26,6 +30,14 @@ export interface Fala {
   destino?: string;
   latencia_ms?: number;
   cache_lido?: number;
+  tokens_entrada?: number;
+  tokens_saida?: number;
+  /**
+   * `performance.now()` do instante em que o turno abriu. É o relógio que a
+   * boca da projeção 3D usa para articular — precisa ser monotônico, então
+   * `Date.now()` não serve: ajuste de horário do sistema faria o visema saltar.
+   */
+  iniciada_em: number;
 }
 
 export interface LinhaLog {
@@ -35,8 +47,6 @@ export interface LinhaLog {
   instante: number;
 }
 
-const MAX_LOGS = 120;
-
 export interface Credencial {
   id_usuario: string;
   nome: string;
@@ -44,9 +54,32 @@ export interface Credencial {
   token?: string;
 }
 
+const MAX_LOGS = 120;
+const MAX_FALAS = 60;
+
+export const SNAPSHOT_INICIAL: SnapshotCognitivo = {
+  sessao: '',
+  seq: 0,
+  instante: 0,
+  traco: '',
+  operador: null,
+  estagio: 'ocioso',
+  objetivo: null,
+  plano: null,
+  capacidades: { ...ESPACO_VAZIO },
+  metricas: { ...METRICAS_INICIAIS },
+  leitura: { ...LEITURA_INICIAL },
+  expressao: EXPRESSAO_NEUTRA,
+  telemetria: TELEMETRIA_ZERO,
+  luzes: { ...LUZES_APAGADAS },
+  nuvem_indisponivel: false,
+  fala: null,
+};
+
 export function useIaraSocket(credencial: Credencial) {
   const { id_usuario: idUsuario, nome, token } = credencial;
-  const [estado, setEstado] = useState<EstadoEscritorio>(estadoInicial);
+
+  const [snapshot, setSnapshot] = useState<SnapshotCognitivo>(SNAPSHOT_INICIAL);
   const [falas, setFalas] = useState<Fala[]>([]);
   const [logs, setLogs] = useState<LinhaLog[]>([]);
   const [conectado, setConectado] = useState(false);
@@ -66,78 +99,59 @@ export function useIaraSocket(credencial: Credencial) {
     });
   }, []);
 
+  /**
+   * A fala vem SUBSTITUÍDA a cada snapshot, nunca concatenada. Por isso um
+   * pacote perdido não corrompe o texto: o próximo já traz o acumulado.
+   */
+  const absorverFala = useCallback((s: SnapshotCognitivo) => {
+    if (!s.fala) return;
+    const f = s.fala;
+    setFalas((antes) => {
+      const i = antes.findIndex((x) => x.id === f.id);
+      const nova: Fala = {
+        id: f.id,
+        papel: 'iara',
+        texto: f.texto,
+        concluida: f.concluida,
+        destino: f.destino ?? undefined,
+        latencia_ms: f.latencia_ms ?? undefined,
+        cache_lido: f.cache_lido,
+        tokens_entrada: s.telemetria.tokens_entrada,
+        tokens_saida: s.telemetria.tokens_saida,
+        // Carimbado uma vez, na abertura do turno, e PRESERVADO nas
+        // atualizações seguintes: se fosse recarimbado a cada snapshot, o
+        // relógio da articulação reiniciaria a cada trecho e a boca gaguejaria.
+        iniciada_em: i < 0 ? performance.now() : antes[i].iniciada_em,
+      };
+      if (i < 0) {
+        const proximo = [...antes, nova];
+        return proximo.length > MAX_FALAS ? proximo.slice(-MAX_FALAS) : proximo;
+      }
+      if (antes[i].texto === nova.texto && antes[i].concluida === nova.concluida) return antes;
+      const copia = [...antes];
+      copia[i] = nova;
+      return copia;
+    });
+  }, []);
+
   const aplicar = useCallback(
     (pacote: PacoteServidor) => {
       // Guarda de sequência: o passado nunca sobrescreve o presente.
-      if (pacote.seq <= ultimoSeq.current && pacote.tipo !== 'hidratacao') return;
+      if (pacote.seq <= ultimoSeq.current) return;
       ultimoSeq.current = pacote.seq;
 
-      switch (pacote.tipo) {
-        case 'hidratacao':
-          ultimoSeq.current = pacote.seq;
-          setEstado(pacote.estado);
-          break;
-
-        case 'transicao':
-          setEstado((s) => ({
-            ...s,
-            seq: pacote.seq,
-            estagio: pacote.estagio,
-            capacidade: pacote.capacidade,
-          }));
-          break;
-
-        case 'pulso':
-          setEstado((s) => ({
-            ...s,
-            seq: pacote.seq,
-            metricas: pacote.metricas,
-            leitura: pacote.leitura,
-          }));
-          break;
-
-        case 'fala_inicio':
-          setFalas((antes) => [
-            ...antes,
-            { id: pacote.id_mensagem, papel: 'iara', texto: '', concluida: false },
-          ]);
-          break;
-
-        case 'fala_delta':
-          setFalas((antes) =>
-            antes.map((f) =>
-              f.id === pacote.id_mensagem ? { ...f, texto: f.texto + pacote.texto } : f,
-            ),
-          );
-          break;
-
-        case 'fala_fim':
-          setFalas((antes) =>
-            antes.map((f) =>
-              f.id === pacote.id_mensagem
-                ? {
-                    ...f,
-                    texto: pacote.texto || f.texto,
-                    concluida: true,
-                    destino: pacote.destino,
-                    latencia_ms: pacote.latencia_ms,
-                    cache_lido: pacote.cache_lido,
-                  }
-                : f,
-            ),
-          );
-          break;
-
-        case 'log':
-          registrarLog(pacote.nivel, pacote.texto);
-          break;
-
-        case 'erro':
-          registrarLog('alerta', pacote.texto);
-          break;
+      if (pacote.tipo === 'snapshot') {
+        setSnapshot(pacote.snapshot);
+        absorverFala(pacote.snapshot);
+        return;
       }
+      if (pacote.tipo === 'log') {
+        registrarLog(pacote.nivel, pacote.texto);
+        return;
+      }
+      registrarLog('alerta', pacote.texto);
     },
-    [registrarLog],
+    [registrarLog, absorverFala],
   );
 
   useEffect(() => {
@@ -162,9 +176,6 @@ export function useIaraSocket(credencial: Credencial) {
        * agenda uma reconexão que sobrescreve `socketRef`, enquanto outro socket
        * que abriu marca `conectado = true`. O resultado é o pior tipo de bug:
        * a UI diz "conectado" e o envio falha em silêncio.
-       *
-       * Acontece sempre que dois sockets coexistem por um instante — no
-       * StrictMode do React em dev, e em qualquer oscilação real de rede.
        */
       const atual = () => socketRef.current === socket;
 
@@ -233,10 +244,19 @@ export function useIaraSocket(credencial: Credencial) {
         setConectado(false);
         return false;
       }
-      setFalas((antes) => [
-        ...antes,
-        { id: `op-${Date.now()}`, papel: 'operador', texto: limpo, concluida: true },
-      ]);
+      setFalas((antes) => {
+        const proximo: Fala[] = [
+          ...antes,
+          {
+            id: `op-${Date.now()}`,
+            papel: 'operador',
+            texto: limpo,
+            concluida: true,
+            iniciada_em: performance.now(),
+          },
+        ];
+        return proximo.length > MAX_FALAS ? proximo.slice(-MAX_FALAS) : proximo;
+      });
       socket.send(JSON.stringify({ tipo: 'mensagem', texto: limpo }));
       return true;
     },
@@ -250,5 +270,5 @@ export function useIaraSocket(credencial: Credencial) {
     }
   }, []);
 
-  return { estado, falas, logs, conectado, enviar, interromper };
+  return { snapshot, falas, logs, conectado, enviar, interromper };
 }

@@ -1,22 +1,23 @@
 /**
  * Sessão de um operador no barramento.
  *
- * Responsável por três coisas que, se ficarem no motor, quebram o React:
+ * Só três responsabilidades, todas de transporte — nenhuma cognitiva:
  *
  *  1. CARIMBO: aplica `seq` monotônico e `instante` em todo pacote.
- *  2. THROTTLE: drena a fila em janelas fixas. Micro-eventos viram um lote;
- *     o React re-renderiza em cadência previsível em vez de a cada mutação.
- *  3. HIDRATAÇÃO: na (re)conexão, manda o estado consolidado e descarta a
- *     telemetria velha. É por isso que o avatar não se teletransporta.
+ *  2. FILA: entrega via ring buffer com descarte semântico, para que rede ruim
+ *     não vire vazamento de memória nem enxurrada retroativa.
+ *  3. BACKPRESSURE: respeita o buffer do socket do sistema operacional.
+ *
+ * Ela não sabe o que é percepção, plano ou habilidade. Recebe snapshot pronto
+ * da `PonteProjecao` e transmite.
  */
 
 import type { WebSocket } from 'ws';
-import type { EstadoAtomico } from '../nucleo/EstadoAtomico';
-import type { PacoteBruto } from '../nucleo/MotorCognitivo';
-import type { PacoteServidor } from '../../lib/protocolo';
+import type { NivelLog, PacoteServidor } from '../../lib/protocolo';
+import type { SnapshotCognitivo } from '../../lib/snapshot';
 import { FilaTelemetria } from './FilaTelemetria';
 
-const JANELA_MS = 60;
+const JANELA_MS = 40;
 
 export class SessaoOperador {
   private readonly fila = new FilaTelemetria();
@@ -24,38 +25,35 @@ export class SessaoOperador {
   private timer: NodeJS.Timeout | null = null;
   private fechada = false;
 
-  constructor(
-    private readonly socket: WebSocket,
-    private readonly estado: EstadoAtomico,
-  ) {
+  constructor(private readonly socket: WebSocket) {
     this.timer = setInterval(() => this.drenar(), JANELA_MS);
     this.timer.unref?.();
   }
 
-  /** Ponto único de entrada de telemetria. O motor só conhece isto. */
-  emitir = (bruto: PacoteBruto): void => {
+  emitirSnapshot(snapshot: SnapshotCognitivo): void {
     if (this.fechada) return;
     this.seq += 1;
-    const pacote = { ...bruto, seq: this.seq, instante: Date.now() } as PacoteServidor;
-    this.fila.enfileirar(pacote);
-
-    // Fala não espera a janela: latência percebida é o produto.
-    if (pacote.tipo === 'fala_delta' || pacote.tipo === 'fala_inicio') {
-      this.drenar();
-    }
-  };
-
-  /** Estado consolidado. Sempre o primeiro pacote de uma conexão. */
-  hidratar(): void {
-    this.fila.limpar();
-    this.seq += 1;
-    const pacote: PacoteServidor = {
-      tipo: 'hidratacao',
+    this.fila.enfileirar({
+      tipo: 'snapshot',
       seq: this.seq,
       instante: Date.now(),
-      estado: { ...this.estado.instantaneo(), seq: this.seq },
-    };
-    this.enviar(pacote);
+      // O `seq` do envelope manda: é o que o cliente usa como guarda de ordem.
+      snapshot: { ...snapshot, seq: this.seq },
+    });
+    this.drenar();
+  }
+
+  emitirLog(nivel: NivelLog, texto: string): void {
+    if (this.fechada) return;
+    this.seq += 1;
+    this.fila.enfileirar({ tipo: 'log', seq: this.seq, instante: Date.now(), nivel, texto });
+  }
+
+  emitirErro(texto: string): void {
+    if (this.fechada) return;
+    this.seq += 1;
+    this.fila.enfileirar({ tipo: 'erro', seq: this.seq, instante: Date.now(), texto });
+    this.drenar();
   }
 
   private drenar(): void {

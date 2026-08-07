@@ -33,7 +33,7 @@ function Medidor({ rotulo, valor, cor }: { rotulo: string; valor: number; cor: s
 
 /** O escritório em si. Só monta quando já existe uma credencial resolvida. */
 function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => void) | null }) {
-  const { estado, falas, logs, conectado, enviar, interromper } = useIaraSocket(credencial);
+  const { snapshot: estado, falas, logs, conectado, enviar, interromper } = useIaraSocket(credencial);
 
   return (
     <main className="tela">
