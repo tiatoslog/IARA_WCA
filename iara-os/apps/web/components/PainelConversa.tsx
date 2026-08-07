@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Fala } from '../hooks/useIaraSocket';
+import { useEscuta } from '../hooks/useEscuta';
 import type { EstagioCognitivo } from '../lib/estado';
 import type { SnapshotCognitivo } from '../lib/snapshot';
 
@@ -47,6 +48,23 @@ export function PainelConversa({ estado, falas, conectado, onEnviar, onInterromp
   const submeter = () => {
     if (onEnviar(rascunho)) setRascunho('');
   };
+
+  /**
+   * Modo ligação. A IARA "está falando" quando há fala em curso não concluída
+   * — é esse sinal que transforma voz do operador em interrupção em vez de
+   * nova pergunta.
+   */
+  const falaEmCurso = falas.length > 0 ? falas[falas.length - 1] : null;
+  const iaraFalando =
+    estado.estagio === 'falando' || Boolean(falaEmCurso && falaEmCurso.papel === 'iara' && !falaEmCurso.concluida);
+
+  const escuta = useEscuta({
+    iaraFalando,
+    aoConcluirFala: (texto) => {
+      onEnviar(texto);
+    },
+    aoInterromper: onInterromper,
+  });
 
   return (
     <aside
@@ -149,6 +167,61 @@ export function PainelConversa({ estado, falas, conectado, onEnviar, onInterromp
       </div>
 
       <footer style={{ padding: 14, borderTop: '1px solid var(--linha)' }}>
+        {/* Faixa da ligação: só aparece quando o microfone está aberto. */}
+        {escuta.ativa && (
+          <div
+            style={{
+              marginBottom: 10,
+              padding: '9px 12px',
+              borderRadius: 10,
+              fontSize: 12.5,
+              lineHeight: 1.45,
+              minHeight: 38,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              background: 'rgba(159, 214, 168, 0.16)',
+              border: '1px solid rgba(159, 214, 168, 0.55)',
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 8,
+                height: 8,
+                flex: 'none',
+                borderRadius: '50%',
+                background: escuta.estado === 'ouvindo' ? 'var(--luz-verde)' : 'var(--luz-quente)',
+                animationName: 'pulsar',
+                animationDuration: escuta.estado === 'ouvindo' ? '1.6s' : '3s',
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
+              }}
+            />
+            <span style={{ color: escuta.parcial ? 'var(--tinta)' : 'var(--tinta-fraca)' }}>
+              {escuta.parcial ||
+                (iaraFalando
+                  ? 'A IARA está falando — pode cortar, é só falar.'
+                  : 'Ouvindo. Fale normalmente; eu envio quando você parar.')}
+            </span>
+          </div>
+        )}
+
+        {escuta.motivoIndisponivel && (
+          <div
+            style={{
+              marginBottom: 10,
+              padding: '8px 10px',
+              borderRadius: 8,
+              fontSize: 11.5,
+              background: 'rgba(240, 135, 106, 0.13)',
+              border: '1px solid rgba(240, 135, 106, 0.4)',
+            }}
+          >
+            {escuta.motivoIndisponivel}
+          </div>
+        )}
+
         <textarea
           className="campo"
           rows={2}
@@ -164,6 +237,24 @@ export function PainelConversa({ estado, falas, conectado, onEnviar, onInterromp
           }}
         />
         <div style={{ display: 'flex', gap: 8, marginTop: 9 }}>
+          <button
+            className="botao"
+            onClick={escuta.alternar}
+            disabled={!conectado || escuta.estado === 'indisponivel'}
+            title={
+              escuta.estado === 'indisponivel'
+                ? (escuta.motivoIndisponivel ?? 'Indisponível')
+                : 'Conversar por voz'
+            }
+            style={{
+              flex: 'none',
+              background: escuta.ativa ? 'var(--luz-verde)' : undefined,
+              borderColor: escuta.ativa ? 'transparent' : undefined,
+            }}
+            aria-pressed={escuta.ativa}
+          >
+            {escuta.ativa ? '● Encerrar' : '🎙 Ligar'}
+          </button>
           <button
             className="botao"
             onClick={submeter}
