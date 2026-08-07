@@ -16,6 +16,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AssinaturaErro } from '../../lib/estado';
 import { normalizar } from './RoteadorIntencoes';
+import { supabase } from './ClienteSupabase';
 
 export interface AchadoRag {
   registro: AssinaturaErro;
@@ -53,14 +54,35 @@ export class RagHistorico {
 
   async carregar(): Promise<void> {
     if (this.carregado) return;
-    const arquivo = path.resolve(process.cwd(), 'dados', 'historico-erros.json');
-    const bruto = await readFile(arquivo, 'utf8');
-    const dados = JSON.parse(bruto) as { erros: AssinaturaErro[] };
-    this.registros = dados.erros;
+
+    this.registros = await this.buscarRegistros();
     // O índice é construído sobre assinatura + sistema. O log bruto nunca é
     // indexado porque nunca é armazenado.
     this.indice = this.registros.map((r) => trigramas(`${r.assinatura} ${r.sistema}`));
     this.carregado = true;
+  }
+
+  private async buscarRegistros(): Promise<AssinaturaErro[]> {
+    const bd = supabase();
+    if (bd) {
+      const { data, error } = await bd
+        .from('erros_assinaturas')
+        .select(
+          'hash, assinatura, sistema, primeira_ocorrencia, ultima_ocorrencia, ocorrencias, resolucao',
+        );
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      if (data && data.length > 0) return data as AssinaturaErro[];
+    }
+
+    const arquivo = path.resolve(process.cwd(), 'dados', 'historico-erros.json');
+    const bruto = await readFile(arquivo, 'utf8');
+    return (JSON.parse(bruto) as { erros: AssinaturaErro[] }).erros;
+  }
+
+  /** Recarrega o índice — use após inserir assinatura nova no banco. */
+  async recarregar(): Promise<void> {
+    this.carregado = false;
+    await this.carregar();
   }
 
   async consultar(pergunta: string, limite = 2): Promise<AchadoRag[]> {

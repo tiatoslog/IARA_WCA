@@ -11,6 +11,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { buscarNaWeb } from './BuscaWeb';
+import { supabase } from './ClienteSupabase';
 
 export interface ResultadoAcao {
   texto: string;
@@ -136,12 +137,27 @@ export class OrquestradorAcoes {
   /**
    * Camada de dados da infraestrutura.
    *
-   * Hoje lê `dados/infraestrutura.json`. Para plugar o banco real, troque só o
-   * corpo de `carregarCentrais` por uma query — a assinatura e o roteador não
-   * mudam.
+   * Supabase quando configurado, `dados/infraestrutura.json` caso contrário.
+   * A decisão é do ambiente, não do código — e o roteador, o motor e a UI não
+   * sabem qual das duas está em uso.
    */
   private async carregarCentrais(): Promise<Central[]> {
     if (this.cacheCentrais) return this.cacheCentrais;
+
+    const bd = supabase();
+    if (bd) {
+      const { data, error } = await bd
+        .from('centrais')
+        .select('nome, uf, ativa, veiculos');
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      // Tabela vazia é configuração incompleta, não resposta válida: cai para
+      // o JSON em vez de afirmar que a operação tem zero centrais.
+      if (data && data.length > 0) {
+        this.cacheCentrais = data as Central[];
+        return this.cacheCentrais;
+      }
+    }
+
     const bruto = await readFile(path.join(RAIZ_DADOS, 'infraestrutura.json'), 'utf8');
     const dados = JSON.parse(bruto) as { centrais: Central[] };
     this.cacheCentrais = dados.centrais;

@@ -147,7 +147,22 @@ export function useIaraSocket(idUsuario: string, nome: string) {
       }
       socketRef.current = socket;
 
+      /**
+       * Guarda de identidade. Sem ela, o `onclose` de um socket já substituído
+       * agenda uma reconexão que sobrescreve `socketRef`, enquanto outro socket
+       * que abriu marca `conectado = true`. O resultado é o pior tipo de bug:
+       * a UI diz "conectado" e o envio falha em silêncio.
+       *
+       * Acontece sempre que dois sockets coexistem por um instante — no
+       * StrictMode do React em dev, e em qualquer oscilação real de rede.
+       */
+      const atual = () => socketRef.current === socket;
+
       socket.onopen = () => {
+        if (!atual()) {
+          socket.close();
+          return;
+        }
         tentativas.current = 0;
         setConectado(true);
         // Reconexão: zera a guarda para aceitar a nova hidratação.
@@ -156,6 +171,7 @@ export function useIaraSocket(idUsuario: string, nome: string) {
       };
 
       socket.onmessage = (evento) => {
+        if (!atual()) return;
         try {
           aplicar(JSON.parse(evento.data as string) as PacoteServidor);
         } catch {
@@ -164,11 +180,15 @@ export function useIaraSocket(idUsuario: string, nome: string) {
       };
 
       socket.onclose = () => {
+        if (!atual()) return; // socket órfão: morre calado, não reagenda nada
+        socketRef.current = null;
         setConectado(false);
         agendarReconexao();
       };
 
-      socket.onerror = () => socket.close();
+      socket.onerror = () => {
+        if (atual()) socket.close();
+      };
     };
 
     const agendarReconexao = () => {
@@ -183,22 +203,35 @@ export function useIaraSocket(idUsuario: string, nome: string) {
     return () => {
       desmontado.current = true;
       if (timerReconexao) clearTimeout(timerReconexao);
-      socketRef.current?.close();
+      const socket = socketRef.current;
+      // Solta a referência ANTES de fechar: o `onclose` que vem a seguir vê um
+      // socket órfão e não reagenda reconexão.
       socketRef.current = null;
+      socket?.close();
     };
   }, [idUsuario, nome, aplicar]);
 
-  const enviar = useCallback((texto: string) => {
-    const limpo = texto.trim();
-    const socket = socketRef.current;
-    if (!limpo || !socket || socket.readyState !== WebSocket.OPEN) return false;
-    setFalas((antes) => [
-      ...antes,
-      { id: `op-${Date.now()}`, papel: 'operador', texto: limpo, concluida: true },
-    ]);
-    socket.send(JSON.stringify({ tipo: 'mensagem', texto: limpo }));
-    return true;
-  }, []);
+  const enviar = useCallback(
+    (texto: string) => {
+      const limpo = texto.trim();
+      const socket = socketRef.current;
+      if (!limpo) return false;
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        // Falha de envio nunca é silenciosa: some da caixa sem explicação é o
+        // que faz o operador achar que a IARA travou.
+        registrarLog('alerta', 'Mensagem não enviada: o barramento não está aberto. Reconectando…');
+        setConectado(false);
+        return false;
+      }
+      setFalas((antes) => [
+        ...antes,
+        { id: `op-${Date.now()}`, papel: 'operador', texto: limpo, concluida: true },
+      ]);
+      socket.send(JSON.stringify({ tipo: 'mensagem', texto: limpo }));
+      return true;
+    },
+    [registrarLog],
+  );
 
   const interromper = useCallback(() => {
     const socket = socketRef.current;

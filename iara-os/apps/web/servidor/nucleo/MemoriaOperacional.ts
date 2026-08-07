@@ -1,19 +1,21 @@
 /**
  * Memória operacional com isolamento de shards.
  *
- * Cada operador tem um arquivo próprio em `dados/memoria/<id>.json`. Não existe
- * um arquivo comum de conversas: o caminho é derivado do `id_usuario` atado à
- * sessão do socket, e um operador nunca informa qual shard quer ler. Isso é o
- * que torna o vazamento entre os 5 operadores impossível por construção, e não
- * por boa vontade do prompt.
+ * Duas persistências, mesmo contrato: Supabase quando configurado, arquivo em
+ * `dados/memoria/<id>.json` caso contrário.
  *
- * A Camada Global (fatos públicos da empresa) é separada e somente-leitura.
+ * O INVARIANTE NÃO MUDA COM O BACKEND: o `id_usuario` vem sempre da sessão do
+ * socket, nunca da mensagem. No modo arquivo isso vira o caminho do shard; no
+ * Supabase vira um `.eq('id_usuario', ...)` obrigatório em toda query. Não
+ * existe método aqui que leia dois operadores de uma vez — nem o consolidador
+ * noturno.
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { InsightRelacional, RegistroMemoria } from '../../lib/estado';
+import { supabase } from './ClienteSupabase';
 
 const RAIZ = path.resolve(process.cwd(), 'dados');
 const PASTA_SHARDS = path.join(RAIZ, 'memoria');
@@ -46,9 +48,9 @@ export class MemoriaOperacional {
     return this.global;
   }
 
-  private caminho(idUsuario: string): string {
-    return path.join(PASTA_SHARDS, `${idSeguro(idUsuario)}.json`);
-  }
+  // ---------------------------------------------------------------------------
+  // Modo arquivo
+  // ---------------------------------------------------------------------------
 
   private async abrir(idUsuario: string): Promise<Shard> {
     const chave = idSeguro(idUsuario);
@@ -57,7 +59,9 @@ export class MemoriaOperacional {
 
     let shard: Shard;
     try {
-      shard = JSON.parse(await readFile(this.caminho(idUsuario), 'utf8')) as Shard;
+      shard = JSON.parse(
+        await readFile(path.join(PASTA_SHARDS, `${chave}.json`), 'utf8'),
+      ) as Shard;
       shard.registros ??= [];
       shard.insights ??= [];
     } catch {
@@ -76,16 +80,35 @@ export class MemoriaOperacional {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // API pública
+  // ---------------------------------------------------------------------------
+
   async registrar(
     idUsuario: string,
     papel: RegistroMemoria['papel'],
     texto: string,
     destino?: RegistroMemoria['destino'],
   ): Promise<void> {
-    const shard = await this.abrir(idUsuario);
+    const chave = idSeguro(idUsuario);
+    const bd = supabase();
+
+    if (bd) {
+      const { error } = await bd.from('memoria_registros').insert({
+        id_usuario: chave,
+        instante: new Date().toISOString(),
+        papel,
+        texto,
+        destino: destino ?? null,
+      });
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      return;
+    }
+
+    const shard = await this.abrir(chave);
     shard.registros.push({
       id: randomUUID(),
-      id_usuario: shard.id_usuario,
+      id_usuario: chave,
       instante: new Date().toISOString(),
       papel,
       texto,
@@ -99,12 +122,41 @@ export class MemoriaOperacional {
 
   /** Histórico recente do shard privado. Nunca cruza operadores. */
   async historico(idUsuario: string, limite = LIMITE_HISTORICO): Promise<RegistroMemoria[]> {
-    const shard = await this.abrir(idUsuario);
+    const chave = idSeguro(idUsuario);
+    const bd = supabase();
+
+    if (bd) {
+      const { data, error } = await bd
+        .from('memoria_registros')
+        .select('id, id_usuario, instante, papel, texto, destino')
+        .eq('id_usuario', chave) // ← o filtro que define o shard
+        .order('instante', { ascending: false })
+        .limit(limite);
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      // A query vem em ordem decrescente para pegar os N mais recentes; o
+      // motor precisa em ordem cronológica.
+      return ((data ?? []) as RegistroMemoria[]).reverse();
+    }
+
+    const shard = await this.abrir(chave);
     return shard.registros.slice(-limite);
   }
 
   async insightsPendentes(idUsuario: string): Promise<InsightRelacional[]> {
-    const shard = await this.abrir(idUsuario);
+    const chave = idSeguro(idUsuario);
+    const bd = supabase();
+
+    if (bd) {
+      const { data, error } = await bd
+        .from('insights_relacionais')
+        .select('id, id_usuario, gerado_em, titulo, detalhe, proativo')
+        .eq('id_usuario', chave)
+        .eq('proativo', true);
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      return (data ?? []) as InsightRelacional[];
+    }
+
+    const shard = await this.abrir(chave);
     return shard.insights.filter((i) => i.proativo);
   }
 
@@ -113,22 +165,46 @@ export class MemoriaOperacional {
     titulo: string,
     detalhe: string,
   ): Promise<InsightRelacional> {
-    const shard = await this.abrir(idUsuario);
+    const chave = idSeguro(idUsuario);
     const insight: InsightRelacional = {
       id: randomUUID(),
-      id_usuario: shard.id_usuario,
+      id_usuario: chave,
       gerado_em: new Date().toISOString(),
       titulo,
       detalhe,
       proativo: true,
     };
+
+    const bd = supabase();
+    if (bd) {
+      const { error } = await bd.from('insights_relacionais').insert(insight);
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      return insight;
+    }
+
+    const shard = await this.abrir(chave);
     shard.insights.push(insight);
     await this.gravar(shard);
     return insight;
   }
 
   async consumirInsight(idUsuario: string, id: string): Promise<void> {
-    const shard = await this.abrir(idUsuario);
+    const chave = idSeguro(idUsuario);
+    const bd = supabase();
+
+    if (bd) {
+      // O `eq('id_usuario')` é redundante com o id ser uuid, e é proposital:
+      // nenhuma escrita sai daqui sem carimbo de dono.
+      const { error } = await bd
+        .from('insights_relacionais')
+        .update({ proativo: false })
+        .eq('id', id)
+        .eq('id_usuario', chave);
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      return;
+    }
+
+    const shard = await this.abrir(chave);
     const alvo = shard.insights.find((i) => i.id === id);
     if (!alvo) return;
     alvo.proativo = false;
@@ -136,21 +212,37 @@ export class MemoriaOperacional {
   }
 
   /**
-   * Consolidação noturna: roda por shard, em isolamento. Não existe passagem
-   * de argumento que faça esta função ler dois shards no mesmo processamento.
+   * Consolidação noturna: roda por shard, em isolamento. Não existe caminho
+   * aqui que leia dois operadores no mesmo processamento — nem por engano.
    */
   async consolidar(idUsuario: string): Promise<InsightRelacional | null> {
-    const shard = await this.abrir(idUsuario);
-    const recentes = shard.registros.filter(
-      (r) => Date.now() - Date.parse(r.instante) < 24 * 60 * 60 * 1000,
-    );
+    const chave = idSeguro(idUsuario);
+    const desde = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    let recentes: RegistroMemoria[];
+    const bd = supabase();
+    if (bd) {
+      const { data, error } = await bd
+        .from('memoria_registros')
+        .select('id, id_usuario, instante, papel, texto, destino')
+        .eq('id_usuario', chave)
+        .gte('instante', desde);
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      recentes = (data ?? []) as RegistroMemoria[];
+    } else {
+      const shard = await this.abrir(chave);
+      recentes = shard.registros.filter((r) => r.instante >= desde);
+    }
+
     if (recentes.length < 6) return null;
 
     const doOperador = recentes.filter((r) => r.papel === 'operador');
+    if (doOperador.length === 0) return null;
+
     const porDestino = new Map<string, number>();
     for (const r of doOperador) {
-      const chave = r.destino ?? 'indefinido';
-      porDestino.set(chave, (porDestino.get(chave) ?? 0) + 1);
+      const k = r.destino ?? 'indefinido';
+      porDestino.set(k, (porDestino.get(k) ?? 0) + 1);
     }
     const dominante = [...porDestino.entries()].sort((a, b) => b[1] - a[1])[0];
     if (!dominante) return null;
@@ -164,7 +256,7 @@ export class MemoriaOperacional {
     };
 
     return this.gravarInsight(
-      idUsuario,
+      chave,
       `Padrão dominante: ${legenda[dominante[0]] ?? dominante[0]}`,
       `${dominante[1]} de ${doOperador.length} mensagens nas últimas 24h caíram nessa categoria.`,
     );

@@ -97,11 +97,61 @@ Regenera energia e paciência no ócio, e na janela das 03:00 varre o shard de
 cada operador **em isolamento**, gravando `InsightRelacional` no shard privado.
 O insight abre o turno seguinte daquele operador.
 
-## Trocando o banco de dados
+## Persistência: arquivo ou Supabase
 
-`dados/infraestrutura.json` é o dataset semente. Para ligar no banco real,
-troque **apenas** o corpo de `carregarCentrais` em
-`nucleo/OrquestradorAcoes.ts` por uma query. Roteador, motor e UI não mudam.
+A escolha é do ambiente, não do código. Sem `SUPABASE_URL` +
+`SUPABASE_SERVICE_ROLE_KEY`, o motor lê `dados/*.json` e grava shards em
+arquivo. Com as duas variáveis, passa a usar Supabase automaticamente. O motor
+anuncia qual está em uso na subida:
+
+```
+[iara] persistência: Supabase
+```
+
+Para preparar o banco: cole `supabase/schema.sql` inteiro no SQL Editor do
+Supabase e rode. É idempotente.
+
+**Postura de segurança.** O navegador nunca fala com o Supabase — só o motor
+fala, com a `service_role`. Por isso o RLS está ligado **sem política nenhuma**:
+se a anon key vazar, ela não lê uma linha. A `service_role` ignora RLS por
+definição, então ela só existe no servidor e **nunca** com prefixo
+`NEXT_PUBLIC_`. O motor ainda decodifica o papel do JWT na subida e grita se
+alguém trocar as duas por engano — o sintoma desse erro é silencioso.
+
+Se a tabela `centrais` estiver vazia, o motor cai para o JSON em vez de afirmar
+que a operação tem zero centrais. Tabela vazia é configuração incompleta, não
+resposta.
+
+## Deploy
+
+⚠️ **O motor não roda na Vercel.** É um processo longo com WebSocket, estado em
+memória e escrita em disco. Serverless não mantém conexão viva, não preserva
+memória entre invocações e tem filesystem somente-leitura. Subir tudo na Vercel
+faz o Next aparecer e a IARA nunca conectar.
+
+O arranjo que funciona é dividir:
+
+| Peça | Onde | Por quê |
+|---|---|---|
+| `app/`, `components/`, `hooks/` | **Vercel** | Next estático + client, encaixe perfeito |
+| `servidor/` | **Railway, Render, Fly.io ou VPS** | precisa de processo longo e WebSocket |
+| dados e shards | **Supabase** | tira a dependência de disco local |
+
+Passos:
+
+1. Suba o motor num host de processo longo. Comando: `npx tsx servidor/index.ts`.
+   Variáveis: `ANTHROPIC_API_KEY`, `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `IARA_PORTA` (a maioria injeta `PORT` — ajuste).
+2. Na Vercel, defina `NEXT_PUBLIC_IARA_WS=wss://<host-do-motor>`.
+   **`wss://`, não `ws://`**: página em HTTPS bloqueia WebSocket inseguro.
+3. No motor, restrinja a origem do WebSocket ao domínio da Vercel antes de
+   expor publicamente — hoje ele aceita qualquer origem, o que é adequado para
+   localhost e não para a internet.
+
+Alternativa, se tudo precisar mesmo ficar na Vercel: trocar o transporte de
+WebSocket por SSE + POST e mover todo o estado para o Supabase. É uma reescrita
+do barramento (`SessaoOperador`, `FilaTelemetria`, `useIaraSocket`), não um
+ajuste de configuração.
 
 ## Comandos
 

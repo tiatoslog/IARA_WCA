@@ -18,6 +18,7 @@ import { ClienteClaude } from './nucleo/ClienteClaude';
 import { MotorCognitivo } from './nucleo/MotorCognitivo';
 import { CicloAutonomo } from './nucleo/CicloAutonomo';
 import { SessaoOperador } from './barramento/SessaoOperador';
+import { persistenciaEmUso } from './nucleo/ClienteSupabase';
 import { lerPacoteCliente } from '../lib/protocolo';
 
 carregarEnv({ path: '.env.local' });
@@ -58,6 +59,7 @@ servidor.on('listening', () => {
       : '[iara] camada de nuvem: DESLIGADA (defina ANTHROPIC_API_KEY em .env.local). ' +
           'Rotas locais seguem 100% funcionais.',
   );
+  console.log(`[iara] persistência: ${persistenciaEmUso()}`);
   void rag.carregar().then(
     () => console.log('[iara] índice histórico carregado'),
     (e: Error) => console.warn(`[iara] índice histórico indisponível: ${e.message}`),
