@@ -49,6 +49,7 @@ export function PainelConversa({ estado, falas, conectado, onEnviar, onInterromp
 
   return (
     <aside
+      className="painel-conversa"
       style={{
         width: 400,
         flex: 'none',
@@ -57,6 +58,7 @@ export function PainelConversa({ estado, falas, conectado, onEnviar, onInterromp
         background: 'var(--painel)',
         borderLeft: '1px solid var(--linha)',
         height: '100%',
+        minHeight: 0,
       }}
     >
       <header style={{ padding: '16px 18px 12px', borderBottom: '1px solid var(--linha)' }}>

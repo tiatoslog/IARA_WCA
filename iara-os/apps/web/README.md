@@ -122,36 +122,82 @@ Se a tabela `centrais` estiver vazia, o motor cai para o JSON em vez de afirmar
 que a operação tem zero centrais. Tabela vazia é configuração incompleta, não
 resposta.
 
+## Autenticação
+
+Com `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` no cliente e
+`SUPABASE_SERVICE_ROLE_KEY` no servidor, a IARA exige login. A identidade do
+operador passa a vir de um **token verificado pelo servidor**
+(`nucleo/Autenticacao.ts`), e o `id_usuario` que o cliente envia é ignorado.
+
+Sem essas variáveis o app roda em **modo local**: a identidade vem de um
+seletor, e uma faixa no topo da tela diz isso o tempo todo. É adequado para
+desenvolvimento e **não** para a internet — um `<select>` não é controle de
+acesso.
+
+Para criar os operadores: Supabase → Authentication → Users → *Add user*
+(e-mail + senha). Opcionalmente preencha `user_metadata.nome` para a IARA
+chamar a pessoa pelo nome.
+
 ## Deploy
 
-⚠️ **O motor não roda na Vercel.** É um processo longo com WebSocket, estado em
-memória e escrita em disco. Serverless não mantém conexão viva, não preserva
-memória entre invocações e tem filesystem somente-leitura. Subir tudo na Vercel
-faz o Next aparecer e a IARA nunca conectar.
+**Um processo, uma porta.** O Next e o motor rodam juntos em
+`servidor/principal.ts`, com o barramento em `/barramento` na mesma origem.
+Isso significa que qualquer host que execute Node serve o sistema inteiro.
 
-O arranjo que funciona é dividir:
+```bash
+npm ci
+npm run build
+npm start          # lê PORT do ambiente
+```
 
-| Peça | Onde | Por quê |
+| Host | Custo aproximado | Observação |
 |---|---|---|
-| `app/`, `components/`, `hooks/` | **Vercel** | Next estático + client, encaixe perfeito |
-| `servidor/` | **Railway, Render, Fly.io ou VPS** | precisa de processo longo e WebSocket |
-| dados e shards | **Supabase** | tira a dependência de disco local |
+| **Railway** | ~US$5/mês | mais simples: detecta Node, injeta `PORT`, dá domínio HTTPS |
+| **Render** | plano free ou ~US$7/mês | o free hiberna e derruba o WebSocket; use pago |
+| **Fly.io** | ~US$3/mês | mais controle, exige `fly.toml` |
+| **VPS** (Hetzner, Contabo) | ~US$5/mês | precisa de Nginx + Certbot na mão |
 
-Passos:
+⚠️ **Vercel não serve para o processo inteiro.** Serverless não mantém
+WebSocket aberto, não preserva memória entre invocações e tem filesystem
+somente-leitura. Se quiser Vercel de qualquer jeito, é preciso separar: Next lá,
+motor num host de processo longo, e `NEXT_PUBLIC_IARA_WS=wss://<host-do-motor>`.
+Dá mais trabalho e não traz vantagem para 5 operadores.
 
-1. Suba o motor num host de processo longo. Comando: `npx tsx servidor/index.ts`.
-   Variáveis: `ANTHROPIC_API_KEY`, `SUPABASE_URL`,
-   `SUPABASE_SERVICE_ROLE_KEY`, `IARA_PORTA` (a maioria injeta `PORT` — ajuste).
-2. Na Vercel, defina `NEXT_PUBLIC_IARA_WS=wss://<host-do-motor>`.
-   **`wss://`, não `ws://`**: página em HTTPS bloqueia WebSocket inseguro.
-3. No motor, restrinja a origem do WebSocket ao domínio da Vercel antes de
-   expor publicamente — hoje ele aceita qualquer origem, o que é adequado para
-   localhost e não para a internet.
+Variáveis obrigatórias em produção:
 
-Alternativa, se tudo precisar mesmo ficar na Vercel: trocar o transporte de
-WebSocket por SSE + POST e mover todo o estado para o Supabase. É uma reescrita
-do barramento (`SessaoOperador`, `FilaTelemetria`, `useIaraSocket`), não um
-ajuste de configuração.
+```
+ANTHROPIC_API_KEY=...
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+IARA_ORIGENS=https://seu-dominio
+NEXT_PUBLIC_IARA_WS=          # vazio: deriva da página, wss:// automático
+```
+
+`IARA_ORIGENS` não é opcional. O navegador **não** aplica CORS a WebSocket —
+essa lista é a única coisa que impede uma página qualquer de abrir um socket
+para o seu motor.
+
+## PWA — instalar no celular e no desktop
+
+O app é instalável: manifesto em `app/manifest.ts`, service worker em
+`public/sw.js`, ícones gerados por `npm run icones` (PNG escrito à mão, sem
+dependência nativa).
+
+- **Android/Chrome:** o navegador oferece "Instalar aplicativo".
+- **iPhone/Safari:** Compartilhar → "Adicionar à Tela de Início".
+- **Windows/macOS:** ícone de instalar na barra de endereço do Chrome ou Edge.
+
+Aberto pelo ícone, roda em tela cheia, sem barra de navegador.
+
+O service worker cacheia só a **casca** — sprites, ícones e o documento. Nada de
+conversa, telemetria ou estado. A inteligência da IARA mora no motor: servir
+resposta velha do cache seria mentir para o operador sobre o que está
+acontecendo agora. Sem rede, o app abre e diz que está reconectando.
+
+**HTTPS é obrigatório** para instalar e para o service worker. Qualquer host da
+tabela acima já entrega isso.
 
 ## Comandos
 

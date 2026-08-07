@@ -10,15 +10,23 @@
 
 import { useMemo } from 'react';
 import {
+  ALTURA_PAREDE,
   ANIMACOES,
+  BASE_RACK,
+  BICO_CAFETEIRA,
+  CAMADA_MURAL,
+  CENA,
   JANELA,
   MOBILIA,
   PIXEL,
+  PLANTA_AMBIENTE,
   QUADRO_METAS,
   RACK,
   SALA_ALTURA,
   SALA_LARGURA,
+  baseDoSprite,
   postoDoEstagio,
+  profundidade,
   type Sprite,
 } from '../lib/cenario';
 import { OBJETO_DA_CAPACIDADE, type EstadoEscritorio, type IdObjeto } from '../lib/estado';
@@ -26,27 +34,47 @@ import { ArquiteturaSala } from './ArquiteturaSala';
 
 const p = (n: number) => `${n * PIXEL}px`;
 
-/** Centro e raio do halo de cada objeto, em pixels de arte. */
-function focoDoObjeto(id: IdObjeto): { x: number; y: number; raio: number } | null {
+interface Foco {
+  x: number;
+  y: number;
+  raio: number;
+  /** O halo vive logo à frente do próprio objeto, nunca à frente da sala. */
+  z: number;
+}
+
+/** Centro, raio e profundidade do halo de cada objeto, em pixels de arte. */
+function focoDoObjeto(id: IdObjeto): Foco | null {
   const emMobilia = MOBILIA.find((s) => s.luz === id);
   if (emMobilia) {
     return {
       x: emMobilia.x + emMobilia.largura / 2,
       y: emMobilia.y + emMobilia.altura / 2,
       raio: Math.max(emMobilia.largura, emMobilia.altura) * 0.9,
+      z: profundidade(baseDoSprite(emMobilia)) + 1,
     };
   }
   if (id === 'janela') {
-    return { x: JANELA.x + JANELA.largura / 2, y: JANELA.y + JANELA.altura / 2, raio: 56 };
+    return {
+      x: JANELA.x + JANELA.largura / 2,
+      y: JANELA.y + JANELA.altura / 2,
+      raio: 56,
+      z: CAMADA_MURAL + 1,
+    };
   }
   if (id === 'rack') {
-    return { x: RACK.x + RACK.largura / 2, y: RACK.y + RACK.altura / 2, raio: 52 };
+    return {
+      x: RACK.x + RACK.largura / 2,
+      y: RACK.y + RACK.altura / 2,
+      raio: 52,
+      z: profundidade(BASE_RACK) + 1,
+    };
   }
   if (id === 'quadro_metas') {
     return {
       x: QUADRO_METAS.x + QUADRO_METAS.largura / 2,
       y: QUADRO_METAS.y + QUADRO_METAS.altura / 2,
       raio: 34,
+      z: CAMADA_MURAL + 1,
     };
   }
   return null;
@@ -69,7 +97,7 @@ function SpriteArte({ sprite }: { sprite: Sprite }) {
         height: p(sprite.altura),
         backgroundImage: `url(/escritorio/${sprite.arquivo})`,
         backgroundSize: `${p(sprite.largura)} ${p(sprite.altura)}`,
-        zIndex: sprite.camada ?? 1,
+        zIndex: profundidade(baseDoSprite(sprite)),
       }}
     />
   );
@@ -98,9 +126,12 @@ export function Escritorio({ estado }: { estado: EstadoEscritorio }) {
     >
       <ArquiteturaSala luzes={estado.luzes} />
 
-      {MOBILIA.map((sprite, i) => (
-        <SpriteArte key={`${sprite.arquivo}-${i}`} sprite={sprite} />
-      ))}
+      {/* Ordem vem de `CENA`, já ordenada por base. Nunca reordenar aqui. */}
+      {CENA.map((sprite, i) =>
+        sprite === PLANTA_AMBIENTE ? null : (
+          <SpriteArte key={`${sprite.arquivo}-${i}`} sprite={sprite} />
+        ),
+      )}
 
       {/* --- vapor da cafeteira: ambiente, nunca reage a dado --- */}
       {[0, 1, 2].map((i) => (
@@ -108,8 +139,8 @@ export function Escritorio({ estado }: { estado: EstadoEscritorio }) {
           key={`vapor-${i}`}
           className="ambiente"
           style={{
-            left: p(262 + i * 4),
-            top: p(30),
+            left: p(BICO_CAFETEIRA.x + i * 4),
+            top: p(BICO_CAFETEIRA.y),
             width: p(3),
             height: p(3),
             borderRadius: '50%',
@@ -122,7 +153,7 @@ export function Escritorio({ estado }: { estado: EstadoEscritorio }) {
             animationTimingFunction: 'ease-in-out',
             animationIterationCount: 'infinite',
             animationDelay: `${i * 2.4}s`,
-            zIndex: 3,
+            zIndex: BICO_CAFETEIRA.z,
           }}
         />
       ))}
@@ -133,8 +164,8 @@ export function Escritorio({ estado }: { estado: EstadoEscritorio }) {
           key={`poeira-${i}`}
           className="ambiente"
           style={{
-            left: p(100 + i * 13),
-            top: p(78 + (i % 2) * 14),
+            left: p(JANELA.x + 4 + i * 13),
+            top: p(ALTURA_PAREDE + 14 + (i % 2) * 14),
             width: p(1),
             height: p(1),
             borderRadius: '50%',
@@ -144,24 +175,24 @@ export function Escritorio({ estado }: { estado: EstadoEscritorio }) {
             animationTimingFunction: 'linear',
             animationIterationCount: 'infinite',
             animationDelay: `${i * 4}s`,
-            zIndex: 3,
+            zIndex: profundidade(ALTURA_PAREDE + 20),
           }}
         />
       ))}
 
-      {/* --- planta balançando --- */}
+      {/* --- planta balançando: única fonte deste sprite, nunca duplicada --- */}
       <div
         className="ambiente"
         style={{
-          left: p(288),
-          top: p(88),
-          width: p(32),
-          height: p(32),
+          left: p(PLANTA_AMBIENTE.x),
+          top: p(PLANTA_AMBIENTE.y),
+          width: p(PLANTA_AMBIENTE.largura),
+          height: p(PLANTA_AMBIENTE.altura),
           transformOrigin: 'bottom center',
           animation: 'balancar 9s ease-in-out infinite',
-          zIndex: 2,
-          backgroundImage: 'url(/escritorio/plant.png)',
-          backgroundSize: `${p(32)} ${p(32)}`,
+          zIndex: profundidade(baseDoSprite(PLANTA_AMBIENTE)),
+          backgroundImage: `url(/escritorio/${PLANTA_AMBIENTE.arquivo})`,
+          backgroundSize: `${p(PLANTA_AMBIENTE.largura)} ${p(PLANTA_AMBIENTE.altura)}`,
         }}
       />
 
@@ -180,18 +211,20 @@ export function Escritorio({ estado }: { estado: EstadoEscritorio }) {
               opacity: valor,
               '--intensidade': valor,
               animationDuration: id === objetoAtivo ? '2.2s' : '7s',
+              zIndex: foco!.z,
             } as React.CSSProperties
           }
         />
       ))}
 
-      {/* --- IARA --- */}
+      {/* --- IARA: profundidade vem do posto, igual a qualquer móvel --- */}
       <div
         className={`avatar q${animacao.quadros}`}
         style={
           {
             left: p(posto.x - animacao.largura / 2),
             top: p(posto.y - animacao.altura),
+            zIndex: profundidade(posto.y),
             width: p(animacao.largura),
             height: p(animacao.altura),
             backgroundImage: `url(/escritorio/${animacao.arquivo})`,
@@ -214,7 +247,7 @@ export function Escritorio({ estado }: { estado: EstadoEscritorio }) {
           background: 'rgba(90, 72, 48, 0.22)',
           filter: 'blur(2px)',
           transition: 'left 1.4s cubic-bezier(0.4,0,0.2,1), top 1.4s cubic-bezier(0.4,0,0.2,1)',
-          zIndex: 4,
+          zIndex: profundidade(posto.y) - 1,
         }}
       />
     </div>

@@ -10,12 +10,17 @@
 
 import {
   ALTURA_PAREDE,
+  BASE_RACK,
+  CAMADA_MURAL,
+  CAMADA_PAREDE,
+  CAMADA_PISO,
   JANELA,
   PIXEL,
   QUADRO_METAS,
   RACK,
   SALA_ALTURA,
   SALA_LARGURA,
+  profundidade,
 } from '../lib/cenario';
 import type { MapaLuzes } from '../lib/estado';
 
@@ -38,6 +43,7 @@ export function ArquiteturaSala({ luzes }: { luzes: MapaLuzes }) {
           width: p(SALA_LARGURA),
           height: p(ALTURA_PAREDE),
           background: 'linear-gradient(180deg, var(--parede-alta) 0%, var(--parede) 100%)',
+          zIndex: CAMADA_PISO,
         }}
       />
       {/* rodapé */}
@@ -49,6 +55,7 @@ export function ArquiteturaSala({ luzes }: { luzes: MapaLuzes }) {
           width: p(SALA_LARGURA),
           height: p(4),
           background: 'var(--rodape)',
+          zIndex: CAMADA_PAREDE,
         }}
       />
       {/* piso */}
@@ -60,6 +67,7 @@ export function ArquiteturaSala({ luzes }: { luzes: MapaLuzes }) {
           width: p(SALA_LARGURA),
           height: p(SALA_ALTURA - ALTURA_PAREDE),
           background: 'var(--piso)',
+          zIndex: CAMADA_PISO,
         }}
       />
       {tabuas.map((y, i) =>
@@ -73,6 +81,7 @@ export function ArquiteturaSala({ luzes }: { luzes: MapaLuzes }) {
               width: p(SALA_LARGURA),
               height: p(16),
               background: 'var(--piso-alt)',
+              zIndex: CAMADA_PISO,
             }}
           />
         ) : null,
@@ -89,6 +98,7 @@ export function ArquiteturaSala({ luzes }: { luzes: MapaLuzes }) {
           background: 'linear-gradient(180deg, #cfe8f7 0%, #eaf4fb 100%)',
           border: `${p(2)} solid #b7a68c`,
           boxShadow: `inset 0 0 0 ${p(1)} #ffffff`,
+          zIndex: CAMADA_MURAL,
         }}
       />
       <div
@@ -99,6 +109,7 @@ export function ArquiteturaSala({ luzes }: { luzes: MapaLuzes }) {
           width: p(2),
           height: p(JANELA.altura),
           background: '#b7a68c',
+          zIndex: CAMADA_MURAL,
         }}
       />
       {/* feixe de luz no piso — ambiente puro, não reage a dado */}
@@ -112,6 +123,7 @@ export function ArquiteturaSala({ luzes }: { luzes: MapaLuzes }) {
           background:
             'linear-gradient(180deg, rgba(255,246,214,0.55) 0%, rgba(255,246,214,0) 100%)',
           animation: 'respirar 18s ease-in-out infinite',
+          zIndex: CAMADA_PAREDE,
         }}
       />
 
@@ -130,6 +142,7 @@ export function ArquiteturaSala({ luzes }: { luzes: MapaLuzes }) {
           flexDirection: 'column',
           gap: p(2),
           justifyContent: 'center',
+          zIndex: CAMADA_MURAL,
         }}
       >
         {[0.9, 0.62, 0.4].map((largura, i) => (
@@ -159,6 +172,9 @@ export function ArquiteturaSala({ luzes }: { luzes: MapaLuzes }) {
           flexDirection: 'column',
           gap: p(2),
           padding: p(3),
+          // O rack está no piso, não chapado na parede: entra na mesma
+          // ordenação por base da mobília.
+          zIndex: profundidade(BASE_RACK),
         }}
       >
         {Array.from({ length: 6 }).map((_, i) => (

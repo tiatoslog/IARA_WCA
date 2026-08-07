@@ -5,7 +5,8 @@
       "name": "iara-web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "iara-os/apps/web"],
-      "port": 3000
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

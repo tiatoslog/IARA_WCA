@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { estadoInicial, type EstadoEscritorio } from '../lib/estado';
 import type { NivelLog, PacoteServidor } from '../lib/protocolo';
+import { enderecoBarramento } from '../lib/supabaseNavegador';
 
 export interface Fala {
   id: string;
@@ -36,7 +37,15 @@ export interface LinhaLog {
 
 const MAX_LOGS = 120;
 
-export function useIaraSocket(idUsuario: string, nome: string) {
+export interface Credencial {
+  id_usuario: string;
+  nome: string;
+  /** Access token do Supabase. Quando presente, é ele que define a identidade. */
+  token?: string;
+}
+
+export function useIaraSocket(credencial: Credencial) {
+  const { id_usuario: idUsuario, nome, token } = credencial;
   const [estado, setEstado] = useState<EstadoEscritorio>(estadoInicial);
   const [falas, setFalas] = useState<Fala[]>([]);
   const [logs, setLogs] = useState<LinhaLog[]>([]);
@@ -137,7 +146,8 @@ export function useIaraSocket(idUsuario: string, nome: string) {
 
     const conectar = () => {
       if (desmontado.current) return;
-      const url = process.env.NEXT_PUBLIC_IARA_WS ?? 'ws://localhost:8787';
+      const url = enderecoBarramento();
+      if (!url) return;
       let socket: WebSocket;
       try {
         socket = new WebSocket(url);
@@ -167,7 +177,7 @@ export function useIaraSocket(idUsuario: string, nome: string) {
         setConectado(true);
         // Reconexão: zera a guarda para aceitar a nova hidratação.
         ultimoSeq.current = 0;
-        socket.send(JSON.stringify({ tipo: 'ola', id_usuario: idUsuario, nome }));
+        socket.send(JSON.stringify({ tipo: 'ola', id_usuario: idUsuario, nome, token }));
       };
 
       socket.onmessage = (evento) => {
@@ -209,7 +219,7 @@ export function useIaraSocket(idUsuario: string, nome: string) {
       socketRef.current = null;
       socket?.close();
     };
-  }, [idUsuario, nome, aplicar]);
+  }, [idUsuario, nome, token, aplicar]);
 
   const enviar = useCallback(
     (texto: string) => {

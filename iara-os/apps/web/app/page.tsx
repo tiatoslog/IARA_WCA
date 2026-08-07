@@ -1,22 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Escritorio } from '../components/Escritorio';
 import { PainelConversa } from '../components/PainelConversa';
 import { ConsoleTecnico } from '../components/ConsoleTecnico';
-import { useIaraSocket } from '../hooks/useIaraSocket';
+import { Portaria } from '../components/Portaria';
+import { useIaraSocket, type Credencial } from '../hooks/useIaraSocket';
 import { OPERADORES } from '../lib/operadores';
-
-/**
- * Cada operador abre um shard privado no motor. Trocar de operador aqui não dá
- * acesso a nada do outro: o servidor deriva o caminho do shard do id da sessão,
- * e a sondagem cruzada é barrada por arquitetura (roteador) antes de ser
- * barrada por prompt.
- */
+import { autenticacaoDisponivel, supabaseNavegador } from '../lib/supabaseNavegador';
 
 function Medidor({ rotulo, valor, cor }: { rotulo: string; valor: number; cor: string }) {
   return (
-    <div style={{ minWidth: 118 }}>
+    <div style={{ minWidth: 96, flex: '1 1 96px' }}>
       <div
         style={{
           display: 'flex',
@@ -36,70 +31,21 @@ function Medidor({ rotulo, valor, cor }: { rotulo: string; valor: number; cor: s
   );
 }
 
-export default function Pagina() {
-  const [operador, setOperador] = useState(OPERADORES[0]);
-
-  // O operador escolhido sobrevive ao recarregamento — a IARA reencontra o
-  // shard certo sem perguntar de novo.
-  useEffect(() => {
-    const salvo = window.localStorage.getItem('iara.operador');
-    const achado = OPERADORES.find((o) => o.id === salvo);
-    if (achado) setOperador(achado);
-  }, []);
-
-  const { estado, falas, logs, conectado, enviar, interromper } = useIaraSocket(
-    operador.id,
-    operador.nome,
-  );
-
-  const trocar = (id: string) => {
-    const alvo = OPERADORES.find((o) => o.id === id);
-    if (!alvo) return;
-    window.localStorage.setItem('iara.operador', alvo.id);
-    setOperador(alvo);
-  };
+/** O escritório em si. Só monta quando já existe uma credencial resolvida. */
+function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => void) | null }) {
+  const { estado, falas, logs, conectado, enviar, interromper } = useIaraSocket(credencial);
 
   return (
-    <main style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
-      <section
-        style={{
-          flex: 1,
-          minWidth: 0,
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 20,
-          padding: 24,
-          background:
-            'radial-gradient(circle at 50% 30%, #f7f2e8 0%, var(--papel) 62%, #e9e1d3 100%)',
-        }}
-      >
-        {/* HUD: fina, discreta, acima da sala e abaixo do painel. */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 22,
-            padding: '10px 18px',
-            borderRadius: 12,
-            background: 'rgba(251, 248, 242, 0.8)',
-            border: '1px solid var(--linha)',
-          }}
-        >
-          <select
-            className="botao"
-            value={operador.id}
-            onChange={(e) => trocar(e.target.value)}
-            style={{ padding: '7px 10px' }}
-          >
-            {OPERADORES.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.nome}
-              </option>
-            ))}
-          </select>
+    <main className="tela">
+      <section className="ambiente-sala">
+        <div className="hud">
+          {aoSair ? (
+            <button className="botao" onClick={aoSair}>
+              Sair
+            </button>
+          ) : (
+            <SeletorLocal />
+          )}
           <Medidor
             rotulo="energia cognitiva"
             valor={estado.metricas.energia_cognitiva}
@@ -118,7 +64,9 @@ export default function Pagina() {
           />
         </div>
 
-        <Escritorio estado={estado} />
+        <div className="enquadramento">
+          <Escritorio estado={estado} />
+        </div>
 
         <ConsoleTecnico logs={logs} />
       </section>
@@ -131,5 +79,117 @@ export default function Pagina() {
         onInterromper={interromper}
       />
     </main>
+  );
+}
+
+/**
+ * Seletor de operador do MODO LOCAL. Só existe quando não há Supabase Auth
+ * configurado. Trocar de operador aqui é desenvolvimento, não segurança — e a
+ * faixa de aviso na página deixa isso explícito.
+ */
+function SeletorLocal() {
+  const [id, setId] = useState(OPERADORES[0].id);
+
+  useEffect(() => {
+    const salvo = window.localStorage.getItem('iara.operador');
+    if (salvo && OPERADORES.some((o) => o.id === salvo)) setId(salvo);
+  }, []);
+
+  return (
+    <select
+      className="botao"
+      value={id}
+      onChange={(e) => {
+        window.localStorage.setItem('iara.operador', e.target.value);
+        window.location.reload();
+      }}
+      style={{ padding: '7px 10px' }}
+    >
+      {OPERADORES.map((o) => (
+        <option key={o.id} value={o.id}>
+          {o.nome}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export default function Pagina() {
+  const comAuth = autenticacaoDisponivel();
+  const [credencial, setCredencial] = useState<Credencial | null>(null);
+  const [verificando, setVerificando] = useState(comAuth);
+
+  const lerSessao = useCallback(async () => {
+    const bd = supabaseNavegador();
+    if (!bd) return;
+    const { data } = await bd.auth.getSession();
+    const sessao = data.session;
+    if (!sessao) {
+      setCredencial(null);
+      setVerificando(false);
+      return;
+    }
+    setCredencial({
+      id_usuario: sessao.user.id,
+      nome:
+        (sessao.user.user_metadata?.nome as string | undefined) ??
+        sessao.user.email?.split('@')[0] ??
+        'operador',
+      token: sessao.access_token,
+    });
+    setVerificando(false);
+  }, []);
+
+  useEffect(() => {
+    if (!comAuth) {
+      // Modo local: identidade vem do seletor. Nunca em produção.
+      const salvo = window.localStorage.getItem('iara.operador');
+      const alvo = OPERADORES.find((o) => o.id === salvo) ?? OPERADORES[0];
+      setCredencial({ id_usuario: alvo.id, nome: alvo.nome });
+      return;
+    }
+
+    void lerSessao();
+    const bd = supabaseNavegador();
+    // O token expira; `onAuthStateChange` entrega o renovado e o socket
+    // reconecta com ele, porque `token` está nas dependências do efeito.
+    const { data } = bd!.auth.onAuthStateChange(() => void lerSessao());
+    return () => data.subscription.unsubscribe();
+  }, [comAuth, lerSessao]);
+
+  if (verificando) {
+    return (
+      <main className="carregando">
+        <span>Abrindo o escritório…</span>
+      </main>
+    );
+  }
+
+  if (comAuth && !credencial) {
+    return <Portaria aoEntrar={() => void lerSessao()} />;
+  }
+
+  if (!credencial) return null;
+
+  return (
+    <>
+      {!comAuth && (
+        <div className="faixa-aviso">
+          Modo local sem autenticação — a identidade vem de um seletor, não de um login.
+          Não exponha este processo à internet.
+        </div>
+      )}
+      <Sala
+        credencial={credencial}
+        aoSair={
+          comAuth
+            ? () => {
+                void supabaseNavegador()!.auth.signOut();
+                setCredencial(null);
+              }
+            : null
+        }
+      />
+    </>
   );
 }

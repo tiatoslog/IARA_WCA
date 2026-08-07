@@ -65,7 +65,12 @@ export type PacoteServidor =
   | { tipo: 'erro'; seq: number; instante: number; texto: string };
 
 export type PacoteCliente =
-  | { tipo: 'ola'; id_usuario: string; nome: string }
+  /**
+   * `token` é o access token do Supabase. Quando a autenticação está ativa, é
+   * ELE que define quem é o operador — `id_usuario` e `nome` viram decoração
+   * de desenvolvimento e são ignorados pelo servidor.
+   */
+  | { tipo: 'ola'; id_usuario: string; nome: string; token?: string }
   | { tipo: 'mensagem'; texto: string }
   | { tipo: 'interromper' };
 
@@ -117,8 +122,15 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
   if (obj.tipo === 'ola') {
     const id = typeof obj.id_usuario === 'string' ? obj.id_usuario.trim() : '';
     const nome = typeof obj.nome === 'string' ? obj.nome.trim() : '';
-    if (!id) return null;
-    return { tipo: 'ola', id_usuario: id.slice(0, 64), nome: (nome || id).slice(0, 64) };
+    const token = typeof obj.token === 'string' ? obj.token.trim() : undefined;
+    // Sem id E sem token não há como abrir sessão em modo nenhum.
+    if (!id && !token) return null;
+    return {
+      tipo: 'ola',
+      id_usuario: id.slice(0, 64),
+      nome: (nome || id).slice(0, 64),
+      token: token ? token.slice(0, 4096) : undefined,
+    };
   }
   if (obj.tipo === 'mensagem') {
     const texto = typeof obj.texto === 'string' ? obj.texto : '';

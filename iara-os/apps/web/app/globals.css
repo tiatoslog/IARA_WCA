@@ -163,7 +163,8 @@ body {
   transition:
     left 1.4s cubic-bezier(0.4, 0, 0.2, 1),
     top 1.4s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 5;
+  /* z-index vem de `profundidade(posto.y)` no componente: o avatar entra na
+     mesma ordenação da mobília e pode passar atrás do que está à frente. */
 }
 
 .q3 {
@@ -183,7 +184,7 @@ body {
   mix-blend-mode: screen;
   animation: pulsar 4.2s ease-in-out infinite;
   transition: opacity 700ms ease;
-  z-index: 4;
+  /* z-index vem do foco do objeto: o halo nunca passa à frente da sala. */
 }
 
 .ambiente {
@@ -261,6 +262,137 @@ body {
 .botao:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+ * Layout — desktop e celular
+ *
+ * O palco tem tamanho fixo em pixels de arte (960x624 na escala 3). Em vez de
+ * reescalar o grid, o `enquadramento` aplica um zoom inteiro por CSS. Fração
+ * quebrada borraria o pixel art, que é justamente o que não pode acontecer.
+ * -------------------------------------------------------------------------- */
+
+.tela {
+  display: flex;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.ambiente-sala {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 20px;
+  background: radial-gradient(circle at 50% 30%, #f7f2e8 0%, var(--papel) 62%, #e9e1d3 100%);
+}
+
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgba(251, 248, 242, 0.8);
+  border: 1px solid var(--linha);
+  max-width: 100%;
+}
+
+.enquadramento {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.carregando {
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--tinta-fraca);
+}
+
+.faixa-aviso {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  padding: 6px 14px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  text-align: center;
+  color: #6b3b2a;
+  background: rgba(240, 135, 106, 0.22);
+  border-bottom: 1px solid rgba(240, 135, 106, 0.45);
+}
+
+/* Notebook: o palco encolhe um degrau inteiro. */
+@media (max-width: 1400px) {
+  .enquadramento .palco {
+    transform: scale(0.75);
+    transform-origin: center;
+    margin: -78px 0;
+  }
+}
+
+/* Celular e tablet em retrato: a sala vira o topo, a conversa ocupa o resto.
+   A hierarquia se mantém — o escritório continua sendo a primeira coisa que
+   se vê, só que empilhado em vez de lado a lado. */
+@media (max-width: 900px) {
+  .tela {
+    flex-direction: column;
+  }
+
+  .ambiente-sala {
+    flex: none;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .enquadramento .palco {
+    transform: scale(0.5);
+    transform-origin: center;
+    margin: -156px -240px;
+  }
+
+  .hud {
+    gap: 12px;
+    padding: 8px 12px;
+    width: 100%;
+  }
+
+  .painel-conversa {
+    width: 100% !important;
+    flex: 1 !important;
+    min-height: 0;
+    border-left: none !important;
+    border-top: 1px solid var(--linha);
+  }
+}
+
+/* Celular pequeno: some com os medidores, mantém sala e conversa. */
+@media (max-width: 480px) {
+  .enquadramento .palco {
+    transform: scale(0.375);
+    transform-origin: center;
+    margin: -195px -300px;
+  }
+
+  .hud .medidor,
+  .hud > div > div {
+    font-size: 9.5px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
