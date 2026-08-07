@@ -1,0 +1,30 @@
+# --- dependências e build ---
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.venv/
+__pycache__/
+
+# --- segredos ---
+.env
+.env.local
+.env.*.local
+
+# --- dados privados dos operadores ---
+# Shards de memória são por pessoa. Nunca versionar.
+dados/memoria/
+iara-os/apps/web/dados/memoria/
+
+# --- packs de arte com licença restritiva ---
+# Modern Interiors Free v2.2 proíbe uso comercial; Modern Office 2D Props
+# proíbe deixar os arquivos originais baixáveis. Redistribuir qualquer um dos
+# dois num repositório seria violação de licença.
+# O pack em uso (arlantr, "free to use any way you want") vai versionado como
+# PNG em public/escritorio/, o que a licença dele permite.
+*.zip
+
+# --- local ---
+.claude/settings.local.json
+.DS_Store
+Thumbs.db

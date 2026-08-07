@@ -1,0 +1,17 @@
+{
+  "_nota": "Dataset semente da camada determinística. Para ligar no banco real, troque APENAS o corpo de `carregarCentrais` em servidor/nucleo/OrquestradorAcoes.ts por uma query. O roteador, o motor e a UI não mudam.",
+  "centrais": [
+    { "nome": "Cuiabá Matriz", "uf": "MT", "ativa": true, "veiculos": 84 },
+    { "nome": "Rondonópolis", "uf": "MT", "ativa": true, "veiculos": 41 },
+    { "nome": "Sinop", "uf": "MT", "ativa": true, "veiculos": 33 },
+    { "nome": "Sorriso", "uf": "MT", "ativa": true, "veiculos": 27 },
+    { "nome": "Barra do Garças", "uf": "MT", "ativa": false, "veiculos": 0 },
+    { "nome": "Campo Grande", "uf": "MS", "ativa": true, "veiculos": 52 },
+    { "nome": "Dourados", "uf": "MS", "ativa": true, "veiculos": 24 },
+    { "nome": "Rio Verde", "uf": "GO", "ativa": true, "veiculos": 38 },
+    { "nome": "Goiânia", "uf": "GO", "ativa": true, "veiculos": 46 },
+    { "nome": "Acreúna", "uf": "GO", "ativa": true, "veiculos": 12 },
+    { "nome": "Ribeirão Preto", "uf": "SP", "ativa": true, "veiculos": 63 },
+    { "nome": "Londrina", "uf": "PR", "ativa": true, "veiculos": 29 }
+  ]
+}

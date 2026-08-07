@@ -1,0 +1,275 @@
+/*
+ * IARA OS — folha de estilo do escritório.
+ *
+ * Hierarquia espacial fixa: Ambiente -> Objetos -> HUD -> Conteúdo -> Painéis.
+ * O escritório domina o campo visual; o painel de trabalho é a camada mais
+ * externa e recuada. Nunca inverter.
+ *
+ * Duas famílias de animação, jamais misturadas:
+ *   AMBIENTE  (respirar, balancar, vapor, poeira) — nunca reage a dado, nunca
+ *             para. Existe só para a sala não morrer visualmente.
+ *   REATIVA   (halo, led, avatar) — só muda porque um campo de EstadoEscritorio
+ *             mudou. Misturar as duas faz a tela mentir.
+ */
+
+:root {
+  --papel: #f2ece1;
+  --parede: #e8dfd0;
+  --parede-alta: #efe8db;
+  --rodape: #cbbba4;
+  --piso: #d9c8ad;
+  --piso-alt: #d2bfa1;
+  --tinta: #33302b;
+  --tinta-fraca: #6d675e;
+  --linha: #cdc3b2;
+
+  --luz-quente: #ffd9a0;
+  --luz-fria: #a8d8ff;
+  --luz-alerta: #f0876a; /* coral quente — nunca vermelho saturado */
+  --luz-verde: #9fd6a8;
+
+  --painel: #fbf8f2;
+  --sombra: rgba(60, 48, 32, 0.16);
+
+  --fonte: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--fonte);
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+ * Ambiente — ciclos longos, amplitude pequena. Nunca competem com a leitura.
+ * -------------------------------------------------------------------------- */
+
+@keyframes respirar {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes balancar {
+  0%,
+  100% {
+    transform: rotate(-1.2deg);
+  }
+  50% {
+    transform: rotate(1.2deg);
+  }
+}
+
+@keyframes vapor {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.8);
+  }
+  30% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(1.4);
+  }
+}
+
+@keyframes poeira {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.5;
+  }
+  80% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate(38px, -54px);
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Reativa
+ * -------------------------------------------------------------------------- */
+
+@keyframes pulsar {
+  0%,
+  100% {
+    opacity: var(--intensidade, 0.4);
+  }
+  50% {
+    opacity: calc(var(--intensidade, 0.4) * 1.55);
+  }
+}
+
+@keyframes andar {
+  to {
+    background-position-x: var(--fim);
+  }
+}
+
+@keyframes led {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Palco
+ * -------------------------------------------------------------------------- */
+
+.palco {
+  position: relative;
+  image-rendering: pixelated;
+  flex: none;
+  filter: drop-shadow(0 18px 40px var(--sombra));
+}
+
+.sprite {
+  position: absolute;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+}
+
+.avatar {
+  position: absolute;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  animation-name: andar;
+  animation-iteration-count: infinite;
+  /* Deslocamento entre postos: calmo por decisão, nunca teleporte. */
+  transition:
+    left 1.4s cubic-bezier(0.4, 0, 0.2, 1),
+    top 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 5;
+}
+
+.q3 {
+  animation-timing-function: steps(3);
+}
+.q4 {
+  animation-timing-function: steps(4);
+}
+.q6 {
+  animation-timing-function: steps(6);
+}
+
+.halo {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  animation: pulsar 4.2s ease-in-out infinite;
+  transition: opacity 700ms ease;
+  z-index: 4;
+}
+
+.ambiente {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+ * HUD e painéis
+ * -------------------------------------------------------------------------- */
+
+.medidor {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--linha);
+  overflow: hidden;
+}
+
+.medidor > i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 900ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rolagem {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--linha) transparent;
+}
+
+.rolagem::-webkit-scrollbar {
+  width: 8px;
+}
+.rolagem::-webkit-scrollbar-thumb {
+  background: var(--linha);
+  border-radius: 4px;
+}
+
+.campo {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--tinta);
+  background: #fff;
+  border: 1px solid var(--linha);
+  border-radius: 10px;
+  padding: 11px 13px;
+  outline: none;
+  resize: none;
+  width: 100%;
+}
+
+.campo:focus {
+  border-color: #b5a68d;
+  box-shadow: 0 0 0 3px rgba(181, 166, 141, 0.18);
+}
+
+.botao {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--linha);
+  background: var(--painel);
+  color: var(--tinta);
+  border-radius: 9px;
+  padding: 9px 15px;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.botao:hover:not(:disabled) {
+  background: #f0eade;
+}
+
+.botao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .halo,
+  .avatar,
+  .ambiente > * {
+    animation: none !important;
+  }
+  .avatar {
+    transition: none;
+  }
+}

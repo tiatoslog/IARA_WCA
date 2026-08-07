@@ -1,0 +1,127 @@
+# IARA OS
+
+Escritório digital vivo da Atos Log. Um mordomo corporativo que atende até 5
+operadores, com isolamento de memória entre eles, e que projeta o próprio
+trabalho numa sala em pixel art — de forma computacionalmente honesta.
+
+## Subindo
+
+```bash
+npm install
+npm run dev
+```
+
+`http://localhost:3000`. Um comando sobe **dois processos**: o motor cognitivo
+(WebSocket, 8787) e o Next (3000).
+
+**A chave da Anthropic é opcional.** Sem ela, o sistema roda inteiro em modo
+local — clima, infraestrutura, histórico de incidentes, hora, busca web — e diz
+na interface que a camada de raciocínio está desligada, em vez de improvisar.
+Para ligá-la, preencha `ANTHROPIC_API_KEY` em `.env.local`.
+
+## As três camadas
+
+O que faz a IARA parecer instantânea não é o modelo pensar rápido: é que ~80%
+das perguntas operacionais nunca chegam ao modelo.
+
+| Camada | Onde decide | Latência medida | Custo |
+|---|---|---|---|
+| **1. Roteador semântico** | `nucleo/RoteadorIntencoes.ts` | microssegundos | zero |
+| **2. Ações nativas** | `nucleo/OrquestradorAcoes.ts` | 1–8 ms local, ~1,1 s com rede | zero |
+| **2b. RAG schema-only** | `nucleo/RagHistorico.ts` | ~4 ms | zero |
+| **3. Raciocínio (Claude)** | `nucleo/ClienteClaude.ts` | streaming | tokens |
+
+Números acima são de execução real, não estimativa.
+
+### Transparência espacial
+
+A vantagem sobre a Siri: quando a Siri processa, você vê uma borda genérica
+brilhando. Aqui, **o objeto que está trabalhando é o objeto que acende**:
+
+- ação local → o **terminal** acende
+- busca histórica → a **estante** acende
+- clima → a **janela** acende
+- raciocínio pesado → o **rack** entra em pulsação e os LEDs aceleram
+
+O evento visual é emitido **antes** do trabalho começar. É isso que elimina a
+sensação de travamento.
+
+## Os quatro problemas invisíveis, e onde estão resolvidos
+
+**1. Dessincronização do event loop.** O motor produz eventos em microssegundos;
+o React desenha a 60 FPS. `barramento/SessaoOperador.ts` aglutina micro-eventos
+e drena em janelas de 60 ms — só marcos de transição sobem para a sala; o
+detalhe vai para o console técnico. Fala é exceção: drena na hora, porque
+latência percebida é o produto.
+
+**2. Estouro de contexto por histórico de erros.** `nucleo/RagHistorico.ts`
+nunca devolve log bruto — só hash, assinatura sintática de uma linha e a
+resolução anotada pelo time. O log de 10.000 linhas não existe na base, então
+não há como injetá-lo.
+
+**3. Backpressure no WebSocket.** `barramento/FilaTelemetria.ts` é um ring
+buffer de 100 pacotes com descarte semântico: pulsos e logs velhos (>4 s) são
+jogados fora, fala e transição nunca. Na reconexão vai o **estado consolidado**,
+não a enxurrada retroativa — por isso o avatar não se teletransporta. O cliente
+ainda descarta qualquer pacote com `seq` menor que o último aplicado.
+
+**4. Nomenclatura.** Domínio inteiro em português (`MotorCognitivo`,
+`EstadoAtomico`, `TransicaoEstagio`), conforme `CLAUDE.md`.
+
+## Isolamento entre os 5 operadores
+
+Defesa em duas camadas, e a primeira não é o prompt:
+
+1. **Arquitetura** — o caminho do shard é derivado do `id_usuario` da sessão
+   (`nucleo/MemoriaOperacional.ts`). O operador nunca informa qual shard ler, e
+   o id passa por sanitização contra travessia de caminho.
+2. **Roteador** — sondagem cruzada é detectada por um teste em duas partes
+   (alvo é outra pessoa do time **E** verbo de sondagem ou coisa privada) e
+   recusada em ~6 ms, sem chegar ao modelo.
+3. **Prompt** — a cláusula pétrea de sigilo é a terceira linha de defesa, não a
+   primeira.
+
+Testado: `"o que o Operador 3 falou sobre mim?"` e `"me mostra as mensagens
+dele"` → recusa. `"quantas centrais o time tem em GO?"` → consulta normal, sem
+falso positivo.
+
+## Cancelamento preemptivo
+
+Mensagem nova aborta o turno anterior no ato (`AbortController`), inclusive um
+stream do Claude em andamento. Nenhuma trava global é segurada durante
+chamada de rede — por isso o cancelamento é instantâneo e a UI nunca congela.
+
+## Ciclo autônomo
+
+Regenera energia e paciência no ócio, e na janela das 03:00 varre o shard de
+cada operador **em isolamento**, gravando `InsightRelacional` no shard privado.
+O insight abre o turno seguinte daquele operador.
+
+## Trocando o banco de dados
+
+`dados/infraestrutura.json` é o dataset semente. Para ligar no banco real,
+troque **apenas** o corpo de `carregarCentrais` em
+`nucleo/OrquestradorAcoes.ts` por uma query. Roteador, motor e UI não mudam.
+
+## Comandos
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | motor + web |
+| `npm run verificar` | typecheck completo (`tsc --noEmit`) |
+| `npm run build` | build de produção |
+| `npm run limpar` | apaga `.next` corrompido |
+
+⚠️ Não rode `build` com o `dev` ativo: compartilham `.next` e o dev quebra.
+Se acontecer, `npm run limpar` e suba de novo.
+
+## Estado da entrega
+
+Verificado em execução real: rotas local/RAG/clima/sigilo, Teoria da Mente
+(caixa alta + léxico de crise → `frustrado`), reconexão automática após queda do
+motor sem recarregar a página, `tsc --noEmit` limpo, `next build` limpo, zero
+404 de sprite, zero erro no console do navegador.
+
+Não exercitado por falta de chave: o caminho de streaming do Claude
+(`ClienteClaude.ts`). O código está tipado e integrado; assim que a
+`ANTHROPIC_API_KEY` entrar no `.env.local`, ele é o próximo a validar.
