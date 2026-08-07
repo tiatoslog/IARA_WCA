@@ -13,8 +13,14 @@
 
 import type { BarramentoEventos } from './BarramentoEventos';
 import {
+  agruparPorDominio,
+  type CapacidadeProjetada,
+  type ManifestoProjetado,
+} from '../../../lib/capacidades';
+import {
   HabilidadeExpirou,
   PermissaoNegada,
+  disponivel,
   validar,
   type ContextoHabilidade,
   type Habilidade,
@@ -59,15 +65,47 @@ export class GerenciadorHabilidades {
     return this.registro.get(id)?.manifesto ?? null;
   }
 
-  /** Catálogo para o planejador — e, futuramente, para a LLM planejar com ele. */
+  /**
+   * Catálogo que o Planejador pode oferecer à LLM.
+   *
+   * Só o que está PRONTO PARA USO. Uma habilidade sem credencial no catálogo
+   * de planejamento produz plano que falha no meio — e plano que falha no meio
+   * é pior que plano que não existe, porque já consumiu tokens e já mostrou
+   * passos ao operador.
+   */
   catalogo(): readonly ManifestoHabilidade[] {
-    return [...this.registro.values()].map((h) => h.manifesto);
+    return [...this.registro.values()].filter(disponivel).map((h) => h.manifesto);
+  }
+
+  /**
+   * Manifesto COMPLETO, incluindo o que está desligado e por quê. Vai para o
+   * snapshot: o operador vê o que a IARA poderia fazer e o que falta ligar.
+   */
+  manifestoProjetado(): ManifestoProjetado {
+    const capacidades: CapacidadeProjetada[] = [...this.registro.values()].map((h) => {
+      const motivo = h.indisponivelPorque?.() ?? null;
+      return {
+        id: h.manifesto.id,
+        nome: h.manifesto.nome,
+        dominio: h.manifesto.dominio,
+        disponivel: motivo === null,
+        motivo_indisponivel: motivo ?? undefined,
+        custo: h.manifesto.custo,
+      };
+    });
+    return agruparPorDominio(capacidades);
   }
 
   async executar(pedido: PedidoHabilidade): Promise<ResultadoHabilidade> {
     const habilidade = this.registro.get(pedido.id);
     if (!habilidade) {
       throw new Error(`habilidade desconhecida: ${pedido.id}`);
+    }
+    // Porta 1b — disponibilidade. Um plano antigo, ou uma credencial que caiu
+    // entre o planejamento e a execução, não pode alcançar o executor.
+    const motivo = habilidade.indisponivelPorque?.();
+    if (motivo) {
+      throw new Error(`${pedido.id} indisponível: ${motivo}`);
     }
     const m = habilidade.manifesto;
 

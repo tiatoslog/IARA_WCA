@@ -21,12 +21,15 @@ import type { BarramentoEventos } from '../nucleo/kernel/BarramentoEventos';
 import type { CompiladorSnapshot } from '../nucleo/kernel/CompiladorSnapshot';
 import type { EstadoAtomico } from '../nucleo/EstadoAtomico';
 import type { EventoKernel } from '../nucleo/kernel/Evento';
+import type { SnapshotCognitivo } from '../../lib/snapshot';
+import { caminhoDaVoz, sintetizar, vozDisponivel } from '../nucleo/Voz';
 import type { SessaoOperador } from './SessaoOperador';
 
 const JANELA_MS = 50;
 
 export class PonteProjecao {
   private pendente: NodeJS.Timeout | null = null;
+  private encerrada = false;
   private readonly desassinar: () => void;
 
   constructor(
@@ -39,6 +42,7 @@ export class PonteProjecao {
   }
 
   encerrar(): void {
+    this.encerrada = true;
     this.desassinar();
     if (this.pendente) clearTimeout(this.pendente);
     this.pendente = null;
@@ -56,9 +60,28 @@ export class PonteProjecao {
     // Fala não espera a janela.
     if (e.tipo === 'RESPOSTA_TRECHO' || e.tipo === 'TAREFA_CONCLUIDA') {
       this.emitir();
+      // A voz é sintetizada sobre o texto FINAL, uma vez por turno. Sintetizar
+      // trecho a trecho picotaria a fala em pedaços com prosódia própria, e a
+      // frase sairia com entonação de lista.
+      if (e.tipo === 'TAREFA_CONCLUIDA') this.vocalizar(e.id_mensagem, e.texto);
       return;
     }
     this.agendar();
+  }
+
+  /**
+   * Dispara a síntese e reemite quando o áudio existe.
+   *
+   * Deliberadamente fora do caminho de resposta: o texto já chegou na tela e o
+   * operador já pode ler. Se a Convai demorar ou falhar, o turno inteiro
+   * continua válido — só sai mudo.
+   */
+  private vocalizar(idMensagem: string, texto: string): void {
+    if (!vozDisponivel()) return;
+    void sintetizar(idMensagem, texto).then((ok) => {
+      // `encerrar()` pode ter rodado enquanto a rede respondia.
+      if (ok && !this.encerrada) this.emitir();
+    });
   }
 
   private agendar(): void {
@@ -77,7 +100,22 @@ export class PonteProjecao {
       base.operador?.id_usuario ?? 'anonimo',
       this.sessao.descartados,
     );
-    this.sessao.emitirSnapshot(snapshot);
+    this.sessao.emitirSnapshot(this.comVoz(snapshot));
+  }
+
+  /**
+   * Anexa o caminho do áudio ao snapshot já compilado.
+   *
+   * Acontece AQUI, e não no `CompiladorSnapshot`, porque uma URL é um conceito
+   * do mundo HTTP e o compilador não conhece esse mundo — ele produz estado
+   * cognitivo puro. A ponte é a fronteira, então é dela o trabalho de traduzir
+   * "existe áudio para esta fala" em "está em /voz/<hash>.mp3".
+   */
+  private comVoz(snapshot: SnapshotCognitivo): SnapshotCognitivo {
+    if (!snapshot.fala) return snapshot;
+    const voz = caminhoDaVoz(snapshot.fala.id);
+    if (voz === snapshot.fala.voz) return snapshot;
+    return { ...snapshot, fala: { ...snapshot.fala, voz } };
   }
 
   /**

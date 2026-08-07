@@ -17,9 +17,28 @@ iara-os/apps/web/
     nucleo/       estado, roteador, ações, RAG, teoria da mente, Claude
     barramento/   fila de telemetria e sessão WebSocket
   app/, components/, hooks/   camada de projeção (Next, porta 3000)
+    components/projecao/      projeção "presença": avatar 3D (R3F)
   dados/          base determinística + shards privados (gerados)
-  public/escritorio/   pixel art
+  public/escritorio/        pixel art
+  public/identidade_iara/   modelo 3D — ver components/projecao/EXPORTACAO.md
 ```
+
+## Duas projeções, um contrato
+
+`SnapshotCognitivo` (`lib/snapshot.ts`) é a única coisa que atravessa a fronteira
+do kernel. Duas projeções o consomem e nenhuma conhece o servidor:
+
+- **Escritório** — a sala em pixel art. Lê `luzes` e `estagio`.
+- **Presença** — a IARA enquadrada do peito para cima, em React Three Fiber.
+  Lê `expressao`, `capacidades`, `plano` e `telemetria`.
+
+Trocar de projeção não muda uma linha do servidor. Nenhum componente conhece
+nome de morph target, pela mesma razão que nenhum conhece nome de arquivo de
+sprite: a tradução mora em `components/projecao/mapaFacial.ts`.
+
+Articulação de boca é o único parâmetro reamostrado no cliente. O kernel publica
+na cadência de aglutinação da ponte; lipsync precisa de 60 Hz. O fato é o mesmo —
+o texto que o kernel emitiu — só a taxa de amostragem muda.
 
 ## Invariantes — não negociáveis
 

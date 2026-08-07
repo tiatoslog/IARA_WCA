@@ -23,7 +23,7 @@ import { Planejador } from './Planejador';
 import { FuncaoExecutiva } from './FuncaoExecutiva';
 import { GerenciadorHabilidades } from './GerenciadorHabilidades';
 import { MotorRaciocinio } from './MotorRaciocinio';
-import { HABILIDADES_OPERACIONAIS } from './habilidades/operacionais';
+import { CATALOGO } from './habilidades';
 import {
   AuditoriaEstruturada,
   LimiteVazao,
@@ -69,7 +69,7 @@ export class Kernel {
   constructor(private readonly dep: DependenciasKernel) {
     this.papel = dep.papel ?? 'operador';
     this.habilidades = new GerenciadorHabilidades(dep.barramento);
-    this.habilidades.registrarTodas(HABILIDADES_OPERACIONAIS);
+    this.habilidades.registrarTodas(CATALOGO);
     this.executiva = new FuncaoExecutiva(
       this.planejador,
       this.trabalho,
@@ -117,7 +117,11 @@ export class Kernel {
       const p = this.percepcao.perceber(texto);
       b.publicar({ tipo: 'PERCEPCAO_CONCLUIDA', percepcao: p });
       await this.dep.estado.definirLeitura(p.leitura);
-      await this.dep.memoria.registrar(this.dep.idUsuario, 'operador', texto);
+      // Gravar histórico é DESEJÁVEL, não essencial para responder. Se a
+      // persistência estiver fora (tabela ausente, rede caída), a IARA
+      // continua atendendo e avisa no console — em vez de o turno inteiro
+      // morrer por causa de um INSERT.
+      await this.registrarSemQuebrar('operador', texto);
       if (controle.signal.aborted) return;
 
       // --- 2. Função executiva ---------------------------------------------
@@ -164,16 +168,30 @@ export class Kernel {
         ms: Date.now() - inicio,
       });
 
-      await this.dep.memoria.registrar(
-        this.dep.idUsuario,
-        'iara',
-        texto_final,
-        this.destinoDe(decisao.rota),
-      );
+      await this.registrarSemQuebrar('iara', texto_final, this.destinoDe(decisao.rota));
       await this.dep.estado.aplicarIntencao({ campo: 'afinidade', delta: 0.015 });
     } catch (erro) {
       if (controle.signal.aborted) return;
-      b.publicar({ tipo: 'FALHA', modulo: 'kernel', mensagem: (erro as Error).message });
+      const mensagem = (erro as Error).message;
+      b.publicar({ tipo: 'FALHA', modulo: 'kernel', mensagem });
+
+      /**
+       * A falha PRECISA chegar ao operador como fala.
+       *
+       * Antes ela só virava linha de console — e o console vem fechado. O
+       * sintoma era o pior possível: o operador manda mensagem e a tela não
+       * muda em nada. Silêncio é a única resposta que um assistente nunca
+       * pode dar.
+       */
+      b.publicar({
+        tipo: 'TAREFA_CONCLUIDA',
+        id_mensagem: randomUUID(),
+        texto:
+          'Não consegui concluir esse pedido. Falhou em: ' +
+          `${mensagem}. O detalhe completo está no console técnico.`,
+        rota: 'falha',
+        ms: Date.now() - inicio,
+      });
     } finally {
       if (this.emAndamento === controle) this.emAndamento = null;
       this.trabalho.encerrarTarefa();
@@ -313,8 +331,12 @@ export class Kernel {
     await this.dep.estado.transicionar('pensando', 'raciocinio');
     b.publicar({ tipo: 'RACIOCINIO_INICIADO', modelo: this.raciocinio.modelo });
 
-    const historico = await this.dep.memoria.historico(this.dep.idUsuario, 20);
-    const camadaGlobal = await this.dep.memoria.carregarGlobal();
+    // Histórico enriquece o prompt; a ausência dele degrada a resposta, não
+    // impede. Persistência fora não pode calar o raciocínio.
+    const historico = await this.dep.memoria
+      .historico(this.dep.idUsuario, 20)
+      .catch(() => [] as Awaited<ReturnType<typeof this.dep.memoria.historico>>);
+    const camadaGlobal = await this.dep.memoria.carregarGlobal().catch(() => '');
     const inicio = Date.now();
     let acumulado = '';
     let abriu = false;
@@ -352,6 +374,29 @@ export class Kernel {
     });
 
     return r.texto || acumulado;
+  }
+
+  /**
+   * Grava no shard sem deixar a persistência derrubar o atendimento.
+   *
+   * A falha vira alerta no console, uma vez por turno. Sem isso, uma tabela
+   * ausente no Supabase transforma a IARA inteira em silêncio — que foi
+   * exatamente o que aconteceu quando o schema não tinha sido aplicado.
+   */
+  private async registrarSemQuebrar(
+    papel: 'operador' | 'iara',
+    texto: string,
+    destino?: DestinoCognitivo,
+  ): Promise<void> {
+    try {
+      await this.dep.memoria.registrar(this.dep.idUsuario, papel, texto, destino);
+    } catch (erro) {
+      this.dep.barramento.publicar({
+        tipo: 'FALHA',
+        modulo: 'memoria',
+        mensagem: `histórico não gravado (${(erro as Error).message}). O atendimento segue.`,
+      });
+    }
   }
 
   private destinoDe(rota: string): DestinoCognitivo {

@@ -17,6 +17,7 @@ import { config as carregarEnv } from 'dotenv';
 import { conectarOperador, encerrarResidentes, prepararMotor } from './barramento/Porta';
 import { persistenciaEmUso } from './nucleo/ClienteSupabase';
 import { autenticacaoAtiva } from './nucleo/Autenticacao';
+import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
 
 carregarEnv({ path: '.env.local' });
 carregarEnv();
@@ -68,7 +69,38 @@ async function subir(): Promise<void> {
   // para ele, o hot reload morre.
   const tratarUpgrade = app.getUpgradeHandler();
 
+  /**
+   * Áudio da voz, servido pelo próprio processo.
+   *
+   * Vive fora do Next de propósito: os bytes estão em memória do motor, não no
+   * disco, e uma rota de API do Next não os alcançaria sem duplicar o estado.
+   * O hash na URL é a chave de um Map — não há caminho de arquivo envolvido,
+   * então não há travessia de diretório possível. A validação abaixo existe
+   * mesmo assim, porque "não há como" envelhece mal.
+   */
+  const ROTA_VOZ = /^\/voz\/([0-9a-f]{8,64})\.(mp3|wav)$/;
+
   const servidorHttp = createServer((req, res) => {
+    const caminho = (req.url ?? '').split('?')[0];
+    const voz = ROTA_VOZ.exec(caminho);
+
+    if (voz) {
+      const audio = audioPorHash(voz[1]);
+      if (!audio) {
+        res.writeHead(404).end();
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': audio.tipo,
+        'Content-Length': audio.bytes.length,
+        // Imutável: o nome do arquivo É o hash do conteúdo. Se o texto mudar,
+        // muda o hash, muda a URL — nunca há cache servindo áudio velho.
+        'Cache-Control': 'public, max-age=86400, immutable',
+      });
+      res.end(audio.bytes);
+      return;
+    }
+
     void tratarRequisicao(req, res);
   });
 
@@ -98,6 +130,7 @@ async function subir(): Promise<void> {
     console.log(`[iara] IARA OS em http://localhost:${PORTA}`);
     console.log(`[iara] barramento em ${CAMINHO_WS} (mesma porta, mesma origem)`);
     console.log(`[iara] persistência: ${persistenciaEmUso()}`);
+    console.log(`[iara] voz: ${diagnosticoVoz()}`);
     console.log(
       autenticacaoAtiva()
         ? '[iara] autenticação: Supabase Auth (identidade vem do token verificado)'
@@ -112,7 +145,19 @@ async function subir(): Promise<void> {
 
   void prepararMotor().then(
     () => console.log('[iara] índice histórico carregado'),
-    (e: Error) => console.warn(`[iara] índice histórico indisponível: ${e.message}`),
+    (e: Error) => {
+      console.warn(`[iara] índice histórico indisponível: ${e.message}`);
+      // Erro mais comum na primeira subida com Supabase ligado. Sem esta
+      // dica, o sintoma na tela ("a IARA não responde") não tem relação
+      // aparente com a causa (schema não aplicado).
+      if (/table|schema cache|relation/i.test(e.message)) {
+        console.warn(
+          '[iara] AÇÃO NECESSÁRIA: as tabelas não existem no Supabase.\n' +
+            '       Abra o SQL Editor do projeto e rode iara-os/apps/web/supabase/schema.sql\n' +
+            '       inteiro. Enquanto isso, a IARA atende mas não grava histórico.',
+        );
+      }
+    },
   );
 
   const encerrar = () => {

@@ -137,6 +137,18 @@ export interface FalaProjetada {
   readonly destino: string | null;
   readonly latencia_ms: number | null;
   readonly cache_lido: number;
+  /**
+   * Caminho do áudio desta fala, servido pelo próprio processo, ou `null`
+   * enquanto não houver voz.
+   *
+   * É um CAMINHO, não os bytes: enfiar áudio dentro do snapshot inflaria cada
+   * pacote do barramento em centenas de kilobytes, e o snapshot é aglutinado —
+   * seria o mesmo áudio retransmitido a cada atualização de estado.
+   *
+   * Só aparece depois que a síntese termina, então chega um instante após o
+   * texto. É o comportamento honesto: o texto existe antes da voz existir.
+   */
+  readonly voz: string | null;
 }
 
 export interface SnapshotCognitivo {

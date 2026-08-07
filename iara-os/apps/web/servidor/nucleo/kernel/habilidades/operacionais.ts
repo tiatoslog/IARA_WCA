@@ -1,14 +1,12 @@
 /**
- * Habilidades operacionais — as de custo zero.
+ * Habilidades operacionais — as de custo zero, sempre disponíveis.
  *
- * Todas compartilham os mesmos adaptadores (`OrquestradorAcoes`,
- * `RagHistorico`), por isso vivem no mesmo arquivo. Uma habilidade nova que
- * fale com outro sistema ganha arquivo próprio: o que a torna plugável é o
- * contrato `Habilidade`, não a fronteira de arquivo.
+ * Nomenclatura: verbo + objeto, em português. `consultar_clima`, não `clima`.
+ * O id é lido pela LLM quando ela planeja; um substantivo solto não diz o que
+ * a habilidade FAZ, e plano ruim começa em catálogo mal nomeado.
  *
- * Nenhuma delas conhece o barramento, o planejador ou a sala. Recebem
- * parâmetros validados, devolvem texto. É o que as torna testáveis sem subir
- * o kernel inteiro.
+ * Nenhuma conhece o barramento, o planejador ou a sala. Recebem parâmetros
+ * validados, devolvem texto. É o que as torna testáveis sem subir o kernel.
  */
 
 import type { Habilidade } from '../Habilidade';
@@ -18,11 +16,13 @@ import { RagHistorico } from '../../RagHistorico';
 const acoes = new OrquestradorAcoes();
 const rag = new RagHistorico();
 
-export const habilidadeClima: Habilidade = {
+export const consultarClima: Habilidade = {
   manifesto: {
-    id: 'clima',
+    id: 'consultar_clima',
     nome: 'Radar meteorológico',
-    descricao: 'Condição atual do perímetro operacional via Open-Meteo.',
+    descricao:
+      'Condição meteorológica atual do perímetro operacional (temperatura, umidade, precipitação). Use para perguntas sobre tempo, chuva, calor ou frio.',
+    dominio: 'pesquisa',
     capacidade: 'percepcao',
     permissoes: ['rede'],
     timeout_ms: 6000,
@@ -35,14 +35,27 @@ export const habilidadeClima: Habilidade = {
   },
 };
 
-export const habilidadeInfraestrutura: Habilidade = {
+/**
+ * Consulta de infraestrutura com fallback.
+ *
+ * Convive com `executar_consulta_sql` de propósito: esta SEMPRE funciona,
+ * porque cai para `dados/infraestrutura.json` quando o Supabase não está
+ * configurado. A de SQL é mais poderosa e só existe com banco ligado.
+ *
+ * Sem esta, o modo local perderia a pergunta mais frequente da operação —
+ * "quantas centrais temos?" — e o sistema pareceria quebrado quando na verdade
+ * estaria apenas sem credencial.
+ */
+export const consultarInfraestrutura: Habilidade = {
   manifesto: {
-    id: 'infraestrutura',
+    id: 'consultar_infraestrutura',
     nome: 'Base de centrais',
-    descricao: 'Contagem de centrais ativas e frota vinculada, por UF.',
+    descricao:
+      'Centrais ativas e frota vinculada, por UF. Use para "quantas centrais", "quantos veículos", "status da operação". Funciona com ou sem banco configurado.',
+    dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['banco'],
-    timeout_ms: 4000,
+    timeout_ms: 5000,
     custo: 'zero',
     esquema: {
       uf: { tipo: 'texto', padrao: 'GERAL', dentre: ['GERAL', 'MT', 'MS', 'GO', 'SP', 'PR', 'RO'] },
@@ -58,11 +71,13 @@ export const habilidadeInfraestrutura: Habilidade = {
   },
 };
 
-export const habilidadeRelogio: Habilidade = {
+export const consultarAgenda: Habilidade = {
   manifesto: {
-    id: 'relogio',
-    nome: 'Relógio',
-    descricao: 'Data e hora do servidor.',
+    id: 'consultar_agenda',
+    nome: 'Relógio e calendário',
+    descricao:
+      'Data e hora correntes do servidor. Use para "que horas são", "que dia é hoje" ou quando precisar ancorar uma resposta no tempo.',
+    dominio: 'memoria',
     capacidade: 'memoria',
     permissoes: [],
     timeout_ms: 1000,
@@ -75,11 +90,13 @@ export const habilidadeRelogio: Habilidade = {
   },
 };
 
-export const habilidadeBusca: Habilidade = {
+export const pesquisarWeb: Habilidade = {
   manifesto: {
-    id: 'busca',
-    nome: 'Busca web',
-    descricao: 'Levantamento factual por HTTP puro, sem navegador headless.',
+    id: 'pesquisar_web',
+    nome: 'Pesquisa web',
+    descricao:
+      'Levantamento factual na internet por HTTP puro. Use para informação pública que não está nos sistemas da casa: legislação, notícia, definição de termo.',
+    dominio: 'pesquisa',
     capacidade: 'conhecimento',
     permissoes: ['rede'],
     timeout_ms: 9000,
@@ -92,11 +109,13 @@ export const habilidadeBusca: Habilidade = {
   },
 };
 
-export const habilidadeIncidente: Habilidade = {
+export const buscarHistorico: Habilidade = {
   manifesto: {
-    id: 'incidente',
+    id: 'buscar_historico',
     nome: 'Histórico de incidentes',
-    descricao: 'Busca assinatura sintática no índice local. Nunca devolve log bruto.',
+    descricao:
+      'Procura no índice de incidentes por assinatura semelhante e devolve a resolução que o time adotou. Use para "esse erro já aconteceu", "caiu de novo", "mesmo problema".',
+    dominio: 'memoria',
     capacidade: 'conhecimento',
     permissoes: ['banco'],
     timeout_ms: 4000,
@@ -107,6 +126,8 @@ export const habilidadeIncidente: Habilidade = {
     const achados = await rag.consultar(String(ctx.parametros.consulta));
     return {
       texto: rag.formatar(achados),
+      // O detalhe é o que sobe para o console. Nunca o log bruto — que, aliás,
+      // nem existe na base: é essa ausência que protege o contexto do modelo.
       detalhe: `${achados.length} assinatura(s), nenhum log bruto carregado`,
       resolveu: achados.length > 0,
     };
@@ -116,13 +137,14 @@ export const habilidadeIncidente: Habilidade = {
 /**
  * Recusa por sigilo. É habilidade, não caso especial no orquestrador: assim a
  * recusa aparece na trilha de eventos como qualquer outra ação, e fica
- * auditável.
+ * auditável junto com o resto.
  */
-export const habilidadeSigilo: Habilidade = {
+export const recusarPorSigilo: Habilidade = {
   manifesto: {
-    id: 'sigilo',
+    id: 'recusar_por_sigilo',
     nome: 'Cláusula de sigilo',
     descricao: 'Recusa cortês a pedido sobre registro de outro operador.',
+    dominio: 'memoria',
     capacidade: 'memoria',
     permissoes: [],
     timeout_ms: 500,
@@ -147,10 +169,10 @@ export async function prepararOperacionais(): Promise<void> {
 }
 
 export const HABILIDADES_OPERACIONAIS: readonly Habilidade[] = [
-  habilidadeClima,
-  habilidadeInfraestrutura,
-  habilidadeRelogio,
-  habilidadeBusca,
-  habilidadeIncidente,
-  habilidadeSigilo,
+  consultarClima,
+  consultarInfraestrutura,
+  consultarAgenda,
+  pesquisarWeb,
+  buscarHistorico,
+  recusarPorSigilo,
 ];

@@ -144,10 +144,30 @@ export function conectarOperador(socket: WebSocket): void {
               : `Sessão local para ${operador.nome}. Autenticação desligada — modo de desenvolvimento.`,
           );
 
-          const pendentes = await memoria.insightsPendentes(operador.id_usuario);
-          for (const insight of pendentes.slice(0, 1)) {
-            sessao.emitirLog('info', `Insight do ciclo noturno: ${insight.titulo} — ${insight.detalhe}`);
-            await memoria.consumirInsight(operador.id_usuario, insight.id);
+          /**
+           * Insight noturno é um MIMO, não um requisito de sessão.
+           *
+           * Estava dentro do try que chama `recusar()`: uma tabela ausente no
+           * Supabase derrubava o socket com "não foi possível abrir a sessão",
+           * e o operador via uma tela que nunca conectava. Ler memória não
+           * pode impedir alguém de entrar no escritório.
+           */
+          try {
+            const pendentes = await memoria.insightsPendentes(operador.id_usuario);
+            for (const insight of pendentes.slice(0, 1)) {
+              sessao.emitirLog(
+                'info',
+                `Insight do ciclo noturno: ${insight.titulo} — ${insight.detalhe}`,
+              );
+              await memoria.consumirInsight(operador.id_usuario, insight.id);
+            }
+          } catch (erro) {
+            sessao.emitirLog(
+              'alerta',
+              `Memória persistente indisponível (${(erro as Error).message}). ` +
+                'A sessão continua; o histórico não será gravado. ' +
+                'Verifique se supabase/schema.sql foi aplicado.',
+            );
           }
         } catch (erro) {
           console.warn(`[iara] falha ao abrir sessão: ${(erro as Error).message}`);

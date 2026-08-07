@@ -12,6 +12,7 @@
  */
 
 import type { CapacidadeAtiva } from '../../../lib/estado';
+import type { Dominio } from '../../../lib/capacidades';
 
 export type Permissao =
   | 'rede' // fala com a internet
@@ -33,9 +34,17 @@ export interface CampoEsquema {
 export type Esquema = Record<string, CampoEsquema>;
 
 export interface ManifestoHabilidade {
+  /** Verbo + objeto, em português: `consultar_clima`, `buscar_historico`. */
   readonly id: string;
   readonly nome: string;
+  /**
+   * Escrita PARA A LLM ler ao planejar, não para humano ler em documentação.
+   * Descrição vaga produz plano vago — é o insumo mais barato de melhorar e o
+   * mais fácil de negligenciar.
+   */
   readonly descricao: string;
+  /** Família a que pertence. Define o agrupamento no manifesto e na projeção. */
+  readonly dominio: Dominio;
   /** Qual objeto da sala acende enquanto esta habilidade roda. */
   readonly capacidade: CapacidadeAtiva;
   readonly permissoes: readonly Permissao[];
@@ -64,7 +73,22 @@ export interface ResultadoHabilidade {
 
 export interface Habilidade {
   readonly manifesto: ManifestoHabilidade;
+  /**
+   * Faltou credencial ou dependência? Devolve o motivo; `null` significa
+   * pronta para uso.
+   *
+   * Habilidade indisponível continua NO CATÁLOGO, e isso é deliberado: some do
+   * que o Planejador pode pedir, mas aparece no manifesto para o operador ver
+   * o que a IARA poderia fazer e o que falta ligar. Esconder o desligado é o
+   * que faz um sistema parecer limitado quando na verdade está desconfigurado.
+   */
+  indisponivelPorque?(): string | null;
   executar(ctx: ContextoHabilidade): Promise<ResultadoHabilidade>;
+}
+
+/** Pronta para uso agora? */
+export function disponivel(h: Habilidade): boolean {
+  return !h.indisponivelPorque || h.indisponivelPorque() === null;
 }
 
 // ---------------------------------------------------------------------------

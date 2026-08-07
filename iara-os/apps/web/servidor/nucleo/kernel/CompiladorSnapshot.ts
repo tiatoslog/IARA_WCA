@@ -121,6 +121,9 @@ export class CompiladorSnapshot {
           destino: this.telemetria.rota,
           latencia_ms: null,
           cache_lido: this.telemetria.cache_lido,
+          // O compilador nunca preenche `voz`: áudio é do mundo HTTP, e quem
+          // anexa é a `PonteProjecao`. Aqui é sempre null.
+          voz: null,
         };
         break;
 
@@ -134,6 +137,7 @@ export class CompiladorSnapshot {
           destino: e.rota,
           latencia_ms: e.ms,
           cache_lido: this.telemetria.cache_lido,
+          voz: null,
         };
         break;
 

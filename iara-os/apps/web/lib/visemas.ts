@@ -172,6 +172,27 @@ export function trilhaDeVisemas(texto: string): Visema[] {
  * Quando o cursor alcança o texto revelado e a fala já terminou, devolve
  * `repouso` — boca fechada, que é o estado verdadeiro de quem parou de falar.
  */
+/**
+ * Onde a boca está quando existe ÁUDIO.
+ *
+ * Este é o caminho bom. `fracao` é `currentTime / duration` do elemento de
+ * áudio, então a boca segue a locução real: se a voz alonga uma vogal ou faz
+ * uma pausa, a boca acompanha, porque está lendo o mesmo relógio.
+ *
+ * A aproximação por cadência de leitura (`visemaAgora`) continua existindo
+ * para quando não há voz configurada — e ela é honesta sobre ser aproximação.
+ */
+export function visemaNoProgresso(
+  trilha: Visema[],
+  fracao: number,
+): { visema: Visema; progresso: number } {
+  if (trilha.length === 0) return { visema: 'repouso', progresso: 0 };
+  const limitada = fracao < 0 ? 0 : fracao > 1 ? 1 : fracao;
+  const cursor = limitada * trilha.length;
+  if (cursor >= trilha.length) return { visema: 'repouso', progresso: 1 };
+  return { visema: trilha[Math.floor(cursor)] ?? 'repouso', progresso: limitada };
+}
+
 export function visemaAgora(
   trilha: Visema[],
   revelados: number,

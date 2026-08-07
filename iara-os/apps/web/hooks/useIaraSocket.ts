@@ -32,6 +32,8 @@ export interface Fala {
   cache_lido?: number;
   tokens_entrada?: number;
   tokens_saida?: number;
+  /** Caminho do áudio desta fala, quando a voz já foi sintetizada. */
+  voz?: string | null;
   /**
    * `performance.now()` do instante em que o turno abriu. É o relógio que a
    * boca da projeção 3D usa para articular — precisa ser monotônico, então
@@ -116,6 +118,7 @@ export function useIaraSocket(credencial: Credencial) {
         destino: f.destino ?? undefined,
         latencia_ms: f.latencia_ms ?? undefined,
         cache_lido: f.cache_lido,
+        voz: f.voz,
         tokens_entrada: s.telemetria.tokens_entrada,
         tokens_saida: s.telemetria.tokens_saida,
         // Carimbado uma vez, na abertura do turno, e PRESERVADO nas
@@ -127,7 +130,16 @@ export function useIaraSocket(credencial: Credencial) {
         const proximo = [...antes, nova];
         return proximo.length > MAX_FALAS ? proximo.slice(-MAX_FALAS) : proximo;
       }
-      if (antes[i].texto === nova.texto && antes[i].concluida === nova.concluida) return antes;
+      // `voz` entra na comparação porque ela chega DEPOIS, num snapshot em que
+      // texto e conclusão já não mudam mais. Sem isto, o áudio nunca chegaria
+      // ao componente — o turno seria descartado como repetido.
+      if (
+        antes[i].texto === nova.texto &&
+        antes[i].concluida === nova.concluida &&
+        antes[i].voz === nova.voz
+      ) {
+        return antes;
+      }
       const copia = [...antes];
       copia[i] = nova;
       return copia;

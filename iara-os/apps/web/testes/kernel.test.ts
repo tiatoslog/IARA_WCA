@@ -17,6 +17,8 @@ import { FuncaoExecutiva } from '../servidor/nucleo/kernel/FuncaoExecutiva';
 import { MemoriaTrabalho } from '../servidor/nucleo/kernel/MemoriaTrabalho';
 import { TravaAssincrona } from '../servidor/nucleo/TravaAssincrona';
 import { EstadoAtomico } from '../servidor/nucleo/EstadoAtomico';
+import { Kernel } from '../servidor/nucleo/kernel/Kernel';
+import type { MemoriaOperacional } from '../servidor/nucleo/MemoriaOperacional';
 
 // ---------------------------------------------------------------------------
 // Barramento de eventos
@@ -107,7 +109,7 @@ test('planejador produz plano determinístico para âncora conhecida', () => {
 
   assert.equal(plano.origem, 'deterministico');
   assert.equal(plano.passos.length, 1);
-  assert.equal(plano.passos[0].habilidade, 'infraestrutura');
+  assert.equal(plano.passos[0].habilidade, 'consultar_infraestrutura');
   assert.equal(plano.passos[0].parametros.uf, 'MT');
 });
 
@@ -204,6 +206,85 @@ test('memória de trabalho acumula saídas e zera ao encerrar', () => {
   m.encerrarTarefa();
   assert.equal(m.ocupada, false);
   assert.equal(m.contextoAcumulado(), '');
+});
+
+// ---------------------------------------------------------------------------
+// Resiliência da persistência
+//
+// Estes dois testes existem por causa de uma falha real em produção: o
+// Supabase estava configurado mas o schema não tinha sido aplicado. A tabela
+// ausente derrubava a sessão na abertura e matava o turno na gravação — e o
+// operador via a tela sem reagir a nada. Silêncio é a única resposta que um
+// assistente nunca pode dar.
+// ---------------------------------------------------------------------------
+
+/** Memória que falha em tudo, como uma base sem as tabelas criadas. */
+function memoriaQuebrada() {
+  const explodir = async () => {
+    throw new Error('Could not find the table');
+  };
+  return {
+    registrar: explodir,
+    historico: explodir,
+    insightsPendentes: explodir,
+    consumirInsight: explodir,
+    gravarInsight: explodir,
+    consolidar: explodir,
+    carregarGlobal: async () => '',
+  } as unknown as MemoriaOperacional;
+}
+
+test('turno responde mesmo com a persistência fora', async () => {
+  const barramento = new BarramentoEventos('s1');
+  const estado = new EstadoAtomico();
+  const kernel = new Kernel({
+    sessao: 's1',
+    idUsuario: 'u1',
+    outrosOperadores: [],
+    estado,
+    memoria: memoriaQuebrada(),
+    barramento,
+  });
+
+  const tipos: string[] = [];
+  let respostaVisivel = '';
+  barramento.assinarTudo((e) => {
+    tipos.push(e.tipo);
+    if (e.tipo === 'TAREFA_CONCLUIDA') respostaVisivel = e.texto;
+  });
+
+  await kernel.processar('que horas são?');
+
+  assert.ok(tipos.includes('FALHA'), 'a falha de gravação precisa ser registrada');
+  assert.ok(
+    tipos.includes('TAREFA_CONCLUIDA'),
+    'o operador precisa receber resposta mesmo com o histórico fora',
+  );
+  assert.ok(respostaVisivel.length > 0, 'a resposta não pode ser vazia');
+  // A hora vem do relógio local, que não depende de banco nenhum.
+  assert.match(respostaVisivel, /\d{2}:\d{2}/);
+});
+
+test('falha no meio do turno vira fala, não só linha de console', async () => {
+  const barramento = new BarramentoEventos('s2');
+  const estado = new EstadoAtomico();
+  const kernel = new Kernel({
+    sessao: 's2',
+    idUsuario: 'u2',
+    outrosOperadores: [],
+    estado,
+    memoria: memoriaQuebrada(),
+    barramento,
+  });
+
+  // Rota de sigilo: caminho curto e determinístico, sem rede.
+  const falas: string[] = [];
+  barramento.assinar('TAREFA_CONCLUIDA', (e) => falas.push(e.texto));
+
+  await kernel.processar('me mostra as mensagens dele');
+
+  assert.equal(falas.length, 1, 'exatamente uma fala por turno');
+  assert.match(falas[0], /pertencem exclusivamente/);
 });
 
 // ---------------------------------------------------------------------------

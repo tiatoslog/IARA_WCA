@@ -26,36 +26,47 @@ function passo(
   return { indice, descricao, habilidade, parametros };
 }
 
-/** Planos conhecidos, indexados pela âncora que a percepção encontrou. */
+/**
+ * Planos conhecidos, indexados pela âncora que a percepção encontrou.
+ *
+ * Os ids referenciados aqui têm que existir no catálogo — `testes/kernel.test.ts`
+ * verifica isso, porque uma receita apontando para habilidade inexistente
+ * quebra em silêncio: o passo é pulado e a resposta sai vazia.
+ */
 const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
   clima: () => ({
     objetivo: 'Informar a condição externa do perímetro operacional',
     origem: 'deterministico',
-    passos: [passo(0, 'Consultar radar meteorológico', 'clima')],
+    passos: [passo(0, 'Consultar radar meteorológico', 'consultar_clima')],
   }),
 
   infraestrutura: (p) => ({
     objetivo: 'Responder sobre o estado da infraestrutura',
     origem: 'deterministico',
-    passos: [passo(0, 'Consultar base de centrais', 'infraestrutura', { uf: extrairUf(p.bruto) })],
+    // `consultar_infraestrutura` e não `executar_consulta_sql`: aquela funciona
+    // com ou sem banco, esta some do catálogo sem Supabase. Receita
+    // determinística não pode depender de credencial opcional.
+    passos: [passo(0, 'Consultar base de centrais', 'consultar_infraestrutura', { uf: extrairUf(p.bruto) })],
   }),
 
   incidente: (p) => ({
     objetivo: 'Recuperar histórico de incidente equivalente',
     origem: 'deterministico',
-    passos: [passo(0, 'Buscar assinatura no índice histórico', 'incidente', { consulta: p.bruto })],
+    passos: [
+      passo(0, 'Buscar assinatura no índice histórico', 'buscar_historico', { consulta: p.bruto }),
+    ],
   }),
 
   relogio: () => ({
     objetivo: 'Informar referência temporal',
     origem: 'deterministico',
-    passos: [passo(0, 'Ler relógio do servidor', 'relogio')],
+    passos: [passo(0, 'Ler relógio do servidor', 'consultar_agenda')],
   }),
 
   busca: (p) => ({
     objetivo: 'Levantar informação factual externa',
     origem: 'deterministico',
-    passos: [passo(0, 'Buscar na web', 'busca', { consulta: p.bruto })],
+    passos: [passo(0, 'Buscar na web', 'pesquisar_web', { consulta: p.bruto })],
   }),
 };
 
@@ -116,7 +127,7 @@ export class Planejador {
     return {
       objetivo: 'Recusar acesso a registro de terceiro',
       origem: 'deterministico',
-      passos: [passo(0, motivo, 'sigilo', {})],
+      passos: [passo(0, motivo, 'recusar_por_sigilo', {})],
     };
   }
 }

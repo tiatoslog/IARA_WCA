@@ -21,6 +21,10 @@ import {
 import { PoliticaPadrao, SandboxPorPolitica, LimiteVazao } from '../servidor/nucleo/kernel/Seguranca';
 import { FilaTelemetria } from '../servidor/barramento/FilaTelemetria';
 import { HABILIDADES_OPERACIONAIS } from '../servidor/nucleo/kernel/habilidades/operacionais';
+import { CATALOGO } from '../servidor/nucleo/kernel/habilidades';
+import { Planejador } from '../servidor/nucleo/kernel/Planejador';
+import { MotorPercepcao } from '../servidor/nucleo/kernel/Percepcao';
+import { DOMINIOS } from '../lib/capacidades';
 
 // ---------------------------------------------------------------------------
 // Validação de esquema
@@ -60,6 +64,7 @@ const habilidadeFalsa = (
     id,
     nome: id,
     descricao: 'teste',
+    dominio: 'automacao',
     capacidade: 'automacao',
     permissoes,
     timeout_ms,
@@ -164,6 +169,71 @@ test('toda habilidade operacional declara manifesto coerente', () => {
     assert.ok(m.descricao.length > 10, `${m.id}: descrição curta demais para a LLM planejar`);
     // Nenhuma habilidade operacional pode custar token — é o ponto delas.
     assert.equal(m.custo, 'zero', `${m.id}: habilidade operacional não pode custar tokens`);
+  }
+});
+
+/**
+ * Este teste existe porque a ausência dele deixou passar uma quebra real: as
+ * habilidades foram renomeadas e as receitas do Planejador continuaram
+ * apontando para os ids antigos. O passo era pulado em silêncio e a resposta
+ * saía vazia — o pior modo de falha possível, porque não gera erro nenhum.
+ */
+test('toda receita determinística aponta para habilidade que existe no catálogo', () => {
+  const ids = new Set(CATALOGO.map((h) => h.manifesto.id));
+  const planejador = new Planejador();
+  const percepcao = new MotorPercepcao();
+
+  const frases = [
+    'vai chover hoje?',
+    'quantas centrais ativas temos em MT?',
+    'esse erro de banco já aconteceu antes?',
+    'que horas são?',
+    'pesquisa o que é conhecimento de transporte eletrônico',
+  ];
+
+  for (const frase of frases) {
+    const plano = planejador.planejar(percepcao.perceber(frase));
+    for (const p of plano.passos) {
+      if (!p.habilidade || p.habilidade === 'raciocinio') continue;
+      assert.ok(ids.has(p.habilidade), `"${frase}" → habilidade inexistente "${p.habilidade}"`);
+    }
+  }
+
+  // A recusa por sigilo também é um plano, e também pode apodrecer.
+  const recusa = planejador.planoDeRecusa('teste');
+  assert.ok(ids.has(recusa.passos[0].habilidade!), 'plano de recusa aponta para id inexistente');
+});
+
+test('receita determinística nunca depende de habilidade opcional', () => {
+  // Uma receita que aponte para habilidade indisponível sem credencial faz o
+  // modo local parecer quebrado. Toda receita tem que funcionar sempre.
+  const planejador = new Planejador();
+  const percepcao = new MotorPercepcao();
+  const porId = new Map(CATALOGO.map((h) => [h.manifesto.id, h]));
+
+  for (const frase of ['quantas centrais ativas temos em MT?', 'que horas são?', 'vai chover?']) {
+    const plano = planejador.planejar(percepcao.perceber(frase));
+    for (const p of plano.passos) {
+      if (!p.habilidade || p.habilidade === 'raciocinio') continue;
+      const h = porId.get(p.habilidade)!;
+      assert.equal(
+        h.indisponivelPorque?.() ?? null,
+        null,
+        `receita para "${frase}" usa "${p.habilidade}", que pode estar indisponível`,
+      );
+    }
+  }
+});
+
+test('todo domínio declarado no manifesto existe', () => {
+  for (const h of CATALOGO) {
+    assert.ok(DOMINIOS[h.manifesto.dominio], `${h.manifesto.id}: domínio inválido`);
+  }
+});
+
+test('id de habilidade segue verbo_objeto em minúsculas', () => {
+  for (const h of CATALOGO) {
+    assert.match(h.manifesto.id, /^[a-z]+(_[a-z]+)+$/, `${h.manifesto.id} fora da convenção`);
   }
 });
 

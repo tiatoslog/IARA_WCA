@@ -1,13 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Escritorio } from '../components/Escritorio';
 import { PainelConversa } from '../components/PainelConversa';
 import { ConsoleTecnico } from '../components/ConsoleTecnico';
 import { Portaria } from '../components/Portaria';
+import { Presenca } from '../components/projecao/Presenca';
 import { useIaraSocket, type Credencial } from '../hooks/useIaraSocket';
+import { useVoz } from '../hooks/useVoz';
 import { OPERADORES } from '../lib/operadores';
 import { autenticacaoDisponivel, supabaseNavegador } from '../lib/supabaseNavegador';
+
+/**
+ * As duas projeções do mesmo snapshot. Não são temas: são periféricos de saída
+ * diferentes lendo o mesmo contrato. O Kernel não sabe qual está montado.
+ */
+type Projecao = 'escritorio' | 'presenca';
+
+const CHAVE_PROJECAO = 'iara.projecao';
 
 function Medidor({ rotulo, valor, cor }: { rotulo: string; valor: number; cor: string }) {
   return (
@@ -31,45 +41,106 @@ function Medidor({ rotulo, valor, cor }: { rotulo: string; valor: number; cor: s
   );
 }
 
+/** Alterna o periférico de saída. Só isso — não toca em nada do Kernel. */
+function SeletorProjecao({ valor, aoTrocar }: { valor: Projecao; aoTrocar: (p: Projecao) => void }) {
+  return (
+    <div className="seletor-projecao" role="group" aria-label="Projeção">
+      <button
+        className={valor === 'escritorio' ? 'ativo' : undefined}
+        onClick={() => aoTrocar('escritorio')}
+      >
+        Escritório
+      </button>
+      <button
+        className={valor === 'presenca' ? 'ativo' : undefined}
+        onClick={() => aoTrocar('presenca')}
+      >
+        Presença
+      </button>
+    </div>
+  );
+}
+
 /** O escritório em si. Só monta quando já existe uma credencial resolvida. */
 function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => void) | null }) {
   const { snapshot: estado, falas, logs, conectado, enviar, interromper } = useIaraSocket(credencial);
+  const [projecao, setProjecao] = useState<Projecao>('escritorio');
+
+  useEffect(() => {
+    const salva = window.localStorage.getItem(CHAVE_PROJECAO);
+    if (salva === 'presenca' || salva === 'escritorio') setProjecao(salva);
+  }, []);
+
+  const trocarProjecao = useCallback((p: Projecao) => {
+    window.localStorage.setItem(CHAVE_PROJECAO, p);
+    setProjecao(p);
+  }, []);
+
+  /**
+   * A última fala da IARA. É o relógio da articulação da boca no driver 3D —
+   * ver `ControladorFacial`. Falas do operador não movem o rosto dela.
+   */
+  const falaCorrente = useMemo(() => {
+    for (let i = falas.length - 1; i >= 0; i -= 1) {
+      if (falas[i].papel === 'iara') return falas[i];
+    }
+    return null;
+  }, [falas]);
+
+  /**
+   * A voz vive AQUI, acima das duas projeções. A IARA fala tanto no escritório
+   * quanto na presença — só a boca é exclusiva do avatar 3D. Montar o áudio
+   * dentro de `Presenca` a deixaria muda na sala em pixel art, e trocar de
+   * projeção cortaria a fala no meio.
+   */
+  const voz = useVoz(falaCorrente, true);
 
   return (
     <main className="tela">
-      <section className="ambiente-sala">
-        <div className="hud">
-          {aoSair ? (
-            <button className="botao" onClick={aoSair}>
-              Sair
-            </button>
-          ) : (
-            <SeletorLocal />
-          )}
-          <Medidor
-            rotulo="energia cognitiva"
-            valor={estado.metricas.energia_cognitiva}
-            cor="var(--luz-quente)"
-          />
-          <Medidor
-            rotulo="paciência"
-            valor={estado.metricas.paciencia_operacional}
-            cor="var(--luz-verde)"
-          />
-          <Medidor rotulo="afinidade" valor={estado.metricas.afinidade} cor="#c9a0dc" />
-          <Medidor
-            rotulo="carga de contexto"
-            valor={estado.metricas.carga_contextual}
-            cor="var(--luz-alerta)"
-          />
-        </div>
+      {projecao === 'escritorio' ? (
+        <section className="ambiente-sala">
+          <div className="hud">
+            {aoSair ? (
+              <button className="botao" onClick={aoSair}>
+                Sair
+              </button>
+            ) : (
+              <SeletorLocal />
+            )}
+            <SeletorProjecao valor={projecao} aoTrocar={trocarProjecao} />
+            <Medidor
+              rotulo="energia cognitiva"
+              valor={estado.metricas.energia_cognitiva}
+              cor="var(--luz-quente)"
+            />
+            <Medidor
+              rotulo="paciência"
+              valor={estado.metricas.paciencia_operacional}
+              cor="var(--luz-verde)"
+            />
+            <Medidor rotulo="afinidade" valor={estado.metricas.afinidade} cor="#c9a0dc" />
+            <Medidor
+              rotulo="carga de contexto"
+              valor={estado.metricas.carga_contextual}
+              cor="var(--luz-alerta)"
+            />
+          </div>
 
-        <div className="enquadramento">
-          <Escritorio estado={estado} />
-        </div>
+          <div className="enquadramento">
+            <Escritorio estado={estado} />
+          </div>
 
-        <ConsoleTecnico logs={logs} />
-      </section>
+          <ConsoleTecnico logs={logs} />
+        </section>
+      ) : (
+        <Presenca
+          snapshot={estado}
+          falaCorrente={falaCorrente}
+          voz={voz}
+          conectado={conectado}
+          controles={<SeletorProjecao valor={projecao} aoTrocar={trocarProjecao} />}
+        />
+      )}
 
       <PainelConversa
         estado={estado}
@@ -78,6 +149,16 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         onEnviar={enviar}
         onInterromper={interromper}
       />
+
+      {/* Política de mídia do navegador exige um gesto antes de tocar som.
+          Não é erro — mas ficar em silêncio seria indistinguível de voz
+          quebrada, e o operador acharia que a síntese falhou. Fica fora das
+          duas projeções porque a voz também é das duas. */}
+      {voz.bloqueado && (
+        <button className="voz-bloqueada" onClick={voz.liberar}>
+          Ativar a voz da IARA
+        </button>
+      )}
     </main>
   );
 }

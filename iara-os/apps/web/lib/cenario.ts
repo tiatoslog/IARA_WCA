@@ -15,6 +15,21 @@ export const SALA_LARGURA = 320;
 export const SALA_ALTURA = 208;
 export const ALTURA_PAREDE = 64;
 
+/**
+ * Linha de contato da fileira do fundo — um tile INTEIRO abaixo da emenda
+ * parede/piso.
+ *
+ * Móvel encostado na parede não toca o chão na emenda: ele fica À FRENTE da
+ * parede, com o pé no piso. Alinhar a base exatamente em `ALTURA_PAREDE` é o
+ * que faz um armário parecer pendurado — foi o defeito da primeira versão, em
+ * que a arte da estante terminava 12px ACIMA da emenda e a sala inteira lia
+ * como uma parede com quadros, não como um cômodo com móveis.
+ *
+ * O corpo do móvel atravessar a emenda é o efeito desejado, não um acidente:
+ * é ele que produz a leitura de profundidade. O rack já fazia isso (base 108).
+ */
+export const LINHA_FUNDO = ALTURA_PAREDE + TILE; // 80
+
 // ---------------------------------------------------------------------------
 // Profundidade
 // ---------------------------------------------------------------------------
@@ -72,54 +87,89 @@ export function baseDoSprite(s: Sprite): number {
 // (x=0 e x=320). O centro do piso não é parede — é circulação.
 //
 //        0    32   64   96  128  160  192  224  256  288  320
-//   0    +--------+--------+-------+---------+-------+-----+
-//        | estante|  C O P A| bebe | janela  | metas |rack |  parede de fundo
-//  64    +--------+--------+-------+---------+-------+-----+
-//        |escriv. |                                 |print|
-//        |        |   est.1        est.2            |     |  piso
-// 144    |        | [cadeiras encostadas nas mesas] |banca|
-// 160    |--------+--- C O R R E D O R   L I V R E -+-----|
-// 208    | planta |                                 |plant|
-//        +-------------------------------------------------+
+//   0    +------+------+-----+----------+------+--------+---+
+//        |metas |estant| pia | cafeteira| bebe | janela |rck|  parede de fundo
+//  64    +------+------+-----+----------+------+--------+---+
+//        |escriv|                                    |print|
+//        |      |   est.1        est.2               |     |  piso
+// 144    |      | [cadeiras encostadas nas mesas]    |banca|
+// 160    |------+---- C O R R E D O R   L I V R E ---+-----|
+// 208    |planta|                                    |plant|
+//        +--------------------------------------------------+
+//
+// AS COORDENADAS SÃO DE CONTEÚDO, NÃO DE FOLHA. Toda folha do pack tem padding
+// transparente, e ele não é simétrico nem previsível: `cabinet.png` é 64x64 com
+// 25px de arte começando em x=18; `coffee-maker.png` é 64x64 com 62px de arte
+// começando em x=1. Espaçar pela largura declarada da folha é o que produz
+// sobreposição — dois sprites "encostados" pela folha têm arte separada por
+// 30px, e dois "separados" pela folha se atropelam.
+//
+// Larguras de ARTE medidas do arquivo (alpha bounding box):
+//   cabinet 25 · sink 34 · coffee-maker 62 · water-cooler 14
+//   writing-table 38 · desk 38 · desk-with-pc 38 · PC1 25 · Chair 12
+//   printer 61 · stamping-table 46 · Trash 9 · plant 11
+//
+// Parede de fundo, da esquerda para a direita, em coordenada de ARTE:
+//   metas 6..46 · estante 54..79 · pia 87..120 · cafeteira 128..189
+//   bebedouro 197..210 · janela 218..282 · rack 288..316
+// Folga de 8 entre vizinhos, 6 antes do rack, 4 de margem nas pontas.
 //
 // Invariantes de layout:
 //   - Nada de corpo fechado no piso aberto. Só cadeiras, plantas e o par
 //     mesa/monitor vivem soltos, e cadeira sempre encostada na sua mesa.
+//   - Fileira do fundo tem base em LINHA_FUNDO (80), não em ALTURA_PAREDE (64):
+//     ela fica À FRENTE da parede, com o pé no piso. O corpo do móvel cruza a
+//     emenda de propósito — é isso que dá profundidade em vez de leitura de
+//     quadro pendurado.
+//   - `ancora` é o padding transparente de BAIXO da folha, medido do arquivo.
+//     Se ela mentir, a base mente, e a ordem de desenho mente junto.
 //   - Estações compartilham base ~145: mesas paralelas e alinhadas.
 //   - Cadeira = base da mesa + 6. Folga maior que isso lê como cadeira
 //     abandonada longe da mesa, não como posto de trabalho.
 //   - Monitor sobre mesa tem base na LINHA DA TAMPA, não no piso: assim a
 //     frente da mesa desenha por cima do pé do monitor.
 //   - Faixa y 160..208 vazia entre as bordas: é o corredor.
+//
+// `testes/cenario.test.ts` remede os PNGs e falha se qualquer par voltar a se
+// sobrepor. Não confie no olho aqui — foi o olho que deixou passar da última vez.
 
 /** Mobília e adereços. Nada aqui reage a dado — a luz é aplicada por cima. */
 export const MOBILIA: Sprite[] = [
-  // --- parede de fundo, esquerda para a direita ---
-  { arquivo: 'cabinet.png', largura: 64, altura: 64, x: 0, y: 8, luz: 'estante', ancora: 60 },
-  { arquivo: 'sink.png', largura: 64, altura: 64, x: 52, y: 8, ancora: 56 },
-  { arquivo: 'coffee-maker.png', largura: 64, altura: 64, x: 104, y: 8, luz: 'cafeteira', ancora: 56 },
-  { arquivo: 'water-cooler.png', largura: 16, altura: 32, x: 160, y: 32 },
+  // --- fileira do fundo, esquerda para a direita ---
+  // O `x` compensa o padding lateral da folha: arte em 54 com padding 18 =>
+  // sprite 36. A `ancora` é o padding VERTICAL de baixo, medido do arquivo, e
+  // por isso a base de cada uma cai exatamente em LINHA_FUNDO.
+  { arquivo: 'cabinet.png', largura: 64, altura: 64, x: 36, y: 32, luz: 'estante', ancora: 48 },
+  { arquivo: 'sink.png', largura: 64, altura: 64, x: 72, y: 33, ancora: 47 },
+  { arquivo: 'coffee-maker.png', largura: 64, altura: 64, x: 127, y: 30, luz: 'cafeteira', ancora: 50 },
+  { arquivo: 'water-cooler.png', largura: 16, altura: 32, x: 197, y: 50, ancora: 30 },
 
   // --- borda esquerda: escrivaninha de costas para a parede lateral ---
-  { arquivo: 'writing-table.png', largura: 64, altura: 64, x: 0, y: 96, luz: 'gaveteiro', ancora: 60 },
+  { arquivo: 'writing-table.png', largura: 64, altura: 64, x: 0, y: 96, luz: 'gaveteiro', ancora: 48 },
 
   // --- borda direita: coluna tech inteira sob o rack ---
-  { arquivo: 'printer.png', largura: 64, altura: 32, x: 252, y: 104 },
-  { arquivo: 'stamping-table.png', largura: 64, altura: 32, x: 252, y: 148 },
-  { arquivo: 'Trash.png', largura: 16, altura: 16, x: 236, y: 152 },
+  // y=110 e não 104: o rack termina em 108, e 104 punha a arte da impressora
+  // por cima do pé dele.
+  { arquivo: 'printer.png', largura: 64, altura: 32, x: 252, y: 110, ancora: 31 },
+  { arquivo: 'stamping-table.png', largura: 64, altura: 32, x: 252, y: 148, ancora: 28 },
+  // Encostada na parede direita, entre a impressora e a bancada. Em x=236 ela
+  // ficava solta no meio do piso e ainda entrava no corredor.
+  { arquivo: 'Trash.png', largura: 16, altura: 16, x: 302, y: 142, ancora: 12 },
 
   // --- operacional: ilha central, duas estações paralelas ---
-  { arquivo: 'desk.png', largura: 64, altura: 32, x: 60, y: 112 },
-  // `ancora: 22` põe a base do monitor na tampa da mesa (112+6), não no piso.
+  { arquivo: 'desk.png', largura: 64, altura: 32, x: 60, y: 112, ancora: 28 },
+  // ÚNICA âncora que não é o fundo da arte: o monitor não toca o piso, toca a
+  // TAMPA DA MESA. `22` põe a base dele em 118, acima da base da mesa (140), e
+  // é isso que faz a frente da mesa desenhar por cima do pé do monitor.
   { arquivo: 'PC1.png', largura: 32, altura: 32, x: 76, y: 96, ancora: 22 },
-  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 84, y: 134 },
+  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 84, y: 134, ancora: 15 },
 
-  { arquivo: 'desk-with-pc.png', largura: 64, altura: 64, x: 140, y: 84, luz: 'terminal', ancora: 58 },
-  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 164, y: 132 },
+  { arquivo: 'desk-with-pc.png', largura: 64, altura: 64, x: 140, y: 84, luz: 'terminal', ancora: 47 },
+  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 164, y: 132, ancora: 15 },
 
   // --- adereços: plantas nos dois cantos inferiores, fechando o corredor ---
-  { arquivo: 'plant.png', largura: 32, altura: 32, x: 0, y: 172, luz: 'planta' },
-  { arquivo: 'plant.png', largura: 32, altura: 32, x: 288, y: 176 },
+  { arquivo: 'plant.png', largura: 32, altura: 32, x: 0, y: 172, luz: 'planta', ancora: 31 },
+  { arquivo: 'plant.png', largura: 32, altura: 32, x: 288, y: 176, ancora: 31 },
 ];
 
 /**
@@ -192,9 +242,16 @@ export interface Retangulo {
   altura: number;
 }
 
-/** Chapados na parede: nada passa atrás, então vivem em `CAMADA_MURAL`. */
-export const JANELA: Retangulo = { id: 'janela', x: 208, y: 12, largura: 64, altura: 40 };
-export const QUADRO_METAS: Retangulo = { id: 'quadro_metas', x: 8, y: 16, largura: 40, altura: 28 };
+/**
+ * Chapados na parede: nada passa atrás, então vivem em `CAMADA_MURAL`.
+ *
+ * O quadro de metas é o primeiro pano da parede, à esquerda da estante. Ele
+ * ficava em x=8 — debaixo do armário, invisível — porque o zoneamento foi
+ * reescrito e a constante ficou para trás. `CAMADA_MURAL` é o que torna esse
+ * tipo de erro silencioso: o mural nunca reclama de ser coberto.
+ */
+export const QUADRO_METAS: Retangulo = { id: 'quadro_metas', x: 6, y: 16, largura: 40, altura: 28 };
+export const JANELA: Retangulo = { id: 'janela', x: 218, y: 12, largura: 64, altura: 40 };
 
 /** O rack fica no piso: tem base e entra na ordenação por profundidade. */
 export const RACK: Retangulo = { id: 'rack', x: 288, y: 12, largura: 28, altura: 96 };

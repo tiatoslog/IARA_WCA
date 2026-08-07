@@ -16,7 +16,9 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import type { Bone, Object3D, SkinnedMesh } from 'three';
-import type { SnapshotCognitivo } from '../../lib/projecao';
+import type { SnapshotCognitivo } from '../../lib/snapshot';
+import type { Fala } from '../../hooks/useIaraSocket';
+import type { RelogioVoz } from '../../hooks/useVoz';
 import { ControladorFacial } from './ControladorFacial';
 import { resolverAlvos, rigSuficiente, type AlvoMorph, type ParametroFacial } from './mapaFacial';
 
@@ -58,21 +60,29 @@ function acharOssoCabeca(raiz: Object3D): Bone | null {
 
 export function AvatarPresenca({
   snapshot,
+  fala,
+  voz,
   aoDiagnosticar,
 }: {
   snapshot: SnapshotCognitivo;
+  /** A fala corrente da IARA — o texto que a boca articula. */
+  fala: Fala | null;
+  /** Relógio do áudio, quando há voz. Tem precedência sobre a cadência de leitura. */
+  voz: RelogioVoz | null;
   aoDiagnosticar?: (d: DiagnosticoRig) => void;
 }) {
   const { scene } = useGLTF(CAMINHO_MODELO);
   const controlador = useMemo(() => new ControladorFacial(), []);
 
   /**
-   * O snapshot entra por ref, não por dependência do frame loop. Se o loop
-   * fechasse sobre a prop, cada mensagem nova recriaria o callback e o R3F
-   * teria de reinscrever — trabalho por quadro que não precisa existir.
+   * Snapshot e fala entram por ref, não por dependência do frame loop. Se o
+   * loop fechasse sobre as props, cada trecho de resposta recriaria o callback
+   * e o R3F teria de reinscrever — trabalho por quadro que não precisa existir.
    */
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
+  const falaRef = useRef(fala);
+  falaRef.current = fala;
 
   const { malhas, ossoCabeca, diagnostico } = useMemo(() => {
     const encontradas: MalhaLigada[] = [];
@@ -119,7 +129,13 @@ export function AvatarPresenca({
   );
 
   useFrame((_, dt) => {
-    const quadro = controlador.atualizar(snapshotRef.current, performance.now(), dt);
+    const quadro = controlador.atualizar(
+      snapshotRef.current,
+      falaRef.current,
+      voz,
+      performance.now(),
+      dt,
+    );
 
     for (const { malha, alvos } of malhas) {
       const influencias = malha.morphTargetInfluences;
@@ -133,10 +149,11 @@ export function AvatarPresenca({
     }
 
     if (ossoCabeca && repouso) {
-      // Amplitudes pequenas de propósito: 0.26 rad ≈ 15°, que já é um giro
-      // bem visível numa cabeça enquadrada de perto.
-      ossoCabeca.rotation.y = repouso.y + quadro.cabeca.giro * 0.26;
-      ossoCabeca.rotation.z = repouso.z + quadro.cabeca.inclinacao * 0.14;
+      // `giro` e `inclinacao` já chegam em radianos, convertidos dos graus do
+      // contrato. O aceno é normalizado -1..1, então tem amplitude própria:
+      // 0.1 rad ≈ 6°, que numa cabeça enquadrada de perto já é um aceno claro.
+      ossoCabeca.rotation.y = repouso.y + quadro.cabeca.giro;
+      ossoCabeca.rotation.z = repouso.z + quadro.cabeca.inclinacao;
       ossoCabeca.rotation.x = repouso.x + quadro.cabeca.aceno * 0.1;
     }
   });

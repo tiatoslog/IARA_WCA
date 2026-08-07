@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "tsx servidor/principal.ts",
     "icones": "node scripts/gerar-icones.mjs",
+    "vozes": "node scripts/vozes.mjs",
     "limpar": "node -e \"require('node:fs').rmSync('.next',{recursive:true,force:true})\"",
     "test": "node --import tsx --test \"testes/**/*.test.ts\"",
     "verificar": "tsc --noEmit && npm test"
