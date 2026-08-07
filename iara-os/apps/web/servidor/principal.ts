@@ -17,6 +17,8 @@ import { config as carregarEnv } from 'dotenv';
 import { conectarOperador, encerrarResidentes, prepararMotor } from './barramento/Porta';
 import { persistenciaEmUso } from './nucleo/ClienteSupabase';
 import { autenticacaoAtiva } from './nucleo/Autenticacao';
+import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
+import { diagnosticoWhatsapp } from './canais/WhatsApp';
 import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
 
 carregarEnv({ path: '.env.local' });
@@ -82,6 +84,20 @@ async function subir(): Promise<void> {
 
   const servidorHttp = createServer((req, res) => {
     const caminho = (req.url ?? '').split('?')[0];
+
+    /**
+     * Canal WhatsApp. Vem ANTES do Next porque a Meta exige o corpo bruto para
+     * conferir a assinatura, e o body parser do Next já teria consumido o
+     * stream — reserializar o JSON muda bytes e a assinatura deixa de bater.
+     */
+    if (ehRotaWhatsapp(req.url ?? '')) {
+      void tratarWhatsapp(req, res).catch((e: Error) => {
+        console.warn(`[iara] whatsapp: ${e.message}`);
+        if (!res.headersSent) res.writeHead(500).end();
+      });
+      return;
+    }
+
     const voz = ROTA_VOZ.exec(caminho);
 
     if (voz) {
@@ -130,6 +146,7 @@ async function subir(): Promise<void> {
     console.log(`[iara] IARA OS em http://localhost:${PORTA}`);
     console.log(`[iara] barramento em ${CAMINHO_WS} (mesma porta, mesma origem)`);
     console.log(`[iara] persistência: ${persistenciaEmUso()}`);
+    console.log(`[iara] ${diagnosticoWhatsapp()}`);
     console.log(`[iara] voz: ${diagnosticoVoz()}`);
     console.log(
       autenticacaoAtiva()
