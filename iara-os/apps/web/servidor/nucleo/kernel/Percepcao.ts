@@ -49,6 +49,29 @@ const ANCORAS: ReadonlyArray<{ re: RegExp; nome: string; acionavel: boolean }> =
     nome: 'analise',
     acionavel: false,
   },
+  // Agente Local. O vocabulário abaixo é o mesmo que `Planejador.extrairNomePasta`,
+  // `extrairLocalAutorizado` e `extrairAcaoEnergia` sabem interpretar — reconhecer
+  // aqui o que o planejador não sabe extrair produziria âncora sem plano.
+  {
+    re: /\b(cri[ae]|criar|nova)\s+(uma\s+)?pasta\b|\bpasta\s+(chamada|nomeada|com o nome)\b/,
+    nome: 'pasta',
+    acionavel: true,
+  },
+  {
+    re: /\b(abra|abre|abrir|inicie|iniciar)\s+(o|a|os|as)?\s*(bloco de notas|calculadora|navegador|explorador|terminal|prompt|aplicativo|programa)\b/,
+    nome: 'abrir_app',
+    acionavel: true,
+  },
+  {
+    re: /\b(desligue|desliga|desligar|reinicie|reinicia|reiniciar|suspenda|suspender|hiberne|hibernar)\b/,
+    nome: 'energia',
+    acionavel: true,
+  },
+  {
+    re: /\b(confirmo|confirmado|confirmar|prossiga|cancela|cancelar|cancelado|abortar)\b/,
+    nome: 'confirmacao',
+    acionavel: true,
+  },
 ];
 
 export class MotorPercepcao {
@@ -102,6 +125,10 @@ export class MotorPercepcao {
     if (ancoras.includes('relogio')) return 'referência temporal';
     if (ancoras.includes('busca')) return 'levantamento factual';
     if (ancoras.includes('analise')) return 'análise';
+    if (ancoras.includes('confirmacao')) return 'resolução de ação pendente';
+    if (ancoras.includes('pasta')) return 'organização de arquivos';
+    if (ancoras.includes('abrir_app')) return 'abertura de aplicativo';
+    if (ancoras.includes('energia')) return 'controle de energia da máquina';
     if (tipo === 'documento') return 'análise documental';
     if (tipo === 'saudacao') return 'abertura de conversa';
     if (tipo === 'comando') return 'execução de ação';
