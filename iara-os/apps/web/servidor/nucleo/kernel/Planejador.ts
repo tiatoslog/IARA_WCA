@@ -68,7 +68,81 @@ const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
     origem: 'deterministico',
     passos: [passo(0, 'Buscar na web', 'pesquisar_web', { consulta: p.bruto })],
   }),
+
+  // --- agente local ---
+  pasta: (p) => ({
+    objetivo: 'Criar pasta no computador',
+    origem: 'deterministico',
+    passos: [
+      passo(0, 'Criar a pasta na raiz autorizada', 'criar_pasta', {
+        nome: extrairNomePasta(p.bruto),
+        local: extrairLocalAutorizado(p.bruto),
+      }),
+    ],
+  }),
+
+  abrir_app: (p) => ({
+    objetivo: 'Abrir aplicativo autorizado',
+    origem: 'deterministico',
+    passos: [passo(0, 'Abrir o aplicativo pedido', 'abrir_aplicativo', { aplicativo: p.bruto })],
+  }),
+
+  energia: (p) => ({
+    objetivo: 'Preparar ação de energia com confirmação',
+    origem: 'deterministico',
+    passos: [
+      passo(0, 'Registrar pendência e pedir confirmação', 'acionar_energia', {
+        acao: extrairAcaoEnergia(p.bruto),
+      }),
+    ],
+  }),
+
+  confirmacao: (p) => ({
+    objetivo: 'Resolver confirmação pendente',
+    origem: 'deterministico',
+    passos: [
+      passo(0, 'Fechar o ciclo da ação pendente', 'resolver_confirmacao', {
+        resposta: /^confirmo|^pode /.test(normalizarLocal(p.bruto)) ? 'confirmo' : 'cancelar',
+      }),
+    ],
+  }),
 };
+
+function normalizarLocal(bruto: string): string {
+  return bruto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * O NOME vem do texto ORIGINAL (acentos preservados — a pasta se chama
+ * "Contratos Aéreos", não "contratos aereos"); o LOCAL vem do normalizado.
+ */
+export function extrairNomePasta(bruto: string): string {
+  const m = bruto.match(
+    /pasta\s+(?:chamada\s+|com\s+o\s+nome\s+|nomeada\s+)?["“']?(.+?)["”']?\s*(?:(?:na|no|em)\s+(?:minha\s+|meu\s+)?(?:área de trabalho|area de trabalho|desktop|documentos|downloads))?\s*[?.!]*$/i,
+  );
+  const nome = m?.[1]?.trim() ?? '';
+  // "crie uma pasta" sem nome, ou sobrou só ruído: nome honesto de fallback.
+  if (!nome || /^(nova|uma|a)$/i.test(nome)) return 'Nova pasta';
+  return nome;
+}
+
+export function extrairLocalAutorizado(bruto: string): string {
+  const t = normalizarLocal(bruto);
+  if (/\b(documentos)\b/.test(t)) return 'documentos';
+  if (/\b(downloads)\b/.test(t)) return 'downloads';
+  return 'area_de_trabalho';
+}
+
+export function extrairAcaoEnergia(bruto: string): string {
+  const t = normalizarLocal(bruto);
+  if (/\b(reinicie|reinicia|reiniciar)\b/.test(t)) return 'reiniciar';
+  if (/\b(suspenda|suspender|hiberne|hibernar)\b/.test(t)) return 'suspender';
+  return 'desligar';
+}
 
 const UFS: Record<string, string> = {
   'mato grosso do sul': 'MS',

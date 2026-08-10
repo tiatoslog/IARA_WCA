@@ -18,7 +18,8 @@
  * passo. É o que transforma "ela está pensando" em "ela está no passo 2 de 4".
  */
 
-import type { CapacidadeAtiva, EstagioCognitivo } from '../../lib/estado';
+import type { ReactNode } from 'react';
+import type { CapacidadeAtiva } from '../../lib/estado';
 import type { SnapshotCognitivo } from '../../lib/snapshot';
 
 export const ROTULO_CAPACIDADE: Record<CapacidadeAtiva, string> = {
@@ -27,15 +28,6 @@ export const ROTULO_CAPACIDADE: Record<CapacidadeAtiva, string> = {
   memoria: 'Memória',
   automacao: 'Automação',
   percepcao: 'Percepção',
-};
-
-export const ROTULO_ESTAGIO: Record<EstagioCognitivo, string> = {
-  ocioso: 'em repouso',
-  escutando: 'escutando',
-  executando: 'executando',
-  consultando: 'consultando memória',
-  pensando: 'raciocinando',
-  falando: 'respondendo',
 };
 
 function Barra({ rotulo, valor }: { rotulo: string; valor: number }) {
@@ -63,29 +55,27 @@ function Numero({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
+/**
+ * Identidade, estágio, conexão e aviso de nuvem NÃO moram aqui: moram no
+ * cabeçalho da conversa, uma vez. Este painel é o HUD de instrumentos — o
+ * que ele mostra, nenhum outro painel repete (decisão de 08/08/2026).
+ *
+ * Desde a V4 ele é OCULTO por padrão: instrumentação se abre quando se quer
+ * inspecionar, não mora permanentemente na tela principal.
+ */
 export function PainelCapacidades({
   snapshot,
-  conectado,
+  extra,
 }: {
   snapshot: SnapshotCognitivo;
-  conectado: boolean;
+  /** Blocos extras do painel técnico (ex.: seletor de desempenho). */
+  extra?: ReactNode;
 }) {
   const { telemetria, metricas, plano } = snapshot;
   const chaves = Object.keys(ROTULO_CAPACIDADE) as CapacidadeAtiva[];
 
   return (
     <aside className="painel-presenca rolagem">
-      <header className="presenca-cabecalho">
-        <div className="presenca-identidade">
-          <span className="presenca-nome">IARA</span>
-          <span className="presenca-estagio">{ROTULO_ESTAGIO[snapshot.estagio]}</span>
-        </div>
-        <span
-          className={conectado ? 'presenca-enlace ligado' : 'presenca-enlace'}
-          title={conectado ? 'barramento aberto' : 'barramento fechado'}
-        />
-      </header>
-
       <section className="presenca-bloco">
         <h3>Capacidades</h3>
         {chaves.map((chave) => (
@@ -139,11 +129,17 @@ export function PainelCapacidades({
         )}
       </section>
 
-      {snapshot.nuvem_indisponivel && (
-        <p className="presenca-aviso">
-          Sem chave da Anthropic. A IARA responde em modo local e avisa em vez de improvisar.
-        </p>
+      {snapshot.operador && (
+        <section className="presenca-bloco">
+          <h3>Sessão</h3>
+          <div className="telemetria">
+            <Numero rotulo="operador" valor={snapshot.operador.nome} />
+            <Numero rotulo="leitura" valor={snapshot.leitura.estado} />
+          </div>
+        </section>
       )}
+
+      {extra}
     </aside>
   );
 }

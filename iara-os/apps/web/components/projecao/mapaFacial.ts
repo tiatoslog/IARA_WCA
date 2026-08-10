@@ -13,6 +13,12 @@
  * digitação aqui — é assim no arquivo, e por isso a resolução é por lista de
  * candidatos em vez de por regra de sufixo.
  *
+ * A terceira nomenclatura na tabela é a da "Lisa" (skullvez, CC-BY, o rosto da
+ * fase 1): o conjunto facial clássico do iPhone — `JawOpen`, `EyeBlink_L`,
+ * `EyesLeft` (olhar COMBINADO dos dois olhos num alvo só, não por olho) — lido
+ * do binário FBX real, canal a canal. Quando a Natasha chegar (fase 2), os
+ * nomes MetaHuman que já estão aqui a recebem sem edição nenhuma.
+ *
  * REGRA DE RESOLUÇÃO: todo candidato que existir no modelo é acionado. Isso
  * cobre os dois casos de uma vez — nomenclaturas alternativas (MetaHuman vs.
  * ARKit, das quais só uma existe por modelo) e parâmetros que legitimamente
@@ -47,35 +53,35 @@ export type ParametroFacial =
  * de glTF normaliza os nomes, então o casamento é por sufixo — ver `resolver`.
  */
 export const MAPA_FACIAL: Record<ParametroFacial, string[]> = {
-  piscar_e: ['eye_blink_L', 'eyeBlink_L', 'eyeBlinkLeft'],
-  piscar_d: ['eye_blink_R', 'eyeBlink_R', 'eyeBlinkRight'],
+  piscar_e: ['eye_blink_L', 'eyeBlink_L', 'eyeBlinkLeft', 'EyeBlink_L'],
+  piscar_d: ['eye_blink_R', 'eyeBlink_R', 'eyeBlinkRight', 'EyeBlink_R'],
 
-  olhar_esquerda: ['eye_lookLeft_L', 'eye_lookLeft_R', 'eyeLookOut_L', 'eyeLookIn_R', 'eyeLookOutLeft', 'eyeLookInRight'],
-  olhar_direita: ['eye_lookRight_L', 'eye_lookRight_R', 'eyeLookIn_L', 'eyeLookOut_R', 'eyeLookInLeft', 'eyeLookOutRight'],
-  olhar_cima: ['eye_lookUp_L', 'eye_lookUp_R', 'eyeLookUp_L', 'eyeLookUp_R', 'eyeLookUpLeft', 'eyeLookUpRight'],
-  olhar_baixo: ['eye_lookDown_L', 'eye_lookDown_R', 'eyeLookDown_L', 'eyeLookDown_R', 'eyeLookDownLeft', 'eyeLookDownRight'],
+  olhar_esquerda: ['eye_lookLeft_L', 'eye_lookLeft_R', 'eyeLookOut_L', 'eyeLookIn_R', 'eyeLookOutLeft', 'eyeLookInRight', 'EyesLeft'],
+  olhar_direita: ['eye_lookRight_L', 'eye_lookRight_R', 'eyeLookIn_L', 'eyeLookOut_R', 'eyeLookInLeft', 'eyeLookOutRight', 'EyesRight'],
+  olhar_cima: ['eye_lookUp_L', 'eye_lookUp_R', 'eyeLookUp_L', 'eyeLookUp_R', 'eyeLookUpLeft', 'eyeLookUpRight', 'EyesUp'],
+  olhar_baixo: ['eye_lookDown_L', 'eye_lookDown_R', 'eyeLookDown_L', 'eyeLookDown_R', 'eyeLookDownLeft', 'eyeLookDownRight', 'EyesDown'],
 
-  palpebra_apertada: ['eye_squintInner_L', 'eye_squintInner_R', 'eyeSquint_L', 'eyeSquint_R'],
-  olho_arregalado: ['eye_widen_L', 'eye_widen_R', 'eyeWide_L', 'eyeWide_R'],
+  palpebra_apertada: ['eye_squintInner_L', 'eye_squintInner_R', 'eyeSquint_L', 'eyeSquint_R', 'EyeSquint_L', 'EyeSquint_R'],
+  olho_arregalado: ['eye_widen_L', 'eye_widen_R', 'eyeWide_L', 'eyeWide_R', 'EyeOpen_L', 'EyeOpen_R'],
 
-  sobrancelha_sobe: ['brow_raise_L', 'brow_raise_R', 'brow_raiseOuter_left', 'brow_raiseOuter_right', 'browOuterUp_L', 'browOuterUp_R'],
-  sobrancelha_interna_sobe: ['brow_raiseIn_L', 'brow_raiseIn_R', 'browInnerUp'],
-  sobrancelha_desce: ['brow_down_L', 'brow_down_R', 'browDown_L', 'browDown_R'],
+  sobrancelha_sobe: ['brow_raise_L', 'brow_raise_R', 'brow_raiseOuter_left', 'brow_raiseOuter_right', 'browOuterUp_L', 'browOuterUp_R', 'BrowsU_L', 'BrowsU_R'],
+  sobrancelha_interna_sobe: ['brow_raiseIn_L', 'brow_raiseIn_R', 'browInnerUp', 'BrowsU_C'],
+  sobrancelha_desce: ['brow_down_L', 'brow_down_R', 'browDown_L', 'browDown_R', 'BrowsD_L', 'BrowsD_R'],
 
-  mandibula_abre: ['jaw_open', 'jawOpen'],
+  mandibula_abre: ['jaw_open', 'jawOpen', 'JawOpen'],
 
   labios_arredondam: [
     'mouth_funnel_UL', 'mouth_funnel_UR', 'mouth_funnel_DL', 'mouth_funnel_DR',
     'mouth_lipsPurse_UL', 'mouth_lipsPurse_UR', 'mouth_lipsPurse_DL', 'mouth_lipsPurse_DR',
-    'mouthFunnel', 'mouthPucker',
+    'mouthFunnel', 'mouthPucker', 'LipsFunnel', 'LipsPucker',
   ],
-  labios_selam: ['mouth_lipsPress_L', 'mouth_lipsPress_R', 'mouthClose', 'mouthPress_L', 'mouthPress_R'],
-  labios_esticam: ['mouth_stretch_left', 'mouth_stretch_right', 'mouthStretch_L', 'mouthStretch_R'],
+  labios_selam: ['mouth_lipsPress_L', 'mouth_lipsPress_R', 'mouthClose', 'mouthPress_L', 'mouthPress_R', 'LipsUpperClose', 'LipsLowerClose'],
+  labios_esticam: ['mouth_stretch_left', 'mouth_stretch_right', 'mouthStretch_L', 'mouthStretch_R', 'LipsStretch_L', 'LipsStretch_R'],
 
-  canto_sobe: ['mouth_cornerPull_left', 'mouth_cornerPull_right', 'mouthSmile_L', 'mouthSmile_R'],
-  canto_desce: ['mouth_cornerDepress_L', 'mouth_cornerDepress_R', 'mouthFrown_L', 'mouthFrown_R'],
+  canto_sobe: ['mouth_cornerPull_left', 'mouth_cornerPull_right', 'mouthSmile_L', 'mouthSmile_R', 'MouthSmile_L', 'MouthSmile_R'],
+  canto_desce: ['mouth_cornerDepress_L', 'mouth_cornerDepress_R', 'mouthFrown_L', 'mouthFrown_R', 'MouthFrown_L', 'MouthFrown_R'],
 
-  bochecha_sobe: ['eye_cheekRaise_L', 'eye_cheekRaise_R', 'cheekSquint_L', 'cheekSquint_R'],
+  bochecha_sobe: ['eye_cheekRaise_L', 'eye_cheekRaise_R', 'cheekSquint_L', 'cheekSquint_R', 'CheekSquint_L', 'CheekSquint_R'],
 };
 
 /** Um alvo já resolvido: em qual malha e em qual índice do array de influências. */
