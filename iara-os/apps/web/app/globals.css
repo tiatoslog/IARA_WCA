@@ -13,26 +13,73 @@
  */
 
 :root {
-  --papel: #f2ece1;
-  --parede: #e8dfd0;
-  --parede-alta: #efe8db;
-  --rodape: #cbbba4;
-  --piso: #d9c8ad;
-  --piso-alt: #d2bfa1;
-  --tinta: #33302b;
-  --tinta-fraca: #6d675e;
-  --linha: #cdc3b2;
+  /* Paleta neutra (decisão de 08/08/2026): tira o creme quente e assume
+   * cinzas frios de produto de IA. O coral de alerta permanece — o invariante
+   * é sobre o alerta, não sobre a temperatura da sala. */
+  --papel: #f4f5f7;
+  --parede: #e9ebee;
+  --parede-alta: #f0f1f4;
+  --rodape: #c6cad1;
+  --piso: #d8dbe0;
+  --piso-alt: #cfd3d9;
+  --tinta: #26282c;
+  --tinta-fraca: #676c74;
+  --linha: #d3d6db;
 
-  --luz-quente: #ffd9a0;
-  --luz-fria: #a8d8ff;
+  --luz-quente: #e8d6ae;
+  --luz-fria: #b6d3ee;
   --luz-alerta: #f0876a; /* coral quente — nunca vermelho saturado */
-  --luz-verde: #9fd6a8;
+  --luz-verde: #a9cfb2;
 
-  --painel: #fbf8f2;
-  --sombra: rgba(60, 48, 32, 0.16);
+  --painel: #fbfcfd;
+  --sombra: rgba(30, 34, 40, 0.14);
 
-  --fonte: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+  --fonte: -apple-system, "SF Pro Display", "SF Pro Text", ui-sans-serif,
+    "Segoe UI Variable Display", "Segoe UI", system-ui, Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace;
+
+  /* ------------------------------------------------------------------------
+   * CASCA PREMIUM (decisão de 08/08/2026): a presença e a conversa vivem numa
+   * casca escura neutra, de vidro — referência Apple/visionOS, sem cor de
+   * marca. TODO acento é prata/branco; o único tom que sobrevive é o coral de
+   * alerta (invariante) e o sage de estado ligado. Os tokens antigos (--papel,
+   * --painel…) permanecem para a projeção em pixel art e para a portaria.
+   * ---------------------------------------------------------------------- */
+  /* Tokens canônicos do design system (V4). Os --c-* abaixo são apelidos
+   * históricos dos mesmos valores — um fato, um lugar: mudar a paleta é
+   * mudar SÓ os --iara-*. */
+  /* PALETA ÁGUA (design aprovado em 10/08/2026): a casca migra da prata
+   * neutra para o verde-d'água quase preto da nova identidade — água funda,
+   * espuma, limo e um único acento menta. A iridescência policromática é
+   * EXCLUSIVA da entidade: a interface é pedra, só a IARA tem cor viva. */
+  --iara-bg: #06110e;
+  --iara-bg-alto: #0a1a15;
+  --iara-surface: rgba(159, 235, 208, 0.045);
+  --iara-surface-elevated: rgba(10, 26, 21, 0.72);
+  --iara-border: rgba(159, 235, 208, 0.1);
+  --iara-border-strong: rgba(159, 235, 208, 0.22);
+  --iara-text: #ecf6f0;
+  --iara-text-secondary: #8ca79b;
+  --iara-text-tertiary: #5c7268;
+  --iara-accent: #9febd0;
+  --iara-danger: #f0876a; /* coral quente — nunca vermelho saturado */
+  --iara-warning: #e6c98a;
+  --iara-success: #9fd6a8;
+
+  --c-fundo: var(--iara-bg);
+  --c-fundo-alto: var(--iara-bg-alto);
+  --c-vidro: var(--iara-surface-elevated);
+  --c-vidro-alto: rgba(255, 255, 255, 0.055);
+  --c-superficie: var(--iara-surface);
+  --c-linha: var(--iara-border);
+  --c-linha-forte: var(--iara-border-strong);
+  --c-tinta: var(--iara-text);
+  --c-tinta-2: var(--iara-text-secondary);
+  --c-tinta-3: var(--iara-text-tertiary);
+  --c-prata: var(--iara-accent);
+  --c-verde: var(--iara-success);
+  --c-alerta: var(--iara-danger);
+  --c-brilho: 0 0 24px rgba(255, 255, 255, 0.06);
 }
 
 * {
@@ -44,10 +91,18 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: var(--papel);
-  color: var(--tinta);
+  /* A casca é escura; telas claras (portaria, pixel art) pintam o próprio
+     fundo. Assim nenhuma borda clara vaza nas junções da janela. */
+  background: var(--c-fundo);
+  color: var(--c-tinta);
   font-family: var(--fonte);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 /* --------------------------------------------------------------------------
@@ -246,17 +301,34 @@ body {
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   border: 1px solid var(--linha);
-  background: var(--painel);
+  background: linear-gradient(180deg, #fffdf9 0%, var(--painel) 100%);
   color: var(--tinta);
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 9px 15px;
   cursor: pointer;
-  transition: background 160ms ease;
+  box-shadow: 0 1px 2px rgba(60, 48, 32, 0.07);
+  transition: background 160ms ease, box-shadow 160ms ease, transform 80ms ease;
 }
 
 .botao:hover:not(:disabled) {
   background: #f0eade;
+  box-shadow: 0 2px 6px rgba(60, 48, 32, 0.1);
+}
+
+.botao:active:not(:disabled) {
+  transform: translateY(0.5px);
+  box-shadow: 0 1px 2px rgba(60, 48, 32, 0.08) inset;
+}
+
+.botao:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(181, 166, 141, 0.32);
 }
 
 .botao:disabled {
@@ -328,13 +400,15 @@ body {
   left: 0;
   right: 0;
   z-index: 60;
-  padding: 6px 14px;
-  font-size: 11.5px;
+  padding: 5px 14px;
+  font-size: 10.5px;
   line-height: 1.4;
+  letter-spacing: 0.02em;
   text-align: center;
-  color: #6b3b2a;
-  background: rgba(240, 135, 106, 0.22);
-  border-bottom: 1px solid rgba(240, 135, 106, 0.45);
+  color: rgba(240, 170, 148, 0.9);
+  background: rgba(20, 12, 10, 0.6);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(240, 135, 106, 0.25);
 }
 
 /* Notebook: o palco encolhe um degrau inteiro. */
@@ -372,13 +446,6 @@ body {
     width: 100%;
   }
 
-  .painel-conversa {
-    width: 100% !important;
-    flex: 1 !important;
-    min-height: 0;
-    border-left: none !important;
-    border-top: 1px solid var(--linha);
-  }
 }
 
 /* Celular pequeno: some com os medidores, mantém sala e conversa. */
@@ -398,19 +465,18 @@ body {
 /* --------------------------------------------------------------------------
  * PROJEÇÃO "PRESENÇA" — a IARA enquadrada, no lugar da sala.
  *
- * Referência é chamada de vídeo, não vitrine de personagem: o palco é escuro e
- * a moldura é clara, que é como todo software de vídeo premium separa "imagem"
- * de "controle". O grafite é QUENTE (puxa para o marrom do papel do resto do
- * app) de propósito — um cinza neutro faria a presença parecer um segundo
- * produto colado no primeiro.
+ * Referência é chamada de vídeo premium: palco escuro neutro, moldura de
+ * vidro escuro, hairlines de 1px. Desde a casca premium (08/08/2026) o
+ * grafite quente saiu: palco e painéis vivem na MESMA temperatura neutra,
+ * porque agora a casca inteira é escura — não há mais papel creme para casar.
  * -------------------------------------------------------------------------- */
 
 :root {
-  --palco-fundo: #24211d;
-  --palco-fundo-alto: #34302a;
-  --palco-tinta: #efe8db;
-  --palco-tinta-fraca: #a9a094;
-  --palco-linha: rgba(239, 232, 219, 0.14);
+  --palco-fundo: #0b0b0e;
+  --palco-fundo-alto: #1a1a21;
+  --palco-tinta: var(--c-tinta);
+  --palco-tinta-fraca: var(--c-tinta-2);
+  --palco-linha: var(--c-linha);
 }
 
 .presenca {
@@ -431,6 +497,20 @@ body {
   );
 }
 
+/* Vinheta de estúdio: escurece as bordas e concentra o olhar no rosto — o
+   mesmo truque de toda sala de vídeo premium. Puro ambiente: não reage a dado. */
+.presenca-palco::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 82% 74% at 50% 44%,
+    transparent 58%,
+    rgba(12, 10, 8, 0.38) 100%
+  );
+}
+
 .palco-presenca {
   position: absolute;
   inset: 0;
@@ -441,6 +521,22 @@ body {
   top: 14px;
   left: 14px;
   z-index: 5;
+}
+
+/* Controles sobre o palco: vidro fosco neutro, cápsula, hairline. */
+.presenca-controles .botao,
+.presenca-controles select.botao {
+  background: rgba(18, 18, 24, 0.55);
+  color: var(--palco-tinta);
+  border: 1px solid var(--c-linha-forte);
+  border-radius: 999px;
+  font-size: 12px;
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
+.presenca-controles .botao:hover:not(:disabled) {
+  background: rgba(40, 40, 48, 0.65);
 }
 
 /* Aviso honesto: modelo ausente ou sem rig. Ocupa o palco inteiro, porque não
@@ -480,134 +576,167 @@ body {
   line-height: 1.6;
 }
 
-/* --- painel lateral da presença ------------------------------------------ */
+/* Botão do painel técnico: flutua discreto no canto do palco. A tela
+   principal é presença e conversa; instrumentação se ABRE, não mora nela. */
+.botao-tecnico {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: var(--iara-text-tertiary);
+  background: rgba(18, 18, 24, 0.55);
+  border: 1px solid var(--iara-border);
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(18px) saturate(1.4);
+  transition: color 180ms ease, border-color 180ms ease;
+}
+
+.botao-tecnico:hover,
+.botao-tecnico.aberto {
+  color: var(--iara-text);
+  border-color: var(--iara-border-strong);
+}
+
+/* --- seletor de desempenho (dentro do painel técnico) -------------------- */
+
+.seletor-desempenho {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--iara-surface);
+  border: 1px solid var(--iara-border);
+}
+
+.seletor-desempenho button {
+  flex: 1;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--iara-text-tertiary);
+  background: none;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 0;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.seletor-desempenho button.ativo {
+  color: var(--iara-bg);
+  background: var(--iara-accent);
+}
+
+/* --- painel lateral da presença — HUD de vidro --------------------------- */
 
 .painel-presenca {
-  width: 268px;
+  width: 280px;
   flex: none;
-  padding: 16px 16px 22px;
-  background: var(--painel);
-  border-left: 1px solid var(--linha);
+  padding: 20px 18px 24px;
+  background: var(--c-vidro);
+  backdrop-filter: blur(28px) saturate(1.4);
+  border-left: 1px solid var(--c-linha);
   overflow-y: auto;
 }
 
-.presenca-cabecalho {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--linha);
-}
-
-.presenca-identidade {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.presenca-nome {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-}
-
-.presenca-estagio {
-  font-size: 11.5px;
-  color: var(--tinta-fraca);
-}
-
-.presenca-enlace {
-  width: 7px;
-  height: 7px;
-  margin-top: 6px;
-  border-radius: 50%;
-  flex: none;
-  background: var(--luz-alerta);
-  transition: background 400ms ease;
-}
-
-.presenca-enlace.ligado {
-  background: var(--luz-verde);
-}
-
 .presenca-bloco {
-  padding-top: 16px;
+  padding: 16px 0;
+}
+
+.presenca-bloco + .presenca-bloco {
+  border-top: 1px solid var(--c-linha);
+}
+
+.presenca-bloco:first-child {
+  padding-top: 2px;
 }
 
 .presenca-bloco h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.13em;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--tinta-fraca);
+  color: var(--c-tinta-3);
 }
 
 .selo {
   font-style: normal;
   font-size: 9px;
   letter-spacing: 0.06em;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 999px;
-  background: var(--linha);
-  color: var(--tinta-fraca);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+  color: var(--c-tinta-2);
 }
 
 .selo.emergente {
-  background: rgba(240, 135, 106, 0.2);
-  color: #8a4a34;
+  background: rgba(240, 135, 106, 0.14);
+  border-color: rgba(240, 135, 106, 0.35);
+  color: var(--c-alerta);
 }
 
 /* --- barras de capacidade ------------------------------------------------- */
 
 .capacidade {
-  margin-bottom: 9px;
+  margin-bottom: 11px;
 }
 
 .capacidade-topo {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 4px;
-  font-size: 11.5px;
+  margin-bottom: 5px;
+  font-size: 12px;
+  letter-spacing: 0.01em;
 }
 
 .capacidade-nome {
-  color: var(--tinta-fraca);
+  color: var(--c-tinta-2);
   transition: color 400ms ease;
 }
 
 .capacidade-nome.acesa {
-  color: var(--tinta);
+  color: var(--c-tinta);
   font-weight: 600;
 }
 
 .capacidade-valor {
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--tinta-fraca);
+  font-variant-numeric: tabular-nums;
+  color: var(--c-tinta-3);
 }
 
 .capacidade-trilho {
-  height: 4px;
+  height: 3px;
   border-radius: 2px;
-  background: var(--linha);
+  background: var(--c-superficie);
   overflow: hidden;
 }
 
 /* `scaleX` em vez de `width`: a barra anima na GPU, sem relayout. O piso de
    0.001 no componente existe porque scaleX(0) descarta a camada composta e a
-   primeira subida entra sem transição. */
+   primeira subida entra sem transição. Prata, não dourado: o acento da casca
+   premium é neutro — cor aqui é só o coral de alerta, em outro lugar. */
 .capacidade-trilho > i {
   display: block;
   height: 100%;
   width: 100%;
   transform-origin: left center;
-  background: linear-gradient(90deg, #d8b98a, var(--luz-quente));
+  background: linear-gradient(90deg, rgba(232, 232, 237, 0.55), var(--c-prata));
+  box-shadow: 0 0 8px rgba(232, 232, 237, 0.35);
   transition: transform 620ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -617,7 +746,7 @@ body {
   margin: 0 0 8px;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--tinta);
+  color: var(--c-tinta);
 }
 
 ol.plano {
@@ -631,22 +760,22 @@ ol.plano {
 .passo {
   font-size: 11.5px;
   line-height: 1.45;
-  color: var(--tinta-fraca);
+  color: var(--c-tinta-2);
   transition: color 300ms ease;
 }
 
 .passo.executando {
-  color: var(--tinta);
+  color: var(--c-tinta);
   font-weight: 600;
 }
 
 .passo.concluido {
   text-decoration: line-through;
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
 .passo.falhou {
-  color: #8a4a34;
+  color: var(--c-alerta);
 }
 
 /* --- telemetria ----------------------------------------------------------- */
@@ -654,37 +783,31 @@ ol.plano {
 .telemetria {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 7px 12px;
+  gap: 9px 12px;
 }
 
 .telemetria-item {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   font-size: 10px;
-  color: var(--tinta-fraca);
+  letter-spacing: 0.04em;
+  color: var(--c-tinta-3);
 }
 
 .telemetria-item b {
   font-family: var(--mono);
   font-size: 11.5px;
-  font-weight: 600;
-  color: var(--tinta);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-tinta);
 }
 
-.presenca-nota,
-.presenca-aviso {
+.presenca-nota {
   margin: 12px 0 0;
   font-size: 11px;
   line-height: 1.5;
-  color: var(--tinta-fraca);
-}
-
-.presenca-aviso {
-  padding: 9px 11px;
-  border-radius: 9px;
-  color: #6b3b2a;
-  background: rgba(240, 135, 106, 0.16);
+  color: var(--c-tinta-3);
 }
 
 /* --- seletor de projeção -------------------------------------------------- */
@@ -730,14 +853,369 @@ ol.plano {
   font-family: inherit;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--tinta);
-  background: rgba(251, 248, 242, 0.94);
-  border: 1px solid var(--linha);
+  letter-spacing: 0.01em;
+  color: var(--c-fundo);
+  background: var(--c-prata);
+  border: none;
   border-radius: 999px;
-  padding: 9px 18px;
+  padding: 10px 20px;
   cursor: pointer;
-  box-shadow: 0 6px 20px var(--sombra);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+}
+
+.voz-bloqueada:hover {
+  background: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+ * CONVERSA — o painel de trabalho, em vidro escuro.
+ *
+ * Uma única fonte para cada fato: identidade e estágio vivem SÓ aqui (o HUD
+ * lateral não repete); telemetria vive SÓ no HUD (as bolhas não repetem).
+ * -------------------------------------------------------------------------- */
+
+.painel-conversa {
+  width: 396px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--c-vidro);
+  backdrop-filter: blur(28px) saturate(1.4);
+  border-left: 1px solid var(--c-linha);
+}
+
+.conversa-cabecalho {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--c-linha);
+}
+
+.conversa-cabecalho-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.conversa-titulo {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--c-tinta);
+}
+
+.conversa-estagio {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--c-tinta-2);
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+}
+
+.conversa-enlace {
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--c-alerta);
+  box-shadow: 0 0 8px rgba(240, 135, 106, 0.6);
+  transition: background 400ms ease, box-shadow 400ms ease;
+}
+
+.conversa-enlace.ligado {
+  background: var(--c-verde);
+  box-shadow: 0 0 8px rgba(159, 214, 168, 0.55);
+}
+
+/* Aviso único da nuvem desligada — uma linha, um lugar. */
+.conversa-aviso {
+  margin-top: 10px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(240, 170, 148, 0.95);
+  background: rgba(240, 135, 106, 0.08);
+  border: 1px solid rgba(240, 135, 106, 0.22);
+}
+
+/* Religar depois de uma recusa terminal: ação pequena, dentro do aviso. */
+.conversa-aviso .religar {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--iara-bg);
+  background: var(--iara-accent);
+  border: none;
+  border-radius: 999px;
+  padding: 3px 12px;
+  margin-left: 6px;
+  cursor: pointer;
+}
+
+.conversa-aviso .religar:hover {
+  background: #ffffff;
+}
+
+.conversa-fluxo {
+  flex: 1;
+  min-height: 0;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.balao {
+  max-width: 86%;
+  font-size: 13.5px;
+  line-height: 1.55;
+  padding: 10px 14px;
+  white-space: pre-wrap;
+  border: 1px solid var(--c-linha);
+  animation: surgir 260ms cubic-bezier(0.3, 0.9, 0.4, 1);
+}
+
+.balao.operador {
+  align-self: flex-end;
+  color: var(--c-fundo);
+  background: var(--c-prata);
+  border-color: transparent;
+  border-radius: 18px 18px 6px 18px;
+}
+
+.balao.iara {
+  align-self: flex-start;
+  color: var(--c-tinta);
+  background: var(--c-vidro-alto);
+  border-radius: 18px 18px 18px 6px;
+}
+
+.balao .reticencias {
+  color: var(--c-tinta-3);
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sala vazia: sugestões viram fichas tocáveis, não parágrafo. */
+.sugestoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.sugestoes-titulo {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--c-tinta-3);
+  margin: 0 0 4px;
+}
+
+.sugestao {
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--c-tinta-2);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+  border-radius: 12px;
+  padding: 9px 13px;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.sugestao:hover {
+  color: var(--c-tinta);
+  background: var(--c-vidro-alto);
+  border-color: var(--c-linha-forte);
+}
+
+/* Faixa do modo ligação. */
+.escuta-faixa {
+  margin: 0 0 10px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--c-tinta-2);
+  background: rgba(159, 214, 168, 0.08);
+  border: 1px solid rgba(159, 214, 168, 0.28);
+}
+
+.escuta-faixa.alerta {
+  color: rgba(240, 170, 148, 0.95);
+  background: rgba(240, 135, 106, 0.08);
+  border-color: rgba(240, 135, 106, 0.22);
+}
+
+.escuta-faixa .parcial {
+  color: var(--c-tinta);
+}
+
+.escuta-ponto {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--c-verde);
+  box-shadow: 0 0 8px rgba(159, 214, 168, 0.55);
+  animation: pulsar 1.6s ease-in-out infinite;
+}
+
+.escuta-ponto.espera {
+  background: var(--c-prata);
+  box-shadow: none;
+  animation-duration: 3s;
+}
+
+/* Rodapé: cápsula de escrita + botões circulares. */
+.conversa-rodape {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--c-linha);
+}
+
+.campo-conversa {
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--c-tinta);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+  border-radius: 16px;
+  padding: 11px 14px;
+  outline: none;
+  resize: none;
+  width: 100%;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.campo-conversa::placeholder {
+  color: var(--c-tinta-3);
+}
+
+.campo-conversa:focus {
+  background: var(--c-vidro-alto);
+  border-color: var(--c-linha-forte);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+
+.campo-conversa:disabled {
+  opacity: 0.5;
+}
+
+.conversa-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Botão circular de controle — microfone, vigília, voz, interromper. */
+.cb {
+  font-family: inherit;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-tinta-2);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease,
+    box-shadow 160ms ease, transform 80ms ease;
+}
+
+.cb:hover:not(:disabled) {
+  color: var(--c-tinta);
+  background: var(--c-vidro-alto);
+  border-color: var(--c-linha-forte);
+}
+
+.cb:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.cb:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cb:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+}
+
+/* Ligado: o círculo acende em sage — estado, não decoração. */
+.cb.ativo {
+  color: #0c1410;
+  background: var(--c-verde);
+  border-color: transparent;
+  box-shadow: 0 0 14px rgba(159, 214, 168, 0.35);
+}
+
+/* Enviar: o único botão sólido — prata, como o balão do operador. */
+.cb-enviar {
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-fundo);
+  background: var(--c-prata);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 160ms ease, transform 80ms ease, opacity 160ms ease;
+}
+
+.cb-enviar:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.cb-enviar:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.cb-enviar:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.conversa-dica {
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--c-tinta-3);
+  margin-top: 8px;
+}
+
+.conversa-dica b {
+  color: var(--c-tinta-2);
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {
@@ -750,15 +1228,24 @@ ol.plano {
   .painel-presenca {
     width: 100%;
     border-left: none;
-    border-top: 1px solid var(--linha);
+    border-top: 1px solid var(--c-linha);
     max-height: 40%;
+  }
+
+  .painel-conversa {
+    width: 100%;
+    flex: 1;
+    border-left: none;
+    border-top: 1px solid var(--c-linha);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .halo,
   .avatar,
-  .ambiente > * {
+  .ambiente > *,
+  .escuta-ponto,
+  .balao {
     animation: none !important;
   }
   .avatar {
@@ -766,7 +1253,9 @@ ol.plano {
   }
   .capacidade-trilho > i,
   .capacidade-nome,
-  .passo {
+  .passo,
+  .botao-tecnico,
+  .seletor-desempenho button {
     transition: none;
   }
 }
