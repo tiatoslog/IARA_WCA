@@ -21,20 +21,23 @@ import type { SnapshotCognitivo } from '../../lib/snapshot';
 import type { Fala } from '../../hooks/useIaraSocket';
 import type { EstadoVoz } from '../../hooks/useVoz';
 import { PainelCapacidades } from './PainelCapacidades';
-import type { DiagnosticoRig } from './AvatarPresenca';
+import { gravarModoDesempenho, lerModoDesempenho, type ModoDesempenho } from './desempenho';
 
 /**
  * O palco só existe no navegador. Três.js toca `window` na importação, então
  * renderizar no servidor quebra o build antes de qualquer coisa aparecer.
+ *
+ * NOVA PRESENÇA (design aprovado em 10/08/2026): a entidade — pedra encantada
+ * de vidro dispersivo com cortinas de aurora — substitui o avatar humanoide.
+ * Geometria procedural: sem GLB, sem rig, sem diagnóstico de morph targets.
+ * O avatar antigo permanece em `AvatarPresenca.tsx` caso seja preciso voltar.
  */
-const PalcoPresenca = dynamic(() => import('./PalcoPresenca').then((m) => m.PalcoPresenca), {
-  ssr: false,
-});
-const AvatarPresenca = dynamic(() => import('./AvatarPresenca').then((m) => m.AvatarPresenca), {
-  ssr: false,
-});
+const EntidadePresenca = dynamic(
+  () => import('./EntidadePresenca').then((m) => m.EntidadePresenca),
+  { ssr: false },
+);
 
-/** Falha de carga do GLB não pode derrubar a página inteira. */
+/** Falha de inicialização do WebGL não pode derrubar a página inteira. */
 class LimiteDeFalha extends Component<
   { aoFalhar: (motivo: string) => void; children: ReactNode },
   { caiu: boolean }
@@ -64,11 +67,45 @@ function AvisoModelo({ titulo, detalhe }: { titulo: string; detalhe: string }) {
   );
 }
 
+/**
+ * Seletor de desempenho do palco — vive DENTRO do painel técnico, porque é
+ * decisão de máquina, não de conversa. `auto` é o padrão recomendado.
+ */
+function SeletorDesempenho() {
+  const [modo, setModo] = useState<ModoDesempenho>(() => lerModoDesempenho());
+  const opcoes: Array<[ModoDesempenho, string]> = [
+    ['auto', 'Auto'],
+    ['alto', 'Alto'],
+    ['equilibrado', 'Equilibrado'],
+    ['baixo', 'Baixo'],
+  ];
+  return (
+    <section className="presenca-bloco">
+      <h3>Desempenho</h3>
+      <div className="seletor-desempenho" role="radiogroup" aria-label="Modo de desempenho">
+        {opcoes.map(([valor, rotulo]) => (
+          <button
+            key={valor}
+            className={modo === valor ? 'ativo' : undefined}
+            role="radio"
+            aria-checked={modo === valor}
+            onClick={() => {
+              setModo(valor);
+              gravarModoDesempenho(valor);
+            }}
+          >
+            {rotulo}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Presenca({
   snapshot,
   falaCorrente,
   voz,
-  conectado,
   controles,
 }: {
   snapshot: SnapshotCognitivo;
@@ -76,59 +113,66 @@ export function Presenca({
   falaCorrente: Fala | null;
   /** Voz, vinda de cima: ela toca nas duas projeções, não só nesta. */
   voz: EstadoVoz;
-  conectado: boolean;
   /** Controles da página (troca de projeção, sair). Flutuam sobre o palco. */
   controles?: ReactNode;
 }) {
-  const [diagnostico, setDiagnostico] = useState<DiagnosticoRig | null>(null);
   const [falha, setFalha] = useState<string | null>(null);
+  /**
+   * PAINEL TÉCNICO OCULTO por padrão (decisão da reestruturação V4): a tela
+   * principal é presença e conversa. Capacidades, vitais e telemetria são
+   * instrumentação — quem quiser, abre. Quando a IARA trabalha, isso aparece
+   * pelo comportamento dela, não por medidores permanentes.
+   */
+  const [tecnicoAberto, setTecnicoAberto] = useState(false);
 
-  // Estável: se fosse recriada a cada render, o `useEffect` do avatar
-  // redispararia o diagnóstico a cada snapshot recebido.
-  const aoDiagnosticar = useCallback((d: DiagnosticoRig) => setDiagnostico(d), []);
   const aoFalhar = useCallback((motivo: string) => setFalha(motivo), []);
-
-  const rigInsuficiente = diagnostico !== null && !diagnostico.suficiente;
 
   return (
     <section className="presenca">
       <div className="presenca-palco">
         {controles && <div className="presenca-controles">{controles}</div>}
 
+        <button
+          className={tecnicoAberto ? 'botao-tecnico aberto' : 'botao-tecnico'}
+          onClick={() => setTecnicoAberto((v) => !v)}
+          title={tecnicoAberto ? 'Fechar o painel técnico' : 'Abrir o painel técnico'}
+          aria-label="Painel técnico"
+          aria-expanded={tecnicoAberto}
+        >
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden>
+            <path
+              d="M2 11.5h2.4M7.4 11.5H13M2 7.5h6.4M11.4 7.5H13M2 3.5h1.4M6.4 3.5H13"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+            <circle cx="5.9" cy="11.5" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+            <circle cx="9.9" cy="7.5" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+            <circle cx="4.9" cy="3.5" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+        </button>
+
         {falha === null && (
           <LimiteDeFalha aoFalhar={aoFalhar}>
-            <PalcoPresenca>
-              <AvatarPresenca
-                snapshot={snapshot}
-                fala={falaCorrente}
-                voz={voz.relogio}
-                aoDiagnosticar={aoDiagnosticar}
-              />
-            </PalcoPresenca>
+            <EntidadePresenca
+              snapshot={snapshot}
+              fala={falaCorrente}
+              voz={voz.relogio}
+            />
           </LimiteDeFalha>
         )}
 
         {falha !== null && (
           <AvisoModelo
-            titulo="Modelo não carregou"
-            detalhe={`Falha ao abrir /identidade_iara/source.glb — ${falha}`}
-          />
-        )}
-
-        {falha === null && rigInsuficiente && (
-          <AvisoModelo
-            titulo="Sem rig facial"
-            detalhe={
-              `O modelo carregou (${diagnostico!.morphs} morph targets, ` +
-              `${diagnostico!.parametros_resolvidos} parâmetros resolvidos), mas não tem os ` +
-              'blendshapes de mandíbula, pálpebra e olhar. A IARA não vai fingir uma ' +
-              'expressão que o modelo não sabe fazer. Ver EXPORTACAO.md.'
-            }
+            titulo="A entidade não pôde ser renderizada"
+            detalhe={`O WebGL desta máquina recusou o palco — ${falha}`}
           />
         )}
       </div>
 
-      <PainelCapacidades snapshot={snapshot} conectado={conectado} />
+      {tecnicoAberto && (
+        <PainelCapacidades snapshot={snapshot} extra={<SeletorDesempenho />} />
+      )}
     </section>
   );
 }
