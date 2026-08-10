@@ -26,9 +26,15 @@ export interface PoliticaCapacidades {
 }
 
 const POR_PAPEL: Record<Papel, readonly Permissao[]> = {
-  // Sem `escrita`: nenhuma habilidade atual altera sistema externo, e conceder
-  // por antecipação é como se cria permissão que ninguém revisa.
-  operador: ['rede', 'banco', 'memoria', 'llm'],
+  /**
+   * `escrita` para o operador é decisão CONSCIENTE, tomada quando o Agente
+   * Local entrou no catálogo (criar_pasta, abrir_aplicativo, energia). As
+   * fronteiras que tornam isso aceitável moram no `AgenteLocal`: raízes
+   * autorizadas, allowlist de aplicativos e confirmação obrigatória para
+   * energia. Habilidade nova com `escrita` passa por essas mesmas réguas ou
+   * não entra.
+   */
+  operador: ['rede', 'banco', 'memoria', 'llm', 'escrita'],
   administrador: ['rede', 'banco', 'memoria', 'llm', 'escrita'],
   somente_leitura: ['banco', 'memoria'],
 };
@@ -40,7 +46,16 @@ export class PoliticaPadrao implements PoliticaCapacidades {
 
   podeUsar(papel: Papel, habilidade: string): boolean {
     if (papel === 'somente_leitura') {
-      return ['relogio', 'infraestrutura', 'incidente', 'sigilo'].includes(habilidade);
+      // IDs REAIS do catálogo (habilidades/operacionais.ts) — a lista antiga
+      // usava apelidos que não existem e bloquearia tudo, inclusive a recusa
+      // de sigilo, no dia em que o papel entrasse em uso.
+      return [
+        'consultar_agenda',
+        'consultar_clima',
+        'consultar_infraestrutura',
+        'buscar_historico',
+        'recusar_por_sigilo',
+      ].includes(habilidade);
     }
     return true;
   }
