@@ -66,9 +66,18 @@ export class EstadoAtomico {
 
   async definirOperador(operador: PerfilOperador): Promise<EstadoEscritorio> {
     return this.trava.executar(() => {
+      /**
+       * Métricas só zeram quando o OPERADOR muda. Reconexão (queda de rede,
+       * F5) chama isto de novo para o mesmo operador — resetar aqui apagaria
+       * energia/paciência/afinidade acumuladas e contradiria o contrato do
+       * takeover: "derruba o transporte antigo, preserva estado e kernel".
+       */
+      const mesmoOperador = this.estado.operador?.id_usuario === operador.id_usuario;
       this.estado.operador = { ...operador };
-      this.estado.metricas = { ...METRICAS_INICIAIS };
-      this.estado.leitura = { ...LEITURA_INICIAL, sinais: [] };
+      if (!mesmoOperador) {
+        this.estado.metricas = { ...METRICAS_INICIAIS };
+        this.estado.leitura = { ...LEITURA_INICIAL, sinais: [] };
+      }
       this.proximoSeq();
       return this.instantaneo();
     });

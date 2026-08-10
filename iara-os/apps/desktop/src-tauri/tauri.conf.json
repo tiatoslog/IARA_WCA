@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "IARA",
+  "version": "0.1.0",
+  "identifier": "br.com.atoslog.iara",
+  "build": {
+    "beforeDevCommand": "node -e \"require('node:fs').copyFileSync('ui/bolha.html','../web/public/bolha.html')\"",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "principal",
+        "title": "IARA",
+        "url": "http://localhost:3000",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "visible": true
+      },
+      {
+        "label": "bolha",
+        "title": "IARA — bolha",
+        "url": "bolha.html",
+        "width": 56,
+        "height": 56,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "x": 40,
+        "y": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": ["icons/icon.ico"]
+  }
+}

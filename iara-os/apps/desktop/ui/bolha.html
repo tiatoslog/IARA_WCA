@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<!--
+  A bolha da IARA — presença mínima no desktop.
+
+  Segue os invariantes da sala: movimento calmo (respiração de 6 s, nunca
+  frenético), nada de vermelho saturado, e a bolha não inventa estado — ela é
+  um ponto de acesso, não um indicador. Quando o snapshot chegar até aqui
+  (fase 2 do desktop), o halo passa a refletir o EstagioCognitivo real.
+-->
+<head>
+  <meta charset="utf-8" />
+  <style>
+    html, body {
+      margin: 0;
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .bolha {
+      position: relative;
+      width: 48px;
+      height: 48px;
+      margin: 4px;
+      border-radius: 50%;
+      cursor: pointer;
+      background: radial-gradient(circle at 32% 30%, #f6e7c8 0%, #d9b26a 55%, #8a6a3a 100%);
+      /* Sem sombra externa: a janela é minúscula e o desfoque era CORTADO na
+         borda, desenhando um quadrado em volta da bolha. A profundidade vem
+         só do brilho interno. */
+      box-shadow: inset 0 0 12px rgba(255, 244, 214, 0.55);
+      opacity: 0.55;
+      transition: opacity 0.25s ease;
+    }
+    /* A respiração anima OPACITY num pseudo-elemento (composited), não
+       box-shadow: animar sombra forçava um repaint por quadro, para sempre,
+       numa janela sempre visível — custo de CPU permanente por estética. */
+    .bolha::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      box-shadow: inset 0 0 18px rgba(255, 244, 214, 0.85);
+      opacity: 0;
+      animation: respirar 6s ease-in-out infinite;
+    }
+    /* Sutil em repouso, presente quando procurada. */
+    .bolha:hover { opacity: 1; }
+    .bolha:active { transform: scale(0.96); }
+    @keyframes respirar {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .bolha::after { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bolha" id="bolha" title="IARA — clique para abrir, arraste para mover"></div>
+  <script>
+    const { invoke } = window.__TAURI__.core;
+    const bolha = document.getElementById('bolha');
+    let arrastou = false;
+
+    bolha.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      arrastou = false;
+      // O drag nativo decide: se o mouse mover, é arrasto; o clique não abre.
+      const inicioX = e.screenX;
+      const inicioY = e.screenY;
+      const aoMover = (m) => {
+        if (Math.abs(m.screenX - inicioX) + Math.abs(m.screenY - inicioY) > 4) {
+          desarmar();
+          arrastou = true;
+          invoke('arrastar_bolha');
+        }
+      };
+      /**
+       * Desarme explícito dos DOIS listeners. O `{once:true}` no mouseup não
+       * bastava: quando o arrasto nativo começa, o WebView engole o mouseup e
+       * aquele listener ficava registrado para sempre — um órfão acumulado a
+       * cada arrasto da bolha.
+       */
+      const desarmar = () => {
+        window.removeEventListener('mousemove', aoMover);
+        window.removeEventListener('mouseup', desarmar);
+      };
+      window.addEventListener('mousemove', aoMover);
+      window.addEventListener('mouseup', desarmar);
+    });
+
+    bolha.addEventListener('click', () => {
+      if (!arrastou) invoke('alternar_painel');
+    });
+  </script>
+</body>
+</html>

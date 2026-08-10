@@ -25,8 +25,23 @@ export class SessaoOperador {
   private timer: NodeJS.Timeout | null = null;
   private fechada = false;
 
-  constructor(private readonly socket: WebSocket) {
-    this.timer = setInterval(() => this.drenar(), JANELA_MS);
+  constructor(private readonly socket: WebSocket) {}
+
+  /**
+   * Drenagem SOB DEMANDA, não por relógio. Um `setInterval` de 40 ms por tela
+   * conectada acordava o event loop 25 vezes por segundo com a fila vazia —
+   * multiplicado por espelho, era o maior custo fixo do servidor em ócio.
+   * Agora o timer só existe quando há pacote esperando janela de aglutinação
+   * (logs) ou backpressure segurando a fila.
+   */
+  private agendarDrenagem(): void {
+    if (this.timer || this.fechada) return;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.drenar();
+      // Sobrou pacote (backpressure ou socket ainda abrindo)? Reagenda.
+      if (this.fila.tamanho > 0) this.agendarDrenagem();
+    }, JANELA_MS);
     this.timer.unref?.();
   }
 
@@ -47,6 +62,7 @@ export class SessaoOperador {
     if (this.fechada) return;
     this.seq += 1;
     this.fila.enfileirar({ tipo: 'log', seq: this.seq, instante: Date.now(), nivel, texto });
+    this.agendarDrenagem();
   }
 
   emitirErro(texto: string): void {
@@ -57,10 +73,13 @@ export class SessaoOperador {
   }
 
   private drenar(): void {
-    if (this.fechada || this.socket.readyState !== 1) return;
-    // Backpressure real do socket: se o buffer do SO está cheio, não empilha
-    // mais nada nele — deixa a fila absorver e descartar o que for velho.
-    if (this.socket.bufferedAmount > 1_000_000) return;
+    if (this.fechada) return;
+    // Socket ainda abrindo, ou backpressure real do SO: não empilha agora,
+    // mas REAGENDA — sem o interval fixo de antes, ninguém mais tentaria.
+    if (this.socket.readyState !== 1 || this.socket.bufferedAmount > 1_000_000) {
+      if (this.fila.tamanho > 0) this.agendarDrenagem();
+      return;
+    }
     for (const pacote of this.fila.drenar()) this.enviar(pacote);
   }
 
@@ -75,8 +94,23 @@ export class SessaoOperador {
 
   fechar(): void {
     this.fechada = true;
-    if (this.timer) clearInterval(this.timer);
+    if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     this.fila.limpar();
+  }
+
+  /**
+   * Fecha a sessão E derruba o transporte. É o que o takeover de reconexão
+   * precisa: `fechar()` sozinho deixa o socket antigo vivo no SO, e o `close`
+   * tardio dele (minutos depois, quando o TCP expira) executaria a desmontagem
+   * em cima da sessão nova.
+   */
+  derrubar(codigo = 4000, motivo = 'substituida por conexao nova'): void {
+    this.fechar();
+    try {
+      this.socket.close(codigo, motivo);
+    } catch {
+      /* transporte já encerrado */
+    }
   }
 }

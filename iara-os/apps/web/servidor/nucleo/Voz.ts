@@ -1,5 +1,19 @@
 /**
- * Voz da IARA — síntese de fala via Convai.
+ * Voz da IARA — síntese de fala no SERVIDOR, com dois provedores.
+ *
+ * 1. CONVAI (paga, com chave) — qualidade premium. Tem precedência quando
+ *    `CONVAI_API_KEY` + `CONVAI_VOZ` estão configuradas.
+ * 2. NEURAL DO EDGE (grátis, padrão desde a V4) — o mesmo serviço de vozes
+ *    "Natural" que o navegador Edge usa, acessado pelo motor. Voz padrão
+ *    `pt-BR-FranciscaNeural` (feminina — identidade da IARA, inegociável; o
+ *    Piper local foi descartado porque o catálogo pt-BR dele só tem vozes
+ *    masculinas). Desligável com `IARA_VOZ_NEURAL=0`; trocável com
+ *    `IARA_VOZ_EDGE`.
+ *
+ * HONESTIDADE SOBRE PRIVACIDADE: o provedor neural envia o TEXTO da resposta
+ * ao serviço da Microsoft — exatamente o que o Edge faz quando usa uma voz
+ *"Natural" no navegador. Quem precisar de voz 100% local desliga com
+ * `IARA_VOZ_NEURAL=0` e fica com a síntese do navegador (Maria).
  *
  * A CONVAI NÃO PENSA AQUI. Ela recebe um texto que o Kernel já produziu e
  * devolve áudio. O personagem configurado no painel deles tem persona, memória
@@ -13,12 +27,10 @@
  * processo próprio, a síntese acontece no servidor e o navegador recebe apenas
  * um caminho para os bytes. `CONVAI_API_KEY` nunca é prefixada com
  * `NEXT_PUBLIC_`, e não pode ser.
- *
- * Sem chave, o sistema roda inteiro e a IARA fica muda — a mesma regra que vale
- * para `ANTHROPIC_API_KEY`: ela avisa em vez de improvisar.
  */
 
 import { createHash } from 'node:crypto';
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
 const ENDPOINT = 'https://api.convai.com/tts/';
 
@@ -63,18 +75,34 @@ function encoding(): Encoding {
   return process.env.CONVAI_ENCODING === 'wav' ? 'wav' : 'mp3';
 }
 
-export function vozDisponivel(): boolean {
-  return chave().length > 0 && vozEscolhida().length > 0;
+/** Voz neural do Edge. Feminina por identidade — ver o cabeçalho. */
+function vozEdge(): string {
+  return (process.env.IARA_VOZ_EDGE ?? '').trim() || 'pt-BR-FranciscaNeural';
 }
 
-/** Diz o que falta, para o log de subida ser útil em vez de misterioso. */
+type Provedor = 'convai' | 'edge';
+
+/** Convai configurada tem precedência; o neural grátis é o padrão. */
+function provedor(): Provedor | null {
+  if (chave().length > 0 && vozEscolhida().length > 0) return 'convai';
+  if (process.env.IARA_VOZ_NEURAL !== '0') return 'edge';
+  return null;
+}
+
+export function vozDisponivel(): boolean {
+  return provedor() !== null;
+}
+
+/** Diz o que está em uso, para o log de subida ser útil em vez de misterioso. */
 export function diagnosticoVoz(): string {
-  const temChave = chave().length > 0;
-  const voz = vozEscolhida();
-  if (!temChave && !voz) return 'desligada (sem CONVAI_API_KEY e CONVAI_VOZ)';
-  if (!temChave) return 'desligada (sem CONVAI_API_KEY)';
-  if (!voz) return 'desligada (sem CONVAI_VOZ — rode `npm run vozes`)';
-  return `Convai, voz "${voz}", ${encoding()}`;
+  switch (provedor()) {
+    case 'convai':
+      return `Convai, voz "${vozEscolhida()}", ${encoding()}`;
+    case 'edge':
+      return `neural do Edge, voz "${vozEdge()}" (grátis; desligável com IARA_VOZ_NEURAL=0)`;
+    default:
+      return 'desligada (IARA_VOZ_NEURAL=0 e sem Convai) — síntese do navegador assume';
+  }
 }
 
 interface Audio {
@@ -91,7 +119,8 @@ const porMensagem = new Map<string, string>();
 const emVoo = new Map<string, Promise<boolean>>();
 
 function hashDe(texto: string): string {
-  return createHash('sha256').update(`${vozEscolhida()}|${encoding()}|${texto}`).digest('hex').slice(0, 32);
+  const voz = provedor() === 'edge' ? `edge:${vozEdge()}` : vozEscolhida();
+  return createHash('sha256').update(`${voz}|${encoding()}|${texto}`).digest('hex').slice(0, 32);
 }
 
 function podar(): void {
@@ -145,6 +174,59 @@ export async function sintetizar(idMensagem: string, texto: string): Promise<boo
 }
 
 async function buscar(texto: string, hash: string): Promise<boolean> {
+  if (provedor() === 'edge') return buscarEdge(texto, hash);
+  return buscarConvai(texto, hash);
+}
+
+/**
+ * Síntese pelo serviço neural do Edge. O mp3 chega em stream via WebSocket da
+ * biblioteca; aqui só se acumula em buffer e entra na MESMA cache e rota
+ * `/voz/<hash>.mp3` da Convai — nenhum caminho novo no sistema.
+ */
+async function buscarEdge(texto: string, hash: string): Promise<boolean> {
+  try {
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(vozEdge(), OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    const { audioStream } = tts.toStream(texto);
+
+    const bytes = await new Promise<Buffer>((resolver, rejeitar) => {
+      const pedacos: Buffer[] = [];
+      const limite = setTimeout(
+        () => rejeitar(new Error(`síntese excedeu ${TEMPO_LIMITE_MS}ms`)),
+        TEMPO_LIMITE_MS,
+      );
+      audioStream.on('data', (p: Buffer) => pedacos.push(p));
+      audioStream.on('end', () => {
+        clearTimeout(limite);
+        resolver(Buffer.concat(pedacos));
+      });
+      audioStream.on('error', (e: Error) => {
+        clearTimeout(limite);
+        rejeitar(e);
+      });
+    });
+
+    tts.close();
+
+    // Corpo minúsculo é erro disfarçado — áudio de verdade não cabe em 1 KB.
+    if (bytes.length < 1024) {
+      console.warn(`[iara] voz neural: resposta de ${bytes.length} bytes, não parece áudio`);
+      return false;
+    }
+
+    porHash.set(hash, { bytes, tipo: TIPO_MIME.mp3, criado_em: Date.now() });
+    podar();
+    return true;
+  } catch (erro) {
+    const motivo = erro instanceof Error ? erro.message : String(erro);
+    // Sem rede (ou serviço mudou): a conversa segue e o navegador assume a
+    // voz pelo fallback de 6 s do cliente — atrasado é melhor que mudo.
+    console.warn(`[iara] voz neural indisponível: ${motivo}`);
+    return false;
+  }
+}
+
+async function buscarConvai(texto: string, hash: string): Promise<boolean> {
   const abortar = new AbortController();
   const timer = setTimeout(() => abortar.abort(), TEMPO_LIMITE_MS);
 
@@ -194,7 +276,10 @@ async function buscar(texto: string, hash: string): Promise<boolean> {
  */
 export function caminhoDaVoz(idMensagem: string): string | null {
   const hash = porMensagem.get(idMensagem);
-  return hash ? `/voz/${hash}.${encoding()}` : null;
+  if (!hash) return null;
+  // O neural do Edge é sempre mp3; `CONVAI_ENCODING` só vale para a Convai.
+  const extensao = provedor() === 'edge' ? 'mp3' : encoding();
+  return `/voz/${hash}.${extensao}`;
 }
 
 /** Os bytes, para a rota HTTP. O hash vem da URL — nada de caminho de arquivo. */

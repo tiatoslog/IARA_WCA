@@ -6,3 +6,5 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 dados/memoria/
+# gerado pelo beforeDevCommand do apps/desktop a partir de ui/bolha.html
+public/bolha.html

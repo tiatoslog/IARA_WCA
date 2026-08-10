@@ -37,9 +37,15 @@ export class FilaTelemetria {
     if (chave) {
       const i = this.itens.findIndex((p) => chaveDe(p) === chave);
       if (i >= 0) {
-        // Aglutinação: o estado mais recente substitui o anterior in-place,
-        // preservando a posição na fila.
-        this.itens[i] = pacote;
+        /**
+         * Aglutinação: remove o anterior e entra no FIM, nunca in-place.
+         * Substituir preservando a posição colocaria um `seq` novo na frente
+         * de `seq`s menores já enfileirados — e a guarda de ordem do cliente
+         * descartaria esses pacotes (logs sumindo do console técnico). O
+         * snapshot é estado consolidado; a posição dele na fila não importa.
+         */
+        this.itens.splice(i, 1);
+        this.itens.push(pacote);
         return;
       }
     }

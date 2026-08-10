@@ -81,12 +81,17 @@ export class CicloAutonomo {
 
   private async talvezConsolidar(sinal: AbortSignal): Promise<void> {
     const agora = new Date();
-    const hoje = agora.toISOString().slice(0, 10);
+    // Data LOCAL, coerente com o `getHours()` local logo abaixo. Misturar
+    // data UTC com hora local vira troca de dia no meio da janela.
+    const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
     if (agora.getHours() !== HORA_CONSOLIDACAO) return;
     if (this.consolidadoEm === hoje) return;
-    this.consolidadoEm = hoje;
 
     const insight = await this.memoria.consolidar(this.idUsuario);
+    // O carimbo só entra APÓS o sucesso: se o Supabase está fora às 03:00,
+    // o próximo tique dentro da janela tenta de novo, em vez de o dia
+    // inteiro ficar sem consolidação por causa de uma falha transitória.
+    this.consolidadoEm = hoje;
     if (sinal.aborted || !insight) return;
     console.log(
       JSON.stringify({ canal: 'consolidacao', usuario: this.idUsuario, titulo: insight.titulo }),

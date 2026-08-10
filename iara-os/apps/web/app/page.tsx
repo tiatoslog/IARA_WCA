@@ -1,9 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Escritorio } from '../components/Escritorio';
 import { PainelConversa } from '../components/PainelConversa';
-import { ConsoleTecnico } from '../components/ConsoleTecnico';
 import { Portaria } from '../components/Portaria';
 import { Presenca } from '../components/projecao/Presenca';
 import { useIaraSocket, type Credencial } from '../hooks/useIaraSocket';
@@ -12,69 +10,24 @@ import { OPERADORES } from '../lib/operadores';
 import { autenticacaoDisponivel, supabaseNavegador } from '../lib/supabaseNavegador';
 
 /**
- * As duas projeções do mesmo snapshot. Não são temas: são periféricos de saída
- * diferentes lendo o mesmo contrato. O Kernel não sabe qual está montado.
+ * A projeção é UMA: a presença — a IARA enquadrada como numa chamada de vídeo
+ * (decisão do produto em 08/08/2026). A sala em pixel art continua no repo
+ * (`components/Escritorio.tsx`) como projeção alternativa do mesmo
+ * SnapshotCognitivo, mas não é mais montada: o rosto é o produto.
  */
-type Projecao = 'escritorio' | 'presenca';
 
-const CHAVE_PROJECAO = 'iara.projecao';
-
-function Medidor({ rotulo, valor, cor }: { rotulo: string; valor: number; cor: string }) {
-  return (
-    <div style={{ minWidth: 96, flex: '1 1 96px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: 10.5,
-          color: 'var(--tinta-fraca)',
-          marginBottom: 4,
-        }}
-      >
-        <span>{rotulo}</span>
-        <span>{Math.round(valor * 100)}%</span>
-      </div>
-      <div className="medidor">
-        <i style={{ width: `${valor * 100}%`, background: cor }} />
-      </div>
-    </div>
-  );
-}
-
-/** Alterna o periférico de saída. Só isso — não toca em nada do Kernel. */
-function SeletorProjecao({ valor, aoTrocar }: { valor: Projecao; aoTrocar: (p: Projecao) => void }) {
-  return (
-    <div className="seletor-projecao" role="group" aria-label="Projeção">
-      <button
-        className={valor === 'escritorio' ? 'ativo' : undefined}
-        onClick={() => aoTrocar('escritorio')}
-      >
-        Escritório
-      </button>
-      <button
-        className={valor === 'presenca' ? 'ativo' : undefined}
-        onClick={() => aoTrocar('presenca')}
-      >
-        Presença
-      </button>
-    </div>
-  );
-}
-
-/** O escritório em si. Só monta quando já existe uma credencial resolvida. */
+/** A sala da IARA. Só monta quando já existe uma credencial resolvida. */
 function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => void) | null }) {
-  const { snapshot: estado, falas, logs, conectado, enviar, interromper } = useIaraSocket(credencial);
-  const [projecao, setProjecao] = useState<Projecao>('escritorio');
-
-  useEffect(() => {
-    const salva = window.localStorage.getItem(CHAVE_PROJECAO);
-    if (salva === 'presenca' || salva === 'escritorio') setProjecao(salva);
-  }, []);
-
-  const trocarProjecao = useCallback((p: Projecao) => {
-    window.localStorage.setItem(CHAVE_PROJECAO, p);
-    setProjecao(p);
-  }, []);
+  const {
+    snapshot: estado,
+    falas,
+    conectado,
+    conexao,
+    motivoDesconexao,
+    enviar,
+    interromper,
+    religar,
+  } = useIaraSocket(credencial);
 
   /**
    * A última fala da IARA. É o relógio da articulação da boca no driver 3D —
@@ -93,61 +46,51 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
    * dentro de `Presenca` a deixaria muda na sala em pixel art, e trocar de
    * projeção cortaria a fala no meio.
    */
-  const voz = useVoz(falaCorrente, true);
+  // `voz_lider` ausente (servidor antigo) vale true: tela única fala normal.
+  const voz = useVoz(falaCorrente, true, estado.voz_lider !== false);
+
+  /**
+   * Interromper é interromper TUDO: o turno no kernel e a voz que está
+   * saindo do alto-falante. Cortar só o servidor deixaria a síntese local
+   * terminando a frase de um turno que já morreu.
+   */
+  const interromperTudo = useCallback(() => {
+    voz.silenciar();
+    interromper();
+  }, [voz, interromper]);
 
   return (
     <main className="tela">
-      {projecao === 'escritorio' ? (
-        <section className="ambiente-sala">
-          <div className="hud">
-            {aoSair ? (
-              <button className="botao" onClick={aoSair}>
-                Sair
-              </button>
-            ) : (
-              <SeletorLocal />
-            )}
-            <SeletorProjecao valor={projecao} aoTrocar={trocarProjecao} />
-            <Medidor
-              rotulo="energia cognitiva"
-              valor={estado.metricas.energia_cognitiva}
-              cor="var(--luz-quente)"
-            />
-            <Medidor
-              rotulo="paciência"
-              valor={estado.metricas.paciencia_operacional}
-              cor="var(--luz-verde)"
-            />
-            <Medidor rotulo="afinidade" valor={estado.metricas.afinidade} cor="#c9a0dc" />
-            <Medidor
-              rotulo="carga de contexto"
-              valor={estado.metricas.carga_contextual}
-              cor="var(--luz-alerta)"
-            />
-          </div>
-
-          <div className="enquadramento">
-            <Escritorio estado={estado} />
-          </div>
-
-          <ConsoleTecnico logs={logs} />
-        </section>
-      ) : (
-        <Presenca
-          snapshot={estado}
-          falaCorrente={falaCorrente}
-          voz={voz}
-          conectado={conectado}
-          controles={<SeletorProjecao valor={projecao} aoTrocar={trocarProjecao} />}
-        />
-      )}
+      <Presenca
+        snapshot={estado}
+        falaCorrente={falaCorrente}
+        voz={voz}
+        controles={
+          aoSair ? (
+            <button className="botao" onClick={aoSair}>
+              Sair
+            </button>
+          ) : (
+            <SeletorLocal />
+          )
+        }
+      />
 
       <PainelConversa
         estado={estado}
         falas={falas}
         conectado={conectado}
+        conexao={conexao}
+        motivoDesconexao={motivoDesconexao}
+        onReligar={religar}
         onEnviar={enviar}
-        onInterromper={interromper}
+        onInterromper={interromperTudo}
+        vozFalando={voz.tocando}
+        vozLigada={voz.vozLigada}
+        vozDisponivel={voz.sinteseDisponivel}
+        onAlternarVoz={voz.alternarVoz}
+        onFalar={voz.falar}
+        textoAvulso={voz.textoAvulso}
       />
 
       {/* Política de mídia do navegador exige um gesto antes de tocar som.

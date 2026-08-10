@@ -15,7 +15,9 @@ import { normalizar } from './RoteadorIntencoes';
 const CRISE =
   /\b(urgente|urgencia|parou|caiu|travou|nao funciona|nao esta funcionando|prejuizo|perdendo|critico|emergencia|socorro|pane|fora do ar)\b/;
 const ATRITO = /\b(de novo|denovo|outra vez|sempre|nunca funciona|ja falei|absurdo|ridiculo|pelo amor)\b/;
-const FLUXO = /\b(ok|beleza|entendi|perfeito|fechou|isso mesmo|obrigad)\b/;
+// `obrigad\w*`, não `obrigad\b`: \b depois de prefixo exige não-letra em
+// seguida — "obrigado"/"obrigada" nunca casariam.
+const FLUXO = /\b(ok|beleza|entendi|perfeito|fechou|isso mesmo|obrigad\w*|valeu)\b/;
 
 export interface SinalTemporal {
   /** Intervalo em ms desde a mensagem anterior do mesmo operador. */

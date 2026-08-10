@@ -32,13 +32,23 @@ import {
 
 const memoria = new MemoriaOperacional();
 
+/**
+ * Espelhos simultâneos por operador. O mesmo operador pode estar no app
+ * desktop, numa aba do Chrome (a que escuta o "ei IARA") e no celular ao mesmo
+ * tempo — cada tela é uma sessão de transporte, o kernel é um só. O teto
+ * existe porque sessão zumbi de reconexão (o TCP antigo expira minutos depois)
+ * ocupa vaga até o close chegar.
+ */
+const MAX_ESPELHOS = 4;
+
 interface Residente {
   estado: EstadoAtomico;
   barramento: BarramentoEventos;
   compilador: CompiladorSnapshot | null;
   kernel: Kernel | null;
   ciclo: CicloAutonomo | null;
-  sessao: SessaoOperador | null;
+  /** Uma sessão por tela conectada, em ordem de chegada. */
+  sessoes: Set<SessaoOperador>;
   ponte: PonteProjecao | null;
 }
 
@@ -53,7 +63,7 @@ function residenteDe(idUsuario: string): Residente {
       compilador: null,
       kernel: null,
       ciclo: null,
-      sessao: null,
+      sessoes: new Set(),
       ponte: null,
     };
     residentes.set(idUsuario, r);
@@ -69,9 +79,13 @@ export function conectarOperador(socket: WebSocket): void {
   let residente: Residente | null = null;
   let operador: OperadorAutenticado | null = null;
   let abrindo = false;
+  /** A sessão criada para ESTE socket. O close só desmonta o que é dele. */
+  let minhaSessao: SessaoOperador | null = null;
 
   const recusar = (motivo: string) => {
-    socket.send(JSON.stringify({ tipo: 'erro', seq: 0, instante: Date.now(), texto: motivo }));
+    // seq 1, nunca 0: a guarda de ordem do cliente descarta `seq <= 0` e a
+    // recusa de autenticação viraria um fechamento mudo, sem explicação.
+    socket.send(JSON.stringify({ tipo: 'erro', seq: 1, instante: Date.now(), texto: motivo }));
     socket.close(4401, 'nao autenticado');
   };
 
@@ -102,14 +116,36 @@ export function conectarOperador(socket: WebSocket): void {
           const r = residenteDe(operador.id_usuario);
           residente = r;
 
-          // Reconexão: derruba o transporte antigo, preserva estado e kernel.
-          r.ponte?.encerrar();
-          r.sessao?.fechar();
-          r.compilador?.encerrar();
-          r.ciclo?.parar();
+          /**
+           * Teto de espelhos: recusa a tela NOVA, nunca derruba as
+           * estabelecidas. A versão anterior derrubava a mais antiga — e como
+           * cliente derrubado reconecta, quatro telas viravam um carrossel de
+           * quedas perpétuo (cada uma era "a mais antiga" a cada poucos
+           * segundos). Zumbis de reconexão não precisam desse sacrifício: o
+           * heartbeat de 30 s do servidor os termina sozinho e a vaga volta.
+           */
+          if (r.sessoes.size >= MAX_ESPELHOS) {
+            socket.send(
+              JSON.stringify({
+                tipo: 'erro',
+                seq: 1,
+                instante: Date.now(),
+                texto: `Limite de ${MAX_ESPELHOS} telas simultâneas atingido. Feche uma tela e tente de novo.`,
+              }),
+            );
+            socket.close(4000, 'limite de telas simultaneas');
+            return;
+          }
 
+          /**
+           * Espelho novo, não takeover: a tela nova ENTRA na sessão em vez de
+           * derrubar a anterior. App desktop + navegador do mesmo operador
+           * conviviam se derrubando em ciclo infinito — cada um via "recon-
+           * ectando…" enquanto roubava a vez do outro.
+           */
           const sessao = new SessaoOperador(socket);
-          r.sessao = sessao;
+          minhaSessao = sessao;
+          r.sessoes.add(sessao);
 
           await r.estado.definirOperador({
             id_usuario: operador.id_usuario,
@@ -128,13 +164,17 @@ export function conectarOperador(socket: WebSocket): void {
 
           await r.estado.definirNuvemIndisponivel(!nuvemLigada());
 
-          r.compilador = new CompiladorSnapshot(r.barramento, r.kernel.memoriaTrabalho);
-          r.ponte = new PonteProjecao(r.barramento, r.compilador, r.estado, sessao);
+          // Compilador, ponte e ciclo nascem com o PRIMEIRO espelho e morrem
+          // com o último; espelhos seguintes só se penduram no que já existe.
+          r.compilador ??= new CompiladorSnapshot(r.barramento, r.kernel.memoriaTrabalho);
+          r.ponte ??= new PonteProjecao(r.barramento, r.compilador, r.estado, r.sessoes);
 
-          r.ciclo = new CicloAutonomo(operador.id_usuario, r.estado, memoria, () =>
-            r.ponte?.hidratar(),
-          );
-          r.ciclo.iniciar();
+          if (!r.ciclo) {
+            r.ciclo = new CicloAutonomo(operador.id_usuario, r.estado, memoria, () =>
+              r.ponte?.hidratar(),
+            );
+            r.ciclo.iniciar();
+          }
 
           r.ponte.hidratar();
           sessao.emitirLog(
@@ -191,21 +231,46 @@ export function conectarOperador(socket: WebSocket): void {
       // Comando humano tem prioridade absoluta sobre o ciclo autônomo.
       residente.ciclo?.parar();
       const kernel = residente.kernel;
-      const ciclo = residente.ciclo;
-      void kernel.processar(pacote.texto).finally(() => ciclo?.iniciar());
+      const r = residente;
+      void kernel.processar(pacote.texto).finally(() => {
+        /**
+         * Religa APENAS o ciclo que ainda é o do residente. Se a última tela
+         * fechou durante o turno, o close já fez `ciclo = null` — religar a
+         * instância capturada criaria um timer de 15 s órfão, sem nenhuma
+         * referência viva capaz de pará-lo, acumulando um por desconexão.
+         */
+        if (r.sessoes.size > 0) r.ciclo?.iniciar();
+      });
     }
   });
 
   socket.on('close', () => {
-    if (!residente) return;
-    residente.ponte?.encerrar();
-    residente.ponte = null;
-    residente.compilador?.encerrar();
-    residente.compilador = null;
-    residente.sessao?.fechar();
-    residente.sessao = null;
-    residente.kernel?.cancelar('socket encerrado');
-    residente.ciclo?.parar();
+    if (!residente || !minhaSessao) return;
+    /**
+     * PROPRIEDADE. O close só desmonta a sessão DESTE socket. Um close tardio
+     * (TCP expirando minutos depois de a sessão já ter sido derrubada pelo
+     * teto de espelhos) encontra a sessão fora do conjunto e morre calado.
+     */
+    if (!residente.sessoes.has(minhaSessao)) return;
+    minhaSessao.fechar();
+    residente.sessoes.delete(minhaSessao);
+
+    // A última tela saiu: desmonta o transporte e para o trabalho em curso.
+    // Com outra tela ainda aberta, o turno segue — fechar o navegador não pode
+    // cancelar a resposta que o app desktop está esperando.
+    if (residente.sessoes.size === 0) {
+      residente.ponte?.encerrar();
+      residente.ponte = null;
+      residente.compilador?.encerrar();
+      residente.compilador = null;
+      residente.kernel?.cancelar('todas as telas encerradas');
+      residente.ciclo?.parar();
+      residente.ciclo = null;
+    } else {
+      // A tela que saiu podia ser a líder de voz. Reemitir promove a próxima
+      // na hora — sem isto, a IARA ficaria muda até o próximo evento.
+      residente.ponte?.hidratar();
+    }
   });
 
   socket.on('error', (erro: Error) => {
@@ -223,7 +288,8 @@ export function encerrarResidentes(): void {
     r.kernel?.cancelar('desligamento');
     r.ponte?.encerrar();
     r.compilador?.encerrar();
-    r.sessao?.fechar();
+    for (const sessao of r.sessoes) sessao.fechar();
+    r.sessoes.clear();
     r.barramento.limpar();
   }
 }

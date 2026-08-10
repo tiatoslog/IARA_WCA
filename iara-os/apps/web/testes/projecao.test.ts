@@ -208,26 +208,21 @@ test('o modelo publicado é um glTF válido e servível', () => {
   assert.ok(glb.meshes.length > 0, 'nenhuma malha no modelo');
 });
 
-test('ESTADO CONHECIDO: o modelo atual não tem rig facial', () => {
+test('o modelo publicado tem rig facial suficiente para a presença', () => {
+  // A boa notícia prevista aconteceu em 08/08/2026: o modelo publicado agora é
+  // a Lisa (62 blendshapes — conjunto facial + visemas; ver rig-lisa.test.ts e
+  // CREDITOS.txt). Este teste virou o inverso do que era: se voltar a falhar,
+  // alguém publicou um modelo SEM rosto e a Presença vai cair no aviso de rig.
   const glb = lerGlb(CAMINHO_GLB);
   const dicionario: Record<string, number> = {};
   let i = 0;
   for (const malha of glb.meshes) for (const alvo of malha.alvos) dicionario[alvo] = i++;
 
   const total = glb.meshes.reduce((s, m) => s + m.morphs, 0);
+  assert.ok(total >= 30, `modelo publicado com ${total} morphs — a presença exige o conjunto facial`);
 
-  // Se esta asserção começar a falhar, é boa notícia: significa que o modelo
-  // foi re-exportado com blendshapes. Troque este teste pelo inverso e ligue a
-  // projeção 3D — ver EXPORTACAO.md.
-  assert.equal(total, 0, 'o modelo ganhou morph targets — atualize este teste');
-  assert.equal(
-    rigSuficiente(resolverAlvos(dicionario)),
-    false,
-    'rig suficiente: a projeção 3D pode assumir o rosto',
-  );
-
-  // O que falta, nomeado, para o aviso na tela não ser genérico.
   const resolvidos = resolverAlvos(dicionario);
   const faltando = PARAMETROS_ESSENCIAIS.filter((p) => !resolvidos[p]?.length);
-  assert.deepEqual(faltando, PARAMETROS_ESSENCIAIS);
+  assert.deepEqual(faltando, [], 'parâmetros essenciais sem alvo no modelo publicado');
+  assert.equal(rigSuficiente(resolvidos), true);
 });

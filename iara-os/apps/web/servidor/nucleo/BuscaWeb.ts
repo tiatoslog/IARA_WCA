@@ -36,17 +36,21 @@ export async function buscarNaWeb(consulta: string, limite = 3): Promise<Resulta
   if (!resposta.ok) throw new Error(`DuckDuckGo respondeu ${resposta.status}`);
   const html = await resposta.text();
 
-  const titulos = [...html.matchAll(/class="result__a"[^>]*>([\s\S]*?)<\/a>/g)].map((m) =>
-    limparHtml(m[1]),
-  );
-  const resumos = [...html.matchAll(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g)].map((m) =>
-    limparHtml(m[1]),
-  );
-
+  /**
+   * Extração POR BLOCO de resultado, nunca em duas listas paralelas: um
+   * resultado sem snippet deslocaria todos os pares seguintes e o título A
+   * sairia com o resumo do resultado B.
+   */
+  const blocos = [...html.matchAll(/class="result__body"[\s\S]*?(?=class="result__body"|<div id=|$)/g)];
   const saida: ResultadoBusca[] = [];
-  for (let i = 0; i < titulos.length && saida.length < limite; i += 1) {
-    if (!titulos[i]) continue;
-    saida.push({ titulo: titulos[i], resumo: resumos[i] ?? '' });
+  for (const bloco of blocos) {
+    if (saida.length >= limite) break;
+    const titulo = bloco[0].match(/class="result__a"[^>]*>([\s\S]*?)<\/a>/);
+    if (!titulo) continue;
+    const resumo = bloco[0].match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/);
+    const t = limparHtml(titulo[1]);
+    if (!t) continue;
+    saida.push({ titulo: t, resumo: resumo ? limparHtml(resumo[1]) : '' });
   }
   return saida;
 }

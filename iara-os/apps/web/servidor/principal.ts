@@ -64,6 +64,23 @@ function origemPermitida(req: IncomingMessage): boolean {
 }
 
 async function subir(): Promise<void> {
+  /**
+   * FALHA-FECHADA. Produção sem autenticação era um aviso no log — e aviso
+   * não impede deploy incompleto: sem Supabase, a identidade vem de um campo
+   * que o CLIENTE digita, e qualquer pessoa que alcance o WebSocket assume o
+   * shard de qualquer operador. Se isso é intencional (rede fechada, PoC),
+   * declare IARA_PERMITIR_MODO_LOCAL=1 e assuma a decisão por escrito.
+   */
+  if (!DEV && !autenticacaoAtiva() && process.env.IARA_PERMITIR_MODO_LOCAL !== '1') {
+    console.error(
+      '[iara] RECUSANDO SUBIR: produção sem autenticação (SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY ausentes).\n' +
+        '       Em modo local a identidade vem de um seletor do cliente — exposto à internet, isso é\n' +
+        '       impersonação de qualquer operador. Configure o Supabase Auth ou, se este processo roda\n' +
+        '       em rede fechada e a decisão é consciente, declare IARA_PERMITIR_MODO_LOCAL=1.',
+    );
+    process.exit(1);
+  }
+
   const app = next({ dev: DEV });
   await app.prepare();
   const tratarRequisicao = app.getRequestHandler();
@@ -82,8 +99,27 @@ async function subir(): Promise<void> {
    */
   const ROTA_VOZ = /^\/voz\/([0-9a-f]{8,64})\.(mp3|wav)$/;
 
+  const inicioProcesso = Date.now();
+
   const servidorHttp = createServer((req, res) => {
     const caminho = (req.url ?? '').split('?')[0];
+
+    /**
+     * Health check para orquestradores (Railway, Docker, monitor de uptime).
+     * Sem segredo nenhum na resposta: é estado operacional, não diagnóstico.
+     */
+    if (caminho === '/saude') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          ok: true,
+          uptime_s: Math.round((Date.now() - inicioProcesso) / 1000),
+          modo: DEV ? 'desenvolvimento' : 'producao',
+          autenticacao: autenticacaoAtiva() ? 'supabase' : 'local',
+        }),
+      );
+      return;
+    }
 
     /**
      * Canal WhatsApp. Vem ANTES do Next porque a Meta exige o corpo bruto para
@@ -122,6 +158,26 @@ async function subir(): Promise<void> {
 
   const wss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
 
+  /**
+   * HEARTBEAT. Um socket cujo cabo caiu (Wi-Fi, suspensão, NAT expirando) não
+   * emite `close` — ele apenas para de responder, e a sessão dele viraria
+   * zumbi ocupando vaga de espelho. Ping a cada 30 s; quem não devolveu o pong
+   * da rodada anterior é terminado, e aí sim o `close` dispara a desmontagem.
+   */
+  const vivos = new WeakSet<import('ws').WebSocket>();
+  const RITMO_HEARTBEAT_MS = 30_000;
+  const heartbeat = setInterval(() => {
+    for (const ws of wss.clients) {
+      if (!vivos.has(ws)) {
+        ws.terminate();
+        continue;
+      }
+      vivos.delete(ws);
+      ws.ping();
+    }
+  }, RITMO_HEARTBEAT_MS);
+  heartbeat.unref();
+
   servidorHttp.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const caminho = (req.url ?? '').split('?')[0];
 
@@ -138,6 +194,8 @@ async function subir(): Promise<void> {
     }
 
     wss.handleUpgrade(req, socket, head, (ws) => {
+      vivos.add(ws);
+      ws.on('pong', () => vivos.add(ws));
       conectarOperador(ws);
     });
   });
@@ -179,6 +237,7 @@ async function subir(): Promise<void> {
 
   const encerrar = () => {
     console.log('\n[iara] encerrando...');
+    clearInterval(heartbeat);
     encerrarResidentes();
     wss.close();
     servidorHttp.close(() => process.exit(0));

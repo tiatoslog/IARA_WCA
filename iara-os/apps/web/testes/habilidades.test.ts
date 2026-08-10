@@ -256,10 +256,15 @@ test('sandbox barra papel somente-leitura em habilidade de rede', () => {
   assert.doesNotThrow(() => s.verificar('busca', ['rede'], 'operador'));
 });
 
-test('operador comum não recebe permissão de escrita', () => {
+test('escrita: operador recebe (decisão do Agente Local); somente_leitura nunca', () => {
+  // A política mudou CONSCIENTEMENTE quando o Agente Local entrou no
+  // catálogo: criar_pasta/abrir_aplicativo/energia exigem `escrita`, e as
+  // fronteiras que tornam isso aceitável (raízes autorizadas, allowlist,
+  // confirmação R2) são testadas em agente-local.test.ts.
   const p = new PoliticaPadrao();
-  assert.ok(!p.permissoesDe('operador').includes('escrita'));
+  assert.ok(p.permissoesDe('operador').includes('escrita'));
   assert.ok(p.permissoesDe('administrador').includes('escrita'));
+  assert.ok(!p.permissoesDe('somente_leitura').includes('escrita'));
 });
 
 test('limite de vazão fecha a janela e reabre depois', () => {

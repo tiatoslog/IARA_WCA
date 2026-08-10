@@ -8,13 +8,16 @@
  * nunca "que componente de dashboard preciso?".
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ALTURA_PAREDE,
   ANIMACOES,
   BASE_RACK,
   BICO_CAFETEIRA,
   CAMADA_MURAL,
+  CAMINHADAS,
+  CAMINHADA_MAX_MS,
+  CAMINHADA_MIN_MS,
   CENA,
   JANELA,
   MOBILIA,
@@ -22,9 +25,11 @@ import {
   PLANTA_AMBIENTE,
   QUADRO_METAS,
   RACK,
+  RITMO_CAMINHADA_MS_POR_PX,
   SALA_ALTURA,
   SALA_LARGURA,
   baseDoSprite,
+  direcaoDaCaminhada,
   postoDoEstagio,
   profundidade,
   type Sprite,
@@ -104,9 +109,48 @@ function SpriteArte({ sprite }: { sprite: Sprite }) {
   );
 }
 
+/**
+ * A caminhada da IARA. O posto é decidido pelo estágio (fato do kernel); o
+ * que este hook acrescenta é o TRAJETO: em vez de o avatar teleportar para o
+ * posto novo, ele desliza até lá no ritmo de passos calmos, com a folha de
+ * caminhada da direção certa. Sutileza é isso — mesma informação, sem salto.
+ */
+function useCaminhada(posto: { x: number; y: number }) {
+  const [alvo, setAlvo] = useState(posto);
+  const [caminhando, setCaminhando] = useState<{
+    direcao: keyof typeof CAMINHADAS;
+    duracao_ms: number;
+  } | null>(null);
+  const anterior = useRef(posto);
+
+  useEffect(() => {
+    const de = anterior.current;
+    if (de.x === posto.x && de.y === posto.y) return;
+    anterior.current = posto;
+
+    const distancia = Math.hypot(posto.x - de.x, posto.y - de.y);
+    const duracao_ms = Math.min(
+      CAMINHADA_MAX_MS,
+      Math.max(CAMINHADA_MIN_MS, distancia * RITMO_CAMINHADA_MS_POR_PX),
+    );
+    setCaminhando({ direcao: direcaoDaCaminhada(de, posto), duracao_ms });
+    setAlvo(posto);
+
+    const chegada = setTimeout(() => setCaminhando(null), duracao_ms);
+    return () => clearTimeout(chegada);
+  }, [posto.x, posto.y, posto]);
+
+  return { alvo, caminhando };
+}
+
 export function Escritorio({ estado }: { estado: SnapshotCognitivo }) {
-  const animacao = ANIMACOES[estado.estagio];
   const posto = postoDoEstagio(estado.estagio);
+  const { alvo, caminhando } = useCaminhada(posto);
+  // Durante o trajeto, a folha é a da direção do passo; parada, a do estágio.
+  const animacao = caminhando ? CAMINHADAS[caminhando.direcao] : ANIMACOES[estado.estagio];
+  const transicaoAvatar = caminhando
+    ? `left ${caminhando.duracao_ms}ms linear, top ${caminhando.duracao_ms}ms linear`
+    : undefined;
 
   const halos = useMemo(
     () =>
@@ -228,19 +272,22 @@ export function Escritorio({ estado }: { estado: SnapshotCognitivo }) {
         />
       ))}
 
-      {/* --- IARA: profundidade vem do posto, igual a qualquer móvel --- */}
+      {/* --- IARA: profundidade vem do posto, igual a qualquer móvel.
+             A posição transiciona no ritmo da caminhada — o avatar e a sombra
+             usam a MESMA duração, senão a sombra chega antes da dona. --- */}
       <div
         className={`avatar q${animacao.quadros}`}
         style={
           {
-            left: p(posto.x - animacao.largura / 2),
-            top: p(posto.y - animacao.altura),
-            zIndex: profundidade(posto.y),
+            left: p(alvo.x - animacao.largura / 2),
+            top: p(alvo.y - animacao.altura),
+            zIndex: profundidade(alvo.y),
             width: p(animacao.largura),
             height: p(animacao.altura),
             backgroundImage: `url(/escritorio/${animacao.arquivo})`,
             backgroundSize: `${p(animacao.largura * animacao.quadros)} ${p(animacao.altura)}`,
             animationDuration: `${animacao.duracao_ms}ms`,
+            transition: transicaoAvatar,
             '--fim': p(-animacao.largura * animacao.quadros),
           } as React.CSSProperties
         }
@@ -250,15 +297,17 @@ export function Escritorio({ estado }: { estado: SnapshotCognitivo }) {
       <div
         style={{
           position: 'absolute',
-          left: p(posto.x - 11),
-          top: p(posto.y - 3),
+          left: p(alvo.x - 11),
+          top: p(alvo.y - 3),
           width: p(22),
           height: p(5),
           borderRadius: '50%',
           background: 'rgba(90, 72, 48, 0.22)',
           filter: 'blur(2px)',
-          transition: 'left 1.4s cubic-bezier(0.4,0,0.2,1), top 1.4s cubic-bezier(0.4,0,0.2,1)',
-          zIndex: profundidade(posto.y) - 1,
+          transition: caminhando
+            ? `left ${caminhando.duracao_ms}ms linear, top ${caminhando.duracao_ms}ms linear`
+            : 'left 1.4s cubic-bezier(0.4,0,0.2,1), top 1.4s cubic-bezier(0.4,0,0.2,1)',
+          zIndex: profundidade(alvo.y) - 1,
         }}
       />
     </div>

@@ -9,3 +9,12 @@ https://arlantr.itch.io/
 
 More free game assets:
 https://opengameart.org/users/arlantr
+
+---
+
+Rosto 3D da projeção Presença (public/identidade_iara/source.glb):
+"Lisa - Woman Head with BlendShapes", de skullvez
+https://sketchfab.com/3d-models/lisa-woman-head-with-blendshapes-7670d1c2742b4188a989f1b3205a628b
+Licença: Creative Commons Attribution 4.0 (CC-BY 4.0)
+Modificações: conversão FBX -> GLB, nomes dos morph targets reinjetados,
+textura embutida. 62 blendshapes (conjunto facial clássico + visemas).

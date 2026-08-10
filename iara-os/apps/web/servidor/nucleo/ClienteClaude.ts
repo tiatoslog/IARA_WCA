@@ -107,13 +107,41 @@ export class ClienteClaude {
       sistema.push({ type: 'text', text: pedido.overridePersona });
     }
 
-    const mensagens = [
-      ...pedido.historico.map((r) => ({
-        role: r.papel === 'operador' ? ('user' as const) : ('assistant' as const),
-        content: r.texto,
-      })),
-      { role: 'user' as const, content: pedido.mensagem },
-    ];
+    /**
+     * NORMALIZAÇÃO DO HISTÓRICO. A API exige que a primeira mensagem seja
+     * `user` e os papéis alternem. O shard não garante isso: turno cancelado
+     * grava só o lado do operador, falha de persistência pula registros. Sem
+     * normalizar, um histórico começando em `assistant` (ou com dois `user`
+     * seguidos) derruba TODA chamada de nuvem com erro 400 até a janela
+     * deslizar. Regras: corta prefixo até o primeiro `user`; papéis
+     * consecutivos iguais são fundidos num único bloco.
+     */
+    const brutas = pedido.historico.map((r) => ({
+      role: r.papel === 'operador' ? ('user' as const) : ('assistant' as const),
+      content: r.texto,
+    }));
+    const inicio = brutas.findIndex((m) => m.role === 'user');
+    const mensagens: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    if (inicio >= 0) {
+      for (const m of brutas.slice(inicio)) {
+        const anterior = mensagens[mensagens.length - 1];
+        if (anterior && anterior.role === m.role) {
+          anterior.content = `${anterior.content}\n\n${m.content}`;
+        } else {
+          mensagens.push({ ...m });
+        }
+      }
+    }
+    // A mensagem corrente fecha a lista; se o histórico terminou em `user`
+    // (registro da própria mensagem já gravado), funde em vez de duplicar.
+    const ultima = mensagens[mensagens.length - 1];
+    if (ultima && ultima.role === 'user') {
+      if (ultima.content !== pedido.mensagem) {
+        ultima.content = `${ultima.content}\n\n${pedido.mensagem}`;
+      }
+    } else {
+      mensagens.push({ role: 'user' as const, content: pedido.mensagem });
+    }
 
     const parametros = {
       model: this.modelo,

@@ -156,13 +156,14 @@ export const MOBILIA: Sprite[] = [
   // ficava solta no meio do piso e ainda entrava no corredor.
   { arquivo: 'Trash.png', largura: 16, altura: 16, x: 302, y: 142, ancora: 12 },
 
-  // --- operacional: ilha central, duas estações paralelas ---
-  { arquivo: 'desk.png', largura: 64, altura: 32, x: 60, y: 112, ancora: 28 },
-  // ÚNICA âncora que não é o fundo da arte: o monitor não toca o piso, toca a
-  // TAMPA DA MESA. `22` põe a base dele em 118, acima da base da mesa (140), e
-  // é isso que faz a frente da mesa desenhar por cima do pé do monitor.
-  { arquivo: 'PC1.png', largura: 32, altura: 32, x: 76, y: 96, ancora: 22 },
-  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 84, y: 134, ancora: 15 },
+  // --- operacional: ilha central, duas estações IDÊNTICAS e paralelas ---
+  // A estação da esquerda era composta (desk + PC1 + cadeira) e o monitor
+  // avulso lia como "computador no chão" atrás da mesa — o pé dele flutuava
+  // entre a tampa e o piso. `desk-with-pc` é a mesa com o computador JÁ
+  // desenhado na arte: não existe composição para errar. Duas iguais, mesma
+  // base, viram uma ilha de trabalho de verdade.
+  { arquivo: 'desk-with-pc.png', largura: 64, altura: 64, x: 64, y: 84, ancora: 47 },
+  { arquivo: 'Chair.png', largura: 16, altura: 16, x: 88, y: 132, ancora: 15 },
 
   { arquivo: 'desk-with-pc.png', largura: 64, altura: 64, x: 140, y: 84, luz: 'terminal', ancora: 47 },
   { arquivo: 'Chair.png', largura: 16, altura: 16, x: 164, y: 132, ancora: 15 },
@@ -217,6 +218,39 @@ export const ANIMACOES: Record<EstagioCognitivo, Animacao> = {
   pensando: { arquivo: 'Julia_PC.png', quadros: 6, largura: 64, altura: 64, duracao_ms: 760 },
   falando: { arquivo: 'Julia.png', quadros: 4, largura: 32, altura: 32, duracao_ms: 1100 },
 };
+
+/**
+ * Folhas de CAMINHADA do pack (256x64 → 4 quadros de 64x64). São elas que
+ * fazem a IARA ANDAR entre os postos em vez de teleportar: durante o
+ * deslocamento a projeção troca para a folha da direção do movimento e
+ * desliza a posição no ritmo de passos calmos.
+ */
+export const CAMINHADAS: Record<'frente' | 'costas' | 'esquerda' | 'direita', Animacao> = {
+  frente: { arquivo: 'Julia_walk_Foward.png', quadros: 4, largura: 64, altura: 64, duracao_ms: 900 },
+  costas: { arquivo: 'Julia_walk_Up.png', quadros: 4, largura: 64, altura: 64, duracao_ms: 900 },
+  esquerda: { arquivo: 'Julia_walk_Left.png', quadros: 4, largura: 64, altura: 64, duracao_ms: 900 },
+  // O nome do arquivo veio assim do pack. Corrigir o typo quebraria o asset.
+  direita: { arquivo: 'Julia_walk_Rigth.png', quadros: 4, largura: 64, altura: 64, duracao_ms: 900 },
+};
+
+/**
+ * Ritmo do deslocamento: ms por pixel de arte. 30 ms/px percorre o vão
+ * mesa→sala (~50 px) em ~1,5 s — dentro da janela de movimento calmo do
+ * invariante (piso de 0,8 s, nada frenético).
+ */
+export const RITMO_CAMINHADA_MS_POR_PX = 30;
+export const CAMINHADA_MIN_MS = 800;
+export const CAMINHADA_MAX_MS = 2400;
+
+export function direcaoDaCaminhada(
+  de: { x: number; y: number },
+  para: { x: number; y: number },
+): keyof typeof CAMINHADAS {
+  const dx = para.x - de.x;
+  const dy = para.y - de.y;
+  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'direita' : 'esquerda';
+  return dy >= 0 ? 'frente' : 'costas';
+}
 
 /**
  * Duas âncoras apenas. O avatar caminha entre elas, nunca teleporta.

@@ -54,8 +54,20 @@ const VERBO_SONDAGEM =
 const COISA_PRIVADA =
   /\b(conversa|conversas|mensagem|mensagens|historico|registro|registros|anotacao|anotacoes|nota|notas|desabafo|avaliacao|feedback|chat|prompt)\b/;
 
-const ALVO_GENERICO =
-  /\b(operador|operadora|colega|usuario)\s*\d*\b|\boutr[oa] (operador|operadora|pessoa|usuario)\b|\b(os outros|as outras|o pessoal|a equipe|o time)\b|\b(ele|ela|eles|elas|dele|dela|deles|delas)\b/;
+/**
+ * Alvo humano EXPLÍCITO (operador, colega, equipe) e pronome anafórico são
+ * dimensões separadas de propósito: "registro dele" numa frase sobre um erro
+ * de banco se refere ao ERRO, não a uma pessoa. Pronome sozinho só vira alvo
+ * quando não há assunto técnico por perto (ver `ehSondagem`).
+ */
+const ALVO_HUMANO =
+  /\b(operador|operadora|colega|usuario)\s*\d*\b|\boutr[oa] (operador|operadora|pessoa|usuario)\b|\b(os outros|as outras|o pessoal|a equipe|o time)\b/;
+
+const PRONOME = /\b(ele|ela|eles|elas|dele|dela|deles|delas)\b/;
+
+/** Assunto técnico: âncora de que o pronome se refere a coisa, não a gente. */
+const ASSUNTO_TECNICO =
+  /\b(erro|erros|bug|bugs|falha|falhas|problema|problemas|servidor|servidores|sistema|sistemas|banco|api|container|deploy|timeout|conexao|processo|script|relatorio)\b/;
 
 export class RoteadorIntencoes {
   /** Nomes dos DEMAIS operadores. Quem está falando nunca entra na lista. */
@@ -66,8 +78,22 @@ export class RoteadorIntencoes {
       const n = normalizar(nome);
       return n.length > 2 && t.includes(n);
     });
-    if (!alvoNominal && !ALVO_GENERICO.test(t)) return false;
-    return VERBO_SONDAGEM.test(t) || COISA_PRIVADA.test(t);
+
+    // Alvo explícito (nome ou "operador 3", "a equipe"): qualquer verbo de
+    // sondagem ou coisa privada confirma.
+    if (alvoNominal || ALVO_HUMANO.test(t)) {
+      return VERBO_SONDAGEM.test(t) || COISA_PRIVADA.test(t);
+    }
+
+    // Só pronome: "registro dele" numa frase sobre erro/servidor aponta para
+    // a coisa, não para colega — deixa passar para o RAG responder. Sem
+    // assunto técnico por perto, o pronome só pode ser gente: barra.
+    if (PRONOME.test(t)) {
+      if (VERBO_SONDAGEM.test(t)) return true;
+      return COISA_PRIVADA.test(t) && !ASSUNTO_TECNICO.test(t);
+    }
+
+    return false;
   }
 
   rotear(mensagem: string): IntencaoMapeada {
@@ -83,8 +109,14 @@ export class RoteadorIntencoes {
       };
     }
 
-    // 1. Clima / mundo real
-    if (/\b(chuva|chover|chovendo|tempo|clima|temperatura|previsao|calor|frio)\b/.test(t)) {
+    // 1. Clima / mundo real. "tempo" solto é armadilha: "quanto tempo leva"
+    // é duração, não meteorologia — só casa "tempo" com contexto de clima.
+    if (
+      !/\b(quanto|ha quanto|em quanto)\s+tempo\b/.test(t) &&
+      /\b(chuva|chover|chovendo|clima|temperatura|previsao|calor|frio|tempo (hoje|agora|amanha|la fora)|(como esta|como ta|como anda) o tempo)\b/.test(
+        t,
+      )
+    ) {
       return {
         destino: 'sistema_local',
         modulo: 'clima',
@@ -135,8 +167,9 @@ export class RoteadorIntencoes {
       };
     }
 
-    // 4. Busca web leve
-    if (/\b(pesquis|busca na internet|procura na web|o que e |quem e |noticia)\b/.test(t)) {
+    // 4. Busca web leve. `pesquis\w*`, não `pesquis\b`: o \b depois de prefixo
+    // exige não-letra em seguida e faria "pesquisa"/"pesquise" nunca casarem.
+    if (/\b(pesquis\w*|busca na internet|procura na web|o que e |quem e |noticia\w*)\b/.test(t)) {
       return {
         destino: 'sistema_local',
         modulo: 'busca_web',

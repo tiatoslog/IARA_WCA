@@ -51,6 +51,8 @@ export class RagHistorico {
   private registros: AssinaturaErro[] = [];
   private indice: Array<Map<string, number>> = [];
   private carregado = false;
+  /** true quando o índice veio do dataset semente, não do banco real. */
+  private baseDeDemonstracao = false;
 
   async carregar(): Promise<void> {
     if (this.carregado) return;
@@ -71,11 +73,15 @@ export class RagHistorico {
           'hash, assinatura, sistema, primeira_ocorrencia, ultima_ocorrencia, ocorrencias, resolucao',
         );
       if (error) throw new Error(`Supabase: ${error.message}`);
-      if (data && data.length > 0) return data as AssinaturaErro[];
+      if (data && data.length > 0) {
+        this.baseDeDemonstracao = false;
+        return data as AssinaturaErro[];
+      }
     }
 
     const arquivo = path.resolve(process.cwd(), 'dados', 'historico-erros.json');
     const bruto = await readFile(arquivo, 'utf8');
+    this.baseDeDemonstracao = true;
     return (JSON.parse(bruto) as { erros: AssinaturaErro[] }).erros;
   }
 
@@ -107,6 +113,11 @@ export class RagHistorico {
         `a última em ${r.ultima_ocorrencia}. Resolução adotada: ${r.resolucao}`
       );
     });
-    return `Sim, já passamos por isso.\n${linhas.join('\n')}`;
+    // Dado de demonstração se declara: incidente fictício narrado com
+    // confiança destrói a credibilidade do histórico real que vier depois.
+    const origem = this.baseDeDemonstracao
+      ? '\n(Atenção: base de demonstração do dataset semente — o histórico real ainda não foi conectado.)'
+      : '';
+    return `Sim, já passamos por isso.\n${linhas.join('\n')}${origem}`;
   }
 }

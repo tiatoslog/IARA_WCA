@@ -34,6 +34,8 @@ export interface Fala {
   tokens_saida?: number;
   /** Caminho do áudio desta fala, quando a voz já foi sintetizada. */
   voz?: string | null;
+  /** O servidor vai mandar áudio desta fala (Convai ligada) — espere por ele. */
+  voz_prevista?: boolean;
   /**
    * `performance.now()` do instante em que o turno abriu. É o relógio que a
    * boca da projeção 3D usa para articular — precisa ser monotônico, então
@@ -58,6 +60,20 @@ export interface Credencial {
 
 const MAX_LOGS = 120;
 const MAX_FALAS = 60;
+
+/**
+ * Estado do enlace, para a UI dizer a verdade sobre a conexão:
+ *  - `conectando`: primeira tentativa desta credencial.
+ *  - `conectado`: barramento aberto.
+ *  - `reconectando`: caiu e o backoff está trabalhando (1→2→4→8→16 s).
+ *  - `desconectado`: o servidor RECUSOU (sessão expirada, limite de telas) —
+ *    reconectar automaticamente viraria um loop infinito de recusa a cada
+ *    poucos segundos, para sempre. Aqui só um gesto humano religa.
+ */
+export type EstadoConexao = 'conectando' | 'conectado' | 'reconectando' | 'desconectado';
+
+/** Fechamentos que o servidor usa para dizer "não volte sozinho". */
+const FECHAMENTOS_TERMINAIS = new Set([4401, 4000]);
 
 export const SNAPSHOT_INICIAL: SnapshotCognitivo = {
   sessao: '',
@@ -84,13 +100,20 @@ export function useIaraSocket(credencial: Credencial) {
   const [snapshot, setSnapshot] = useState<SnapshotCognitivo>(SNAPSHOT_INICIAL);
   const [falas, setFalas] = useState<Fala[]>([]);
   const [logs, setLogs] = useState<LinhaLog[]>([]);
-  const [conectado, setConectado] = useState(false);
+  const [conexao, setConexao] = useState<EstadoConexao>('conectando');
+  /** Por que o servidor mandou parar — mostrado no aviso de desconexão. */
+  const [motivoDesconexao, setMotivoDesconexao] = useState<string | null>(null);
+  const conectado = conexao === 'conectado';
 
   const socketRef = useRef<WebSocket | null>(null);
   const ultimoSeq = useRef(0);
   const contadorLog = useRef(0);
   const tentativas = useRef(0);
   const desmontado = useRef(false);
+  /** O servidor mandou não voltar (4401/4000). Só `religar()` limpa. */
+  const recusado = useRef(false);
+  /** Religa manualmente após uma recusa terminal. */
+  const [chaveReligar, setChaveReligar] = useState(0);
 
   const registrarLog = useCallback((nivel: NivelLog, texto: string) => {
     contadorLog.current += 1;
@@ -119,6 +142,7 @@ export function useIaraSocket(credencial: Credencial) {
         latencia_ms: f.latencia_ms ?? undefined,
         cache_lido: f.cache_lido,
         voz: f.voz,
+        voz_prevista: f.voz_prevista,
         tokens_entrada: s.telemetria.tokens_entrada,
         tokens_saida: s.telemetria.tokens_saida,
         // Carimbado uma vez, na abertura do turno, e PRESERVADO nas
@@ -148,20 +172,34 @@ export function useIaraSocket(credencial: Credencial) {
 
   const aplicar = useCallback(
     (pacote: PacoteServidor) => {
+      /**
+       * Erro passa POR FORA da guarda de sequência. A recusa de autenticação
+       * chega antes de qualquer snapshot e o socket fecha em seguida — se a
+       * guarda a descartasse, o operador veria um loop de reconexão mudo em
+       * vez de "sessão expirada, entre novamente".
+       */
+      if (pacote.tipo === 'erro') {
+        registrarLog('alerta', pacote.texto);
+        return;
+      }
+
       // Guarda de sequência: o passado nunca sobrescreve o presente.
       if (pacote.seq <= ultimoSeq.current) return;
       ultimoSeq.current = pacote.seq;
 
       if (pacote.tipo === 'snapshot') {
-        setSnapshot(pacote.snapshot);
+        // Snapshot estruturalmente idêntico (só `seq`/`instante` mudaram) não
+        // re-renderiza a aplicação: o servidor já deduplica, mas a hidratação
+        // da reconexão passa por fora — esta guarda cobre o que sobra.
+        setSnapshot((antes) => {
+          const a = JSON.stringify({ ...antes, seq: 0, instante: 0 });
+          const b = JSON.stringify({ ...pacote.snapshot, seq: 0, instante: 0 });
+          return a === b ? antes : pacote.snapshot;
+        });
         absorverFala(pacote.snapshot);
         return;
       }
-      if (pacote.tipo === 'log') {
-        registrarLog(pacote.nivel, pacote.texto);
-        return;
-      }
-      registrarLog('alerta', pacote.texto);
+      registrarLog(pacote.nivel, pacote.texto);
     },
     [registrarLog, absorverFala],
   );
@@ -197,7 +235,7 @@ export function useIaraSocket(credencial: Credencial) {
           return;
         }
         tentativas.current = 0;
-        setConectado(true);
+        setConexao('conectado');
         // Reconexão: zera a guarda para aceitar a nova hidratação.
         ultimoSeq.current = 0;
         socket.send(JSON.stringify({ tipo: 'ola', id_usuario: idUsuario, nome, token }));
@@ -212,10 +250,27 @@ export function useIaraSocket(credencial: Credencial) {
         }
       };
 
-      socket.onclose = () => {
+      socket.onclose = (evento) => {
         if (!atual()) return; // socket órfão: morre calado, não reagenda nada
         socketRef.current = null;
-        setConectado(false);
+        /**
+         * Recusa TERMINAL (4401 sessão inválida, 4000 limite de telas): parar.
+         * Reconectar automaticamente aqui era um loop infinito — recusa a cada
+         * 8 s, para sempre, com log de alerta empilhando. O caminho de volta é
+         * humano (`religar`) ou um token novo via `onAuthStateChange`, que
+         * troca as dependências deste efeito e reconecta com credencial nova.
+         */
+        if (FECHAMENTOS_TERMINAIS.has(evento.code)) {
+          recusado.current = true;
+          setMotivoDesconexao(
+            evento.code === 4000
+              ? 'Limite de telas simultâneas atingido — feche outra tela e reconecte.'
+              : 'A sessão expirou ou foi recusada. Entre novamente.',
+          );
+          setConexao('desconectado');
+          return;
+        }
+        setConexao('reconectando');
         agendarReconexao();
       };
 
@@ -227,10 +282,18 @@ export function useIaraSocket(credencial: Credencial) {
     const agendarReconexao = () => {
       if (desmontado.current) return;
       tentativas.current += 1;
-      const espera = Math.min(8000, 400 * 2 ** Math.min(tentativas.current, 5));
+      // 1 → 2 → 4 → 8 → 16 s, com jitter de até 20%: N telas derrubadas pelo
+      // mesmo restart do motor não voltam em fase batendo no mesmo instante.
+      const base = Math.min(16_000, 1000 * 2 ** Math.min(tentativas.current - 1, 4));
+      const espera = base + Math.random() * base * 0.2;
       timerReconexao = setTimeout(conectar, espera);
     };
 
+    if (recusado.current) {
+      // Religação manual depois de uma recusa: uma tentativa limpa.
+      recusado.current = false;
+    }
+    setConexao((c) => (c === 'conectado' ? c : 'conectando'));
     conectar();
 
     return () => {
@@ -242,7 +305,7 @@ export function useIaraSocket(credencial: Credencial) {
       socketRef.current = null;
       socket?.close();
     };
-  }, [idUsuario, nome, token, aplicar]);
+  }, [idUsuario, nome, token, aplicar, chaveReligar]);
 
   const enviar = useCallback(
     (texto: string) => {
@@ -253,7 +316,7 @@ export function useIaraSocket(credencial: Credencial) {
         // Falha de envio nunca é silenciosa: some da caixa sem explicação é o
         // que faz o operador achar que a IARA travou.
         registrarLog('alerta', 'Mensagem não enviada: o barramento não está aberto. Reconectando…');
-        setConectado(false);
+        setConexao((c) => (c === 'conectado' ? 'reconectando' : c));
         return false;
       }
       setFalas((antes) => {
@@ -282,5 +345,22 @@ export function useIaraSocket(credencial: Credencial) {
     }
   }, []);
 
-  return { snapshot, falas, logs, conectado, enviar, interromper };
+  /** Religa após uma recusa terminal — o gesto humano que zera a decisão. */
+  const religar = useCallback(() => {
+    tentativas.current = 0;
+    setMotivoDesconexao(null);
+    setChaveReligar((v) => v + 1);
+  }, []);
+
+  return {
+    snapshot,
+    falas,
+    logs,
+    conectado,
+    conexao,
+    motivoDesconexao,
+    enviar,
+    interromper,
+    religar,
+  };
 }

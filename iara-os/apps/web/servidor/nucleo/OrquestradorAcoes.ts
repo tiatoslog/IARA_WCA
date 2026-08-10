@@ -50,8 +50,15 @@ const CODIGOS_TEMPO: Record<number, string> = {
   99: 'trovoada com granizo intenso',
 };
 
+/** Validade do cache de centrais. Sem TTL, mudança no banco só aparecia
+ *  depois de reiniciar o processo. */
+const CACHE_CENTRAIS_MS = 60_000;
+
 export class OrquestradorAcoes {
   private cacheCentrais: Central[] | null = null;
+  private cacheCentraisEm = 0;
+  /** true quando a resposta veio do dataset semente, não do banco real. */
+  private centraisDeDemonstracao = false;
 
   async executar(
     modulo: string,
@@ -142,7 +149,9 @@ export class OrquestradorAcoes {
    * sabem qual das duas está em uso.
    */
   private async carregarCentrais(): Promise<Central[]> {
-    if (this.cacheCentrais) return this.cacheCentrais;
+    if (this.cacheCentrais && Date.now() - this.cacheCentraisEm < CACHE_CENTRAIS_MS) {
+      return this.cacheCentrais;
+    }
 
     const bd = supabase();
     if (bd) {
@@ -154,6 +163,8 @@ export class OrquestradorAcoes {
       // o JSON em vez de afirmar que a operação tem zero centrais.
       if (data && data.length > 0) {
         this.cacheCentrais = data as Central[];
+        this.cacheCentraisEm = Date.now();
+        this.centraisDeDemonstracao = false;
         return this.cacheCentrais;
       }
     }
@@ -161,6 +172,8 @@ export class OrquestradorAcoes {
     const bruto = await readFile(path.join(RAIZ_DADOS, 'infraestrutura.json'), 'utf8');
     const dados = JSON.parse(bruto) as { centrais: Central[] };
     this.cacheCentrais = dados.centrais;
+    this.cacheCentraisEm = Date.now();
+    this.centraisDeDemonstracao = true;
     return this.cacheCentrais;
   }
 
@@ -179,9 +192,19 @@ export class OrquestradorAcoes {
       const inativas = filtradas.length - ativas.length;
       const nota = inativas > 0 ? ` ${inativas} está(ão) fora de operação.` : '';
 
+      /**
+       * HONESTIDADE SOBRE A FONTE. O dataset semente responde com a mesma
+       * fluência do banco real — e número fictício dito com confiança é o
+       * jeito mais rápido de perder a confiança do operador. Dado de
+       * demonstração se declara como tal, sempre.
+       */
+      const origem = this.centraisDeDemonstracao
+        ? ' (Atenção: estes são dados de demonstração do dataset semente — o banco real ainda não foi conectado.)'
+        : '';
+
       return (
         `Verifiquei os registros de infraestrutura: ${ativas.length} central(is) ativa(s) ` +
-        `${escopo}, somando ${veiculos} veículos vinculados.${nota}`
+        `${escopo}, somando ${veiculos} veículos vinculados.${nota}${origem}`
       );
     } catch (erro) {
       return `Não consegui ler a base de infraestrutura (${(erro as Error).message}).`;

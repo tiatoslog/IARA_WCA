@@ -31,12 +31,24 @@ export class PonteProjecao {
   private pendente: NodeJS.Timeout | null = null;
   private encerrada = false;
   private readonly desassinar: () => void;
+  /**
+   * Assinatura estrutural do último snapshot emitido. Snapshot idêntico não é
+   * reemitido: sem isto, o "respirar" do ciclo autônomo (15 s) e qualquer
+   * evento que não mudou nada visível faziam TODAS as telas re-renderizar a
+   * aplicação inteira em idle — `seq` e `instante` são novos a cada emissão,
+   * então a comparação precisa ignorá-los.
+   */
+  private ultimaAssinatura = '';
 
   constructor(
     private readonly barramento: BarramentoEventos,
     private readonly compilador: CompiladorSnapshot,
     private readonly estado: EstadoAtomico,
-    private readonly sessao: SessaoOperador,
+    /**
+     * Referência VIVA ao conjunto de espelhos do residente: telas entram e
+     * saem sem a ponte precisar saber. Cada sessão carimba o próprio `seq`.
+     */
+    private readonly sessoes: ReadonlySet<SessaoOperador>,
   ) {
     this.desassinar = barramento.assinarTudo((e) => this.aoEvento(e));
   }
@@ -50,12 +62,14 @@ export class PonteProjecao {
 
   /** Snapshot imediato — usado na conexão e na reconexão. */
   hidratar(): void {
-    this.emitir();
+    // Hidratação nunca é deduplicada: a tela que acabou de (re)conectar zerou
+    // a guarda de sequência e precisa do estado consolidado, igual ou não.
+    this.emitir(true);
   }
 
   private aoEvento(e: EventoKernel): void {
     const log = this.traduzir(e);
-    if (log) this.sessao.emitirLog(log.nivel, log.texto);
+    if (log) for (const sessao of this.sessoes) sessao.emitirLog(log.nivel, log.texto);
 
     // Fala não espera a janela.
     if (e.tipo === 'RESPOSTA_TRECHO' || e.tipo === 'TAREFA_CONCLUIDA') {
@@ -93,14 +107,35 @@ export class PonteProjecao {
     this.pendente.unref?.();
   }
 
-  private emitir(): void {
+  private emitir(forcar = false): void {
     const base = this.estado.instantaneo();
+    // Descartes somados: a telemetria é do operador, não de uma tela.
+    let descartados = 0;
+    for (const sessao of this.sessoes) descartados += sessao.descartados;
     const snapshot = this.compilador.compilar(
       base,
       base.operador?.id_usuario ?? 'anonimo',
-      this.sessao.descartados,
+      descartados,
     );
-    this.sessao.emitirSnapshot(this.comVoz(snapshot));
+    const pronto = this.comVoz(snapshot);
+
+    // `seq` e `instante` mudam a cada compilação mesmo com estado idêntico —
+    // zerados na assinatura para a comparação enxergar só o que é visível.
+    const assinatura = JSON.stringify({ ...pronto, seq: 0, instante: 0 });
+    if (!forcar && assinatura === this.ultimaAssinatura) return;
+    this.ultimaAssinatura = assinatura;
+    /**
+     * Eleição de líder de voz: só UMA tela reproduz áudio, a mais antiga.
+     * `Set` preserva ordem de inserção, então o primeiro da iteração é o
+     * espelho mais velho. Quando ele fecha, a próxima emissão promove o
+     * seguinte — sem isso, app + abas espelhando o mesmo operador falam
+     * todos ao mesmo tempo e a IARA sai repetida e embolada.
+     */
+    let lider = true;
+    for (const sessao of this.sessoes) {
+      sessao.emitirSnapshot({ ...pronto, voz_lider: lider });
+      lider = false;
+    }
   }
 
   /**
@@ -114,8 +149,17 @@ export class PonteProjecao {
   private comVoz(snapshot: SnapshotCognitivo): SnapshotCognitivo {
     if (!snapshot.fala) return snapshot;
     const voz = caminhoDaVoz(snapshot.fala.id);
-    if (voz === snapshot.fala.voz) return snapshot;
-    return { ...snapshot, fala: { ...snapshot.fala, voz } };
+    /**
+     * `voz_prevista` avisa o cliente que o áudio está a caminho. É o que
+     * impede a síntese do navegador de disparar no instante da conclusão e o
+     * áudio da Convai chegar um segundo depois POR CIMA — as duas vozes
+     * juntas eram a fala dobrada e embolada.
+     */
+    const prevista = vozDisponivel();
+    if (voz === snapshot.fala.voz && prevista === (snapshot.fala.voz_prevista ?? false)) {
+      return snapshot;
+    }
+    return { ...snapshot, fala: { ...snapshot.fala, voz, voz_prevista: prevista } };
   }
 
   /**

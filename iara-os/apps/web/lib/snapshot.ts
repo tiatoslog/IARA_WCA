@@ -149,6 +149,14 @@ export interface FalaProjetada {
    * texto. É o comportamento honesto: o texto existe antes da voz existir.
    */
   readonly voz: string | null;
+
+  /**
+   * `true` quando o servidor VAI produzir áudio para esta fala (Convai
+   * configurada). É o que permite ao cliente esperar o áudio de qualidade em
+   * vez de disparar a síntese local — sem isto, as duas vozes saem uma em
+   * cima da outra, porque o áudio chega sempre um instante depois do texto.
+   */
+  readonly voz_prevista?: boolean;
 }
 
 export interface SnapshotCognitivo {
@@ -175,4 +183,13 @@ export interface SnapshotCognitivo {
 
   /** `null` quando a IARA não está falando nem acabou de falar. */
   readonly fala: FalaProjetada | null;
+
+  /**
+   * `true` na ÚNICA tela eleita para reproduzir voz. A sessão aceita até
+   * quatro espelhos do mesmo operador (app + abas), e sem eleição cada um
+   * reproduz o próprio áudio — a IARA sai repetida e embolada. O servidor
+   * elege o espelho mais antigo; quando ele fecha, o próximo herda a voz.
+   * Ausente (servidor antigo) vale `true`: tela única fala normalmente.
+   */
+  readonly voz_lider?: boolean;
 }
