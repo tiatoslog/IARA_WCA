@@ -23,7 +23,9 @@ import {
   IconeVoz,
 } from './Icones';
 import type { EstagioCognitivo } from '../lib/estado';
+import type { PreferenciasOperador } from '../lib/perfil';
 import type { SnapshotCognitivo } from '../lib/snapshot';
+import { FichaOperador, fichaDoSnapshot } from './FichaOperador';
 
 const ROTULO_ESTAGIO: Record<EstagioCognitivo, string> = {
   ocioso: 'à disposição',
@@ -65,6 +67,8 @@ interface Props {
   onFalar?: (texto: string) => boolean;
   /** O texto avulso soando agora — entra na guarda de eco junto com a fala. */
   textoAvulso?: string | null;
+  /** Grava a ficha do operador. `false` = o barramento estava fechado. */
+  onSalvarPreferencias?: (p: PreferenciasOperador) => boolean;
 }
 
 export function PainelConversa({
@@ -82,8 +86,10 @@ export function PainelConversa({
   onAlternarVoz,
   onFalar,
   textoAvulso = null,
+  onSalvarPreferencias,
 }: Props) {
   const [rascunho, setRascunho] = useState('');
+  const [fichaAberta, setFichaAberta] = useState(false);
   const fim = useRef<HTMLDivElement | null>(null);
 
   /**
@@ -112,6 +118,15 @@ export function PainelConversa({
   const submeter = () => {
     if (onEnviar(rascunho)) setRascunho('');
   };
+
+  /**
+   * O nome que a IARA usa. É a MESMA regra do prompt — ficha primeiro,
+   * credencial depois — e por isso a saudação do "ei IARA" muda junto quando o
+   * operador troca o nome na ficha. Duas regras diferentes para o mesmo fato
+   * fariam a voz e o texto chamarem a pessoa de coisas diferentes.
+   */
+  const preferencias = fichaDoSnapshot(estado.operador?.preferencias);
+  const nomeOperador = preferencias.como_chamar || estado.operador?.nome || '';
 
   /**
    * Modo ligação. A IARA "está falando" quando há fala em curso não concluída
@@ -148,10 +163,8 @@ export function PainelConversa({
     // "Ei IARA" respondido com voz: a confirmação de que ela está ouvindo.
     // Devolver `false` (voz desligada) faz a escuta soar o toque de despertar.
     aoAcordar: onFalar
-      ? () => {
-          const nome = estado.operador?.nome;
-          return onFalar(nome ? `Oi ${nome}, pode falar.` : 'Oi, pode falar.');
-        }
+      ? () =>
+          onFalar(nomeOperador ? `Oi ${nomeOperador}, pode falar.` : 'Oi, pode falar.')
       : undefined,
   });
 
@@ -174,6 +187,22 @@ export function PainelConversa({
                   ? 'abrindo…'
                   : 'reconectando…'}
           </span>
+          {/*
+            A porta da ficha é o NOME de quem está na sala — não uma
+            engrenagem de configurações. Preferência sobre como ser tratado não
+            é ajuste de sistema; é sobre a pessoa, e o lugar dela é onde a
+            pessoa aparece.
+          */}
+          {onSalvarPreferencias && nomeOperador && (
+            <button
+              className={fichaAberta ? 'conversa-operador aberto' : 'conversa-operador'}
+              onClick={() => setFichaAberta((v) => !v)}
+              title="Como a IARA deve chamar e atender você"
+              aria-expanded={fichaAberta}
+            >
+              {nomeOperador}
+            </button>
+          )}
           <span
             className={conectado ? 'conversa-enlace ligado' : 'conversa-enlace'}
             title={conectado ? 'barramento aberto' : 'barramento fechado'}
@@ -197,6 +226,24 @@ export function PainelConversa({
         )}
       </header>
 
+      {/*
+        A ficha OCUPA o fluxo, não flutua sobre ele. Modal sobreposto exigiria
+        uma camada acima do painel — e o painel já é a camada mais externa da
+        hierarquia espacial. Enquanto a ficha está aberta, o rodapé de escrita
+        continua vivo: quem abriu para trocar o próprio nome não deveria perder
+        a conversa por isso.
+      */}
+      {fichaAberta && onSalvarPreferencias ? (
+        <div className="conversa-fluxo rolagem">
+          <FichaOperador
+            nomeCredencial={estado.operador?.nome ?? ''}
+            preferencias={preferencias}
+            conectado={conectado}
+            aoSalvar={onSalvarPreferencias}
+            aoFechar={() => setFichaAberta(false)}
+          />
+        </div>
+      ) : (
       <div className="conversa-fluxo rolagem">
         {falas.length === 0 && (
           <div className="sugestoes">
@@ -216,6 +263,7 @@ export function PainelConversa({
         ))}
         <div ref={fim} />
       </div>
+      )}
 
       <footer className="conversa-rodape">
         {/* Faixa da ligação: só aparece quando o microfone está aberto. */}

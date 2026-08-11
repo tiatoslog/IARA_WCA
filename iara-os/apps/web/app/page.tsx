@@ -27,6 +27,7 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
     enviar,
     interromper,
     religar,
+    salvarPreferencias,
   } = useIaraSocket(credencial);
 
   /**
@@ -91,6 +92,7 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         onAlternarVoz={voz.alternarVoz}
         onFalar={voz.falar}
         textoAvulso={voz.textoAvulso}
+        onSalvarPreferencias={salvarPreferencias}
       />
 
       {/* Política de mídia do navegador exige um gesto antes de tocar som.

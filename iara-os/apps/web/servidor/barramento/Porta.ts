@@ -147,10 +147,21 @@ export function conectarOperador(socket: WebSocket): void {
           minhaSessao = sessao;
           r.sessoes.add(sessao);
 
+          /**
+           * A ficha entra JUNTO com a identidade, num único `definirOperador`.
+           *
+           * Em duas chamadas o primeiro snapshot sairia com a ficha vazia e o
+           * segundo a corrigiria — e o formulário, que hidrata do snapshot,
+           * abriria em branco por um instante antes de preencher. Pior: se o
+           * operador fosse rápido no clique, digitaria em cima de um campo
+           * prestes a ser sobrescrito. `lerPreferencias` nunca lança, então
+           * não há risco de a ficha impedir a sessão de abrir.
+           */
           await r.estado.definirOperador({
             id_usuario: operador.id_usuario,
             nome: operador.nome,
             visto_em: new Date().toISOString(),
+            preferencias: await memoria.lerPreferencias(operador.id_usuario),
           });
 
           r.kernel ??= new Kernel({
@@ -224,6 +235,41 @@ export function conectarOperador(socket: WebSocket): void {
 
     if (pacote.tipo === 'interromper') {
       residente.kernel.cancelar('interrupção do operador');
+      return;
+    }
+
+    if (pacote.tipo === 'preferencias') {
+      /**
+       * O shard de destino é `operador.id_usuario` — a identidade RESOLVIDA na
+       * apresentação, verificada por token quando há Supabase. O pacote não
+       * carrega id nenhum, e é por isso que não existe aqui a pergunta "de
+       * quem é esta ficha": a resposta é a mesma de sempre, a sessão.
+       */
+      const r = residente;
+      const dono = operador;
+      void (async () => {
+        try {
+          const gravada = await memoria.gravarPreferencias(dono.id_usuario, pacote.preferencias);
+          const atual = r.estado.instantaneo().operador;
+          await r.estado.definirOperador({
+            id_usuario: dono.id_usuario,
+            nome: atual?.nome ?? dono.nome,
+            visto_em: atual?.visto_em ?? new Date().toISOString(),
+            preferencias: gravada,
+          });
+          // Reidrata TODOS os espelhos: a ficha mudou para o operador, não
+          // para a aba que salvou. App desktop e navegador têm que concordar.
+          r.ponte?.hidratar();
+          minhaSessao?.emitirLog('info', 'Ficha do operador atualizada.');
+        } catch (erro) {
+          // Falha de escrita é dita em voz alta. Ficha que "salvou" e não
+          // salvou faz o operador declarar a mesma coisa de novo na semana
+          // seguinte, sem entender por quê.
+          minhaSessao?.emitirErro(
+            `Não foi possível salvar a ficha: ${(erro as Error).message}`,
+          );
+        }
+      })();
       return;
     }
 

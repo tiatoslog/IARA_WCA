@@ -15,6 +15,11 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { InsightRelacional, RegistroMemoria } from '../../lib/estado';
+import {
+  normalizarPreferencias,
+  PREFERENCIAS_PADRAO,
+  type PreferenciasOperador,
+} from '../../lib/perfil';
 import { supabase } from './ClienteSupabase';
 
 const RAIZ = path.resolve(process.cwd(), 'dados');
@@ -25,6 +30,8 @@ interface Shard {
   id_usuario: string;
   registros: RegistroMemoria[];
   insights: InsightRelacional[];
+  /** A ficha que o operador escreveu sobre si. Ausente em shard antigo. */
+  preferencias?: PreferenciasOperador;
 }
 
 /** Só `[a-z0-9_-]`. Bloqueia travessia de caminho vinda do socket. */
@@ -140,6 +147,67 @@ export class MemoriaOperacional {
 
     const shard = await this.abrir(chave);
     return shard.registros.slice(-limite);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ficha do operador
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Lê a ficha do shard. NUNCA lança: uma tabela ausente no Supabase não pode
+   * impedir alguém de entrar no escritório — é a mesma regra que já vale para o
+   * insight noturno na `Porta`. Ficha ilegível degrada para "nada declarado",
+   * que é exatamente o estado em que a IARA não presume tratamento nenhum.
+   */
+  async lerPreferencias(idUsuario: string): Promise<PreferenciasOperador> {
+    const chave = idSeguro(idUsuario);
+    const bd = supabase();
+
+    try {
+      if (bd) {
+        const { data, error } = await bd
+          .from('operador_preferencias')
+          .select('preferencias')
+          .eq('id_usuario', chave) // ← o filtro que define o shard
+          .maybeSingle();
+        if (error) throw new Error(`Supabase: ${error.message}`);
+        return normalizarPreferencias(data?.preferencias);
+      }
+      const shard = await this.abrir(chave);
+      return normalizarPreferencias(shard.preferencias);
+    } catch {
+      return { ...PREFERENCIAS_PADRAO };
+    }
+  }
+
+  /**
+   * Grava a ficha. Ao contrário da leitura, PROPAGA o erro: quem clicou em
+   * "salvar" precisa saber que não salvou. Sumir com a escrita e devolver a
+   * tela em silêncio é o que faz o operador declarar a mesma coisa três vezes.
+   */
+  async gravarPreferencias(
+    idUsuario: string,
+    preferencias: PreferenciasOperador,
+  ): Promise<PreferenciasOperador> {
+    const chave = idSeguro(idUsuario);
+    const limpo = normalizarPreferencias(preferencias);
+    const bd = supabase();
+
+    if (bd) {
+      const { error } = await bd
+        .from('operador_preferencias')
+        .upsert(
+          { id_usuario: chave, preferencias: limpo, atualizado_em: new Date().toISOString() },
+          { onConflict: 'id_usuario' },
+        );
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      return limpo;
+    }
+
+    const shard = await this.abrir(chave);
+    shard.preferencias = limpo;
+    await this.gravar(shard);
+    return limpo;
   }
 
   async insightsPendentes(idUsuario: string): Promise<InsightRelacional[]> {

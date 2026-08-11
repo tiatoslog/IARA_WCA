@@ -52,15 +52,29 @@
    * neutra para o verde-d'água quase preto da nova identidade — água funda,
    * espuma, limo e um único acento menta. A iridescência policromática é
    * EXCLUSIVA da entidade: a interface é pedra, só a IARA tem cor viva. */
+  /* LEGIBILIDADE (11/08/2026): a escada de tinta é medida contra o fundo do
+   * painel, não escolhida no olho. Antes ela era 16,2 / 6,9 / 3,5:1 — o
+   * terciário ficava abaixo do mínimo AA de 4,5:1 e era justamente ele que
+   * carregava o rótulo de seção, o placeholder do campo e a linha de dica.
+   * Agora é 16,2 / 9,4 / 5,6:1: os três degraus passam de AA e cada um ainda
+   * fica ~1,7× do seguinte, então a hierarquia continua legível como
+   * hierarquia. Discrição se faz com degrau de contraste, não com texto que
+   * some.
+   *
+   * Superfície e borda subiram junto pelo mesmo motivo do outro lado: ficha de
+   * sugestão e cápsula de escrita a 4,5% / 10% de alfa não tinham aresta, e
+   * componente sem aresta não é discreto, é ilegível. */
   --iara-bg: #06110e;
   --iara-bg-alto: #0a1a15;
-  --iara-surface: rgba(159, 235, 208, 0.045);
-  --iara-surface-elevated: rgba(10, 26, 21, 0.72);
-  --iara-border: rgba(159, 235, 208, 0.1);
-  --iara-border-strong: rgba(159, 235, 208, 0.22);
+  --iara-surface: rgba(159, 235, 208, 0.07);
+  /* Opacidade alta é invariante, não gosto: o painel de trabalho não pode
+   * mudar de piso porque a aurora passou atrás dele. Presença ≠ informação. */
+  --iara-surface-elevated: rgba(10, 26, 21, 0.86);
+  --iara-border: rgba(159, 235, 208, 0.16);
+  --iara-border-strong: rgba(159, 235, 208, 0.32);
   --iara-text: #ecf6f0;
-  --iara-text-secondary: #8ca79b;
-  --iara-text-tertiary: #5c7268;
+  --iara-text-secondary: #a8c2b6;
+  --iara-text-tertiary: #7d968b;
   --iara-accent: #9febd0;
   --iara-danger: #f0876a; /* coral quente — nunca vermelho saturado */
   --iara-warning: #e6c98a;
@@ -914,6 +928,28 @@ ol.plano {
   border: 1px solid var(--c-linha);
 }
 
+/* A porta da ficha: o nome de quem está na sala, em cápsula discreta. Mesma
+   linguagem da cápsula de estágio ao lado — são dois fatos do mesmo nível. */
+.conversa-operador {
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--c-tinta-2);
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.conversa-operador:hover,
+.conversa-operador.aberto {
+  color: var(--c-tinta);
+  background: var(--c-superficie);
+  border-color: var(--c-linha);
+}
+
 .conversa-enlace {
   margin-left: auto;
   width: 7px;
@@ -1044,6 +1080,184 @@ ol.plano {
   color: var(--c-tinta);
   background: var(--c-vidro-alto);
   border-color: var(--c-linha-forte);
+}
+
+/* --------------------------------------------------------------------------
+ * FICHA DO OPERADOR — o caderno do mordomo, dentro do painel.
+ *
+ * Ocupa o fluxo da conversa em vez de flutuar sobre ele: o painel já é a
+ * camada mais externa da hierarquia espacial, e uma modal exigiria uma camada
+ * acima dela.
+ * -------------------------------------------------------------------------- */
+
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ficha-cabecalho {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.ficha-cabecalho h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--c-tinta);
+}
+
+.ficha-fechar {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  margin-left: auto;
+  padding: 4px 6px;
+  color: var(--c-tinta-2);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.ficha-fechar:hover {
+  color: var(--c-tinta);
+  background: var(--c-superficie);
+}
+
+.ficha-nota {
+  margin: -8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--c-tinta-2);
+}
+
+.ficha-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.ficha-campo > span,
+.ficha-campo > legend {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--c-tinta);
+  padding: 0;
+}
+
+.ficha-campo small {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--c-tinta-3);
+}
+
+.ficha-contador {
+  align-self: flex-end;
+}
+
+.ficha-campo input,
+.ficha-campo textarea {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--c-tinta);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+  border-radius: 12px;
+  padding: 9px 12px;
+  outline: none;
+  resize: none;
+  width: 100%;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.ficha-campo input::placeholder,
+.ficha-campo textarea::placeholder {
+  color: var(--c-tinta-3);
+}
+
+.ficha-campo input:focus,
+.ficha-campo textarea:focus {
+  background: var(--c-vidro-alto);
+  border-color: var(--c-linha-forte);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+
+/* Tratamento: três opções lado a lado, nenhuma pré-marcada por dedução —
+   "Só o nome" é o padrão porque é o único que o sistema pode assumir. */
+.ficha-opcoes {
+  display: flex;
+  gap: 5px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+}
+
+.ficha-opcoes button {
+  flex: 1;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--c-tinta-2);
+  background: none;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 0;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.ficha-opcoes button:hover {
+  color: var(--c-tinta);
+}
+
+.ficha-opcoes button.ativo {
+  color: var(--c-fundo);
+  background: var(--c-prata);
+}
+
+.ficha-acoes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.ficha-salvar {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-fundo);
+  background: var(--c-prata);
+  border: none;
+  border-radius: 999px;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: background 160ms ease, opacity 160ms ease;
+}
+
+.ficha-salvar:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.ficha-salvar:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ficha-estado {
+  font-size: 11px;
+  color: var(--c-tinta-2);
 }
 
 /* Faixa do modo ligação. */

@@ -10,6 +10,7 @@
  * retroativa (backpressure wave) de bagunçar a UI na reconexão.
  */
 
+import { normalizarPreferencias, type PreferenciasOperador } from './perfil';
 import type { SnapshotCognitivo } from './snapshot';
 
 export type NivelLog = 'traco' | 'info' | 'alerta';
@@ -36,7 +37,13 @@ export type PacoteCliente =
    */
   | { tipo: 'ola'; id_usuario: string; nome: string; token?: string }
   | { tipo: 'mensagem'; texto: string }
-  | { tipo: 'interromper' };
+  | { tipo: 'interromper' }
+  /**
+   * A ficha do operador. Não carrega `id_usuario`: o shard de destino é
+   * derivado da sessão do socket, como toda escrita do sistema. Aceitar um id
+   * aqui seria abrir por escrito a porta que o roteador fecha.
+   */
+  | { tipo: 'preferencias'; preferencias: PreferenciasOperador };
 
 /**
  * Prioridade de descarte da fila de telemetria. Quanto menor, mais descartável.
@@ -93,6 +100,12 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
   }
   if (obj.tipo === 'interromper') {
     return { tipo: 'interromper' };
+  }
+  if (obj.tipo === 'preferencias') {
+    // `normalizarPreferencias` já é total: qualquer entrada vira uma ficha
+    // válida, no pior caso a vazia. Não existe pacote de preferências
+    // malformado — existe ficha em branco, que é um estado legítimo.
+    return { tipo: 'preferencias', preferencias: normalizarPreferencias(obj.preferencias) };
   }
   return null;
 }

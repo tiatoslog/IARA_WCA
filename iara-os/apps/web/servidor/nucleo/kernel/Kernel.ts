@@ -33,6 +33,7 @@ import {
 } from './Seguranca';
 import type { Plano } from './Evento';
 import type { DestinoCognitivo, EstagioCognitivo } from '../../../lib/estado';
+import { normalizarPreferencias } from '../../../lib/perfil';
 
 export interface DependenciasKernel {
   sessao: string;
@@ -337,6 +338,28 @@ export class Kernel {
       .historico(this.dep.idUsuario, 20)
       .catch(() => [] as Awaited<ReturnType<typeof this.dep.memoria.historico>>);
     const camadaGlobal = await this.dep.memoria.carregarGlobal().catch(() => '');
+
+    /**
+     * A ficha vem do ESTADO, não de uma leitura por turno: a `Porta` já a
+     * carregou na abertura da sessão e a regrava ali quando o operador salva.
+     * Reler o shard a cada raciocínio seria um ida-e-volta de persistência no
+     * caminho crítico da resposta, para buscar algo que não mudou.
+     *
+     * Ordem importa: a ficha (declarada, estável) vem antes da leitura de
+     * humor (inferida, volátil). Quem lê o prompt encontra primeiro quem é a
+     * pessoa, depois como ela está agora.
+     */
+    const perfil = this.dep.estado.instantaneo().operador;
+    const overridePersona = [
+      TeoriaDaMente.overrideDePreferencias(
+        normalizarPreferencias(perfil?.preferencias),
+        perfil?.nome ?? '',
+      ),
+      TeoriaDaMente.overrideDePersona(percepcao.leitura),
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
     const inicio = Date.now();
     let acumulado = '';
     let abriu = false;
@@ -344,7 +367,7 @@ export class Kernel {
     const r = await this.raciocinio.responder({
       enunciado: percepcao.bruto,
       historico: historico.slice(0, -1),
-      overridePersona: TeoriaDaMente.overrideDePersona(percepcao.leitura),
+      overridePersona,
       camadaGlobal,
       contexto: this.trabalho.contextoAcumulado(),
       sinal: controle.signal,

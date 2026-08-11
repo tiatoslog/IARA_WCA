@@ -10,6 +10,10 @@
  * animação ambiente é responsabilidade do CSS, não do estado.
  */
 
+import type { PreferenciasOperador } from './perfil';
+
+export type { PreferenciasOperador };
+
 // ---------------------------------------------------------------------------
 // Estágios e capacidades
 // ---------------------------------------------------------------------------
@@ -96,6 +100,17 @@ export interface PerfilOperador {
   nome: string;
   /** ISO. Convertido para absoluto na escrita, nunca relativo. */
   visto_em: string;
+  /**
+   * A ficha que o operador escreveu sobre si — ver `lib/perfil.ts`.
+   *
+   * Viaja no snapshot porque o formulário precisa hidratar com o que já está
+   * gravado, e o snapshot já é o caminho de tudo que o servidor conta à tela.
+   * Um segundo canal só para isto tornaria "só existe o snapshot" ficção.
+   *
+   * Opcional no tipo por causa de shard antigo e servidor antigo: quem lê
+   * resolve com `PREFERENCIAS_PADRAO`, que é justamente "nada declarado".
+   */
+  preferencias?: PreferenciasOperador;
 }
 
 /**

@@ -20,6 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { NivelLog, PacoteServidor } from '../lib/protocolo';
 import { ESPACO_VAZIO, EXPRESSAO_NEUTRA, TELEMETRIA_ZERO, type SnapshotCognitivo } from '../lib/snapshot';
 import { LEITURA_INICIAL, LUZES_APAGADAS, METRICAS_INICIAIS } from '../lib/estado';
+import type { PreferenciasOperador } from '../lib/perfil';
 import { enderecoBarramento } from '../lib/supabaseNavegador';
 
 export interface Fala {
@@ -345,6 +346,25 @@ export function useIaraSocket(credencial: Credencial) {
     }
   }, []);
 
+  /**
+   * Salva a ficha do operador. Não devolve a ficha gravada: quem manda no que
+   * está valendo é o snapshot que volta pelo barramento, como em todo o resto
+   * do sistema. Devolve só se o pacote SAIU — o formulário precisa distinguir
+   * "salvo" de "o barramento estava fechado e ninguém ouviu".
+   */
+  const salvarPreferencias = useCallback(
+    (preferencias: PreferenciasOperador) => {
+      const socket = socketRef.current;
+      if (socket?.readyState !== WebSocket.OPEN) {
+        registrarLog('alerta', 'Ficha não salva: o barramento não está aberto.');
+        return false;
+      }
+      socket.send(JSON.stringify({ tipo: 'preferencias', preferencias }));
+      return true;
+    },
+    [registrarLog],
+  );
+
   /** Religa após uma recusa terminal — o gesto humano que zera a decisão. */
   const religar = useCallback(() => {
     tentativas.current = 0;
@@ -362,5 +382,6 @@ export function useIaraSocket(credencial: Credencial) {
     enviar,
     interromper,
     religar,
+    salvarPreferencias,
   };
 }

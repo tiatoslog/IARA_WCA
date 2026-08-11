@@ -75,6 +75,15 @@ create table if not exists public.insights_relacionais (
 create index if not exists insights_usuario_proativo_idx
   on public.insights_relacionais (id_usuario, proativo);
 
+-- A ficha que o operador escreveu sobre si: como ser chamado, como ser tratado,
+-- o que ele quer que a IARA leve em conta. Uma linha por operador — `id_usuario`
+-- é a chave primária, e é o upsert que mantém isso verdadeiro.
+create table if not exists public.operador_preferencias (
+  id_usuario    text primary key,
+  preferencias  jsonb not null default '{}'::jsonb,
+  atualizado_em timestamptz not null default now()
+);
+
 -- -----------------------------------------------------------------------------
 -- 4. RLS: ligado, sem política. Ninguém além da service_role entra.
 -- -----------------------------------------------------------------------------
@@ -82,11 +91,14 @@ alter table public.centrais             enable row level security;
 alter table public.erros_assinaturas    enable row level security;
 alter table public.memoria_registros    enable row level security;
 alter table public.insights_relacionais enable row level security;
+alter table public.operador_preferencias enable row level security;
 
 -- Nenhuma policy é criada de propósito. Sem policy + RLS ligado = acesso
 -- negado para anon e authenticated. Se um dia o navegador precisar ler
 -- `centrais` direto, crie uma policy de SELECT explícita apenas para ela —
--- jamais para memoria_registros ou insights_relacionais.
+-- jamais para memoria_registros, insights_relacionais ou
+-- operador_preferencias. A ficha é tão privada quanto o histórico: ela diz
+-- como a pessoa quer ser chamada, e isso é dela.
 
 -- -----------------------------------------------------------------------------
 -- 5. Carga inicial (os mesmos dados dos JSON semente)
