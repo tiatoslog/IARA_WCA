@@ -34,7 +34,7 @@ import {
 import { RegistroErros } from './RegistroErros';
 import { PorteiroAutorizacao } from './PorteiroAutorizacao';
 import type { Plano } from './Evento';
-import { PermissaoNegada, ParametroInvalido } from './Habilidade';
+import { PermissaoNegada, ParametroInvalido, type Habilidade } from './Habilidade';
 import { confirmaAcontecimento, VERBO_DO_ESTADO, type EstadoExecucao } from './Verdade';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
 import type { DestinoCognitivo, EstagioCognitivo } from '../../../lib/estado';
@@ -108,6 +108,26 @@ export interface DependenciasKernel {
    * que a costura é aceitável aqui e não seria em cima de uma trava.
    */
   raciocinio?: MotorRaciocinio;
+  /**
+   * Habilidades ACRESCENTADAS ao catálogo real. Nunca substituem nada.
+   *
+   * Mesma justificativa de `raciocinio`, e a mesma disciplina: existe para
+   * poder EXERCITAR uma trava, nunca para desligá-la. O catálogo real é
+   * bem-comportado — todo executor dele ou devolve texto ou lança de imediato —
+   * e por isso ele não consegue produzir os três casos em que a distinção entre
+   * "falhou" e "não sei" nasce: o executor que trava, o verificador que
+   * pendura, e o executor que ALCANÇA O MUNDO e só então explode.
+   *
+   * Provar esses casos só na camada do `GerenciadorHabilidades` deixava de fora
+   * exatamente o que importa — como a RESPOSTA fala deles. Foi assim que passou
+   * um passo `verificado` que não chegava a frase nenhuma.
+   *
+   * Nenhuma guarda é contornada: porteiro, sandbox, esquema, timeout e
+   * verificador continuam todos no caminho de uma habilidade injetada. E
+   * `Porta.ts`/`PortaWhatsapp.ts` não passam este campo — o catálogo de
+   * produção é o de sempre, e há teste travando isso.
+   */
+  habilidadesExtras?: readonly Habilidade[];
 }
 
 const ESTAGIO_DA_ROTA: Record<string, EstagioCognitivo> = {
@@ -159,6 +179,7 @@ export class Kernel {
     this.raciocinio = dep.raciocinio ?? new MotorRaciocinio();
     this.habilidades = new GerenciadorHabilidades(dep.barramento);
     this.habilidades.registrarTodas(CATALOGO);
+    if (dep.habilidadesExtras) this.habilidades.registrarTodas(dep.habilidadesExtras);
     this.executiva = new FuncaoExecutiva(
       this.planejador,
       this.trabalho,
@@ -597,16 +618,30 @@ export class Kernel {
         this.trabalho.registrarErro();
 
         const estado = await this.apurarAposExcecao(passo, manifesto.risco, erro, enunciado, controle);
-        const evidencia =
-          estado.evidencia ?? (erro as Error).message;
+        const evidencia = estado.evidencia ?? (erro as Error).message;
 
         passos.push({
           descricao: passo.descricao,
           habilidade: passo.habilidade,
           estado: estado.estado,
-          texto: '',
+          /**
+           * O PASSO QUE O MUNDO CONFIRMOU PRECISA FALAR.
+           *
+           * Este `texto` era `''` sempre, e aí `verificado` vindo daqui não
+           * entrava em `saidasDe` (filtra texto vazio) nem em `falhasDe` nem em
+           * `desconhecidosDe` — ele simplesmente sumia. Um plano de passo único
+           * cujo executor explodiu DEPOIS de aplicar o efeito respondia
+           * "Não consegui executar esse pedido […]. Nada foi alterado." com o
+           * efeito aplicado e o verificador confirmando que ele existe. Mentira
+           * operacional pelo avesso, criada pela própria correção anterior.
+           *
+           * Só o ramo confirmado empresta texto: `falhou` e `desconhecido`
+           * continuam sendo contados pela evidência, nas listas certas.
+           */
+          texto: estado.estado === 'verificado' ? evidencia : '',
           evidencia,
         });
+        if (estado.estado === 'verificado') this.trabalho.concluirPasso(evidencia);
         this.auditoria.registrar({
           instante: new Date().toISOString(),
           sessao: this.dep.sessao,

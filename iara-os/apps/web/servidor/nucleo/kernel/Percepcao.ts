@@ -13,7 +13,12 @@ import type { LeituraOperador } from '../../../lib/estado';
 import type { Percepcao, TipoEntrada, Urgencia } from './Evento';
 import { normalizar } from '../texto';
 import { TeoriaDaMente, type SinalTemporal } from '../TeoriaDaMente';
-import { separarVozes, sobNegacao } from './Enunciacao';
+import {
+  ehPerguntaSobreResolver,
+  periodoEhIrrealis,
+  separarVozes,
+  sobNegacao,
+} from './Enunciacao';
 
 const URGENTE =
   /\b(urgente|urgencia|agora|imediato|parou|caiu|travou|fora do ar|critico|emergencia|prejuizo)\b/;
@@ -61,6 +66,14 @@ interface Ancora {
    * confirmo", que hoje cancela corretamente.
    */
   readonly negavel?: boolean;
+  /**
+   * "Como faço para confirmar?" pergunta SOBRE a ação; não a resolve.
+   *
+   * Separado de `negavel` porque as duas famílias não coincidem: a âncora de
+   * confirmação precisa sobreviver à negação (para poder cancelar) e morrer na
+   * interrogação (para não confirmar sem querer).
+   */
+  readonly interrogavel?: boolean;
 }
 
 const ANCORAS: ReadonlyArray<Ancora> = [
@@ -133,6 +146,12 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     re: /\b(confirmo|confirmado|confirmar|prossiga|cancela|cancelar|cancelado|abortar)\b/,
     nome: 'confirmacao',
     acionavel: true,
+    /**
+     * NÃO é `negavel` — "não confirmo" precisa continuar chegando à receita,
+     * que lê a polaridade e cancela. Mas é `interrogavel`: perguntar COMO
+     * confirmar não pode resolver a pendência. Ver `ehPerguntaSobreResolver`.
+     */
+    interrogavel: true,
   },
 ];
 
@@ -161,14 +180,39 @@ export class MotorPercepcao {
     const t = normalizar(bruto);
     const tPropria = vozes.temRelato ? normalizar(vozes.propria) : t;
 
+    /**
+     * Uma âncora de EFEITO só sobrevive quando a frase de fato PEDE a ação.
+     * Três formas de não pedir, e as três chegavam armando pendência:
+     * citar (tratado em `separarVozes`), proibir (`sobNegacao`) e apenas
+     * mencionar — "se eu pedisse para desligar", "você consegue desligar?".
+     */
     const encontradas = ANCORAS.filter((a) => {
-      const m = tPropria.match(a.re);
-      if (!m || m.index === undefined) return false;
       if (a.exceto?.test(tPropria)) return false;
-      // "não desligue o computador" não é um pedido de desligamento. É o
-      // oposto exato dele, e agir seria fazer o contrário do que foi dito.
-      if (a.negavel && sobNegacao(tPropria, m.index)) return false;
-      return true;
+      // "como faço para confirmar?" pergunta sobre a resolução; não resolve.
+      // Este teste é da mensagem inteira: não existe "confirmar em parte".
+      if (a.interrogavel && ehPerguntaSobreResolver(tPropria)) return false;
+
+      /**
+       * TODAS as ocorrências, não só a primeira.
+       *
+       * `String.match` sem `g` devolve o primeiro casamento, e era isso que
+       * fazia "imagine que eu pedisse para desligar. agora desligue de verdade"
+       * perder a âncora inteira: a supressão era decidida pela ocorrência
+       * hipotética e a ordem real da segunda frase nunca era olhada. A âncora
+       * sobrevive se UMA ocorrência for pedido de verdade.
+       */
+      const todas = [...tPropria.matchAll(new RegExp(a.re.source, 'g'))];
+      return todas.some((m) => {
+        if (m.index === undefined) return false;
+        if (!a.negavel) return true;
+        // "não desligue o computador" não é um pedido de desligamento. É o
+        // oposto exato dele, e agir seria fazer o contrário do que foi dito.
+        if (sobNegacao(tPropria, m.index)) return false;
+        // "o que aconteceria se eu pedisse para desligar?" fala da ação; não a
+        // pede. Escopo por PERÍODO, para não engolir ordem em frase seguinte.
+        if (periodoEhIrrealis(tPropria, m.index)) return false;
+        return true;
+      });
     });
     const ancoras = encontradas.map((a) => a.nome);
     const acionaveis = encontradas.filter((a) => a.acionavel).length;

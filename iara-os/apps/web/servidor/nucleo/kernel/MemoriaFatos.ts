@@ -79,14 +79,53 @@ function grafia(minutos: number): string {
 }
 
 /**
- * Procedência de um registro de conversa.
+ * Procedência de um registro de conversa. É AQUI que a memória deixa de ser
+ * uma pilha de strings todas do mesmo peso.
  *
- * Tudo que sai do shard é `memoria`: foi verdade quando gravado e pode ter
- * envelhecido. O que a IARA respondeu não vira fato mais forte por ter saído
- * dela — tratar a própria fala como fonte é como uma alucinação vira memória.
+ * O DEFEITO, encontrado no fechamento forense (11/08/2026): esta função
+ * devolvia `memoria` para tudo. Duas consequências, e a segunda é séria:
+ *
+ *  1. O ramo `criterio: 'procedencia'` de `detectarConflitos` era INALCANÇÁVEL.
+ *     A política de força existia e nunca era exercida — a mesma doença que
+ *     tirou `Verdade.ts` do caminho vivo, reencenada dentro do próprio módulo
+ *     que a curou.
+ *  2. Como o desempate caía sempre em recência, **a prosa da própria LLM
+ *     sobrepunha o que o operador declarou**, bastando ser mais recente. A IARA
+ *     dizia "a reunião é às 18h" por engano num turno, aquilo virava memória de
+ *     mesmo peso, e no turno seguinte derrubava o "16h" que o operador tinha
+ *     afirmado. Alucinação virando fato por decurso de prazo.
+ *
+ * A escala resolve as duas: o que veio de ferramenta determinística é `fato`
+ * (6), documento recuperado é `documento` (4), o que o OPERADOR declarou é
+ * `memoria` (3), e prosa da nuvem é `inferencia` (2) — abaixo do operador, de
+ * propósito. A IARA não é fonte sobre o mundo; ela é fonte sobre o que apurou.
  */
-function procedenciaDe(_registro: RegistroMemoria): Procedencia {
-  return 'memoria';
+function procedenciaDe(registro: RegistroMemoria): Procedencia {
+  if (registro.papel === 'operador') return 'memoria';
+
+  switch (registro.destino) {
+    // Índice de incidentes: verdadeiro na data em que foi escrito.
+    case 'rag_historico':
+      return 'documento';
+    /**
+     * TUDO O MAIS QUE A IARA DISSE É `inferencia` — inclusive a rota
+     * `sistema_local`, e isso merece explicação porque a tentação é o contrário.
+     *
+     * `sistema_local` parece determinístico, e a fonte é. Mas o que fica no
+     * histórico não é o dado: é a PROSA que o kernel compôs em volta dele, e
+     * ela carrega de volta o que o operador escreveu. O ataque de segunda ordem
+     * mostrou a forma: "crie uma pasta chamada Reunião 16h" produz a resposta
+     * `Pasta "Reunião 16h" criada`, que na rota `plano_local` viraria `fato`
+     * (força 6) e derrubaria um "a reunião é às 17h" declarado pelo operador
+     * depois. O eco de uma ação viraria autoridade sobre o mundo.
+     *
+     * `fato` fica RESERVADO para um armazém de fatos estruturados, que ainda
+     * não existe. Enquanto a memória for conversa, nada que a IARA falou pesa
+     * mais do que o que a pessoa afirmou.
+     */
+    default:
+      return 'inferencia';
+  }
 }
 
 /**

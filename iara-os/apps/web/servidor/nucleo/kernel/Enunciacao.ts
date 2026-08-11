@@ -187,9 +187,126 @@ const NEGACAO = /\b(nao|nunca|jamais|nem|evite|evita|deixe\s+de|para\s+de)\b/;
  */
 const ALCANCE_NEGACAO = 4;
 
+/**
+ * Modo IRREALIS — a frase FALA da ação em vez de PEDIR a ação.
+ *
+ * O DEFEITO, reproduzido no fechamento forense (11/08/2026), na mesma família
+ * que a citação e a negação e sobrevivendo às duas correções:
+ *
+ *   "se eu pedisse para desligar o computador, o que aconteceria?"
+ *   "você consegue desligar o computador?"
+ *   "imagine que eu pedisse para desligar o computador"
+ *   "quando você desliga o computador, avisa antes?"
+ *
+ *   As quatro produziam âncora `energia` com confiança 0,92 e ARMAVAM a
+ *   pendência de desligamento. Perguntar à IARA o que ela faria virava pedir
+ *   que ela fizesse.
+ *
+ * A LISTA É DE ALTA PRECISÃO, e isso é mais importante que ser exaustiva. O
+ * caso que não pode quebrar é o pedido educado — "pode desligar o computador?"
+ * é um PEDIDO em português, não uma pergunta sobre capacidade, e suprimi-lo
+ * faria a IARA ignorar a forma mais comum de pedir alguma coisa. Por isso
+ * `pode/poderia` ficam de fora e só `consegue/é capaz/sabe como` entram: são as
+ * formas que perguntam sobre a habilidade, não que acionam.
+ *
+ * Marcador em qualquer ponto da voz própria suprime a âncora de efeito. Uma
+ * janela curta não serve aqui: "o que acontece se eu mandar você reiniciar a
+ * máquina" tem sete palavras entre o marcador e o verbo.
+ */
+const IRREALIS =
+  /\b(?:se\s+(?:eu|voce|a\s+gente|alguem)\s+(?:pedisse|pedir|mandasse|mandar|dissesse|disser|falasse|falar|solicitasse|solicitar|confirmar|confirmasse|cancelar|cancelasse|desligar|desligasse|reiniciar|reiniciasse)|caso\s+eu\s+(?:peca|pedisse|mande|mandasse|confirme|confirmasse)|imagine|imagina|suponha|suponhamos|supondo|hipoteticamente|o\s+que\s+(?:acontece|aconteceria|voce\s+faria|faria)\s+se|voce\s+(?:consegue|conseguiria|e\s+capaz|seria\s+capaz|sabe\s+como|saberia)|quando\s+voce\s+(?:desliga|reinicia|suspende|cria|abre)|sempre\s+que\s+voce)\b/;
+
+/** A frase MENCIONA a ação em vez de pedi-la? */
+export function ehIrrealis(textoNormalizado: string): boolean {
+  return IRREALIS.test(textoNormalizado);
+}
+
+/**
+ * O PERÍODO em que a âncora caiu está em modo irrealis?
+ *
+ * Testar a mensagem inteira era demais: "imagine que eu pedisse para desligar.
+ * agora desligue de verdade" perdia a âncora nas DUAS orações, e o operador
+ * ficava sem o comando que ele de fato deu na segunda. O ataque de terceira
+ * ordem pegou isso.
+ *
+ * Escopo por período resolve sem abrir nada: uma frase hipotética continua
+ * hipotética, e uma ordem em frase própria continua ordem. O período é delimitado
+ * por `.`, `!` ou `?` — dois-pontos NÃO delimitam, porque "suponha o seguinte:
+ * desligue o computador" é uma hipótese só.
+ */
+export function periodoEhIrrealis(textoNormalizado: string, posicaoDaAncora: number): boolean {
+  return IRREALIS.test(periodoDe(textoNormalizado, posicaoDaAncora).texto);
+}
+
+/**
+ * O período que contém a posição, e onde ele começa.
+ *
+ * Delimitado por `.`, `!` ou `?`. Dois-pontos NÃO delimitam: "suponha o
+ * seguinte: desligue o computador" é uma hipótese só, e virgula também não —
+ * "não achei o arquivo, pode desligar?" é uma oração só.
+ */
+function periodoDe(texto: string, posicao: number): { texto: string; inicio: number } {
+  const antes = texto.slice(0, posicao);
+  const inicio =
+    Math.max(antes.lastIndexOf('.'), antes.lastIndexOf('!'), antes.lastIndexOf('?')) + 1;
+  const resto = texto.slice(inicio);
+  const fim = resto.search(/[.!?]/);
+  return { texto: fim >= 0 ? resto.slice(0, fim + 1) : resto, inicio };
+}
+
+/**
+ * PERGUNTAR COMO CONFIRMAR NÃO É CONFIRMAR.
+ *
+ * O DEFEITO, encontrado no ataque de segunda ordem às próprias correções: a
+ * âncora `confirmacao` foi deliberadamente deixada FORA da supressão por
+ * negação e por irrealis, com o argumento de que a receita já lia a polaridade
+ * em `ehAfirmacao`. Ela lê polaridade — não lê MODALIDADE. Resultado, com
+ * pendência de desligamento armada e executor espião:
+ *
+ *   "como faço para confirmar?"      → shutdown.exe /s   DISPAROU
+ *   "preciso confirmar alguma coisa?"→ shutdown.exe /s   DISPAROU
+ *   "você consegue confirmar isso?"  → shutdown.exe /s   DISPAROU
+ *
+ * É o pior momento possível para esse erro: a pergunta acontece exatamente
+ * dentro da janela de 60 s em que a pendência está viva, porque é ela que faz
+ * o operador perguntar.
+ *
+ * A supressão é melhor que mapear para "cancelar": cancelar destruiria a
+ * pendência de quem só queria entender o que fazer. Sem âncora, o pedido vai
+ * para o raciocínio, que explica — e a pendência continua lá, esperando um
+ * "confirmo" de verdade.
+ *
+ * O interrogativo tem que vir ANTES do verbo: "confirmo o que você perguntou"
+ * é confirmação legítima e não pode ser engolida.
+ *
+ * SÓ A FAMÍLIA DE CONFIRMAR ENTRA — `cancelar` ficou de fora de propósito, e o
+ * ataque de terceira ordem é quem mostrou por quê: com `cancel` na lista,
+ * "devo cancelar isso, certo?" perdia a âncora e o CANCELAMENTO não acontecia.
+ * A pendência ficava viva (nada executava, o lado seguro), mas o operador saía
+ * achando que tinha desistido. Isso quebra a assimetria que o `AgenteLocal`
+ * declara: desistir nunca pode exigir a prova que agir exige. Suprimir uma
+ * confirmação é ganho de segurança; suprimir um cancelamento é uma falha.
+ */
+const PERGUNTA_SOBRE_RESOLVER =
+  /\b(?:como|o que|preciso|devo|tenho que|posso|poderia|sera que|quando|onde|qual|quais)\b[^?]{0,60}\b(?:confirm|prossegu|prossig)/;
+
+export function ehPerguntaSobreResolver(textoNormalizado: string): boolean {
+  // Diferente das âncoras de efeito, aqui o teste é da MENSAGEM INTEIRA e não do
+  // período: não existe "confirmar em parte". Uma pergunta sobre confirmar em
+  // qualquer ponto da mensagem já tira a resolução do caminho determinístico.
+  return PERGUNTA_SOBRE_RESOLVER.test(textoNormalizado) || ehIrrealis(textoNormalizado);
+}
+
 export function sobNegacao(textoNormalizado: string, posicaoDaAncora: number): boolean {
   if (posicaoDaAncora <= 0) return false;
-  const antes = textoNormalizado.slice(0, posicaoDaAncora).trim().split(/\s+/);
+  /**
+   * A janela nunca atravessa a fronteira do período. "não desligue agora.
+   * desligue às 18h" tem duas orações: a negação governa a primeira, e sem este
+   * recorte ela vazava para a segunda e anulava um pedido legítimo. Mesma
+   * família do escopo de `periodoEhIrrealis` — achado no ataque de 3ª ordem.
+   */
+  const { inicio } = periodoDe(textoNormalizado, posicaoDaAncora);
+  const antes = textoNormalizado.slice(inicio, posicaoDaAncora).trim().split(/\s+/);
   const janela = antes.slice(-ALCANCE_NEGACAO).join(' ');
   return NEGACAO.test(janela);
 }
