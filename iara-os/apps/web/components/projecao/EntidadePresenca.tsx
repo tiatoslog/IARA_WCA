@@ -435,11 +435,33 @@ function CenaEntidade({
 /* Infraestrutura do palco (mesmos padrões do PalcoPresenca)                 */
 /* ------------------------------------------------------------------------- */
 
-/** Câmera da entidade: enquadramento medido da direção de arte. */
+/**
+ * Enquadramento da entidade — medido, não chutado, e o único lugar onde a
+ * proporção da arte se decide.
+ *
+ * A altura visível no plano da pedra é `DISTANCIA * tan(ABERTURA/2)`. Como a
+ * pedra tem raio 1, a fração da altura do palco que ela ocupa é exatamente
+ * `1 / (DISTANCIA * tan(ABERTURA/2))`. Em 5.6 / 30° isso dava 0,67: a pedra
+ * tomava dois terços do palco, e presença nesse tamanho vira volume, não
+ * refinamento. Em 11.6 / 24° cai para 0,41 — joia sobre campo escuro.
+ *
+ * A lente longa anda junto com o recuo, e é decisão de direção, não
+ * consequência aritmética: 24° achata a perspectiva e o vidro passa a ler como
+ * objeto fotografado. Com 30° a esfera cresce nas bordas do quadro, que é
+ * precisamente a assinatura de grande angular que a referência não tem.
+ *
+ * Para reenquadrar, mexa só na distância: a abertura é a lente, e trocar de
+ * lente troca o caráter da imagem, não o tamanho do objeto.
+ */
+const ABERTURA = 24;
+const DISTANCIA_CAMERA = 11.6;
+/** Leve mergulho de ~4°, o mesmo do enquadramento anterior. */
+const ALTURA_CAMERA = 0.8;
+
 function CameraEntidade() {
   const camera = useThree((e) => e.camera);
   useEffect(() => {
-    camera.position.set(0, 0.5, 5.6);
+    camera.position.set(0, ALTURA_CAMERA, DISTANCIA_CAMERA);
     camera.lookAt(0, 0, 0);
     (camera as PerspectiveCamera).updateProjectionMatrix();
   }, [camera]);
@@ -549,7 +571,7 @@ export function EntidadePresenca({
   return (
     <Canvas
       className="palco-presenca"
-      camera={{ fov: 30, near: 0.1, far: 40 }}
+      camera={{ fov: ABERTURA, near: 0.1, far: 40 }}
       dpr={[1, 1.5]}
       gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
     >
