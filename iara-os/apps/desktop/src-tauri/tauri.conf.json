@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "br.com.atoslog.iara",
   "build": {
-    "beforeDevCommand": "node -e \"require('node:fs').copyFileSync('ui/bolha.html','../web/public/bolha.html')\"",
+    "beforeDevCommand": "node copiar-bolha.mjs",
     "devUrl": "http://localhost:3000",
     "frontendDist": "../ui"
   },

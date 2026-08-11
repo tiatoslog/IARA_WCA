@@ -1,0 +1,7 @@
+# Artefatos de compilação do Rust. Passa de 2 GB depois do primeiro build —
+# nunca versionar.
+/target/
+
+# Schemas de capability gerados pelo Tauri a cada build, só para
+# autocompletar. Derivados da config; regeneram sozinhos.
+/gen/schemas/
