@@ -13,7 +13,7 @@ import type { Habilidade } from '../Habilidade';
 import { supabase } from '../../ClienteSupabase';
 import { CONSULTAS, listarConsultas, type SeletorSupabase } from './consultasNomeadas';
 import { validar } from '../Habilidade';
-import { normalizar } from '../../RoteadorIntencoes';
+import { normalizar } from '../../texto';
 
 // ---------------------------------------------------------------------------
 // 1. Banco operacional — consultas nomeadas
@@ -31,6 +31,7 @@ export const executarConsultaSql: Habilidade = {
     permissoes: ['banco'],
     timeout_ms: 6000,
     custo: 'zero',
+    risco: 'baixo',
     esquema: {
       consulta: { tipo: 'texto', obrigatorio: true, dentre: Object.keys(CONSULTAS) },
       // Validado de novo, contra o esquema da consulta escolhida.
@@ -157,6 +158,7 @@ export const consultarMemoriaCorporativa: Habilidade = {
     permissoes: ['banco'],
     timeout_ms: 4000,
     custo: 'zero',
+    risco: 'baixo',
     esquema: { consulta: { tipo: 'texto', obrigatorio: true } },
   },
 
@@ -260,6 +262,7 @@ export const extrairTextoDocumento: Habilidade = {
     permissoes: ['banco'],
     timeout_ms: 12000,
     custo: 'zero',
+    risco: 'baixo',
     esquema: { arquivo: { tipo: 'texto', obrigatorio: true } },
   },
 

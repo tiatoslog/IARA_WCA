@@ -15,7 +15,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AssinaturaErro } from '../../lib/estado';
-import { normalizar } from './RoteadorIntencoes';
+import { normalizar } from './texto';
 import { supabase } from './ClienteSupabase';
 
 export interface AchadoRag {

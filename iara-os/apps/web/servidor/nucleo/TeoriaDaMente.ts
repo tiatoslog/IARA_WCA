@@ -11,7 +11,7 @@
 
 import { OCEAN_IARA, type LeituraOperador, type MatrizOcean } from '../../lib/estado';
 import { fichaVazia, type PreferenciasOperador } from '../../lib/perfil';
-import { normalizar } from './RoteadorIntencoes';
+import { normalizar } from './texto';
 
 const CRISE =
   /\b(urgente|urgencia|parou|caiu|travou|nao funciona|nao esta funcionando|prejuizo|perdendo|critico|emergencia|socorro|pane|fora do ar)\b/;

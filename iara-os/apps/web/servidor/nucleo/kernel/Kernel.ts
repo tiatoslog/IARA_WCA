@@ -31,9 +31,26 @@ import {
   SandboxPorPolitica,
   type Papel,
 } from './Seguranca';
+import { RegistroErros } from './RegistroErros';
+import { PorteiroAutorizacao } from './PorteiroAutorizacao';
 import type { Plano } from './Evento';
 import type { DestinoCognitivo, EstagioCognitivo } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
+
+/**
+ * Resultado da execução de um plano. As falhas são tão fato quanto as saídas —
+ * e precisam viajar juntas, senão a composição só enxerga o que deu certo.
+ */
+interface ExecucaoPlano {
+  readonly saidas: string[];
+  readonly falhas: string[];
+  /**
+   * Passos executados sem erro cuja verificação NÃO confirmou o mundo. Não são
+   * falhas — são a zona cinzenta entre "fiz" e "provei que fiz", e a resposta
+   * precisa distinguir as três.
+   */
+  readonly verificacoesPendentes: string[];
+}
 
 export interface DependenciasKernel {
   sessao: string;
@@ -43,32 +60,66 @@ export interface DependenciasKernel {
   estado: EstadoAtomico;
   memoria: MemoriaOperacional;
   barramento: BarramentoEventos;
+  /**
+   * A camada de raciocínio. Injetável por UM motivo, e não é conveniência:
+   * ela é a única entrada NÃO CONFIÁVEL do kernel, e as travas que existem para
+   * contê-la só podem ser provadas se um teste puder emitir o plano hostil que
+   * a LLM emitiria.
+   *
+   * Trocar isto não desliga nenhuma guarda — o `PorteiroAutorizacao`, o
+   * sandbox, o esquema e o verificador continuam todos no caminho. É por isso
+   * que a costura é aceitável aqui e não seria em cima de uma trava.
+   */
+  raciocinio?: MotorRaciocinio;
 }
 
 const ESTAGIO_DA_ROTA: Record<string, EstagioCognitivo> = {
   sigilo: 'executando',
+  esclarecer: 'falando',
   plano_local: 'executando',
   plano_cognitivo: 'pensando',
   raciocinio_direto: 'pensando',
 };
+
+/**
+ * Turnos que o detector de ambiguidade consulta para procurar antecedente.
+ *
+ * Deliberadamente menor que a janela do raciocínio (20): resolver "aquele
+ * relatório" com algo dito há trinta mensagens não é recuperar contexto, é
+ * inventar um vínculo. Se o assunto sumiu por seis turnos, perguntar é o
+ * comportamento certo.
+ */
+const JANELA_ANTECEDENTE = 6;
 
 export class Kernel {
   private readonly percepcao = new MotorPercepcao();
   private readonly trabalho = new MemoriaTrabalho();
   private readonly planejador = new Planejador();
   private readonly habilidades: GerenciadorHabilidades;
-  private readonly raciocinio = new MotorRaciocinio();
+  private readonly raciocinio: MotorRaciocinio;
   private readonly executiva: FuncaoExecutiva;
   private readonly politica = new PoliticaPadrao();
   private readonly sandbox = new SandboxPorPolitica(this.politica);
+  /**
+   * Autorização por RISCO, ortogonal à permissão por papel do `sandbox`.
+   *
+   * As duas portas respondem perguntas diferentes e nenhuma substitui a outra:
+   * o sandbox pergunta "este papel pode?", o porteiro pergunta "quem autorizou
+   * este passo?". Foi a ausência da segunda que deixou um plano da LLM desligar
+   * a máquina — ver `PorteiroAutorizacao.ts`.
+   */
+  private readonly porteiro = new PorteiroAutorizacao();
   private readonly auditoria = new AuditoriaEstruturada();
   private readonly vazao = new LimiteVazao();
+  /** Falhas cognitivas do turno viram assinatura, não só linha de console. */
+  private readonly erros = new RegistroErros();
   private readonly papel: Papel;
 
   private emAndamento: AbortController | null = null;
 
   constructor(private readonly dep: DependenciasKernel) {
     this.papel = dep.papel ?? 'operador';
+    this.raciocinio = dep.raciocinio ?? new MotorRaciocinio();
     this.habilidades = new GerenciadorHabilidades(dep.barramento);
     this.habilidades.registrarTodas(CATALOGO);
     this.executiva = new FuncaoExecutiva(
@@ -81,6 +132,11 @@ export class Kernel {
 
   get memoriaTrabalho(): MemoriaTrabalho {
     return this.trabalho;
+  }
+
+  /** Defeitos cognitivos observados nesta sessão, para diagnóstico e métrica. */
+  get inventarioDeErros() {
+    return this.erros.inventario;
   }
 
   /** Cancelamento preemptivo. Nenhuma trava global é segurada em rede. */
@@ -126,7 +182,26 @@ export class Kernel {
       if (controle.signal.aborted) return;
 
       // --- 2. Função executiva ---------------------------------------------
-      const decisao = this.executiva.decidir(p);
+      /**
+       * O histórico entra na DECISÃO, não só no raciocínio.
+       *
+       * É o que faz a IARA não perguntar "qual relatório?" sobre um relatório
+       * que ela mesma acabou de discutir. Sem isto o detector de ambiguidade
+       * decide no escuro — e decidir no escuro produz as duas falhas opostas:
+       * perguntar o óbvio e adivinhar o crítico.
+       *
+       * Custo zero quando a persistência está fora: contexto vazio faz a IARA
+       * perguntar mais, que é o lado seguro de degradar.
+       */
+      const recentes = await this.dep.memoria
+        .historico(this.dep.idUsuario, JANELA_ANTECEDENTE)
+        .catch(() => [] as Awaited<ReturnType<typeof this.dep.memoria.historico>>);
+
+      const decisao = this.executiva.decidir(p, {
+        historicoRecente: recentes.map((r) => r.texto),
+        pessoasConhecidas: this.dep.outrosOperadores,
+      });
+
       b.publicar({
         tipo: 'DECISAO_TOMADA',
         rota: decisao.rota,
@@ -145,6 +220,29 @@ export class Kernel {
 
       await this.dep.estado.transicionar(ESTAGIO_DA_ROTA[decisao.rota] ?? 'executando', null);
 
+      /**
+       * PERGUNTAR É UMA RESPOSTA COMPLETA, e sai por aqui.
+       *
+       * Não há plano, não há habilidade, não há token: a IARA identificou o
+       * que falta e devolve exatamente essa pergunta. Deixar isto seguir para
+       * o raciocínio seria pagar por uma chamada cujo único desfecho aceitável
+       * já está decidido — e correr o risco de a LLM, vendo o pedido inteiro,
+       * resolver adivinhar em vez de perguntar.
+       */
+      if (decisao.rota === 'esclarecer' && decisao.pergunta) {
+        const idPergunta = randomUUID();
+        b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idPergunta, texto: decisao.pergunta });
+        b.publicar({
+          tipo: 'TAREFA_CONCLUIDA',
+          id_mensagem: idPergunta,
+          texto: decisao.pergunta,
+          rota: 'esclarecer',
+          ms: Date.now() - inicio,
+        });
+        await this.registrarSemQuebrar('iara', decisao.pergunta, 'sistema_local');
+        return;
+      }
+
       // --- 3. Plano ---------------------------------------------------------
       const plano = await this.montarPlano(decisao.rota, p, controle.signal);
       if (controle.signal.aborted) return;
@@ -153,12 +251,12 @@ export class Kernel {
       b.publicar({ tipo: 'PLANO_CRIADO', plano });
 
       // --- 4. Execução ------------------------------------------------------
-      const saidas = await this.executarPlano(plano, p.bruto, controle);
+      const execucao = await this.executarPlano(plano, p.bruto, controle);
       if (controle.signal.aborted) return;
 
       // --- 5. Resposta ------------------------------------------------------
       const idMensagem = randomUUID();
-      const texto_final = await this.comporResposta(plano, saidas, p, idMensagem, controle);
+      const texto_final = await this.comporResposta(plano, execucao, p, idMensagem, controle);
       if (controle.signal.aborted) return;
 
       b.publicar({
@@ -229,9 +327,12 @@ export class Kernel {
     plano: Plano,
     enunciado: string,
     controle: AbortController,
-  ): Promise<string[]> {
+  ): Promise<ExecucaoPlano> {
     const b = this.dep.barramento;
     const saidas: string[] = [];
+    const falhas: string[] = [];
+    /** Passos que rodaram mas cuja verificação não confirmou o mundo. */
+    const verificacoesPendentes: string[] = [];
 
     for (const passo of plano.passos) {
       if (controle.signal.aborted) break;
@@ -242,9 +343,81 @@ export class Kernel {
       this.trabalho.entrarNoPasso(passo.indice, passo.habilidade);
       b.publicar({ tipo: 'PASSO_INICIADO', passo, total: plano.passos.length });
 
+      /**
+       * Habilidade referenciada por um plano mas ausente do catálogo.
+       *
+       * Antes isto era `continue` mudo: o passo sumia, `saidas` ficava vazio e
+       * a composição caía no raciocínio livre — onde a LLM, sem nenhum
+       * resultado e sem saber que algo falhou, narrava a ação como se tivesse
+       * acontecido. Era assim que "crie uma pasta" virava "pasta criada" sem
+       * pasta nenhuma. Falha de catálogo agora é FATO REGISTRADO, e o fato
+       * viaja até a resposta.
+       */
       const manifesto = this.habilidades.manifesto(passo.habilidade);
       if (!manifesto) {
         this.trabalho.registrarErro();
+        const motivo = `habilidade "${passo.habilidade}" não existe no catálogo`;
+        falhas.push(`${passo.descricao}: ${motivo}`);
+        this.auditoria.registrar({
+          instante: new Date().toISOString(),
+          sessao: this.dep.sessao,
+          id_usuario: this.dep.idUsuario,
+          traco: b.tracoAtual,
+          acao: `habilidade_ausente:${passo.habilidade}`,
+          detalhe: motivo,
+          permitido: false,
+        });
+        b.publicar({ tipo: 'FALHA', modulo: 'catalogo', mensagem: motivo });
+        b.publicar({ tipo: 'PASSO_CONCLUIDO', passo, resumo: `falhou: ${motivo}`, ms: 0 });
+        this.erros.registrar({
+          classe: 'habilidade_ausente',
+          entrada: enunciado,
+          observado: motivo,
+          esperado: `plano determinístico só cita habilidade registrada no catálogo`,
+          instante: new Date().toISOString(),
+        });
+        continue;
+      }
+
+      /**
+       * PORTEIRO DE AUTORIZAÇÃO — entender não é autorizar.
+       *
+       * Antes do sandbox de propósito: o sandbox responde "este papel pode?", e
+       * o papel `operador` concede `escrita`. Isso era tudo que separava um
+       * plano emitido pela LLM de um `shutdown.exe`. Aqui se pergunta outra
+       * coisa — QUEM autorizou este passo — e a resposta "a própria LLM" nunca
+       * basta para risco alto.
+       *
+       * A recusa é FATO REGISTRADO, não silêncio: vai para `falhas`, e `falhas`
+       * viaja até a resposta. Barrar sem contar seria trocar uma mentira
+       * ("desliguei") por outra ("nada aconteceu").
+       */
+      const veredito = this.porteiro.avaliar({
+        habilidade: passo.habilidade,
+        risco: manifesto.risco,
+        origem: plano.origem,
+      });
+      if (!veredito.permitido) {
+        this.trabalho.registrarErro();
+        falhas.push(`${passo.descricao}: ${veredito.motivo}`);
+        this.auditoria.registrar({
+          instante: new Date().toISOString(),
+          sessao: this.dep.sessao,
+          id_usuario: this.dep.idUsuario,
+          traco: b.tracoAtual,
+          acao: `autorizacao_negada:${passo.habilidade}`,
+          detalhe: `risco ${manifesto.risco}, origem ${plano.origem}`,
+          permitido: false,
+        });
+        b.publicar({ tipo: 'FALHA', modulo: 'autorizacao', mensagem: veredito.motivo });
+        b.publicar({ tipo: 'PASSO_CONCLUIDO', passo, resumo: 'barrado pela autorização', ms: 0 });
+        this.erros.registrar({
+          classe: 'autorizacao_negada',
+          entrada: enunciado,
+          observado: `plano ${plano.origem} tentou acionar "${passo.habilidade}" (risco ${manifesto.risco})`,
+          esperado: 'ação de risco alto só nasce de pedido direto do operador',
+          instante: new Date().toISOString(),
+        });
         continue;
       }
 
@@ -252,7 +425,7 @@ export class Kernel {
       try {
         this.sandbox.verificar(passo.habilidade, manifesto.permissoes, this.papel);
 
-        const r = await this.habilidades.executar({
+        const v = await this.habilidades.executarVerificando({
           id: passo.habilidade,
           parametros: { ...passo.parametros },
           enunciado,
@@ -262,17 +435,52 @@ export class Kernel {
           concedidas: this.politica.permissoesDe(this.papel),
         });
 
-        saidas.push(r.texto);
-        this.trabalho.concluirPasso(r.texto);
+        /**
+         * AQUI a execução deixa de ser sinônimo de verdade.
+         *
+         * O texto que sobe para a resposta é o da habilidade, mas quando a
+         * verificação não confirmou ele viaja ACOMPANHADO da ressalva. É a
+         * diferença entre "Pasta criada" e "Pasta criada — mas não consegui
+         * confirmar: o diretório não existe depois da execução".
+         */
+        const naoConfirmado =
+          v.verificacao !== null && !v.verificacao.confirmado ? v.verificacao : null;
+
+        const texto = naoConfirmado
+          ? `${v.resultado.texto}\n\n[não confirmado: ${naoConfirmado.evidencia}]`
+          : v.resultado.texto;
+
+        saidas.push(texto);
+        this.trabalho.concluirPasso(texto);
+        if (naoConfirmado) {
+          verificacoesPendentes.push(`${passo.descricao}: ${naoConfirmado.evidencia}`);
+          // `sem_meio_de_verificar` é limitação conhecida da plataforma, não
+          // defeito da IARA — registrar isso a cada `abrir_aplicativo` encheria
+          // o inventário de ruído. `divergente` é outra coisa: o executor disse
+          // uma coisa e o mundo disse outra, e isso É defeito.
+          if (naoConfirmado.motivo === 'divergente') {
+            this.erros.registrar({
+              classe: 'execucao_nao_confirmada',
+              entrada: enunciado,
+              observado: `${passo.habilidade} relatou sucesso; verificação: ${naoConfirmado.evidencia}`,
+              esperado: 'execução confirmada pelo mundo, ou falha declarada',
+              instante: new Date().toISOString(),
+            });
+          }
+        }
+
         b.publicar({
           tipo: 'PASSO_CONCLUIDO',
           passo,
-          resumo: r.detalhe,
+          resumo: naoConfirmado
+            ? `${v.resultado.detalhe} — não confirmado (${v.estado})`
+            : v.resultado.detalhe,
           ms: Date.now() - inicio,
         });
       } catch (erro) {
         if (controle.signal.aborted) break;
         this.trabalho.registrarErro();
+        falhas.push(`${passo.descricao}: ${(erro as Error).message}`);
         this.auditoria.registrar({
           instante: new Date().toISOString(),
           sessao: this.dep.sessao,
@@ -291,7 +499,7 @@ export class Kernel {
       }
     }
 
-    return saidas;
+    return { saidas, falhas, verificacoesPendentes };
   }
 
   /**
@@ -303,18 +511,53 @@ export class Kernel {
    */
   private async comporResposta(
     plano: Plano,
-    saidas: string[],
+    execucao: ExecucaoPlano,
     percepcao: ReturnType<MotorPercepcao['perceber']>,
     idMensagem: string,
     controle: AbortController,
   ): Promise<string> {
     const b = this.dep.barramento;
+    const { saidas, falhas, verificacoesPendentes } = execucao;
     const precisaRaciocinio = plano.passos.some(
       (p) => !p.habilidade || p.habilidade === 'raciocinio',
     );
 
     if (!precisaRaciocinio && saidas.length > 0) {
-      const texto = saidas.join('\n\n');
+      /**
+       * FALHA PARCIAL — o que deu certo não pode apagar o que não deu.
+       *
+       * Este ramo devolvia só `saidas`, e `falhas` morria aqui. Um plano de dois
+       * passos em que o primeiro lia o relógio e o segundo era BARRADO pela
+       * autorização respondia "São 10:55" e mais nada: a recusa aparecia no
+       * console e no evento `FALHA`, nunca na fala. O operador concluía que o
+       * pedido inteiro tinha sido atendido.
+       *
+       * É a mesma família da mentira operacional que o resto deste arquivo
+       * combate — só que pelo avesso: em vez de afirmar o que não aconteceu,
+       * omitir o que não aconteceu. As duas produzem uma resposta que não
+       * representa o estado real do mundo.
+       */
+      const texto =
+        falhas.length > 0
+          ? `${saidas.join('\n\n')}\n\nO resto do pedido eu NÃO executei: ${falhas.join('; ')}.`
+          : saidas.join('\n\n');
+      b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto });
+      return texto;
+    }
+
+    /**
+     * Plano determinístico que não produziu UMA saída sequer.
+     *
+     * Aqui não se cai para a LLM. O operador pediu uma AÇÃO, a ação não
+     * aconteceu, e mandar isso para o raciocínio livre — sem resultado e sem
+     * ferramenta — é exatamente a receita da ação inventada. A resposta
+     * honesta é dizer o que falhou.
+     */
+    if (!precisaRaciocinio && saidas.length === 0) {
+      const texto =
+        falhas.length > 0
+          ? `Não executei isso. ${falhas.join('; ')}. Nada foi alterado na máquina.`
+          : 'Não consegui executar esse pedido e não tenho resultado para mostrar. Nada foi alterado.';
       b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto });
       return texto;
     }
@@ -369,7 +612,23 @@ export class Kernel {
       historico: historico.slice(0, -1),
       overridePersona,
       camadaGlobal,
-      contexto: this.trabalho.contextoAcumulado(),
+      /**
+       * As falhas entram no contexto como FATO, não como silêncio. Sem esta
+       * linha a LLM recebe um plano pela metade sem saber que metade faltou —
+       * e preenche a lacuna com prosa plausível.
+       */
+      contexto: [
+        this.trabalho.contextoAcumulado(),
+        falhas.length > 0
+          ? `--- passos que NÃO foram executados (não afirme que foram) ---\n${falhas.join('\n')}`
+          : '',
+        verificacoesPendentes.length > 0
+          ? '--- executados mas NÃO CONFIRMADOS (diga que solicitou, não que está feito) ---\n' +
+            verificacoesPendentes.join('\n')
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
       sinal: controle.signal,
       aoReceberTexto: (pedaco) => {
         if (controle.signal.aborted) return;

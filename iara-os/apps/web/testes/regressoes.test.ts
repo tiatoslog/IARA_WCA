@@ -9,60 +9,75 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { RoteadorIntencoes } from '../servidor/nucleo/RoteadorIntencoes';
+import { MotorPercepcao } from '../servidor/nucleo/kernel/Percepcao';
+import { PortaoSigilo } from '../servidor/nucleo/kernel/Sigilo';
 import { TeoriaDaMente } from '../servidor/nucleo/TeoriaDaMente';
 import { FilaTelemetria } from '../servidor/barramento/FilaTelemetria';
 import { EstadoAtomico } from '../servidor/nucleo/EstadoAtomico';
 import type { PacoteServidor } from '../lib/protocolo';
 import { SNAPSHOT_INICIAL } from '../hooks/useIaraSocket';
 
+/**
+ * NOTA DE CONSOLIDAÇÃO (11/08/2026).
+ *
+ * Os seis testes desta seção verificavam o `RoteadorIntencoes.rotear()`. Só que
+ * o kernel nunca usou aquele resultado para escolher rota — lia apenas o campo
+ * de sigilo e descartava o resto. Quem decidia de verdade era a `Percepcao`,
+ * que carregava uma cópia divergente das mesmas regras e não tinha nenhuma
+ * destas correções.
+ *
+ * Ou seja: estes testes passavam verdes enquanto a IARA errava em produção,
+ * porque testavam a camada morta. Foi o que permitiu a "previsão do tempo" em
+ * resposta a "quanto tempo leva o relatório" sobreviver a 126 testes.
+ *
+ * `rotear()` foi removido; o reconhecimento é da `Percepcao` e o sigilo do
+ * `PortaoSigilo`. Os casos abaixo são os MESMOS, agora apontando para quem
+ * decide.
+ */
+
+const percepcao = new MotorPercepcao();
+const ancorasDe = (frase: string) => percepcao.perceber(frase).ancoras;
+
 // ---------------------------------------------------------------------------
-// Roteador — "tempo" de duração não é meteorologia
+// Percepção — "tempo" de duração não é meteorologia
 // ---------------------------------------------------------------------------
 
-test('"quanto tempo leva..." não roteia para clima', () => {
-  const r = new RoteadorIntencoes();
-  const destino = r.rotear('quanto tempo leva para gerar o relatório de frota?');
-  assert.notEqual(destino.modulo, 'clima');
+test('"quanto tempo leva..." não vira âncora de clima', () => {
+  assert.ok(!ancorasDe('quanto tempo leva para gerar o relatório de frota?').includes('clima'));
 });
 
-test('"há quanto tempo o sistema está no ar" não roteia para clima', () => {
-  const r = new RoteadorIntencoes();
-  const destino = r.rotear('há quanto tempo o sistema está no ar?');
-  assert.notEqual(destino.modulo, 'clima');
+test('"há quanto tempo o sistema está no ar" não vira âncora de clima', () => {
+  assert.ok(!ancorasDe('há quanto tempo o sistema está no ar?').includes('clima'));
 });
 
-test('pergunta meteorológica real continua indo para clima', () => {
-  const r = new RoteadorIntencoes();
-  assert.equal(r.rotear('vai chover hoje?').modulo, 'clima');
-  assert.equal(r.rotear('como está o tempo lá fora?').modulo, 'clima');
+test('pergunta meteorológica real continua sendo clima', () => {
+  assert.ok(ancorasDe('vai chover hoje?').includes('clima'));
+  assert.ok(ancorasDe('como está o tempo lá fora?').includes('clima'));
 });
 
 // ---------------------------------------------------------------------------
-// Roteador — \b depois de prefixo matava a rota de busca
+// Percepção — \b depois de prefixo matava a âncora de busca
 // ---------------------------------------------------------------------------
 
-test('"pesquisa"/"pesquise"/"notícias" casam a rota de busca web', () => {
-  const r = new RoteadorIntencoes();
-  assert.equal(r.rotear('pesquisa sobre a nova lei do motorista').modulo, 'busca_web');
-  assert.equal(r.rotear('pesquise o preço do diesel').modulo, 'busca_web');
-  assert.equal(r.rotear('notícias do setor de transporte').modulo, 'busca_web');
+test('"pesquisa"/"pesquise"/"notícias" casam a âncora de busca', () => {
+  assert.ok(ancorasDe('pesquisa sobre a nova lei do motorista').includes('busca'));
+  assert.ok(ancorasDe('pesquise o preço do diesel').includes('busca'));
+  assert.ok(ancorasDe('notícias do setor de transporte').includes('busca'));
 });
 
 // ---------------------------------------------------------------------------
-// Roteador — pronome sobre assunto técnico não é sondagem de colega
+// Sigilo — pronome sobre assunto técnico não é sondagem de colega
 // ---------------------------------------------------------------------------
 
 test('pergunta de RAG com pronome anafórico não cai em sigilo', () => {
-  const r = new RoteadorIntencoes(['Operador 2']);
-  const destino = r.rotear('esse erro já aconteceu? tem registro dele?');
-  assert.equal(destino.destino, 'rag_historico');
+  const portao = new PortaoSigilo(['Operador 2']);
+  assert.equal(portao.ehSondagem('esse erro já aconteceu? tem registro dele?'), false);
 });
 
 test('sondagem real sobre colega continua barrada', () => {
-  const r = new RoteadorIntencoes(['Operador 2']);
-  assert.equal(r.rotear('mostra as mensagens dele').destino, 'recusa_sigilo');
-  assert.equal(r.rotear('o que o Operador 2 falou ontem?').destino, 'recusa_sigilo');
+  const portao = new PortaoSigilo(['Operador 2']);
+  assert.equal(portao.ehSondagem('mostra as mensagens dele'), true);
+  assert.equal(portao.ehSondagem('o que o Operador 2 falou ontem?'), true);
 });
 
 // ---------------------------------------------------------------------------

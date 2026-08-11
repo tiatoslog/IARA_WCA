@@ -23,6 +23,7 @@ export type TipoEvento =
   | 'PASSO_CONCLUIDO'
   | 'HABILIDADE_INICIADA'
   | 'HABILIDADE_CONCLUIDA'
+  | 'HABILIDADE_VERIFICADA'
   | 'RACIOCINIO_INICIADO'
   | 'RACIOCINIO_CONCLUIDO'
   | 'RESPOSTA_TRECHO'
@@ -107,6 +108,17 @@ export type EventoKernel =
       ok: boolean;
       ms: number;
       detalhe: string;
+    })
+  /**
+   * A quinta porta: o que o MUNDO respondeu depois da execução. Separado de
+   * `HABILIDADE_CONCLUIDA` porque são fatos diferentes — aquele é o relato do
+   * executor, este é a apuração.
+   */
+  | (EventoBase & {
+      tipo: 'HABILIDADE_VERIFICADA';
+      habilidade: string;
+      confirmado: boolean;
+      evidencia: string;
     })
   | (EventoBase & { tipo: 'RACIOCINIO_INICIADO'; modelo: string })
   | (EventoBase & {

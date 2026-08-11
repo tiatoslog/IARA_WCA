@@ -69,6 +69,9 @@ const habilidadeFalsa = (
     permissoes,
     timeout_ms,
     custo: 'zero',
+    // Baixo: a dublê não altera nada fora do processo, então não precisa
+    // declarar verificação para passar no contrato do catálogo.
+    risco: 'baixo',
     esquema: {},
   },
   executar: corpo,

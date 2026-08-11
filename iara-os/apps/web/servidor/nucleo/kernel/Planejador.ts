@@ -29,9 +29,16 @@ function passo(
 /**
  * Planos conhecidos, indexados pela âncora que a percepção encontrou.
  *
- * Os ids referenciados aqui têm que existir no catálogo — `testes/kernel.test.ts`
- * verifica isso, porque uma receita apontando para habilidade inexistente
- * quebra em silêncio: o passo é pulado e a resposta sai vazia.
+ * Os ids referenciados aqui têm que existir no catálogo —
+ * `testes/integridade-cognitiva.test.ts` verifica isso percorrendo cada
+ * receita. Uma receita apontando para habilidade inexistente é o pior defeito
+ * possível deste arquivo: o passo é pulado, a resposta cai no raciocínio livre
+ * e a LLM narra como feita uma ação que nunca rodou.
+ *
+ * Este comentário já apontou para um teste que não existia, enquanto quatro
+ * receitas (`criar_pasta`, `abrir_aplicativo`, `acionar_energia`,
+ * `resolver_confirmacao`) citavam habilidades ausentes do catálogo. Se mover o
+ * teste, mova esta referência junto.
  */
 const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
   clima: () => ({
@@ -102,11 +109,32 @@ const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
     origem: 'deterministico',
     passos: [
       passo(0, 'Fechar o ciclo da ação pendente', 'resolver_confirmacao', {
-        resposta: /^confirmo|^pode /.test(normalizarLocal(p.bruto)) ? 'confirmo' : 'cancelar',
+        resposta: ehAfirmacao(p.bruto) ? 'confirmo' : 'cancelar',
       }),
     ],
   }),
 };
+
+/**
+ * Confirmação vs. cancelamento.
+ *
+ * O teste anterior era `/^confirmo|^pode /`, e a âncora `confirmacao` da
+ * percepção casa um vocabulário bem maior que isso: "confirmado", "confirmar" e
+ * "prossiga" caíam todos no ramo `cancelar`. Errava para o lado seguro — mas
+ * errava, e o operador que digita "prossiga" duas vezes sem nada acontecer
+ * conclui, com razão, que a IARA não entende confirmação.
+ *
+ * O NEGATIVO é verificado primeiro: "cancela, não prossiga" tem as duas
+ * famílias na frase, e nesse empate desistir é a leitura correta.
+ */
+const NEGACAO = /\b(cancela|cancelar|cancelado|aborta|abortar|desiste|desistir|nao|deixa)\b/;
+const AFIRMACAO = /\b(confirmo|confirmado|confirma|confirmar|prossiga|prossegue|prosseguir|pode ir|pode sim|manda|sim)\b/;
+
+export function ehAfirmacao(bruto: string): boolean {
+  const t = normalizarLocal(bruto);
+  if (NEGACAO.test(t)) return false;
+  return AFIRMACAO.test(t);
+}
 
 function normalizarLocal(bruto: string): string {
   return bruto

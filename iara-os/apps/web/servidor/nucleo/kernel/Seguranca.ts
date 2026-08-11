@@ -33,9 +33,18 @@ const POR_PAPEL: Record<Papel, readonly Permissao[]> = {
    * autorizadas, allowlist de aplicativos e confirmação obrigatória para
    * energia. Habilidade nova com `escrita` passa por essas mesmas réguas ou
    * não entra.
+   *
+   * `externo` NÃO entra aqui, e essa ausência é o ponto.
+   *
+   * O comentário de `integracoes.ts` sempre afirmou que habilidades que falam
+   * com terceiros "não são concedidas ao operador por padrão" — mas `escrita`
+   * cobria as duas coisas, e `enviar_whatsapp` estava liberada para o papel
+   * `operador`. Ficou latente só porque a habilidade não tem token. No dia em
+   * que WHATSAPP_TOKEN entrasse no ambiente, a trava descrita em prosa não
+   * existiria em código. Agora existe.
    */
   operador: ['rede', 'banco', 'memoria', 'llm', 'escrita'],
-  administrador: ['rede', 'banco', 'memoria', 'llm', 'escrita'],
+  administrador: ['rede', 'banco', 'memoria', 'llm', 'escrita', 'externo'],
   somente_leitura: ['banco', 'memoria'],
 };
 

@@ -19,7 +19,15 @@ export type Permissao =
   | 'banco' // lê dados da operação
   | 'memoria' // lê o shard privado do operador
   | 'llm' // gasta tokens
-  | 'escrita'; // altera algo fora do processo
+  | 'escrita' // altera algo na máquina onde o motor roda
+  /**
+   * Age no mundo EM NOME do operador, alcançando outra pessoa: manda mensagem,
+   * envia e-mail, publica. Separada de `escrita` porque o risco é de outra
+   * natureza — criar uma pasta errada se desfaz, uma mensagem enviada ao
+   * destinatário errado não. Enquanto `escrita` é do operador, `externo` é do
+   * administrador.
+   */
+  | 'externo';
 
 /** Validação em runtime dos parâmetros. Simples de propósito: o kernel
  *  precisa disso rápido e sem dependência de biblioteca de schema. */
@@ -50,8 +58,26 @@ export interface ManifestoHabilidade {
   readonly permissoes: readonly Permissao[];
   readonly timeout_ms: number;
   readonly custo: 'zero' | 'tokens';
+  /**
+   * Quanto custa errar com esta habilidade — e, portanto, quanta prova ela
+   * exige antes e depois.
+   *
+   * `baixo`  consultar, ler, organizar. Nenhuma confirmação, nenhuma
+   *          verificação (a resposta É o resultado).
+   * `medio`  altera algo na máquina ou nos dados. Sem confirmação prévia, mas
+   *          verificação obrigatória: criar pasta é reversível, afirmar que
+   *          criou sem ter criado não é.
+   * `alto`   irreversível ou alcança terceiro. Confirmação explícita ANTES,
+   *          verificação DEPOIS.
+   *
+   * Risco é ortogonal a confiança. Uma intenção pode ter confiança 0,99 e
+   * ainda assim exigir confirmação — ver `PoliticaDeRisco`.
+   */
+  readonly risco: Risco;
   readonly esquema: Esquema;
 }
+
+export type Risco = 'baixo' | 'medio' | 'alto';
 
 export interface ContextoHabilidade {
   readonly sessao: string;
@@ -67,8 +93,30 @@ export interface ResultadoHabilidade {
   readonly texto: string;
   /** Uma linha para o console técnico. Nunca payload cru. */
   readonly detalhe: string;
-  /** Habilidade pode declarar que não resolveu sem ser um erro. */
+  /**
+   * Habilidade pode declarar que não resolveu sem ser um erro.
+   *
+   * ATENÇÃO: isto é AUTODECLARADO. É o relato do executor, não a verdade — por
+   * isso a procedência de um resultado cru é `resultado_ferramenta`, e só a
+   * verificação a promove a `fato_verificado`. Nunca trate `resolveu: true`
+   * como prova de que algo aconteceu no mundo.
+   */
   readonly resolveu: boolean;
+}
+
+/**
+ * O que a verificação apurou CONFERINDO O MUNDO, depois de executar.
+ *
+ * `confirmado: false` não quer dizer "falhou" — quer dizer "não consegui
+ * provar". A distinção é o núcleo desta camada: `motivo` explica qual das duas
+ * coisas aconteceu, e a resposta ao operador muda conforme.
+ */
+export interface Verificacao {
+  readonly confirmado: boolean;
+  /** Uma linha: o que foi conferido e o que se encontrou. */
+  readonly evidencia: string;
+  /** Preenchido quando `confirmado` é falso. */
+  readonly motivo?: 'nao_encontrado' | 'divergente' | 'sem_meio_de_verificar';
 }
 
 export interface Habilidade {
@@ -84,6 +132,20 @@ export interface Habilidade {
    */
   indisponivelPorque?(): string | null;
   executar(ctx: ContextoHabilidade): Promise<ResultadoHabilidade>;
+
+  /**
+   * Confere o MUNDO depois de executar. Opcional, e a ausência é significativa.
+   *
+   * Quem altera algo fora do processo DEVE implementar: é o que separa "pedi
+   * para criar a pasta" de "a pasta existe". Quem só lê (clima, relógio,
+   * consulta) não implementa — verificar uma leitura seria repetir a leitura,
+   * pagando duas vezes por nenhuma garantia nova.
+   *
+   * A regra "toda habilidade de risco médio ou alto verifica" é imposta por
+   * teste em `testes/verificacao.test.ts`, não pela boa vontade de quem
+   * escreve a habilidade.
+   */
+  verificar?(resultado: ResultadoHabilidade, ctx: ContextoHabilidade): Promise<Verificacao>;
 }
 
 /** Pronta para uso agora? */

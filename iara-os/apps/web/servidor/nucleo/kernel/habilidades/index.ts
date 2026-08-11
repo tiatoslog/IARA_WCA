@@ -16,11 +16,13 @@ import type { Habilidade } from '../Habilidade';
 import { HABILIDADES_OPERACIONAIS, prepararOperacionais } from './operacionais';
 import { HABILIDADES_DADOS } from './dados';
 import { HABILIDADES_INTEGRACAO } from './integracoes';
+import { HABILIDADES_AGENTE_LOCAL } from './agenteLocal';
 
 export const CATALOGO: readonly Habilidade[] = [
   ...HABILIDADES_OPERACIONAIS,
   ...HABILIDADES_DADOS,
   ...HABILIDADES_INTEGRACAO,
+  ...HABILIDADES_AGENTE_LOCAL,
 ];
 
 export { prepararOperacionais };

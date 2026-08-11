@@ -11,7 +11,7 @@
 
 import type { LeituraOperador } from '../../../lib/estado';
 import type { Percepcao, TipoEntrada, Urgencia } from './Evento';
-import { normalizar } from '../RoteadorIntencoes';
+import { normalizar } from '../texto';
 import { TeoriaDaMente, type SinalTemporal } from '../TeoriaDaMente';
 
 const URGENTE =
@@ -30,10 +30,49 @@ const DOCUMENTO = /\b(pdf|planilha|xlsx|csv|documento|contrato|anexo|arquivo|not
  * temática não pode inflar a confiança, senão a Função Executiva acha que
  * domina o assunto e deixa de pedir decomposição.
  */
-const ANCORAS: ReadonlyArray<{ re: RegExp; nome: string; acionavel: boolean }> = [
-  { re: /\b(chuva|chover|chovendo|tempo|clima|temperatura|previsao)\b/, nome: 'clima', acionavel: true },
+/**
+ * Contextos em que "tempo" NÃO é meteorologia. Sem esta trava, "quanto tempo
+ * leva para gerar o relatório?" casava a âncora `clima`, virava plano
+ * determinístico com confiança 0,92 e a IARA respondia a previsão do tempo —
+ * com toda a segurança do mundo. O `RoteadorIntencoes` já tinha essa guarda; a
+ * `Percepcao`, que é quem de fato decide a rota, não tinha. Duas camadas de
+ * roteamento, uma corrigida e outra não: ver `testes/regressoes.test.ts`.
+ */
+const TEMPO_NAO_METEOROLOGICO =
+  // O lookahead inicial faz a exceção CEDER quando há termo meteorológico
+  // inequívoco na frase: "vai chover? quanto tempo até parar" é clima, apesar
+  // do "quanto tempo". Só a palavra "tempo" sozinha é ambígua.
+  /^(?!.*\b(chuva|chover|chovendo|clima|temperatura|previsao|calor|frio)\b).*(?:\b(quanto|ha quanto|em quanto|qualquer|algum|muito|pouco|todo|um)\s+tempo\b|\btempo\s+(de|para|pra|que|restante|estimado|medio|limite|habil|integral|real)\b|\bao mesmo tempo\b|\bperda de tempo\b)/;
+
+interface Ancora {
+  readonly re: RegExp;
+  readonly nome: string;
+  readonly acionavel: boolean;
+  /** Casou `re`, mas casa isto também? Então não é esta âncora. */
+  readonly exceto?: RegExp;
+}
+
+const ANCORAS: ReadonlyArray<Ancora> = [
   {
-    re: /\b(quantas centrais|centrais ativas|servidores ativos|frota|quantos veiculos)\b/,
+    re: /\b(chuva|chover|chovendo|tempo|clima|temperatura|previsao)\b/,
+    nome: 'clima',
+    acionavel: true,
+    exceto: TEMPO_NAO_METEOROLOGICO,
+  },
+  {
+    /**
+     * `frota` NUNCA sozinha.
+     *
+     * Todas as outras alternativas desta âncora são frases de contagem; `frota`
+     * era a única palavra solta, e por isso capturava tudo que mencionasse a
+     * frota por qualquer motivo. "Elabore uma estratégia de redução de custo
+     * para a frota" virava plano determinístico e a IARA respondia quantas
+     * centrais existem — resposta impecável para uma pergunta que ninguém fez.
+     *
+     * Mesma família do bug de "tempo": palavra genérica tratada como âncora
+     * acionável. Ver `testes/mentira-operacional.test.ts`.
+     */
+    re: /\b(quantas centrais|centrais ativas|servidores ativos|quantos veiculos)\b|\b(quantos?|quantas?|tamanho da|status da|total da|composicao da)\s+(veiculos na\s+)?frota\b|\bfrota\s+(ativa|total|atual|disponivel)\b/,
     nome: 'infraestrutura',
     acionavel: true,
   },
@@ -43,9 +82,18 @@ const ANCORAS: ReadonlyArray<{ re: RegExp; nome: string; acionavel: boolean }> =
     acionavel: true,
   },
   { re: /\b(que horas|que dia e hoje|data de hoje)\b/, nome: 'relogio', acionavel: true },
-  { re: /\b(pesquis|busca na internet|procura na web|noticia)\b/, nome: 'busca', acionavel: true },
   {
-    re: /\b(resumo|resumir|analise|analisar|explica|explicar|compara)\b/,
+    // `pesquis\w*`, não `pesquis\b`: o \b depois de um prefixo exige não-letra
+    // em seguida, então "pesquise" e "pesquisa" nunca casavam — a âncora só
+    // funcionava para a palavra "pesquis", que ninguém digita. Mesmo motivo
+    // para `noticia\w*` ("notícias" no plural). O `RoteadorIntencoes` já tinha
+    // essa correção; esta cópia da regra não.
+    re: /\b(pesquis\w*|busca na internet|procura na web|noticia\w*)\b/,
+    nome: 'busca',
+    acionavel: true,
+  },
+  {
+    re: /\b(resum\w*|analis\w*|explic\w*|compar\w*)\b/,
     nome: 'analise',
     acionavel: false,
   },
@@ -82,7 +130,7 @@ export class MotorPercepcao {
     const temporal: SinalTemporal = this.mente.registrarChegada();
     const leitura: LeituraOperador = this.mente.analisar(bruto, temporal);
 
-    const encontradas = ANCORAS.filter((a) => a.re.test(t));
+    const encontradas = ANCORAS.filter((a) => a.re.test(t) && !a.exceto?.test(t));
     const ancoras = encontradas.map((a) => a.nome);
     const acionaveis = encontradas.filter((a) => a.acionavel).length;
     const tipo = this.classificar(t, bruto);

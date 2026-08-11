@@ -18,6 +18,7 @@
 import type { Plano, Passo, Percepcao } from './Evento';
 import type { ManifestoHabilidade } from './Habilidade';
 import { ClienteClaude, NuvemIndisponivel } from '../ClienteClaude';
+import { PorteiroAutorizacao } from './PorteiroAutorizacao';
 import type { RegistroMemoria } from '../../../lib/estado';
 
 export interface PedidoSintese {
@@ -42,6 +43,8 @@ export interface RespostaRaciocinio {
 const MAX_PASSOS = 6;
 
 export class MotorRaciocinio {
+  private readonly porteiro = new PorteiroAutorizacao();
+
   constructor(private readonly claude = new ClienteClaude()) {}
 
   get disponivel(): boolean {
@@ -68,7 +71,18 @@ export class MotorRaciocinio {
   ): Promise<Plano | null> {
     if (!this.claude.disponivel) return null;
 
-    const disponiveis = catalogo.filter((m) => m.custo === 'zero' && m.id !== 'sigilo');
+    /**
+     * O que a LLM pode sequer NOMEAR num plano.
+     *
+     * `planejavel` exclui o risco que exige confirmação prévia. É a segunda
+     * barreira: o `PorteiroAutorizacao` no Kernel recusaria o passo de qualquer
+     * forma, mas oferecer a habilidade produziria um plano inteiro construído
+     * em volta de algo que vai ser barrado — tokens gastos, passos mostrados ao
+     * operador e nada feito. Aqui a habilidade simplesmente não existe.
+     */
+    const disponiveis = catalogo.filter(
+      (m) => m.custo === 'zero' && m.id !== 'sigilo' && this.porteiro.planejavel(m.risco),
+    );
     const lista = disponiveis
       .map((m) => `- ${m.id}: ${m.descricao} | parâmetros: ${Object.keys(m.esquema).join(', ') || 'nenhum'}`)
       .join('\n');

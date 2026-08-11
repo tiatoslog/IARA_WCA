@@ -27,7 +27,23 @@ import {
   type ManifestoHabilidade,
   type Permissao,
   type ResultadoHabilidade,
+  type Verificacao,
 } from './Habilidade';
+import type { EstadoExecucao } from './Verdade';
+
+/**
+ * O que o executor relatou E o que a verificação apurou, lado a lado.
+ *
+ * Os dois campos existem separados de propósito: `resultado` é o relato da
+ * habilidade, `verificacao` é o mundo. Fundir os dois num booleano é
+ * exatamente como "solicitei a execução" vira "pronto".
+ */
+export interface ResultadoVerificado {
+  readonly resultado: ResultadoHabilidade;
+  /** `null` quando a habilidade não declara verificação (risco baixo). */
+  readonly verificacao: Verificacao | null;
+  readonly estado: EstadoExecucao;
+}
 
 export interface PedidoHabilidade {
   id: string;
@@ -94,6 +110,69 @@ export class GerenciadorHabilidades {
       };
     });
     return agruparPorDominio(capacidades);
+  }
+
+  /**
+   * Executa e, quando a habilidade sabe se verificar, CONFERE O MUNDO.
+   *
+   * A quinta porta. As quatro anteriores decidem se a ação pode acontecer;
+   * esta decide se ela aconteceu. Uma habilidade de risco médio ou alto que
+   * não declara `verificar` termina em `desconhecido`, nunca em sucesso — e o
+   * teste de contrato impede que ela chegue ao catálogo assim.
+   */
+  async executarVerificando(pedido: PedidoHabilidade): Promise<ResultadoVerificado> {
+    const resultado = await this.executar(pedido);
+    const habilidade = this.registro.get(pedido.id)!;
+    const risco = habilidade.manifesto.risco;
+
+    if (!habilidade.verificar) {
+      // Risco baixo é leitura: a resposta É o resultado, não há mundo separado
+      // para conferir. Qualquer outro risco sem verificador é honestamente
+      // desconhecido.
+      return {
+        resultado,
+        verificacao: null,
+        estado: risco === 'baixo' ? 'verificado' : 'desconhecido',
+      };
+    }
+
+    const ctx: ContextoHabilidade = {
+      sessao: pedido.sessao,
+      id_usuario: pedido.id_usuario,
+      parametros: validar(habilidade.manifesto.esquema, pedido.parametros),
+      sinal: pedido.sinal,
+      enunciado: pedido.enunciado,
+    };
+
+    let verificacao: Verificacao;
+    try {
+      verificacao = await habilidade.verificar(resultado, ctx);
+    } catch (erro) {
+      // Verificador que quebra não pode virar sucesso nem falha: vira
+      // desconhecido, que é literalmente o que se sabe nesse ponto.
+      verificacao = {
+        confirmado: false,
+        evidencia: `a verificação falhou: ${(erro as Error).message}`,
+        motivo: 'sem_meio_de_verificar',
+      };
+    }
+
+    this.barramento.publicar({
+      tipo: 'HABILIDADE_VERIFICADA',
+      habilidade: pedido.id,
+      confirmado: verificacao.confirmado,
+      evidencia: verificacao.evidencia,
+    });
+
+    return {
+      resultado,
+      verificacao,
+      estado: verificacao.confirmado
+        ? 'verificado'
+        : verificacao.motivo === 'sem_meio_de_verificar'
+          ? 'desconhecido'
+          : 'falhou',
+    };
   }
 
   async executar(pedido: PedidoHabilidade): Promise<ResultadoHabilidade> {

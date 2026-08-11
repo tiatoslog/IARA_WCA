@@ -37,6 +37,26 @@ function pendente(
         `${manifesto.id} está declarada mas não implementada. Configure ${variavel} e implemente o executor.`,
       );
     },
+
+    /**
+     * Verificação declarada, ainda não implementável — pelo mesmo motivo que o
+     * executor: não há provedor ligado.
+     *
+     * Existe agora porque o contrato do catálogo exige que toda habilidade de
+     * risco médio ou alto saiba se verificar (`testes/verificacao.test.ts`), e
+     * porque a forma correta de "ainda não sei" é dizer isso, não omitir.
+     *
+     * QUEM IMPLEMENTAR `executar` IMPLEMENTA ISTO JUNTO. Para um envio, a
+     * verificação real é: status do provedor, destinatário confirmado e
+     * carimbo de tempo do envio — nunca o código de retorno da chamada HTTP.
+     */
+    async verificar() {
+      return {
+        confirmado: false,
+        evidencia: `${manifesto.id} não tem provedor ligado; nada foi enviado`,
+        motivo: 'sem_meio_de_verificar' as const,
+      };
+    },
   };
 }
 
@@ -51,6 +71,7 @@ export const lerEmails = pendente(
     permissoes: ['rede', 'memoria'],
     timeout_ms: 10000,
     custo: 'zero',
+    risco: 'baixo',
     esquema: {
       filtro: { tipo: 'texto' },
       limite: { tipo: 'numero', padrao: 10 },
@@ -67,12 +88,13 @@ export const enviarWhatsapp = pendente(
       'Envia mensagem de WhatsApp para um contato da operação. Ação irreversível: exige confirmação explícita do operador antes de disparar.',
     dominio: 'comunicacao',
     capacidade: 'automacao',
-    // `escrita` porque sai do processo e chega em outra pessoa. Nenhuma
-    // habilidade que fala com o mundo externo em nome do operador pode ser
-    // acionada sem esse selo.
-    permissoes: ['rede', 'escrita'],
+    // `externo`, não `escrita`: chega em OUTRA PESSOA. Mensagem enviada ao
+    // destinatário errado não se desfaz, e é por isso que essa permissão não
+    // é concedida ao papel `operador` — ver `Seguranca.ts`.
+    permissoes: ['rede', 'externo'],
     timeout_ms: 10000,
     custo: 'zero',
+    risco: 'alto',
     esquema: {
       destinatario: { tipo: 'texto', obrigatorio: true },
       mensagem: { tipo: 'texto', obrigatorio: true },
@@ -92,6 +114,7 @@ export const buscarDocumentoSharepoint = pendente(
     permissoes: ['rede', 'banco'],
     timeout_ms: 12000,
     custo: 'zero',
+    risco: 'baixo',
     esquema: { consulta: { tipo: 'texto', obrigatorio: true } },
   },
   'MS_GRAPH_TOKEN',
