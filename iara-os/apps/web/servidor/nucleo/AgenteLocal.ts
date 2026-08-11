@@ -9,9 +9,11 @@
  *  2. ALLOWLIST DE APLICATIVOS. Abrir aplicativo é escolher de um mapa
  *     fechado, revisado em commit. Não existe "execute este comando".
  *  3. ENERGIA É R2. Desligar/reiniciar/suspender NUNCA executa direto: vira
- *     pendência de 60 segundos que só a palavra "confirmo" do MESMO operador
- *     libera. Cancelar sempre funciona, inclusive depois do agendamento
- *     (shutdown do Windows com atraso + /a).
+ *     pendência de 60 segundos que só a palavra "confirmo" do MESMO operador,
+ *     NA MESMA CONVERSA, libera — e para a ação que foi de fato anunciada, não
+ *     para o que estiver no slot. Cancelar sempre funciona, inclusive depois do
+ *     agendamento (shutdown do Windows com atraso + /a) e inclusive de outra
+ *     conversa: desistir nunca exige a prova que agir exige.
  *  4. AUDITORIA. Toda ação — executada, recusada ou pendente — vira uma linha
  *     JSON no canal `agente_local`, sem copiar conteúdo de conversa.
  *
@@ -23,6 +25,7 @@
 import { mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
@@ -136,9 +139,33 @@ const ROTULO_ENERGIA: Record<AcaoEnergia, string> = {
  *  executando ação esquecida é exatamente o acidente que este fluxo evita. */
 const VALIDADE_PENDENCIA_MS = 60_000;
 
+/**
+ * A pendência de energia, com IDENTIDADE — não só uma ação solta.
+ *
+ * O DEFEITO, reproduzido na auditoria de fechamento (11/08/2026): a pendência
+ * era `{ acao, expira_em }` indexada só por `id_usuario`. Duas consequências,
+ * as duas confirmadas com executor espião:
+ *
+ *  1. TROCA SILENCIOSA DE AÇÃO. `pedirEnergia(u,'desligar')` seguido de
+ *     `pedirEnergia(u,'reiniciar')` sobrescrevia o slot sem dizer nada. O
+ *     operador que leu "vou desligar" e digitou "confirmo" recebia um REBOOT.
+ *  2. CONFIRMAÇÃO ATRAVESSANDO CANAL. O `agenteLocal` é singleton do processo e
+ *     a chave era só o usuário: uma pendência armada pelo WhatsApp podia ser
+ *     liberada por um "confirmo" digitado no navegador — duas conversas
+ *     diferentes, uma autorização só.
+ *
+ * `sessao` amarra a confirmação ao MESMO diálogo em que o pedido foi feito
+ * (`Porta.ts` usa o id do operador; `PortaWhatsapp.ts` usa `whatsapp:<id>`, e é
+ * por isso que os espelhos do navegador continuam funcionando entre si).
+ * `id` é o nonce que dá à pendência uma identidade própria, para que
+ * "confirmo" nunca seja um cheque em branco sobre o slot atual.
+ */
 interface Pendencia {
-  acao: AcaoEnergia;
-  expira_em: number;
+  readonly id: string;
+  readonly acao: AcaoEnergia;
+  readonly sessao: string;
+  readonly criada_em: number;
+  readonly expira_em: number;
 }
 
 /** Assinatura compatível com `child_process.spawn` — injetável nos testes
@@ -206,55 +233,114 @@ export class AgenteLocal {
     return `${app.rotulo} aberto.`;
   }
 
+  /**
+   * A pendência VÁLIDA para este diálogo, ou `null`.
+   *
+   * Um só lugar decide o que "válida" quer dizer — não expirada E do mesmo
+   * `sessao`. Espalhar esse teste por `confirmar`, `cancelar` e `temPendencia`
+   * é como as três respostas passam a divergir com o tempo.
+   */
+  private valida(idUsuario: string, sessao: string): Pendencia | null {
+    const p = this.pendencias.get(idUsuario);
+    if (!p) return null;
+    if (Date.now() > p.expira_em) return null;
+    if (p.sessao !== sessao) return null;
+    return p;
+  }
+
   /** R2: nunca executa — registra a pendência e devolve o pedido de confirmação. */
-  pedirEnergia(idUsuario: string, acao: AcaoEnergia): string {
-    this.pendencias.set(idUsuario, { acao, expira_em: Date.now() + VALIDADE_PENDENCIA_MS });
-    this.auditar(idUsuario, `energia_pendente:${acao}`, true, 'aguardando confirmação');
+  pedirEnergia(idUsuario: string, acao: AcaoEnergia, sessao: string): string {
+    /**
+     * Substituir uma pendência é FATO DITO, não sobrescrita muda.
+     *
+     * Sem esta frase, quem pediu "desligar" e depois "reiniciar" fica com dois
+     * pedidos na cabeça e um só no sistema — e o "confirmo" seguinte resolve o
+     * que o sistema guardou, não o que a pessoa lembra.
+     */
+    const anterior = this.pendencias.get(idUsuario);
+    const trocou =
+      anterior && Date.now() <= anterior.expira_em && anterior.acao !== acao
+        ? `Descartei o pedido anterior de ${ROTULO_ENERGIA[anterior.acao]}. `
+        : '';
+
+    this.pendencias.set(idUsuario, {
+      id: randomUUID(),
+      acao,
+      sessao,
+      criada_em: Date.now(),
+      expira_em: Date.now() + VALIDADE_PENDENCIA_MS,
+    });
+    this.auditar(idUsuario, `energia_pendente:${acao}`, true, `aguardando confirmação (${sessao})`);
     return (
-      `Entendido: você quer ${ROTULO_ENERGIA[acao]}. Isso interrompe tudo que estiver aberto, ` +
-      `então preciso da sua confirmação explícita. Responda "confirmo" em até 1 minuto — ou "cancela" para desistir.`
+      `${trocou}Entendido: você quer ${ROTULO_ENERGIA[acao]}. Isso interrompe tudo que estiver aberto, ` +
+      `então preciso da sua confirmação explícita. Responda "confirmo ${ROTULO_ENERGIA[acao].split(' ')[0]}" ` +
+      `— ou só "confirmo" — em até 1 minuto. "cancela" desiste.`
     );
   }
 
-  confirmar(idUsuario: string): string {
-    const pendencia = this.pendencias.get(idUsuario);
-    if (!pendencia || Date.now() > pendencia.expira_em) {
-      this.pendencias.delete(idUsuario);
+  confirmar(idUsuario: string, sessao: string): string {
+    const bruta = this.pendencias.get(idUsuario);
+    const pendencia = this.valida(idUsuario, sessao);
+
+    if (!pendencia) {
+      /**
+       * Pendência de OUTRO diálogo não é apagada aqui: ela não é deste
+       * "confirmo", e destruí-la deixaria o operador sem a ação que ele de fato
+       * pediu na outra tela. Só a expirada sai do mapa.
+       */
+      if (bruta && Date.now() > bruta.expira_em) this.pendencias.delete(idUsuario);
+      if (bruta && bruta.sessao !== sessao && Date.now() <= bruta.expira_em) {
+        this.auditar(idUsuario, 'energia:confirmacao_de_outra_sessao', false, sessao);
+        return (
+          'Existe um pedido seu aguardando confirmação, mas ele foi feito em outra conversa. ' +
+          'Confirme por lá, ou repita o pedido aqui — não libero ação irreversível com um "confirmo" ' +
+          'que veio de outro contexto.'
+        );
+      }
       return 'Não há nenhuma ação aguardando confirmação — ou ela expirou. Pode pedir de novo.';
     }
+
     this.pendencias.delete(idUsuario);
 
     if (pendencia.acao === 'suspender') {
       this.executor('rundll32.exe', ['powrprof.dll,SetSuspendState', '0,1,0']);
-      this.auditar(idUsuario, 'energia:suspender', true, 'executado');
+      this.auditar(idUsuario, 'energia:suspender', true, `executado (${pendencia.id})`);
       return 'Suspendendo o computador agora. Até já.';
     }
 
     const flag = pendencia.acao === 'desligar' ? '/s' : '/r';
     // 20 segundos de atraso: janela real de arrependimento. "cancela" aborta.
     this.executor('shutdown.exe', [flag, '/t', '20', '/c', 'IARA: acao confirmada pelo operador.']);
-    this.auditar(idUsuario, `energia:${pendencia.acao}`, true, 'agendado em 20s');
+    this.auditar(idUsuario, `energia:${pendencia.acao}`, true, `agendado em 20s (${pendencia.id})`);
     return (
       `Confirmado. Vou ${ROTULO_ENERGIA[pendencia.acao]} em 20 segundos. ` +
       'Se mudou de ideia, diga "cancela" que eu aborto.'
     );
   }
 
-  cancelar(idUsuario: string): string {
+  cancelar(idUsuario: string, sessao: string): string {
+    /**
+     * Cancelar é ASSIMÉTRICO em relação a confirmar, e de propósito: desistir
+     * nunca precisa da mesma prova que agir. Uma pendência de outra sessão é
+     * apagada daqui sem cerimônia — o custo de cancelar demais é zero, o de
+     * cancelar de menos é um desligamento que o operador tentou impedir.
+     */
     const havia = this.pendencias.delete(idUsuario);
-    // Aborta também um shutdown já agendado — melhor um /a sem efeito do que
-    // um desligamento que o operador tentou impedir e não conseguiu.
     this.executor('shutdown.exe', ['/a']);
-    this.auditar(idUsuario, 'energia:cancelar', true, havia ? 'pendência descartada' : 'abort enviado');
+    this.auditar(
+      idUsuario,
+      'energia:cancelar',
+      true,
+      `${havia ? 'pendência descartada' : 'abort enviado'} (${sessao})`,
+    );
     return havia
       ? 'Cancelado. Nada será executado.'
       : 'Cancelado — se havia um desligamento agendado, acabei de abortar.';
   }
 
-  /** Existe pendência válida para este operador? (usado pelo fluxo de confirmação) */
-  temPendencia(idUsuario: string): boolean {
-    const p = this.pendencias.get(idUsuario);
-    return Boolean(p && Date.now() <= p.expira_em);
+  /** Existe pendência válida PARA ESTE DIÁLOGO? (usado pelo fluxo de confirmação) */
+  temPendencia(idUsuario: string, sessao: string): boolean {
+    return this.valida(idUsuario, sessao) !== null;
   }
 }
 

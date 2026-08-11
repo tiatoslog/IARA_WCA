@@ -144,25 +144,7 @@ export class GerenciadorHabilidades {
       enunciado: pedido.enunciado,
     };
 
-    let verificacao: Verificacao;
-    try {
-      verificacao = await habilidade.verificar(resultado, ctx);
-    } catch (erro) {
-      // Verificador que quebra não pode virar sucesso nem falha: vira
-      // desconhecido, que é literalmente o que se sabe nesse ponto.
-      verificacao = {
-        confirmado: false,
-        evidencia: `a verificação falhou: ${(erro as Error).message}`,
-        motivo: 'sem_meio_de_verificar',
-      };
-    }
-
-    this.barramento.publicar({
-      tipo: 'HABILIDADE_VERIFICADA',
-      habilidade: pedido.id,
-      confirmado: verificacao.confirmado,
-      evidencia: verificacao.evidencia,
-    });
+    const verificacao = await this.conferirMundo(habilidade, resultado, ctx, pedido.id);
 
     return {
       resultado,
@@ -173,6 +155,87 @@ export class GerenciadorHabilidades {
           ? 'desconhecido'
           : 'falhou',
     };
+  }
+
+  /**
+   * PERGUNTA AO MUNDO depois de o executor ter EXPLODIDO.
+   *
+   * O caso que esta porta cobre, e que nenhuma outra cobria: `executar` lança —
+   * timeout, exceção, cancelamento — e o kernel conclui "falhou, nada mudou".
+   * Para um executor que já tinha alcançado o disco (ou o provedor) antes de
+   * estourar o relógio, essa conclusão é FALSA, e é a mentira operacional pelo
+   * avesso: negar um efeito que existe.
+   *
+   * Quando a habilidade sabe se verificar, a exceção não precisa virar palpite.
+   * Pergunta-se ao disco. `null` quando não há verificador — aí sim o que se
+   * sabe é nada, e quem chama tem que dizer isso em vez de escolher um lado.
+   */
+  async apurar(
+    id: string,
+    pedido: Omit<PedidoHabilidade, 'id'>,
+    relato: ResultadoHabilidade,
+  ): Promise<Verificacao | null> {
+    const habilidade = this.registro.get(id);
+    if (!habilidade?.verificar) return null;
+
+    let parametros: Record<string, unknown>;
+    try {
+      parametros = validar(habilidade.manifesto.esquema, pedido.parametros);
+    } catch {
+      // Parâmetro que nem passa no esquema não chegou a executor nenhum.
+      return null;
+    }
+
+    return this.conferirMundo(
+      habilidade,
+      relato,
+      {
+        sessao: pedido.sessao,
+        id_usuario: pedido.id_usuario,
+        parametros,
+        sinal: pedido.sinal,
+        enunciado: pedido.enunciado,
+      },
+      id,
+    );
+  }
+
+  /**
+   * Roda o verificador e publica o que ele apurou. Um só lugar, porque a regra
+   * "verificador que quebra vira DESCONHECIDO, nunca sucesso nem falha" precisa
+   * valer igual no caminho feliz e no caminho de exceção.
+   */
+  private async conferirMundo(
+    habilidade: Habilidade,
+    resultado: ResultadoHabilidade,
+    ctx: ContextoHabilidade,
+    id: string,
+  ): Promise<Verificacao> {
+    let verificacao: Verificacao;
+    try {
+      verificacao = await this.comRelogio(
+        habilidade.verificar!(resultado, ctx),
+        habilidade.manifesto.timeout_ms,
+        `verificação de ${id}`,
+      );
+    } catch (erro) {
+      // Verificador que quebra (ou que pendura) não pode virar sucesso nem
+      // falha: vira desconhecido, que é literalmente o que se sabe nesse ponto.
+      verificacao = {
+        confirmado: false,
+        evidencia: `a verificação falhou: ${(erro as Error).message}`,
+        motivo: 'sem_meio_de_verificar',
+      };
+    }
+
+    this.barramento.publicar({
+      tipo: 'HABILIDADE_VERIFICADA',
+      habilidade: id,
+      confirmado: verificacao.confirmado,
+      evidencia: verificacao.evidencia,
+    });
+
+    return verificacao;
   }
 
   async executar(pedido: PedidoHabilidade): Promise<ResultadoHabilidade> {
@@ -234,25 +297,33 @@ export class GerenciadorHabilidades {
     }
   }
 
-  /**
-   * Timeout que não deixa promessa pendurada. O `finally` limpa o relógio
-   * inclusive quando a habilidade resolve antes — senão o processo segura um
-   * timer por chamada e vaza sob carga.
-   */
-  private async comTimeout(
+  private comTimeout(
     habilidade: Habilidade,
     ctx: ContextoHabilidade,
     ms: number,
   ): Promise<ResultadoHabilidade> {
+    return this.comRelogio(habilidade.executar(ctx), ms, habilidade.manifesto.id);
+  }
+
+  /**
+   * Relógio que não deixa promessa pendurada. O `finally` limpa o timer
+   * inclusive quando a promessa resolve antes — senão o processo segura um
+   * timer por chamada e vaza sob carga.
+   *
+   * Vale para o EXECUTOR e para o VERIFICADOR. O verificador rodava sem relógio
+   * nenhum: um `verificar` que pendurasse (um `fetch` sem timeout, um provedor
+   * que não responde) travava o turno inteiro para sempre — o operador ficava
+   * olhando uma tela que nunca conclui, e nenhum `AbortSignal` salvava, porque
+   * respeitar o sinal é escolha de quem escreve a habilidade. Uma trava não
+   * pode depender da boa vontade do código que ela existe para conter.
+   */
+  private async comRelogio<T>(promessa: Promise<T>, ms: number, quem: string): Promise<T> {
     let relogio: NodeJS.Timeout | undefined;
     try {
       return await Promise.race([
-        habilidade.executar(ctx),
+        promessa,
         new Promise<never>((_, rejeitar) => {
-          relogio = setTimeout(
-            () => rejeitar(new HabilidadeExpirou(`${habilidade.manifesto.id} passou de ${ms}ms`)),
-            ms,
-          );
+          relogio = setTimeout(() => rejeitar(new HabilidadeExpirou(`${quem} passou de ${ms}ms`)), ms);
         }),
       ]);
     } finally {

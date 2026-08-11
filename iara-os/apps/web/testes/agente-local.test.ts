@@ -21,6 +21,13 @@ import {
   extrairNomePasta,
 } from '../servidor/nucleo/kernel/Planejador';
 
+/**
+ * A conversa em que o pedido de energia nasce. Uma pendência é amarrada ao par
+ * (operador, sessão): "confirmo" digitado em outro diálogo não a libera — ver
+ * o caso "confirmação vinda de outra conversa" mais abaixo.
+ */
+const SESSAO = 's-agente-local';
+
 // ---------------------------------------------------------------------------
 // Fronteiras
 // ---------------------------------------------------------------------------
@@ -57,19 +64,19 @@ test('energia nunca executa sem confirmação; confirmo executa; segunda vez nã
   const executados: string[][] = [];
   const agente = new AgenteLocal((cmd, args) => executados.push([cmd, ...args]));
 
-  const pedido = agente.pedirEnergia('daiane', 'desligar');
+  const pedido = agente.pedirEnergia('daiane', 'desligar', SESSAO);
   assert.match(pedido, /confirmo/);
   assert.equal(executados.length, 0, 'pedir energia não pode executar nada');
-  assert.ok(agente.temPendencia('daiane'));
+  assert.ok(agente.temPendencia('daiane', SESSAO));
 
-  const confirmacao = agente.confirmar('daiane');
+  const confirmacao = agente.confirmar('daiane', SESSAO);
   assert.match(confirmacao, /20 segundos/);
   assert.equal(executados.length, 1);
   assert.equal(executados[0][0], 'shutdown.exe');
   assert.equal(executados[0][1], '/s');
 
   // Pendência consumida: confirmar de novo não desliga de novo.
-  const denovo = agente.confirmar('daiane');
+  const denovo = agente.confirmar('daiane', SESSAO);
   assert.match(denovo, /Não há nenhuma ação/);
   assert.equal(executados.length, 1);
 });
@@ -77,22 +84,22 @@ test('energia nunca executa sem confirmação; confirmo executa; segunda vez nã
 test('confirmação de um operador não libera pendência de outro', () => {
   const executados: string[][] = [];
   const agente = new AgenteLocal((cmd, args) => executados.push([cmd, ...args]));
-  agente.pedirEnergia('daiane', 'reiniciar');
+  agente.pedirEnergia('daiane', 'reiniciar', SESSAO);
 
-  const alheia = agente.confirmar('operador-2');
+  const alheia = agente.confirmar('operador-2', SESSAO);
   assert.match(alheia, /Não há nenhuma ação/);
   assert.equal(executados.length, 0);
-  assert.ok(agente.temPendencia('daiane'), 'a pendência da dona continua viva');
+  assert.ok(agente.temPendencia('daiane', SESSAO), 'a pendência da dona continua viva');
 });
 
 test('cancelar descarta a pendência e envia abort de shutdown', () => {
   const executados: string[][] = [];
   const agente = new AgenteLocal((cmd, args) => executados.push([cmd, ...args]));
-  agente.pedirEnergia('daiane', 'desligar');
+  agente.pedirEnergia('daiane', 'desligar', SESSAO);
 
-  const r = agente.cancelar('daiane');
+  const r = agente.cancelar('daiane', SESSAO);
   assert.match(r, /Cancelado/);
-  assert.ok(!agente.temPendencia('daiane'));
+  assert.ok(!agente.temPendencia('daiane', SESSAO));
   assert.deepEqual(executados, [['shutdown.exe', '/a']]);
 });
 

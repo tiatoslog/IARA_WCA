@@ -13,6 +13,7 @@ import type { LeituraOperador } from '../../../lib/estado';
 import type { Percepcao, TipoEntrada, Urgencia } from './Evento';
 import { normalizar } from '../texto';
 import { TeoriaDaMente, type SinalTemporal } from '../TeoriaDaMente';
+import { separarVozes, sobNegacao } from './Enunciacao';
 
 const URGENTE =
   /\b(urgente|urgencia|agora|imediato|parou|caiu|travou|fora do ar|critico|emergencia|prejuizo)\b/;
@@ -50,6 +51,16 @@ interface Ancora {
   readonly acionavel: boolean;
   /** Casou `re`, mas casa isto também? Então não é esta âncora. */
   readonly exceto?: RegExp;
+  /**
+   * "não faça isto" significa NÃO FAÇA — e a âncora some.
+   *
+   * Vale para as âncoras que disparam receita de EFEITO (energia, pasta,
+   * aplicativo): ali a negação inverte o pedido, e agir seria fazer o oposto do
+   * que foi dito. NÃO vale para `confirmacao`, cuja receita já lê a polaridade
+   * por conta própria (`ehAfirmacao`): remover a âncora ali quebraria "não
+   * confirmo", que hoje cancela corretamente.
+   */
+  readonly negavel?: boolean;
 }
 
 const ANCORAS: ReadonlyArray<Ancora> = [
@@ -104,16 +115,19 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     re: /\b(cri[ae]|criar|nova)\s+(uma\s+)?pasta\b|\bpasta\s+(chamada|nomeada|com o nome)\b/,
     nome: 'pasta',
     acionavel: true,
+    negavel: true,
   },
   {
     re: /\b(abra|abre|abrir|inicie|iniciar)\s+(o|a|os|as)?\s*(bloco de notas|calculadora|navegador|explorador|terminal|prompt|aplicativo|programa)\b/,
     nome: 'abrir_app',
     acionavel: true,
+    negavel: true,
   },
   {
     re: /\b(desligue|desliga|desligar|reinicie|reinicia|reiniciar|suspenda|suspender|hiberne|hibernar)\b/,
     nome: 'energia',
     acionavel: true,
+    negavel: true,
   },
   {
     re: /\b(confirmo|confirmado|confirmar|prossiga|cancela|cancelar|cancelado|abortar)\b/,
@@ -126,11 +140,36 @@ export class MotorPercepcao {
   private readonly mente = new TeoriaDaMente();
 
   perceber(bruto: string): Percepcao {
-    const t = normalizar(bruto);
     const temporal: SinalTemporal = this.mente.registrarChegada();
     const leitura: LeituraOperador = this.mente.analisar(bruto, temporal);
 
-    const encontradas = ANCORAS.filter((a) => a.re.test(t) && !a.exceto?.test(t));
+    /**
+     * A VOZ VEM ANTES DA ÂNCORA.
+     *
+     * Âncora procurada na frase inteira não distingue "desligue o computador"
+     * de "o e-mail diz: desligue o computador" — e a segunda armava uma
+     * pendência de risco alto por causa de uma frase que o operador só estava
+     * mostrando. O reconhecimento roda sobre a voz PRÓPRIA; o que ele atribuiu
+     * a terceiro fica de fora do gatilho e sobrevive em `bruto` para o
+     * raciocínio comentar.
+     *
+     * A classificação de tipo e a medição de urgência continuam olhando a frase
+     * inteira: um e-mail citado dizendo "o sistema caiu" é urgente de verdade,
+     * mesmo não sendo um comando.
+     */
+    const vozes = separarVozes(bruto);
+    const t = normalizar(bruto);
+    const tPropria = vozes.temRelato ? normalizar(vozes.propria) : t;
+
+    const encontradas = ANCORAS.filter((a) => {
+      const m = tPropria.match(a.re);
+      if (!m || m.index === undefined) return false;
+      if (a.exceto?.test(tPropria)) return false;
+      // "não desligue o computador" não é um pedido de desligamento. É o
+      // oposto exato dele, e agir seria fazer o contrário do que foi dito.
+      if (a.negavel && sobNegacao(tPropria, m.index)) return false;
+      return true;
+    });
     const ancoras = encontradas.map((a) => a.nome);
     const acionaveis = encontradas.filter((a) => a.acionavel).length;
     const tipo = this.classificar(t, bruto);
@@ -149,6 +188,7 @@ export class MotorPercepcao {
       confianca:
         acionaveis > 0 ? 0.92 : tipo === 'saudacao' ? 0.85 : ancoras.length > 0 ? 0.5 : 0.35,
       ancoras,
+      citado: vozes.relatada,
     };
   }
 

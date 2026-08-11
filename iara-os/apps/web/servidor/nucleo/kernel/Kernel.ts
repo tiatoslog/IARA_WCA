@@ -34,23 +34,60 @@ import {
 import { RegistroErros } from './RegistroErros';
 import { PorteiroAutorizacao } from './PorteiroAutorizacao';
 import type { Plano } from './Evento';
+import { PermissaoNegada, ParametroInvalido } from './Habilidade';
+import { confirmaAcontecimento, VERBO_DO_ESTADO, type EstadoExecucao } from './Verdade';
+import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
 import type { DestinoCognitivo, EstagioCognitivo } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
+
+/**
+ * O que se sabe sobre UM passo depois de tentar executá-lo.
+ *
+ * O `estado` é do vocabulário de `Verdade.ts`, e é ele — não um booleano, não a
+ * ausência de exceção — que decide o verbo que a resposta pode usar. Antes desta
+ * auditoria o Kernel colapsava tudo em três listas de string e perdia a
+ * distinção que mais importa: `falhou` ("não aconteceu") e `desconhecido` ("não
+ * consigo provar o que aconteceu") caíam no mesmo balde.
+ */
+interface PassoExecutado {
+  readonly descricao: string;
+  readonly habilidade: string;
+  readonly estado: EstadoExecucao;
+  /** O que sobe para a resposta. Vazio quando o passo não produziu saída. */
+  readonly texto: string;
+  /** Uma linha: o que se apurou. Vira ressalva ou motivo de recusa. */
+  readonly evidencia: string;
+}
 
 /**
  * Resultado da execução de um plano. As falhas são tão fato quanto as saídas —
  * e precisam viajar juntas, senão a composição só enxerga o que deu certo.
  */
 interface ExecucaoPlano {
-  readonly saidas: string[];
-  readonly falhas: string[];
-  /**
-   * Passos executados sem erro cuja verificação NÃO confirmou o mundo. Não são
-   * falhas — são a zona cinzenta entre "fiz" e "provei que fiz", e a resposta
-   * precisa distinguir as três.
-   */
-  readonly verificacoesPendentes: string[];
+  readonly passos: readonly PassoExecutado[];
 }
+
+/** Passos que produziram texto aproveitável para a resposta. */
+const saidasDe = (e: ExecucaoPlano): string[] =>
+  e.passos.filter((p) => p.texto).map((p) => p.texto);
+
+/**
+ * Passos que NÃO aconteceram. `aguardando_confirmacao` entra aqui porque, do
+ * ponto de vista do operador, o efeito não existe — mudou só o motivo.
+ */
+const falhasDe = (e: ExecucaoPlano): string[] =>
+  e.passos
+    .filter((p) => p.estado === 'falhou' || p.estado === 'aguardando_confirmacao')
+    .map((p) => `${p.descricao}: ${p.evidencia}`);
+
+/**
+ * A zona cinzenta entre "fiz" e "provei que fiz". Não são falhas, e tratá-las
+ * como sucesso é a mentira operacional que este arquivo inteiro combate.
+ */
+const desconhecidosDe = (e: ExecucaoPlano): string[] =>
+  e.passos
+    .filter((p) => p.estado === 'desconhecido')
+    .map((p) => `${p.descricao}: ${p.evidencia}`);
 
 export interface DependenciasKernel {
   sessao: string;
@@ -252,7 +289,35 @@ export class Kernel {
 
       // --- 4. Execução ------------------------------------------------------
       const execucao = await this.executarPlano(plano, p.bruto, controle);
-      if (controle.signal.aborted) return;
+      if (controle.signal.aborted) {
+        /**
+         * CANCELAR A RESPOSTA NÃO CANCELA O MUNDO.
+         *
+         * Um passo pode ter completado o efeito microssegundos antes de a
+         * preempção chegar — o operador manda uma segunda mensagem enquanto a
+         * primeira já criou a pasta. A resposta deste turno é descartada (é o
+         * que preempção significa), mas o EFEITO não pode ser descartado junto:
+         * some da tela e some do histórico, e ninguém nunca soube que
+         * aconteceu.
+         *
+         * O turno cancelado não fala — quem fala é o turno novo. Mas o fato vai
+         * para o barramento, e daí para a trilha de auditoria.
+         */
+        const realizados = execucao.passos.filter(
+          (x) => x.estado === 'verificado' || x.estado === 'executado' || x.estado === 'desconhecido',
+        );
+        if (realizados.length > 0) {
+          b.publicar({
+            tipo: 'FALHA',
+            modulo: 'preempcao',
+            mensagem:
+              'Turno interrompido DEPOIS de executar: ' +
+              `${realizados.map((x) => x.descricao).join('; ')}. ` +
+              'A resposta foi descartada; o efeito não.',
+          });
+        }
+        return;
+      }
 
       // --- 5. Resposta ------------------------------------------------------
       const idMensagem = randomUUID();
@@ -329,10 +394,7 @@ export class Kernel {
     controle: AbortController,
   ): Promise<ExecucaoPlano> {
     const b = this.dep.barramento;
-    const saidas: string[] = [];
-    const falhas: string[] = [];
-    /** Passos que rodaram mas cuja verificação não confirmou o mundo. */
-    const verificacoesPendentes: string[] = [];
+    const passos: PassoExecutado[] = [];
 
     for (const passo of plano.passos) {
       if (controle.signal.aborted) break;
@@ -357,7 +419,13 @@ export class Kernel {
       if (!manifesto) {
         this.trabalho.registrarErro();
         const motivo = `habilidade "${passo.habilidade}" não existe no catálogo`;
-        falhas.push(`${passo.descricao}: ${motivo}`);
+        passos.push({
+          descricao: passo.descricao,
+          habilidade: passo.habilidade,
+          estado: 'falhou',
+          texto: '',
+          evidencia: motivo,
+        });
         this.auditoria.registrar({
           instante: new Date().toISOString(),
           sessao: this.dep.sessao,
@@ -399,7 +467,18 @@ export class Kernel {
       });
       if (!veredito.permitido) {
         this.trabalho.registrarErro();
-        falhas.push(`${passo.descricao}: ${veredito.motivo}`);
+        /**
+         * `aguardando_confirmacao`, não `falhou`: nada quebrou — falta
+         * autoridade. O verbo que a resposta usa muda com isso, e é o verbo
+         * que diz ao operador o que fazer a seguir.
+         */
+        passos.push({
+          descricao: passo.descricao,
+          habilidade: passo.habilidade,
+          estado: 'aguardando_confirmacao',
+          texto: '',
+          evidencia: veredito.motivo,
+        });
         this.auditoria.registrar({
           instante: new Date().toISOString(),
           sessao: this.dep.sessao,
@@ -442,31 +521,67 @@ export class Kernel {
          * verificação não confirmou ele viaja ACOMPANHADO da ressalva. É a
          * diferença entre "Pasta criada" e "Pasta criada — mas não consegui
          * confirmar: o diretório não existe depois da execução".
+         *
+         * O `estado` que o Gerenciador apurou é ADOTADO, não recalculado. Antes
+         * ele era descartado: `divergente` (o executor disse uma coisa e o
+         * mundo disse outra — isto é FALHA) e `sem_meio_de_verificar` (limite
+         * conhecido da plataforma — isto é DESCONHECIDO) caíam os dois no mesmo
+         * balde de "verificação pendente", e a resposta os tratava igual.
          */
         const naoConfirmado =
           v.verificacao !== null && !v.verificacao.confirmado ? v.verificacao : null;
 
-        const texto = naoConfirmado
-          ? `${v.resultado.texto}\n\n[não confirmado: ${naoConfirmado.evidencia}]`
-          : v.resultado.texto;
+        /**
+         * `confirmaAcontecimento` é o predicado, não `naoConfirmado`.
+         *
+         * A diferença aparece na habilidade de risco que não declara
+         * verificador: `verificacao` vem `null`, o antigo teste concluía
+         * "confirmado" e a ressalva sumia — justo no caso em que menos se sabe.
+         * O contrato do catálogo impede essa habilidade de existir, mas a
+         * ressalva não pode depender de o contrato ser respeitado.
+         *
+         * O verbo vem de `Verdade.ts`. "[não confirmado: …]" era um rótulo
+         * técnico; "[não consigo provar o que aconteceu: …]" é o que a IARA de
+         * fato tem a dizer.
+         */
+        const texto = confirmaAcontecimento(v.estado)
+          ? v.resultado.texto
+          : `${v.resultado.texto}\n\n[${VERBO_DO_ESTADO[v.estado]}: ` +
+            `${naoConfirmado?.evidencia ?? 'esta habilidade não sabe conferir o próprio efeito'}]`;
 
-        saidas.push(texto);
-        this.trabalho.concluirPasso(texto);
-        if (naoConfirmado) {
-          verificacoesPendentes.push(`${passo.descricao}: ${naoConfirmado.evidencia}`);
-          // `sem_meio_de_verificar` é limitação conhecida da plataforma, não
-          // defeito da IARA — registrar isso a cada `abrir_aplicativo` encheria
-          // o inventário de ruído. `divergente` é outra coisa: o executor disse
-          // uma coisa e o mundo disse outra, e isso É defeito.
-          if (naoConfirmado.motivo === 'divergente') {
-            this.erros.registrar({
-              classe: 'execucao_nao_confirmada',
-              entrada: enunciado,
-              observado: `${passo.habilidade} relatou sucesso; verificação: ${naoConfirmado.evidencia}`,
-              esperado: 'execução confirmada pelo mundo, ou falha declarada',
-              instante: new Date().toISOString(),
-            });
-          }
+        passos.push({
+          descricao: passo.descricao,
+          habilidade: passo.habilidade,
+          estado: v.estado,
+          /**
+           * Passo que o mundo DESMENTIU não empresta seu texto à resposta. Era
+           * assim que "Pasta criada em Downloads" continuava sendo a primeira
+           * frase que o operador lia, com a desmentida escondida embaixo.
+           *
+           * Só `divergente`, não todo `falhou`. Quando o motivo é
+           * `nao_encontrado`, o executor JÁ FOI HONESTO — "esse nome não passa
+           * na minha regra de segurança, me diga outro" é a melhor frase que
+           * existe para aquele momento, e trocá-la pela evidência crua puniria
+           * a habilidade por ter contado a verdade.
+           */
+          texto: naoConfirmado?.motivo === 'divergente' ? '' : texto,
+          evidencia: naoConfirmado?.evidencia ?? v.resultado.detalhe,
+        });
+        if (naoConfirmado?.motivo !== 'divergente') this.trabalho.concluirPasso(texto);
+
+        // `sem_meio_de_verificar` é limitação conhecida da plataforma, não
+        // defeito da IARA — registrar isso a cada `abrir_aplicativo` encheria
+        // o inventário de ruído. `divergente` é outra coisa: o executor disse
+        // uma coisa e o mundo disse outra, e isso É defeito.
+        if (naoConfirmado?.motivo === 'divergente') {
+          this.trabalho.registrarErro();
+          this.erros.registrar({
+            classe: 'execucao_nao_confirmada',
+            entrada: enunciado,
+            observado: `${passo.habilidade} relatou sucesso; verificação: ${naoConfirmado.evidencia}`,
+            esperado: 'execução confirmada pelo mundo, ou falha declarada',
+            instante: new Date().toISOString(),
+          });
         }
 
         b.publicar({
@@ -480,26 +595,106 @@ export class Kernel {
       } catch (erro) {
         if (controle.signal.aborted) break;
         this.trabalho.registrarErro();
-        falhas.push(`${passo.descricao}: ${(erro as Error).message}`);
+
+        const estado = await this.apurarAposExcecao(passo, manifesto.risco, erro, enunciado, controle);
+        const evidencia =
+          estado.evidencia ?? (erro as Error).message;
+
+        passos.push({
+          descricao: passo.descricao,
+          habilidade: passo.habilidade,
+          estado: estado.estado,
+          texto: '',
+          evidencia,
+        });
         this.auditoria.registrar({
           instante: new Date().toISOString(),
           sessao: this.dep.sessao,
           id_usuario: this.dep.idUsuario,
           traco: b.tracoAtual,
           acao: `habilidade:${passo.habilidade}`,
-          detalhe: (erro as Error).message,
+          detalhe: `${estado.estado}: ${evidencia}`,
           permitido: false,
         });
         b.publicar({
           tipo: 'PASSO_CONCLUIDO',
           passo,
-          resumo: `falhou: ${(erro as Error).message}`,
+          resumo: `${estado.estado}: ${evidencia}`,
           ms: Date.now() - inicio,
         });
       }
     }
 
-    return { saidas, falhas, verificacoesPendentes };
+    return { passos };
+  }
+
+  /**
+   * O executor explodiu. E daí — o mundo mudou ou não?
+   *
+   * O DEFEITO que este método corrige (P1 da auditoria de fechamento): toda
+   * exceção virava `falhas`, e `falhas` sem nenhuma saída produzia a frase
+   * "Não executei isso. […]. Nada foi alterado na máquina." Para uma exceção de
+   * PORTA (permissão, esquema, credencial ausente) essa frase é verdadeira: o
+   * executor nunca rodou. Para um TIMEOUT ela é um chute — `criar_pasta` pode
+   * ter alcançado o disco antes de o relógio estourar, e um envio pode ter
+   * chegado ao destinatário antes de a resposta se perder. Afirmar "nada foi
+   * alterado" nesse caso é a mentira operacional pelo avesso: negar um efeito
+   * que existe.
+   *
+   * A ordem é: primeiro descartar o que nem chegou a executar; depois PERGUNTAR
+   * AO MUNDO; e só quando não há a quem perguntar admitir `desconhecido`.
+   */
+  private async apurarAposExcecao(
+    passo: { habilidade: string | null; parametros: Readonly<Record<string, unknown>> },
+    risco: string,
+    erro: unknown,
+    enunciado: string,
+    controle: AbortController,
+  ): Promise<{ estado: EstadoExecucao; evidencia?: string }> {
+    const mensagem = (erro as Error).message;
+
+    /**
+     * Exceção de PORTA: barrada antes do executor. Aqui "nada aconteceu" é
+     * fato, não suposição — e `HabilidadeExpirou` deliberadamente NÃO entra
+     * nesta lista.
+     */
+    const antesDeExecutar =
+      erro instanceof PermissaoNegada ||
+      erro instanceof ParametroInvalido ||
+      /indisponível:/.test(mensagem);
+    if (antesDeExecutar || risco === 'baixo') {
+      return { estado: 'falhou', evidencia: mensagem };
+    }
+
+    const apuracao = await this.habilidades
+      .apurar(
+        passo.habilidade!,
+        {
+          parametros: { ...passo.parametros },
+          enunciado,
+          id_usuario: this.dep.idUsuario,
+          sessao: this.dep.sessao,
+          sinal: controle.signal,
+          concedidas: this.politica.permissoesDe(this.papel),
+        },
+        { texto: '', detalhe: mensagem, resolveu: false },
+      )
+      .catch(() => null);
+
+    if (apuracao?.confirmado) {
+      // O executor quebrou DEPOIS de alcançar o mundo. O efeito existe.
+      return {
+        estado: 'verificado',
+        evidencia: `o executor falhou (${mensagem}), mas o mundo confirma: ${apuracao.evidencia}`,
+      };
+    }
+    if (apuracao && apuracao.motivo !== 'sem_meio_de_verificar') {
+      return { estado: 'falhou', evidencia: `${mensagem}; ${apuracao.evidencia}` };
+    }
+    return {
+      estado: 'desconhecido',
+      evidencia: `${mensagem} — e não consigo apurar se chegou a acontecer`,
+    };
   }
 
   /**
@@ -517,7 +712,9 @@ export class Kernel {
     controle: AbortController,
   ): Promise<string> {
     const b = this.dep.barramento;
-    const { saidas, falhas, verificacoesPendentes } = execucao;
+    const saidas = saidasDe(execucao);
+    const falhas = falhasDe(execucao);
+    const verificacoesPendentes = desconhecidosDe(execucao);
     const precisaRaciocinio = plano.passos.some(
       (p) => !p.habilidade || p.habilidade === 'raciocinio',
     );
@@ -537,10 +734,15 @@ export class Kernel {
        * omitir o que não aconteceu. As duas produzem uma resposta que não
        * representa o estado real do mundo.
        */
-      const texto =
-        falhas.length > 0
-          ? `${saidas.join('\n\n')}\n\nO resto do pedido eu NÃO executei: ${falhas.join('; ')}.`
-          : saidas.join('\n\n');
+      const texto = [
+        saidas.join('\n\n'),
+        falhas.length > 0 ? `O resto do pedido eu NÃO executei: ${falhas.join('; ')}.` : '',
+        verificacoesPendentes.length > 0
+          ? `Sobre o resto, ${VERBO_DO_ESTADO.desconhecido}: ${verificacoesPendentes.join('; ')}.`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n');
       b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto });
       return texto;
     }
@@ -552,10 +754,20 @@ export class Kernel {
      * aconteceu, e mandar isso para o raciocínio livre — sem resultado e sem
      * ferramenta — é exatamente a receita da ação inventada. A resposta
      * honesta é dizer o que falhou.
+     *
+     * "NADA FOI ALTERADO" É UMA AFIRMAÇÃO SOBRE O MUNDO, e por isso só sai
+     * quando o mundo a sustenta. Com um passo em `desconhecido` — um timeout
+     * que pode ter alcançado o disco, uma resposta que se perdeu depois do
+     * efeito — essa frase é um chute com cara de garantia, e o operador tomaria
+     * decisão em cima dela. O verbo honesto vem de `Verdade.ts`.
      */
     if (!precisaRaciocinio && saidas.length === 0) {
-      const texto =
-        falhas.length > 0
+      const naoSei = verificacoesPendentes.length > 0;
+      const texto = naoSei
+        ? `${VERBO_DO_ESTADO.desconhecido.replace(/^n/, 'N')}: ${verificacoesPendentes.join('; ')}. ` +
+          (falhas.length > 0 ? `Além disso, não executei: ${falhas.join('; ')}. ` : '') +
+          'Confira antes de repetir o pedido — pode ter acontecido pela metade.'
+        : falhas.length > 0
           ? `Não executei isso. ${falhas.join('; ')}. Nada foi alterado na máquina.`
           : 'Não consegui executar esse pedido e não tenho resultado para mostrar. Nada foi alterado.';
       b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto });
@@ -618,6 +830,25 @@ export class Kernel {
        * e preenche a lacuna com prosa plausível.
        */
       contexto: [
+        /**
+         * O que o operador CITOU entra aqui, junto com o resto do material de
+         * terceiro — e não na posição de pedido. A percepção já o separou; se
+         * ele voltasse a valer como enunciado, a separação teria sido só
+         * cosmética. Ver `Enunciacao.ts` e a moldura em `MotorRaciocinio`.
+         */
+        percepcao.citado
+          ? `--- trecho que o operador atribuiu a outra fonte ---\n${percepcao.citado}`
+          : '',
+        /**
+         * O DESEMPATE DE MEMÓRIA CHEGA RESOLVIDO, não como matéria-prima.
+         *
+         * O histórico ia cru, e quando ele continha dois horários para a mesma
+         * reunião era a LLM quem escolhia — sem política, sem registro, e sem
+         * dizer ao operador que havia escolhido. Agora o kernel aplica
+         * `maisForte` (procedência primeiro, recência só dentro da mesma
+         * procedência) e manda o veredito junto com a evidência descartada.
+         */
+        contextoDeConflitos(detectarConflitos(extrairFatosHorario(historico))),
         this.trabalho.contextoAcumulado(),
         falhas.length > 0
           ? `--- passos que NÃO foram executados (não afirme que foram) ---\n${falhas.join('\n')}`

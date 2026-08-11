@@ -47,6 +47,11 @@ const PRONOME = /\b(ele|ela|eles|elas|dele|dela|deles|delas)\b/;
 const ASSUNTO_TECNICO =
   /\b(erro|erros|bug|bugs|falha|falhas|problema|problemas|servidor|servidores|sistema|sistemas|banco|api|container|deploy|timeout|conexao|processo|script|relatorio)\b/;
 
+/** Neutraliza metacaractere de regex num fragmento vindo de dado. */
+function escapar(bruto: string): string {
+  return bruto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export class PortaoSigilo {
   /** Nomes dos DEMAIS operadores. Quem está falando nunca entra na lista. */
   constructor(private readonly outros: readonly string[] = []) {}
@@ -74,7 +79,12 @@ export class PortaoSigilo {
       normalizar(nome)
         .split(' ')
         .filter((parte) => parte.length > 2)
-        .some((parte) => new RegExp(`\\b${parte}\\b`).test(t)),
+        // O nome vai para DENTRO de uma expressão regular. O roster é estático
+        // hoje, mas no dia em que vier do banco um "D'Ávila (TI)" faz o
+        // construtor lançar — e a exceção sobe pela `decidir`, derruba o turno e
+        // deixa o portão de sigilo FORA do caminho. Uma trava que quebra é uma
+        // trava aberta: escapar é mais barato que descobrir isso em produção.
+        .some((parte) => new RegExp(`\\b${escapar(parte)}\\b`).test(t)),
     );
 
     // Alvo explícito (nome ou "operador 3", "a equipe"): qualquer verbo de

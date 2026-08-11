@@ -173,7 +173,11 @@ export const acionarEnergia: Habilidade = {
   },
   async executar(ctx) {
     return {
-      texto: agenteLocal.pedirEnergia(ctx.id_usuario, String(ctx.parametros.acao) as AcaoEnergia),
+      texto: agenteLocal.pedirEnergia(
+        ctx.id_usuario,
+        String(ctx.parametros.acao) as AcaoEnergia,
+        ctx.sessao,
+      ),
       detalhe: `energia:${ctx.parametros.acao} pendente de confirmação`,
       resolveu: true,
     };
@@ -185,7 +189,7 @@ export const acionarEnergia: Habilidade = {
    * desligou seria verificar a promessa errada.
    */
   async verificar(_resultado, ctx) {
-    return agenteLocal.temPendencia(ctx.id_usuario)
+    return agenteLocal.temPendencia(ctx.id_usuario, ctx.sessao)
       ? { confirmado: true, evidencia: 'pendência registrada e dentro da janela de 60s' }
       : {
           confirmado: false,
@@ -222,11 +226,11 @@ export const resolverConfirmacao: Habilidade = {
      * — inclusive com a fala do executor dizendo, na linha de cima, que não
      * havia ação pendente. Duas frases contraditórias na mesma resposta.
      */
-    const havia = agenteLocal.temPendencia(ctx.id_usuario);
+    const havia = agenteLocal.temPendencia(ctx.id_usuario, ctx.sessao);
     return {
       texto: confirmou
-        ? agenteLocal.confirmar(ctx.id_usuario)
-        : agenteLocal.cancelar(ctx.id_usuario),
+        ? agenteLocal.confirmar(ctx.id_usuario, ctx.sessao)
+        : agenteLocal.cancelar(ctx.id_usuario, ctx.sessao),
       detalhe: confirmou
         ? havia
           ? 'confirmação aceita'
@@ -250,7 +254,7 @@ export const resolverConfirmacao: Habilidade = {
    */
   async verificar(resultado, ctx) {
     if (ctx.parametros.resposta !== 'confirmo') {
-      return agenteLocal.temPendencia(ctx.id_usuario)
+      return agenteLocal.temPendencia(ctx.id_usuario, ctx.sessao)
         ? { confirmado: false, evidencia: 'pendência ainda ativa após o cancelamento', motivo: 'divergente' }
         : { confirmado: true, evidencia: 'nenhuma pendência ativa; cancelamento efetivado' };
     }

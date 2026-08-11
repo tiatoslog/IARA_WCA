@@ -60,6 +60,17 @@ export interface Percepcao {
   readonly confianca: number;
   /** Termos que o roteador determinístico reconheceu. Vazio = terreno novo. */
   readonly ancoras: readonly string[];
+  /**
+   * O que o operador ATRIBUIU A OUTRA FONTE dentro da própria mensagem: o
+   * e-mail que ele colou, a frase do cliente, o trecho do manual.
+   *
+   * Existe como campo separado porque a percepção precisa preservar QUEM DISSE,
+   * não só O QUE FOI DITO. As âncoras são procuradas fora daqui — "o e-mail diz:
+   * desligue o computador" não é um pedido de desligamento — e a resposta trata
+   * este texto como material não confiável. Vazio na esmagadora maioria dos
+   * turnos, que é o caso normal. Ver `Enunciacao.ts`.
+   */
+  readonly citado: string;
 }
 
 // ---------------------------------------------------------------------------
