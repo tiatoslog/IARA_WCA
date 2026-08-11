@@ -3,9 +3,15 @@
 /**
  * A portaria. Ninguém entra no escritório sem se identificar.
  *
- * Não é uma tela de login genérica: é a porta da sala. Mesmo aqui, a pergunta
- * é "que objeto isto é?" — é a recepção, com a mesma paleta e a mesma calma do
- * resto do ambiente.
+ * Não é uma tela de login genérica: é a porta da sala. A pergunta continua
+ * sendo "que objeto isto é?" — é a superfície de metal da entrada, com a marca
+ * gravada nela, e uma placa de vidro no meio onde se escreve o nome.
+ *
+ * O fundo é o campo de cromo da marca (`lib/marca.ts`), desfocado. Desfocado
+ * de propósito: um fundo em foco competiria com o card, e a portaria existe
+ * para levar o operador para dentro — não para ser contemplada. A deriva lenta
+ * é AMBIENTE (ciclo de 32 s, amplitude mínima): nunca reage a dado, nunca
+ * para, existe só para a porta não parecer um print.
  */
 
 import { useState } from 'react';
@@ -41,87 +47,65 @@ export function Portaria({ aoEntrar }: { aoEntrar: () => void }) {
   };
 
   return (
-    <main
-      style={{
-        height: '100dvh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-        background:
-          'radial-gradient(circle at 50% 30%, #f7f2e8 0%, var(--papel) 62%, #e9e1d3 100%)',
-      }}
-    >
-      <form
-        onSubmit={entrar}
-        style={{
-          width: '100%',
-          maxWidth: 340,
-          background: 'var(--painel)',
-          border: '1px solid var(--linha)',
-          borderRadius: 16,
-          padding: 26,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-          boxShadow: '0 18px 40px var(--sombra)',
-        }}
-      >
-        <div>
-          <div style={{ fontSize: 19, fontWeight: 600, letterSpacing: 0.4 }}>IARA</div>
-          <div style={{ fontSize: 12.5, color: 'var(--tinta-fraca)', marginTop: 4 }}>
-            O escritório está fechado. Identifique-se para entrar.
-          </div>
-        </div>
+    <main className="portaria">
+      <div className="portaria-cromo" aria-hidden="true" />
+      <div className="portaria-veu" aria-hidden="true" />
 
-        <label style={{ fontSize: 12, color: 'var(--tinta-fraca)' }}>
-          E-mail
+      <form className="portaria-placa" onSubmit={entrar}>
+        <img
+          className="portaria-marca"
+          src="/marca/iara-simbolo.png"
+          alt="IARA"
+          width={92}
+          height={92}
+          draggable={false}
+        />
+
+        {/* Só o nome. O logotipo traz IARA gravada no metal, mas a 92 px aquilo
+            é textura, não palavra — e a porta é o único lugar onde alguém pode
+            chegar sem saber de quem é a casa.
+
+            Nada de "identifique-se para entrar": os rótulos dos campos e o
+            botão já dizem isso. Instrução redundante é ruído, e ruído é o que
+            tira o ar de uma tela premium. */}
+        <h1 className="portaria-nome">IARA</h1>
+
+        <label className="portaria-campo">
+          <span>E-mail</span>
           <input
-            className="campo"
             type="email"
             autoComplete="username"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={{ marginTop: 5 }}
           />
         </label>
 
-        <label style={{ fontSize: 12, color: 'var(--tinta-fraca)' }}>
-          Senha
+        <label className="portaria-campo">
+          <span>Senha</span>
           <input
-            className="campo"
             type="password"
             autoComplete="current-password"
             required
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            style={{ marginTop: 5 }}
           />
         </label>
 
         {erro && (
-          <div
-            style={{
-              fontSize: 12,
-              padding: '8px 10px',
-              borderRadius: 8,
-              background: 'rgba(240, 135, 106, 0.13)',
-              border: '1px solid rgba(240, 135, 106, 0.4)',
-            }}
-          >
+          <div className="portaria-erro" role="alert">
             {erro}
           </div>
         )}
 
-        <button className="botao" type="submit" disabled={ocupado}>
+        <button className="portaria-entrar" type="submit" disabled={ocupado}>
           {ocupado ? 'Abrindo…' : 'Entrar'}
         </button>
 
-        <p style={{ fontSize: 11, color: 'var(--tinta-fraca)', lineHeight: 1.5, margin: 0 }}>
-          Seus registros são exclusivamente seus. Nenhum outro operador — e nem a própria
-          IARA em outra sessão — enxerga o que você conversa aqui.
-        </p>
+        {/* O que a IARA é, em três verbos — e não é slogan: é o laço do kernel
+            (Percepcao → Planejador → OrquestradorAcoes). "Agente cognitivo"
+            nomeia a categoria; isto nomeia a diferença, que é EXECUTAR. */}
+        <p className="portaria-natureza">Percebe, decide e executa.</p>
       </form>
     </main>
   );

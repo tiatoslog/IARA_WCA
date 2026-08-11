@@ -1,0 +1,5 @@
+# Cópia da marca publicada em ui/ por copiar-bolha.mjs, que roda tanto no
+# beforeDevCommand quanto no beforeBuildCommand. A FONTE é
+# apps/web/public/marca/iara-simbolo.png — essa sim versionada. Guardar o
+# duplicado aqui só criaria uma segunda verdade para o mesmo arquivo.
+ui/iara-simbolo.png

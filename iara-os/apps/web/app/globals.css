@@ -105,7 +105,7 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  /* A casca é escura; telas claras (portaria, pixel art) pintam o próprio
+  /* A casca é escura; telas claras (a projeção em pixel art) pintam o próprio
      fundo. Assim nenhuma borda clara vaza nas junções da janela. */
   background: var(--c-fundo);
   color: var(--c-tinta);
@@ -1454,6 +1454,213 @@ ol.plano {
   }
 }
 
+/* --------------------------------------------------------------------------
+ * PORTARIA — a porta da sala.
+ *
+ * Três camadas, na ordem da hierarquia espacial: o campo de cromo (ambiente),
+ * o véu que o rebaixa (ambiente), a placa de vidro (painel). O card é a camada
+ * mais externa e recuada, como em toda a casa — o que domina o campo visual é
+ * o metal, não o formulário.
+ *
+ * O desfoque mora aqui, não no arquivo: o SVG continua nítido para quem quiser
+ * usá-lo em outro lugar, e a portaria escolhe o quanto quer ver.
+ * -------------------------------------------------------------------------- */
+
+.portaria {
+  position: relative;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+  background: var(--iara-bg);
+}
+
+.portaria-cromo {
+  position: absolute;
+  /* Estoura a caixa: o desfoque come a borda, e sem essa folga sobrava um halo
+     claro na moldura da janela. */
+  inset: -8%;
+  background: url('/marca/iara-hero.png') center / cover no-repeat;
+  /* Profundidade de campo, não névoa: o desfoque simula a lente aberta de uma
+     foto de produto — o rosto cromado tem de continuar CLARAMENTE visível
+     atrás do card. Acima de ~14 px o metal vira fundo cinza e a marca some. */
+  filter: blur(7px);
+  transform: scale(1.04);
+  animation: deriva 32s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* AMBIENTE: ciclo longo, amplitude mínima, nunca reage a dado. */
+@keyframes deriva {
+  0%,
+  100% {
+    transform: scale(1.04) translate3d(-0.6%, -0.4%, 0);
+  }
+  50% {
+    transform: scale(1.08) translate3d(0.6%, 0.5%, 0);
+  }
+}
+
+.portaria-veu {
+  position: absolute;
+  inset: 0;
+  /* Só a sombra necessária para o card ter contraste, e SÓ onde o card fica.
+     A escultura mora no terço esquerdo do quadro; escurecer o quadro inteiro
+     apagaria justamente ela. O véu é uma sombra sob o card, não uma cortina. */
+  background:
+    radial-gradient(ellipse 36% 54% at 50% 50%, rgba(4, 6, 10, 0.52), transparent 76%),
+    linear-gradient(180deg, rgba(4, 6, 10, 0.16) 0%, transparent 32%, rgba(4, 6, 10, 0.36) 100%);
+}
+
+.portaria-placa {
+  position: relative;
+  width: 100%;
+  max-width: 356px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 30px 28px 26px;
+  border-radius: 22px;
+  background: rgba(6, 12, 14, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(30px) saturate(1.3);
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* A marca no card é a MESMA fotografia do fundo, em quadro fechado e cortada
+   em disco. Não é um segundo logotipo: é a mesma escultura, outra distância. */
+.portaria-marca {
+  width: 92px;
+  height: 92px;
+  align-self: center;
+  border-radius: 50%;
+  object-fit: cover;
+  user-select: none;
+  box-shadow:
+    0 8px 26px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+/* O nome, no tracking da marca — o mesmo 0,22em do título da conversa. Palavra
+   gravada em metal pede ar entre as letras, e é esse espaçamento que faz IARA
+   ler como marca em vez de como palavra. */
+.portaria-nome {
+  margin: 2px 0 4px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  /* O tracking empurra a palavra para a esquerda: sem compensar o espaço que
+     sobra depois da última letra, ela fica descentrada dentro do card. */
+  text-indent: 0.22em;
+  color: var(--c-tinta);
+}
+
+/* O que a IARA é. UMA linha, embaixo, discreta — a porta informa, não vende.
+   Ela fecha o card: o olho entra pela marca, atravessa o formulário e sai
+   sabendo o que há do outro lado. */
+.portaria-natureza {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.5;
+  letter-spacing: 0.05em;
+  color: var(--c-tinta-3);
+}
+
+.portaria-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.portaria-campo > span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-tinta-3);
+}
+
+.portaria-campo input {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--c-tinta);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--c-linha);
+  border-radius: 12px;
+  padding: 11px 13px;
+  outline: none;
+  width: 100%;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.portaria-campo input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--c-linha-forte);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.07);
+}
+
+.portaria-erro {
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: rgba(240, 170, 148, 0.95);
+  background: rgba(240, 135, 106, 0.1);
+  border: 1px solid rgba(240, 135, 106, 0.28);
+}
+
+/* Metal, e não o acento da casa.
+ *
+ * O `--c-prata` do app é menta (#9febd0) — cor viva, que pertence à ENTIDADE
+ * lá dentro. A portaria é a marca, e a marca é acromática por decisão: cromo,
+ * prata, branco, preto e grafite, mais nada. Um botão verde na porta anunciava
+ * uma identidade que o produto não tem. O degradê de três paradas é chapa
+ * polida: claro em cima, sombra na dobra, luz de volta na base. */
+.portaria-entrar {
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #14171a;
+  background: linear-gradient(180deg, #ffffff 0%, #d5dade 46%, #a9b0b6 54%, #e6eaed 100%);
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  margin-top: 4px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 6px 18px rgba(0, 0, 0, 0.4);
+  transition: filter 160ms ease, opacity 160ms ease, transform 80ms ease;
+}
+
+.portaria-entrar:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.portaria-entrar:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+.portaria-entrar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.portaria-entrar:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 0 3px rgba(255, 255, 255, 0.42);
+}
+
+
 @media (prefers-reduced-motion: reduce) {
   .halo,
   .avatar,
@@ -1461,6 +1668,9 @@ ol.plano {
   .escuta-ponto,
   .balao {
     animation: none !important;
+  }
+  .portaria-cromo {
+    animation: none;
   }
   .avatar {
     transition: none;

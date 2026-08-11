@@ -26,10 +26,21 @@ import { fileURLToPath } from 'node:url';
 // diretório de trabalho dele não é contrato nosso.
 const aqui = dirname(fileURLToPath(import.meta.url));
 
-const origem = join(aqui, 'ui', 'bolha.html');
-const destino = join(aqui, '..', 'web', 'public', 'bolha.html');
+const publico = join(aqui, '..', 'web', 'public');
+mkdirSync(publico, { recursive: true });
+copyFileSync(join(aqui, 'ui', 'bolha.html'), join(publico, 'bolha.html'));
 
-mkdirSync(dirname(destino), { recursive: true });
-copyFileSync(origem, destino);
+/**
+ * A marca vai junto, nos DOIS sentidos, porque a bolha carrega a escultura e
+ * ela é servida de lugares diferentes em cada modo:
+ *   dev        — a janela aponta para localhost:3000, então o arquivo precisa
+ *                estar na raiz de `web/public` (o HTML o pede como vizinho);
+ *   produção   — `frontendDist` empacota `ui/`, e o arquivo precisa estar lá.
+ * A FONTE é sempre `web/public/marca/iara-simbolo.png`, assado pela forja.
+ * Aqui só se copia.
+ */
+const marca = join(publico, 'marca', 'iara-simbolo.png');
+copyFileSync(marca, join(publico, 'iara-simbolo.png'));
+copyFileSync(marca, join(aqui, 'ui', 'iara-simbolo.png'));
 
-console.log(`[bolha] publicada em ${destino}`);
+console.log(`[bolha] publicada em ${publico}`);

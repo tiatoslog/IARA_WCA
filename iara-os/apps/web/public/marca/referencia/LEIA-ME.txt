@@ -1,0 +1,29 @@
+REFERÊNCIAS DA MARCA IARA — os arquivos originais
+
+Esta pasta guarda as FOTOGRAFIAS de origem da identidade. Elas são a marca; o
+que está em `public/marca/*.png` é recorte delas, gerado por
+`npm run marca` (scripts/gerar-marca.ts). Nada aqui é desenhado, redesenhado
+ou "interpretado" — a esteira só corta, compõe e redimensiona.
+
+Salve exatamente com estes nomes:
+
+  cabeca.*     o rosto humanoide cromado, de frente, sobre cinza de estúdio.
+               Vira o logotipo: o símbolo quadrado, a bolha flutuante do
+               desktop e todos os ícones (barra de tarefas, PWA, instalador).
+
+  cromo.*      a superfície abstrata de metal líquido.
+               Vira o fundo da tela de login.
+
+Formato: PNG, JPG, WebP ou AVIF — a extensão não importa, só o nome. Use a maior resolução que você tiver. Quanto maior, melhor —
+o ícone do instalador pede 1024x1024 e o fundo do login pede pelo menos 1920
+de largura.
+
+Depois de salvar:
+
+  npm run marca     recorta o símbolo e o fundo, e grava a palavra IARA na face
+  npm run icones    corta PWA, Apple, Tauri e monta o .ico da barra de tarefas
+
+LICENÇA — atenção antes de publicar
+Estes arquivos são servidos por HTTP e ficam baixáveis por URL direta. O
+projeto é comercial. Confirme que você tem direito de uso comercial das
+imagens antes de subir para produção, e anote a origem em ../../CREDITOS.txt.

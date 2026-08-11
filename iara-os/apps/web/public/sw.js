@@ -10,7 +10,17 @@
  * service worker nem intercepta).
  */
 
-const VERSAO = 'iara-v1';
+/*
+ * A VERSÃO é o único jeito de aposentar um asset.
+ *
+ * `/icones/` é servido cache-first, então quem instalou o PWA fica com o que
+ * baixou — para sempre, mesmo com o arquivo novo no servidor. Trocar o ícone
+ * SEM subir esta chave deixa a identidade velha instalada na tela inicial de
+ * todo mundo. Subiu a marca? Sobe a versão.
+ *
+ * v2 — 11/08/2026: a marca passou a ser a fotografia de cromo.
+ */
+const VERSAO = 'iara-v2';
 const CASCA = ['/', '/icones/icone-192.png', '/icones/icone-512.png'];
 
 self.addEventListener('install', (evento) => {

@@ -23,7 +23,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#e8dfd0',
+  // A cor da casca, não mais o creme antigo: é ela que pinta a barra do
+  // sistema quando o app abre instalado.
+  themeColor: '#06110e',
   width: 'device-width',
   initialScale: 1,
   // Sem zoom por gesto: o escritório é pixel art com enquadramento próprio, e

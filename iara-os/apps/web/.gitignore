@@ -1,10 +1,14 @@
 node_modules/
 .next/
+# uma instância por porta — ver distDir em next.config.mjs
+.next-*/
 out/
 .env
 .env.local
 *.tsbuildinfo
 next-env.d.ts
 dados/memoria/
-# gerado pelo beforeDevCommand do apps/desktop a partir de ui/bolha.html
+# gerados pelo beforeDevCommand do apps/desktop (ver copiar-bolha.mjs).
+# A fonte da marca é public/marca/iara-simbolo.png, essa sim versionada.
 public/bolha.html
+public/iara-simbolo.png

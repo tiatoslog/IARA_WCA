@@ -5,6 +5,7 @@
   "identifier": "br.com.atoslog.iara",
   "build": {
     "beforeDevCommand": "node copiar-bolha.mjs",
+    "beforeBuildCommand": "node copiar-bolha.mjs",
     "devUrl": "http://localhost:3000",
     "frontendDist": "../ui"
   },

@@ -16,8 +16,9 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait-primary',
-    background_color: '#f2ece1',
-    theme_color: '#e8dfd0',
+    // A tela de abertura do PWA é a casca escura da IARA, não o creme antigo.
+    background_color: '#06110e',
+    theme_color: '#06110e',
     lang: 'pt-BR',
     categories: ['productivity', 'business'],
     icons: [

@@ -25,12 +25,17 @@
       margin: 4px;
       border-radius: 50%;
       cursor: pointer;
-      background: radial-gradient(circle at 32% 30%, #f6e7c8 0%, #d9b26a 55%, #8a6a3a 100%);
+      /* A escultura, em quadro fechado, cortada em disco. É a MESMA fotografia
+         da portaria e do ícone da barra de tarefas — uma identidade, três
+         escalas. Imagem assada, não WebGL: esta janela fica sempre visível, e
+         um contexto 3D permanente aqui custaria GPU o dia inteiro por
+         estética. */
+      background: #b4b8bd url('iara-simbolo.png') center / cover no-repeat;
       /* Sem sombra externa: a janela é minúscula e o desfoque era CORTADO na
          borda, desenhando um quadrado em volta da bolha. A profundidade vem
          só do brilho interno. */
-      box-shadow: inset 0 0 12px rgba(255, 244, 214, 0.55);
-      opacity: 0.55;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+      opacity: 0.72;
       transition: opacity 0.25s ease;
     }
     /* A respiração anima OPACITY num pseudo-elemento (composited), não
@@ -41,7 +46,7 @@
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      box-shadow: inset 0 0 18px rgba(255, 244, 214, 0.85);
+      box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.7);
       opacity: 0;
       animation: respirar 6s ease-in-out infinite;
     }
