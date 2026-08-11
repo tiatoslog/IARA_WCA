@@ -1,0 +1,199 @@
+/**
+ * A FRONTEIRA — o que é estado interno da IARA e o que alcança o mundo.
+ *
+ * A auditoria anterior fechou a rota de fuga do WhatsApp e declarou duas
+ * exclusões: `MemoriaOperacional` e o jornal ficariam FORA do `PortalEfeitos`.
+ * A justificativa era boa — roteá-los criaria regressão infinita, porque o
+ * portal grava no jornal para registrar que vai gravar na memória, e o jornal é
+ * memória. Mas uma justificativa boa não é uma prova, e uma exclusão que vive só
+ * num parágrafo de relatório é uma exclusão que ninguém consegue defender daqui
+ * a seis meses.
+ *
+ * Este arquivo transforma a exclusão em CONTRATO. Ele não tem comportamento em
+ * tempo de execução: é uma declaração, lida por `testes/fronteira-interna.test.ts`,
+ * que faz análise de GRAFO DE CHAMADAS — não `grep` — e prova que:
+ *
+ *   1. nenhum módulo de ESTADO INTERNO alcança, nem transitivamente, um módulo
+ *      capaz de produzir efeito externo;
+ *   2. o registro nunca chama o portal (`Portal → Registro`, jamais o inverso);
+ *   3. todo módulo que toca um provedor ou executor está declarado aqui.
+ *
+ * A terceira regra é a que sobrevive ao tempo: um arquivo novo que alcance a
+ * rede, o disco ou o shell e não esteja declarado FAZ A SUÍTE FALHAR. A pessoa
+ * que o escrever é obrigada a classificá-lo, e classificar é o momento em que
+ * ela pensa sobre o que está fazendo.
+ */
+
+/**
+ * ESTADO INTERNO — o que a IARA sabe sobre si mesma e sobre a conversa.
+ *
+ * Persistem em disco e em banco, e nada disso é efeito no mundo: ninguém além
+ * da própria IARA lê essas tabelas, nenhum terceiro é alcançado, nada é
+ * irreversível de forma observável fora do processo. Repetir uma gravação de
+ * histórico produz uma linha a mais num log que só o motor consulta.
+ *
+ * A pergunta que separa esta lista da de baixo NÃO é "escreve em algum lugar?" —
+ * as duas escrevem. É: **alguém fora da IARA percebe?**
+ */
+export const ESTADO_INTERNO: readonly string[] = [
+  // Histórico, shards, preferências e insights do operador.
+  'servidor/nucleo/MemoriaOperacional.ts',
+  // Cliente do banco onde o estado interno mora.
+  'servidor/nucleo/ClienteSupabase.ts',
+  // O jornal das operações. É a AUDITORIA, não um executor — ver `Fase 3`.
+  'servidor/nucleo/kernel/RegistroOperacoes.ts',
+  // Estado cognitivo em memória; nada atravessa o processo.
+  'servidor/nucleo/EstadoAtomico.ts',
+  'servidor/nucleo/kernel/MemoriaTrabalho.ts',
+  'servidor/nucleo/kernel/RegistroErros.ts',
+];
+
+/**
+ * EFEITO EXTERNO — daqui alguém de fora percebe.
+ *
+ * Rede que alcança terceiro, processo do sistema operacional, arquivo no disco
+ * do operador. Todo módulo desta lista só pode ser alcançado ATRAVÉS do
+ * `PortalEfeitos`, e é isso que o teste de grafo prova.
+ */
+export const EFEITO_EXTERNO: readonly string[] = [
+  // Cliente do provedor: POST ao Graph da Meta.
+  'servidor/canais/WhatsApp.ts',
+  // `spawn` (shell) e `mkdir` (disco do operador).
+  'servidor/nucleo/AgenteLocal.ts',
+];
+
+/**
+ * A FRONTEIRA em si. Só ela, e os adaptadores que ela registra, podem alcançar
+ * a lista de cima.
+ */
+export const PORTAL = 'servidor/nucleo/kernel/PortalEfeitos.ts';
+
+/**
+ * LEITURA EXTERNA — sai para a rede e não muda nada.
+ *
+ * Categoria própria, e não um apêndice de `EFEITO_EXTERNO`, porque a diferença
+ * governa o que o sistema precisa garantir. Uma consulta repetida devolve a
+ * mesma coisa: não há duplicidade a evitar, não há o que verificar, não há o que
+ * autorizar. Tratá-las como efeito encheria o jornal de linhas inúteis e, pior,
+ * ensinaria a equipe a ignorar o jornal.
+ *
+ * Continuam declaradas porque saem do processo — e o que sai do processo é
+ * sempre matéria de auditoria, mesmo quando é inofensivo.
+ */
+export const LEITURA_EXTERNA: readonly string[] = [
+  'servidor/nucleo/BuscaWeb.ts', // busca na web
+  'servidor/nucleo/OrquestradorAcoes.ts', // previsão do tempo
+  'servidor/nucleo/Voz.ts', // síntese de voz: texto entra, áudio sai
+];
+
+/**
+ * LEITURA INTERNA — abre o disco e só lê.
+ *
+ * Categoria criada na auditoria de terceira ordem, e a razão é um defeito do
+ * próprio teste que a antecedeu. A checagem original procurava NOMES DE MÉTODO
+ * (`writeFile(`, `spawn(`…), e um módulo que importasse `node:fs` e usasse
+ * `createWriteStream` ou `writeFileSync` passaria batido — a regex não conhece
+ * todas as formas de escrever num arquivo, e nunca vai conhecer.
+ *
+ * A checagem passou a ser por IMPORTAÇÃO: quem abre `node:fs` ou
+ * `node:child_process` precisa estar declarado em alguma categoria. Isso obrigou
+ * a nomear os que só leem — e nomear é o ponto, porque o dia em que um deles
+ * passar a escrever, a declaração vira mentira e alguém precisa mexer aqui.
+ */
+export const LEITURA_INTERNA: readonly string[] = [
+  'servidor/nucleo/RagHistorico.ts', // lê o histórico de incidentes
+  'servidor/nucleo/kernel/habilidades/dados.ts', // lê documentos
+];
+
+/**
+ * CATÁLOGO — habilidades que ALCANÇAM um efeito, e podem.
+ *
+ * Categoria criada corrigindo um defeito da própria auditoria de terceira ordem.
+ * `habilidades/agenteLocal.ts` tinha sido classificado como LEITURA INTERNA
+ * porque importa `existsSync` para o verificador — verdade sobre o `node:fs`, e
+ * mentira sobre o arquivo: ele também importa o `AgenteLocal` e chega ao `spawn`.
+ *
+ * O estrago não era o rótulo errado. Era que, com um módulo que legitimamente
+ * alcança efeito dentro de LEITURA INTERNA, a categoria ficava impossível de
+ * verificar — e uma categoria que não pode ser verificada é onde alguém esconde
+ * o próximo executor. Separar devolve a LEITURA INTERNA a propriedade que a
+ * torna útil: `G6b` prova que dali NÃO se alcança o mundo.
+ *
+ * Estes alcançam efeito, e é o desenho: são o catálogo, e o catálogo passa pelo
+ * `Kernel.abrirOperacao` — que é o portal.
+ */
+export const CATALOGO: readonly string[] = [
+  'servidor/nucleo/kernel/habilidades/agenteLocal.ts',
+];
+
+/**
+ * ENTRADA — o mundo falando com a IARA, não o contrário.
+ *
+ * `node:http` aqui é servidor, não cliente. A direção inverte tudo: um webhook
+ * que chega é matéria a ser percebida; uma requisição que sai é efeito. Confundir
+ * as duas classificaria a porta de entrada como rota de fuga.
+ */
+export const ENTRADA: readonly string[] = [
+  'servidor/principal.ts', // servidor HTTP + WebSocket
+  'servidor/canais/PortaWhatsapp.ts', // webhook da Meta (usa o portal para sair)
+];
+
+/**
+ * MÉTODO MUTÁVEL SEM EFEITO — a lista que impede a declaração de mentir.
+ *
+ * O DEFEITO que ela corrige foi encontrado atacando a própria fronteira: mover
+ * `WhatsApp.ts` de EFEITO EXTERNO para LEITURA EXTERNA passava nos quinze testes.
+ * Nenhuma asserção olhava se a classificação era VERDADE — todas confiavam nela.
+ * Uma declaração auto-atestada é exatamente tão forte quanto a boa-fé de quem a
+ * edita, e a boa-fé não sobrevive a um prazo apertado.
+ *
+ * Agora a classificação é conferida contra EVIDÊNCIA: quem usa `POST`, `PUT`,
+ * `PATCH` ou `DELETE` é EFEITO EXTERNO — a menos que esteja declarado aqui, com
+ * a razão escrita. Reclassificar deixou de ser mover uma linha; virou afirmar
+ * por escrito, num arquivo cuja única função é essa afirmação, que um POST não
+ * muda nada. É o máximo que uma checagem estática alcança, e é muito mais que
+ * confiar.
+ */
+export const POST_SEM_EFEITO: Record<string, string> = {
+  'servidor/nucleo/Voz.ts':
+    'POST de síntese de voz: o texto entra, o áudio volta. Nada é criado, ' +
+    'alterado ou entregue a ninguém no provedor — é uma função pura cara.',
+};
+
+/**
+ * ESTE arquivo. Ele é a DECLARAÇÃO da fronteira, não um módulo que a atravessa:
+ * não importa nada, não executa nada, e cita os nomes dos padrões proibidos
+ * dentro de comentários — o que faz a checagem textual acusá-lo de si mesmo.
+ *
+ * A isenção é EARNED, não concedida: `G7b` prova que este arquivo não tem
+ * nenhum `import`. No dia em que alguém acrescentar um, a isenção cai junto.
+ */
+export const ARQUIVO_DA_DECLARACAO = 'servidor/nucleo/Fronteira.ts';
+
+/** Todo módulo declarado, em qualquer categoria. */
+export const DECLARADOS: readonly string[] = [
+  ...ESTADO_INTERNO,
+  ...EFEITO_EXTERNO,
+  ...LEITURA_EXTERNA,
+  ...LEITURA_INTERNA,
+  ...CATALOGO,
+  ...ENTRADA,
+  PORTAL,
+];
+
+/**
+ * Módulos do Node cuja simples IMPORTAÇÃO significa alcançar algo fora do
+ * processo. Quem os abre precisa estar declarado acima.
+ *
+ * `node:crypto`, `node:path`, `node:os` ficam de fora: calculam, não alcançam.
+ */
+export const BUILTINS_QUE_ALCANCAM = [
+  'node:fs',
+  'node:fs/promises',
+  'node:child_process',
+  'node:net',
+  'node:http',
+  'node:https',
+  'node:dgram',
+  'node:worker_threads',
+] as const;

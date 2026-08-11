@@ -130,6 +130,13 @@ test('A4. shell e filesystem mutável continuam confinados ao AgenteLocal', () =
     path.join('servidor', 'nucleo', 'AgenteLocal.ts'), // spawn + mkdir, via habilidades
     path.join('servidor', 'nucleo', 'MemoriaOperacional.ts'), // shard do operador
     path.join('servidor', 'nucleo', 'kernel', 'RegistroOperacoes.ts'), // o próprio jornal
+    /**
+     * A DECLARAÇÃO da fronteira. Ela cita os nomes dos padrões proibidos dentro
+     * dos próprios comentários, então uma checagem textual sempre a acusa de si
+     * mesma. A isenção é merecida e provada em `G4c`: o arquivo não importa nada
+     * e não tem aresta no grafo.
+     */
+    path.join('servidor', 'nucleo', 'Fronteira.ts'),
   ];
   const infratores = fontes(path.join(RAIZ, 'servidor'))
     .filter((f) => /\bspawn\(|\bexecFile\(|\bwriteFile\(|\bappendFile\(|\bmkdir\(/.test(readFileSync(f, 'utf8')))
