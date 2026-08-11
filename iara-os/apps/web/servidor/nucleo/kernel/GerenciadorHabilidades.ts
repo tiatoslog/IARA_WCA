@@ -30,6 +30,8 @@ import {
   type Verificacao,
 } from './Habilidade';
 import type { EstadoExecucao } from './Verdade';
+import type { Operacao } from './Operacao';
+import { RegistroOperacoes } from './RegistroOperacoes';
 
 /**
  * O que o executor relatou E o que a verificação apurou, lado a lado.
@@ -54,10 +56,24 @@ export interface PedidoHabilidade {
   sinal: AbortSignal;
   /** Permissões concedidas ao operador desta sessão. */
   concedidas: readonly Permissao[];
+  /**
+   * O jornal e a identidade deste passo. Ver `ContextoHabilidade`.
+   *
+   * OPCIONAIS AQUI e obrigatórios no contexto, de propósito. O Kernel sempre os
+   * passa — é o caminho vivo, e há teste travando isso. Um teste que exercita o
+   * Gerenciador isoladamente está provando as quatro portas desta classe, não o
+   * ciclo de vida da operação, e obrigá-lo a fabricar um jornal só para chamar
+   * `executar` transformaria cada teste de permissão num teste de persistência.
+   */
+  registro?: RegistroOperacoes;
+  operacao?: Operacao | null;
 }
 
 export class GerenciadorHabilidades {
   private readonly registro = new Map<string, Habilidade>();
+  /** Jornal de recurso para chamadas que não vêm do Kernel. Nunca recebe
+   *  transição: quem transiciona é o Kernel, com o jornal real da sessão. */
+  private readonly jornalPadrao = new RegistroOperacoes();
 
   constructor(private readonly barramento: BarramentoEventos) {}
 
@@ -142,6 +158,8 @@ export class GerenciadorHabilidades {
       parametros: validar(habilidade.manifesto.esquema, pedido.parametros),
       sinal: pedido.sinal,
       enunciado: pedido.enunciado,
+      registro: pedido.registro ?? this.jornalPadrao,
+      operacao: pedido.operacao ?? null,
     };
 
     const verificacao = await this.conferirMundo(habilidade, resultado, ctx, pedido.id);
@@ -195,6 +213,8 @@ export class GerenciadorHabilidades {
         parametros,
         sinal: pedido.sinal,
         enunciado: pedido.enunciado,
+        registro: pedido.registro ?? this.jornalPadrao,
+        operacao: pedido.operacao ?? null,
       },
       id,
     );
@@ -273,6 +293,8 @@ export class GerenciadorHabilidades {
       parametros,
       sinal: pedido.sinal,
       enunciado: pedido.enunciado,
+      registro: pedido.registro ?? this.jornalPadrao,
+      operacao: pedido.operacao ?? null,
     };
 
     try {

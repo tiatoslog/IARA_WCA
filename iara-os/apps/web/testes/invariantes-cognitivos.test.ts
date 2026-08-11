@@ -323,6 +323,10 @@ function habilidadeDeTeste(
       timeout_ms: o.timeout_ms ?? 50,
       custo: 'zero',
       risco: o.risco,
+      // Dublê de teste: a semântica declarada é a conservadora que não perturba
+      // o comportamento que este arquivo já provava. A suíte de escrita declara
+      // `escrita_nao_idempotente` explicitamente onde a duplicidade é o assunto.
+      idempotencia: o.risco === 'baixo' ? 'leitura' : 'escrita_idempotente',
       esquema: {},
     },
     executar: o.executar,

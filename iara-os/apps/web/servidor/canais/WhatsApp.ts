@@ -171,14 +171,56 @@ export function identificar(telefone: string): IdentidadeWhatsapp | null {
 // 5. Envio
 // ---------------------------------------------------------------------------
 
+/** O que a Meta respondeu. Nunca um booleano — ver `EntregaWhatsapp`. */
+export interface EntregaWhatsapp {
+  /** A Meta ACEITOU e enfileirou. Não quer dizer entregue nem lido. */
+  readonly aceito: boolean;
+  /** `wamid` atribuído pela Meta. É por ele que se pergunta o status depois. */
+  readonly referencia?: string;
+  readonly detalhe: string;
+}
+
 /**
- * Envia texto de volta. Não lança: falha de entrega não pode derrubar o turno
- * do kernel, que já terminou o trabalho — só registra e segue.
+ * ENTREGA O TEXTO AO PROVEDOR. Primitiva de transporte, e só isso.
+ *
+ * ESTA FUNÇÃO NÃO DEVE SER CHAMADA POR NINGUÉM ALÉM DA INTEGRAÇÃO
+ * `servidor/nucleo/kernel/integracoes/whatsapp.ts`. Há um teste de arquitetura
+ * (`fronteira-efeitos.test.ts`) que falha se outro arquivo a importar.
+ *
+ * O DEFEITO QUE ISSO CORRIGE: ela se chamava `responder`, devolvia `boolean`, e
+ * era chamada direto por `PortaWhatsapp.atender()`. Uma mensagem saía para uma
+ * pessoa sem operação, sem identidade, sem idempotência, sem verificador e sem
+ * uma linha de jornal — a última porta dos fundos da arquitetura.
+ *
+ * Duas mudanças, e as duas são de contrato, não de implementação:
+ *
+ *  1. o nome diz o que ela faz (ENTREGAR a um provedor), não o que ela
+ *     significava no fluxo (RESPONDER ao operador). Quem quer responder agora
+ *     precisa passar pelo portal;
+ *  2. o retorno carrega EVIDÊNCIA — aceite mais referência do provedor — em vez
+ *     de um booleano que colapsava "a Meta enfileirou" e "a pessoa recebeu" no
+ *     mesmo `true`.
+ *
+ * Não lança: falha de transporte é informação, não exceção. Quem decide o que
+ * isso significa é o portal.
  */
-export async function responder(telefone: string, texto: string): Promise<boolean> {
+export async function entregarTexto(
+  telefone: string,
+  texto: string,
+  /**
+   * Chave de idempotência da operação. A Cloud API **não** oferece cabeçalho de
+   * idempotência hoje, então ela viaja apenas como correlação de log — e é por
+   * isso que o relatório declara `at-most-once local`, não `exactly-once`.
+   * Quando a Meta publicar o cabeçalho, é aqui que ele entra.
+   */
+  chaveIdempotencia?: string,
+): Promise<EntregaWhatsapp> {
   const token = seg('WHATSAPP_TOKEN');
   const phoneId = seg('WHATSAPP_PHONE_ID');
-  if (!token || !phoneId) return false;
+  if (!token || !phoneId) {
+    return { aceito: false, detalhe: 'WHATSAPP_TOKEN/WHATSAPP_PHONE_ID ausentes' };
+  }
+  void chaveIdempotencia;
 
   try {
     const r = await fetch(`${GRAPH}/${phoneId}/messages`, {
@@ -201,11 +243,30 @@ export async function responder(telefone: string, texto: string): Promise<boolea
     if (!r.ok) {
       const detalhe = await r.text().catch(() => '');
       console.warn(`[iara] whatsapp: envio falhou ${r.status} ${detalhe.slice(0, 200)}`);
-      return false;
+      return { aceito: false, detalhe: `HTTP ${r.status}: ${detalhe.slice(0, 120)}` };
     }
-    return true;
+
+    /**
+     * O `wamid` é o que torna a verificação POSSÍVEL um dia. Sem ele, "aceito"
+     * seria uma afirmação sobre a qual nunca mais daria para perguntar nada.
+     */
+    const corpo = (await r.json().catch(() => ({}))) as {
+      messages?: { id?: string }[];
+    };
+    return {
+      aceito: true,
+      referencia: corpo.messages?.[0]?.id,
+      detalhe: 'a Meta aceitou e enfileirou a mensagem',
+    };
   } catch (erro) {
+    /**
+     * A REQUISIÇÃO PODE TER CHEGADO. Timeout, socket cortado, DNS no meio — a
+     * exceção é sobre o que ESTE processo sabe, não sobre o que a Meta fez.
+     * Relançar é deliberado: o portal precisa distinguir "o provedor recusou"
+     * (`aceito: false`, fato apurado) de "não faço ideia" (exceção → estado
+     * `desconhecida`). Devolver `aceito: false` aqui apagaria a diferença.
+     */
     console.warn(`[iara] whatsapp: ${(erro as Error).message}`);
-    return false;
+    throw erro;
   }
 }

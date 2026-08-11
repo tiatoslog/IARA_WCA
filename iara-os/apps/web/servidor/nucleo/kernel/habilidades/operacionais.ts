@@ -28,6 +28,7 @@ export const consultarClima: Habilidade = {
     timeout_ms: 6000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: {},
   },
   async executar() {
@@ -59,6 +60,7 @@ export const consultarInfraestrutura: Habilidade = {
     timeout_ms: 5000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: {
       uf: { tipo: 'texto', padrao: 'GERAL', dentre: ['GERAL', 'MT', 'MS', 'GO', 'SP', 'PR', 'RO'] },
     },
@@ -85,6 +87,7 @@ export const consultarAgenda: Habilidade = {
     timeout_ms: 1000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: {},
   },
   async executar() {
@@ -105,6 +108,7 @@ export const pesquisarWeb: Habilidade = {
     timeout_ms: 9000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: { consulta: { tipo: 'texto', obrigatorio: true } },
   },
   async executar(ctx) {
@@ -125,6 +129,7 @@ export const buscarHistorico: Habilidade = {
     timeout_ms: 4000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: { consulta: { tipo: 'texto', obrigatorio: true } },
   },
   async executar(ctx) {
@@ -155,6 +160,7 @@ export const recusarPorSigilo: Habilidade = {
     timeout_ms: 500,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: {},
   },
   async executar() {

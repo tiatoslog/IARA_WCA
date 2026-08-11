@@ -13,6 +13,8 @@
 
 import type { CapacidadeAtiva } from '../../../lib/estado';
 import type { Dominio } from '../../../lib/capacidades';
+import type { Operacao, SemanticaEfeito } from './Operacao';
+import type { RegistroOperacoes } from './RegistroOperacoes';
 
 export type Permissao =
   | 'rede' // fala com a internet
@@ -74,6 +76,22 @@ export interface ManifestoHabilidade {
    * ainda assim exigir confirmação — ver `PoliticaDeRisco`.
    */
   readonly risco: Risco;
+  /**
+   * O QUE ACONTECE SE ISTO RODAR DUAS VEZES.
+   *
+   * Obrigatório, e obrigatório em tempo de COMPILAÇÃO: uma habilidade nova não
+   * compila sem responder. É deliberado — a alternativa é um campo opcional que
+   * ninguém preenche até o dia em que um reenvio chega ao cliente.
+   *
+   * Ortogonal a `risco`, e confundir os dois é o erro clássico. Risco governa
+   * confirmação PRÉVIA (quanto custa errar); semântica governa DEDUPLICAÇÃO e
+   * retry (quanto custa repetir). `criar_pasta` é risco médio e idempotente;
+   * `abrir_aplicativo` é o mesmo risco e não idempotente. A política que trata
+   * as duas igual erra uma das duas.
+   *
+   * Ver `Operacao.ts`. Quem declara `efeito_desconhecido` NÃO executa.
+   */
+  readonly idempotencia: SemanticaEfeito;
   readonly esquema: Esquema;
 }
 
@@ -86,6 +104,22 @@ export interface ContextoHabilidade {
   readonly sinal: AbortSignal;
   /** Texto original do operador. Algumas habilidades precisam do bruto. */
   readonly enunciado: string;
+  /**
+   * O jornal das operações.
+   *
+   * Só as habilidades que ARMAM ou RESOLVEM uma autorização precisam disto —
+   * hoje as duas de energia. As outras ignoram, e é bom que ignorem: uma
+   * habilidade que mexe no jornal por conta própria é uma habilidade que pode
+   * se autoautorizar. A máquina de transições impede o pior (nenhuma delas
+   * consegue carimbar `verificador` num estado que não conferiu), mas o desenho
+   * é este: quem executa não legisla.
+   */
+  readonly registro: RegistroOperacoes;
+  /**
+   * A operação que ESTE passo é. `null` para leitura — leitura não tem
+   * identidade persistida, ver `Kernel.abrirOperacao`.
+   */
+  readonly operacao: Operacao | null;
 }
 
 export interface ResultadoHabilidade {

@@ -72,6 +72,7 @@ export const lerEmails = pendente(
     timeout_ms: 10000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: {
       filtro: { tipo: 'texto' },
       limite: { tipo: 'numero', padrao: 10 },
@@ -95,6 +96,9 @@ export const enviarWhatsapp = pendente(
     timeout_ms: 10000,
     custo: 'zero',
     risco: 'alto',
+    // A família inteira que este contrato existe para proteger: mensagem entregue
+    // ao destinatário não se desfaz, e o provedor não oferece exatamente-uma-vez.
+    idempotencia: 'escrita_nao_idempotente',
     esquema: {
       destinatario: { tipo: 'texto', obrigatorio: true },
       mensagem: { tipo: 'texto', obrigatorio: true },
@@ -115,6 +119,7 @@ export const buscarDocumentoSharepoint = pendente(
     timeout_ms: 12000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: { consulta: { tipo: 'texto', obrigatorio: true } },
   },
   'MS_GRAPH_TOKEN',

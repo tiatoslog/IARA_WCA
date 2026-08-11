@@ -17,14 +17,30 @@ import { EstadoAtomico } from '../nucleo/EstadoAtomico';
 import { MemoriaOperacional } from '../nucleo/MemoriaOperacional';
 import { Kernel } from '../nucleo/kernel/Kernel';
 import { outrosOperadores } from '../../lib/operadores';
+import { PortalEfeitos } from '../nucleo/kernel/PortalEfeitos';
+import { registroOperacoes } from '../nucleo/kernel/RegistroOperacoes';
+import { ID_WHATSAPP_RESPONDER, INTEGRACOES } from '../nucleo/kernel/integracoes';
 import {
   assinaturaValida,
   identificar,
   lerMensagem,
-  responder,
   verificarWebhook,
   whatsappDisponivel,
 } from './WhatsApp';
+
+/**
+ * A fronteira de efeitos deste canal.
+ *
+ * Compartilha o `registroOperacoes` do processo — que é onde TODO o estado mora
+ * — então instanciar o portal aqui não cria uma segunda verdade: cria um segundo
+ * ponteiro para a mesma. O portal em si só carrega o mapa de integrações.
+ *
+ * Existe para o caso do número NÃO CADASTRADO, que precisa de uma resposta antes
+ * de haver kernel algum. Para operador conhecido, usa-se `kernel.efeitos`, que é
+ * o mesmo desenho com o mesmo jornal.
+ */
+const portalCanal = new PortalEfeitos(registroOperacoes);
+portalCanal.registrarTodas(INTEGRACOES);
 
 const memoria = new MemoriaOperacional();
 
@@ -134,14 +150,22 @@ export async function tratarWhatsapp(req: IncomingMessage, res: ServerResponse):
     console.warn(`[iara] whatsapp: número não cadastrado (${mascarar(mensagem.telefone)})`);
     // Resposta genérica e idêntica para qualquer desconhecido: confirmar que
     // "este número não tem acesso" já entrega que o número existe e atende.
-    await responder(
-      mensagem.telefone,
-      'Não consigo atender por este canal. Fale com o time de TI da Atos Log.',
-    );
+    await entregar({
+      // Ator único, e não o telefone: o nome do arquivo de jornal deriva do
+      // ator, e um jornal por número desconhecido seria um arquivo novo a cada
+      // sonda da internet — com o telefone no NOME do arquivo. O número vai nos
+      // parâmetros, dentro do shard do canal.
+      ator: 'canal_whatsapp',
+      sessao: 'whatsapp:nao_cadastrado',
+      telefone: mensagem.telefone,
+      texto: 'Não consigo atender por este canal. Fale com o time de TI da Atos Log.',
+      origem_pedido: mensagem.id,
+      portal: portalCanal,
+    });
     return;
   }
 
-  await atender(identidade.id_usuario, mensagem.telefone, mensagem.texto);
+  await atender(identidade.id_usuario, mensagem.telefone, mensagem.texto, mensagem.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -153,7 +177,12 @@ export async function tratarWhatsapp(req: IncomingMessage, res: ServerResponse):
  * operador acumularia ouvintes a cada mensagem — vazamento clássico de
  * event bus.
  */
-async function atender(idUsuario: string, telefone: string, texto: string): Promise<void> {
+async function atender(
+  idUsuario: string,
+  telefone: string,
+  texto: string,
+  idMensagem: string,
+): Promise<void> {
   const r = residenteDe(idUsuario);
   let resposta = '';
 
@@ -172,7 +201,73 @@ async function atender(idUsuario: string, telefone: string, texto: string): Prom
   if (!resposta) {
     resposta = 'Não consegui concluir esse pedido agora. Tente de novo em instantes.';
   }
-  await responder(telefone, resposta);
+
+  await entregar({
+    ator: idUsuario,
+    sessao: `whatsapp:${idUsuario}`,
+    telefone,
+    texto: resposta,
+    /**
+     * O ID DA MENSAGEM DA META É A IDENTIDADE DO TURNO — e é o que faz a
+     * deduplicação sobreviver ao restart.
+     *
+     * `jaVistas` é um `Map` de 10 minutos em memória: útil, e insuficiente. Uma
+     * reentrega da Meta depois de um reinício encontrava o mapa vazio e a IARA
+     * respondia duas vezes. Com o id da mensagem como origem do pedido, a chave
+     * de idempotência é a mesma nas duas entregas, e o jornal em disco reconhece
+     * a segunda como duplicata.
+     */
+    origem_pedido: idMensagem,
+    portal: r.kernel.efeitos,
+  });
+}
+
+/**
+ * A ÚNICA saída de mensagem deste canal.
+ *
+ * Antes era `await responder(telefone, resposta)` — um POST ao Graph sem
+ * operação, sem chave, sem jornal, sem verificador. Agora é uma operação como
+ * qualquer outra: identificada, deduplicada, registrada antes do efeito, e
+ * fechada em `aceita_pelo_provedor` — nunca em "enviado", porque a Meta aceitar
+ * não é a pessoa receber.
+ *
+ * Não lança: falha de entrega não pode derrubar o webhook, que já respondeu 200.
+ * O que não pode acontecer — e não acontece mais — é a falha sumir.
+ */
+async function entregar(p: {
+  ator: string;
+  sessao: string;
+  telefone: string;
+  texto: string;
+  origem_pedido: string;
+  portal: PortalEfeitos;
+}): Promise<void> {
+  const r = await p.portal.executar({
+    integracao: ID_WHATSAPP_RESPONDER,
+    id_usuario: p.ator,
+    sessao: p.sessao,
+    parametros: { telefone: p.telefone, texto: p.texto },
+    origem_pedido: p.origem_pedido,
+    /**
+     * A autorização é a MENSAGEM QUE O OPERADOR MANDOU. Responder a quem
+     * escreveu é o ato que ele iniciou — não uma iniciativa da IARA, e não uma
+     * decisão da camada de raciocínio.
+     */
+    fonte_autorizacao: 'operador',
+    motivo_autorizacao: `resposta à mensagem ${p.origem_pedido} recebida do próprio operador`,
+    /**
+     * O `wamid` da Meta é único por mensagem recebida, e cada mensagem recebida
+     * merece exatamente uma resposta. Com isso a chave sozinha basta, e as
+     * heurísticas de impressão digital saem do caminho — senão duas perguntas
+     * diferentes que produzem a MESMA frase de resposta ("Bom dia! Como posso
+     * ajudar?") fariam a segunda ser engolida em silêncio, para sempre.
+     */
+    origem_confiavel: true,
+  });
+
+  if (r.tipo === 'recusada') {
+    console.warn(`[iara] whatsapp: resposta não entregue — ${r.motivo}`);
+  }
 }
 
 function lerCorpo(req: IncomingMessage): Promise<Buffer> {

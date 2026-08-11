@@ -72,6 +72,10 @@ const habilidadeFalsa = (
     // Baixo: a dublê não altera nada fora do processo, então não precisa
     // declarar verificação para passar no contrato do catálogo.
     risco: 'baixo',
+    // Dublê de teste: a semântica declarada é a conservadora que não perturba
+    // o comportamento que este arquivo já provava. A suíte de escrita declara
+    // `escrita_nao_idempotente` explicitamente onde a duplicidade é o assunto.
+    idempotencia: 'leitura',
     esquema: {},
   },
   executar: corpo,

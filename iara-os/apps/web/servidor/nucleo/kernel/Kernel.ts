@@ -34,8 +34,15 @@ import {
 import { RegistroErros } from './RegistroErros';
 import { PorteiroAutorizacao } from './PorteiroAutorizacao';
 import type { Plano } from './Evento';
-import { PermissaoNegada, ParametroInvalido, type Habilidade } from './Habilidade';
+import { PermissaoNegada, ParametroInvalido, type Habilidade, type Risco } from './Habilidade';
 import { confirmaAcontecimento, VERBO_DO_ESTADO, type EstadoExecucao } from './Verdade';
+import { RegistroOperacoes, registroOperacoes } from './RegistroOperacoes';
+import { PortalEfeitos } from './PortalEfeitos';
+import { INTEGRACOES } from './integracoes';
+// `provaDe`, não `evidencia`: o bloco de exceção deste arquivo já tem uma
+// variável local com esse nome, e sombra silenciosa entre uma string e a função
+// que carimba a fonte da prova é o tipo de colisão que compila e mente.
+import type { Operacao, SemanticaEfeito } from './Operacao';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
 import type { DestinoCognitivo, EstagioCognitivo } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
@@ -128,6 +135,16 @@ export interface DependenciasKernel {
    * produção é o de sempre, e há teste travando isso.
    */
   habilidadesExtras?: readonly Habilidade[];
+  /**
+   * O jornal das operações de escrita. Injetável para que os testes possam
+   * apontá-lo a um diretório temporário — e, sobretudo, para que um teste possa
+   * DESTRUIR o registro e construir outro sobre o mesmo jornal, que é a única
+   * forma honesta de provar reidratação sem matar o processo de teste.
+   *
+   * Não desliga nada: sem injeção, o Kernel cria o seu, e o caminho de escrita
+   * passa por ele de qualquer jeito.
+   */
+  registroOperacoes?: RegistroOperacoes;
 }
 
 const ESTAGIO_DA_ROTA: Record<string, EstagioCognitivo> = {
@@ -166,6 +183,27 @@ export class Kernel {
    * a máquina — ver `PorteiroAutorizacao.ts`.
    */
   private readonly porteiro = new PorteiroAutorizacao();
+  /**
+   * A IDENTIDADE E O DESTINO de tudo que altera o mundo.
+   *
+   * O porteiro responde "quem autorizou". Este responde as duas perguntas que
+   * ninguém respondia: "de que ação exatamente estamos falando" e "o que se
+   * sabe sobre ela depois que o processo morreu". Sem a primeira não existe
+   * deduplicação possível; sem a segunda, um restart apaga a diferença entre
+   * "não aconteceu" e "aconteceu e ninguém viu".
+   */
+  private readonly registro: RegistroOperacoes;
+  /**
+   * A ÚNICA fronteira por onde qualquer efeito alcança o mundo.
+   *
+   * O Kernel não executa mais escrita por conta própria: ele descreve a operação
+   * e o portal a conduz. Não é indireção decorativa — é o que torna possível
+   * dizer, e provar com teste de arquitetura, que nenhum caminho de efeito
+   * escapa. Enquanto a sequência morava dentro do laço de passos daqui, ela
+   * valia só para quem passava pelo laço; foi assim que o canal WhatsApp
+   * alcançou a Meta por fora de tudo.
+   */
+  private readonly portal: PortalEfeitos;
   private readonly auditoria = new AuditoriaEstruturada();
   private readonly vazao = new LimiteVazao();
   /** Falhas cognitivas do turno viram assinatura, não só linha de console. */
@@ -177,6 +215,15 @@ export class Kernel {
   constructor(private readonly dep: DependenciasKernel) {
     this.papel = dep.papel ?? 'operador';
     this.raciocinio = dep.raciocinio ?? new MotorRaciocinio();
+    /**
+     * O jornal COMPARTILHADO do processo, não um por kernel. Um kernel por
+     * sessão significa dois kernels para o mesmo operador (navegador e
+     * WhatsApp); índices separados fariam a deduplicação valer dentro de um
+     * canal e não entre eles. Ver `registroOperacoes`.
+     */
+    this.registro = dep.registroOperacoes ?? registroOperacoes;
+    this.portal = new PortalEfeitos(this.registro, dep.barramento);
+    this.portal.registrarTodas(INTEGRACOES);
     this.habilidades = new GerenciadorHabilidades(dep.barramento);
     this.habilidades.registrarTodas(CATALOGO);
     if (dep.habilidadesExtras) this.habilidades.registrarTodas(dep.habilidadesExtras);
@@ -190,6 +237,16 @@ export class Kernel {
 
   get memoriaTrabalho(): MemoriaTrabalho {
     return this.trabalho;
+  }
+
+  /** O jornal das escritas desta sessão. Leitura — ninguém transiciona por fora. */
+  get operacoes(): RegistroOperacoes {
+    return this.registro;
+  }
+
+  /** A fronteira de efeitos. Exposta para o canal poder responder POR ELA. */
+  get efeitos(): PortalEfeitos {
+    return this.portal;
   }
 
   /** Defeitos cognitivos observados nesta sessão, para diagnóstico e métrica. */
@@ -521,6 +578,43 @@ export class Kernel {
         continue;
       }
 
+      /**
+       * REGISTRO DA OPERAÇÃO — a porta que faltava entre AUTORIZAR e EXECUTAR.
+       *
+       * Toda escrita ganha identidade, é gravada no jornal ANTES de o efeito
+       * acontecer, e é deduplicada contra o que já existe. Leitura não passa por
+       * aqui de propósito: uma consulta repetida devolve a mesma coisa, não há
+       * duplicidade a evitar, e dar identidade persistida a cada leitura de
+       * relógio encheria o jornal de linhas que nunca serão consultadas.
+       *
+       * A fronteira é a semântica DECLARADA no manifesto, não uma lista de
+       * nomes de habilidade. Habilidade nova de escrita nasce coberta.
+       */
+      const abertura = await this.abrirOperacao(passo, manifesto, plano.origem);
+      if (!abertura.ok) {
+        this.trabalho.registrarErro();
+        passos.push({
+          descricao: passo.descricao,
+          habilidade: passo.habilidade,
+          estado: abertura.estado,
+          texto: '',
+          evidencia: abertura.motivo,
+        });
+        this.auditoria.registrar({
+          instante: new Date().toISOString(),
+          sessao: this.dep.sessao,
+          id_usuario: this.dep.idUsuario,
+          traco: b.tracoAtual,
+          acao: `operacao_barrada:${passo.habilidade}`,
+          detalhe: abertura.motivo,
+          permitido: false,
+        });
+        b.publicar({ tipo: 'FALHA', modulo: 'operacao', mensagem: abertura.motivo });
+        b.publicar({ tipo: 'PASSO_CONCLUIDO', passo, resumo: abertura.motivo, ms: 0 });
+        continue;
+      }
+      const operacao = abertura.operacao;
+
       const inicio = Date.now();
       try {
         this.sandbox.verificar(passo.habilidade, manifesto.permissoes, this.papel);
@@ -533,6 +627,8 @@ export class Kernel {
           sessao: this.dep.sessao,
           sinal: controle.signal,
           concedidas: this.politica.permissoesDe(this.papel),
+          registro: this.registro,
+          operacao,
         });
 
         /**
@@ -605,6 +701,8 @@ export class Kernel {
           });
         }
 
+        await this.fecharOperacao(operacao, v.estado, v.verificacao?.evidencia ?? v.resultado.detalhe);
+
         b.publicar({
           tipo: 'PASSO_CONCLUIDO',
           passo,
@@ -617,7 +715,7 @@ export class Kernel {
         if (controle.signal.aborted) break;
         this.trabalho.registrarErro();
 
-        const estado = await this.apurarAposExcecao(passo, manifesto.risco, erro, enunciado, controle);
+        const estado = await this.apurarAposExcecao(passo, operacao, manifesto.risco, erro, enunciado, controle);
         const evidencia = estado.evidencia ?? (erro as Error).message;
 
         passos.push({
@@ -651,6 +749,8 @@ export class Kernel {
           detalhe: `${estado.estado}: ${evidencia}`,
           permitido: false,
         });
+        await this.fecharOperacao(operacao, estado.estado, evidencia);
+
         b.publicar({
           tipo: 'PASSO_CONCLUIDO',
           passo,
@@ -661,6 +761,119 @@ export class Kernel {
     }
 
     return { passos };
+  }
+
+  /**
+   * Dá identidade à escrita, autoriza-a e grava "vou executar" ANTES de
+   * executar. Devolve `ok: false` quando o efeito não deve acontecer.
+   *
+   * A ORDEM DAS PORTAS É A SEGURANÇA, e cada uma cobre um caso distinto:
+   *
+   *  1. semântica desconhecida — quem não sabe o que a própria repetição causa
+   *     não alcança o mundo;
+   *  2. reserva — deduplicação e concorrência, num só passo síncrono;
+   *  3. autorização — risco alto exige fala humana, e a fonte é tipada;
+   *  4. jornal — o registro de intenção precisa estar no disco antes do efeito,
+   *     senão um crash no meio não deixa rastro nenhum.
+   *
+   * O passo 4 é o que separa este desenho de um contador de duplicatas em
+   * memória. Gravar depois seria mais rápido e inútil: o único momento em que o
+   * jornal importa é justamente aquele em que o processo não chega ao "depois".
+   */
+  private async abrirOperacao(
+    passo: { habilidade: string | null; parametros: Readonly<Record<string, unknown>> },
+    manifesto: { id: string; risco: Risco; idempotencia: SemanticaEfeito },
+    origem: Plano['origem'],
+  ): Promise<
+    | { ok: true; operacao: Operacao | null }
+    | { ok: false; estado: EstadoExecucao; motivo: string }
+  > {
+    /**
+     * A FONTE DA AUTORIZAÇÃO VEM DA ORIGEM DO PLANO — e é a segunda barreira
+     * contra a LLM, independente do porteiro.
+     *
+     * Plano determinístico nasce de uma âncora encontrada no texto que o
+     * OPERADOR escreveu: a autorização é, literalmente, a fala dele. Plano
+     * emergente nasce da camada de raciocínio e carimba `porteiro`, que
+     * `transicionar` recusa para risco alto. Mesmo que alguém apague a checagem
+     * do porteiro, um passo de risco alto proposto pela LLM continua sem
+     * conseguir chegar a `autorizada`.
+     */
+    const r = await this.portal.abrir({
+      id_usuario: this.dep.idUsuario,
+      sessao: this.dep.sessao,
+      acao: manifesto.id,
+      risco: manifesto.risco,
+      semantica: manifesto.idempotencia,
+      parametros: { ...passo.parametros },
+      /**
+       * O TRAÇO DO BARRAMENTO É A IDENTIDADE DO TURNO — o discriminador inteiro
+       * da chave de idempotência. `novoTraco()` roda uma vez por mensagem do
+       * operador: o mesmo turno reexecutado colide, um turno novo não.
+       */
+      origem_pedido: this.dep.barramento.tracoAtual,
+      fonte_autorizacao: origem === 'deterministico' ? 'operador' : 'porteiro',
+      motivo_autorizacao:
+        origem === 'deterministico'
+          ? 'pedido direto do operador (plano determinístico)'
+          : `plano ${origem}, risco ${manifesto.risco}`,
+    });
+
+    if (r.ok) return r;
+
+    /**
+     * Tradução do vocabulário do portal (ciclo de vida da operação) para o do
+     * turno (`Verdade.ts`). `desconhecida` vira `desconhecido`, e nunca
+     * `falhou`: dizer "não executei" seria verdade sobre ESTE turno e mentira
+     * sobre o mundo — o efeito anterior pode existir.
+     */
+    return {
+      ok: false,
+      estado:
+        r.estado === 'verificada'
+          ? 'verificado'
+          : r.estado === 'falhou'
+            ? 'falhou'
+            : 'desconhecido',
+      motivo: r.motivo,
+    };
+  }
+
+  /**
+   * Fecha a operação com o que se APUROU — traduzindo o vocabulário de
+   * `Verdade.ts` (o que se sabe deste passo) para o de `Operacao.ts` (o ciclo
+   * de vida da coisa persistida).
+   *
+   * A tradução é o ponto todo. `verificado` só vira `verificada` carregando uma
+   * prova de fonte `verificador`; qualquer outra fonte faz `transicionar`
+   * lançar. É "execução não é verificação" imposto por tipo, num único lugar,
+   * em vez de por disciplina em vários.
+   */
+  private async fecharOperacao(
+    operacao: Operacao | null,
+    estado: EstadoExecucao,
+    evidenciaTexto: string,
+  ): Promise<void> {
+    const destino =
+      estado === 'verificado'
+        ? 'verificada'
+        : estado === 'falhou'
+          ? 'falhou'
+          : estado === 'executado'
+            ? 'executada_nao_verificada'
+            : 'desconhecida';
+
+    /**
+     * `verificador` só quando o estado É verificado. É "execução não é
+     * verificação" imposto por tipo: qualquer outra fonte faz `transicionar`
+     * lançar, e o portal degrada para `desconhecida` — nunca para sucesso.
+     */
+    await this.portal.fechar(
+      operacao,
+      destino,
+      destino === 'verificada' ? 'verificador' : 'executor',
+      evidenciaTexto,
+    );
   }
 
   /**
@@ -681,6 +894,7 @@ export class Kernel {
    */
   private async apurarAposExcecao(
     passo: { habilidade: string | null; parametros: Readonly<Record<string, unknown>> },
+    operacao: Operacao | null,
     risco: string,
     erro: unknown,
     enunciado: string,
@@ -711,6 +925,8 @@ export class Kernel {
           sessao: this.dep.sessao,
           sinal: controle.signal,
           concedidas: this.politica.permissoesDe(this.papel),
+          registro: this.registro,
+          operacao,
         },
         { texto: '', detalhe: mensagem, resolveu: false },
       )

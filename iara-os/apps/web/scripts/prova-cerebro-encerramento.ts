@@ -72,6 +72,10 @@ function lab(id: string, o: Partial<Habilidade> & { risco?: 'baixo' | 'medio' | 
       timeout_ms: o.ms ?? 60,
       custo: 'zero',
       risco: o.risco ?? 'medio',
+      // Dublê de teste: a semântica declarada é a conservadora que não perturba
+      // o comportamento que este arquivo já provava. A suíte de escrita declara
+      // `escrita_nao_idempotente` explicitamente onde a duplicidade é o assunto.
+      idempotencia: (o.risco ?? 'medio') === 'baixo' ? 'leitura' : 'escrita_idempotente',
       esquema: {},
     },
     executar: o.executar!,

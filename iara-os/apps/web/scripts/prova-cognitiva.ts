@@ -1,3 +1,10 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { RegistroOperacoes } from '../servidor/nucleo/kernel/RegistroOperacoes';
+/** Jornal descartável: estes testes exercitam verificador, não persistência —
+ *  e um jornal apontado ao repositório sujaria `dados/` a cada rodada. */
+const JORNAL_DESCARTAVEL = mkdtempSync(path.join(tmpdir(), 'iara-jornal-'));
 /**
  * Prova comportamental do núcleo cognitivo.
  *
@@ -137,7 +144,15 @@ async function principal() {
   const app = CATALOGO.find((h) => h.manifesto.id === 'abrir_aplicativo')!;
   const v = await app.verificar!(
     { texto: 'Bloco de Notas aberto.', detalhe: '', resolveu: true },
-    { sessao: 's', id_usuario: 'u', parametros: {}, sinal: new AbortController().signal, enunciado: '' },
+    {
+      sessao: 's',
+      id_usuario: 'u',
+      parametros: {},
+      sinal: new AbortController().signal,
+      enunciado: '',
+      registro: new RegistroOperacoes(JORNAL_DESCARTAVEL),
+      operacao: null,
+    },
   );
   caso('abra o bloco de notas', `confirmado=${v.confirmado} motivo=${v.motivo}`, v.evidencia);
 

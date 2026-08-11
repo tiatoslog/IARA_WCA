@@ -19,6 +19,11 @@ import { BarramentoEventos } from '../servidor/nucleo/kernel/BarramentoEventos';
 import { GerenciadorHabilidades } from '../servidor/nucleo/kernel/GerenciadorHabilidades';
 import type { Habilidade, Verificacao } from '../servidor/nucleo/kernel/Habilidade';
 import { CATALOGO } from '../servidor/nucleo/kernel/habilidades';
+import { RegistroOperacoes } from '../servidor/nucleo/kernel/RegistroOperacoes';
+
+/** Jornal descartável: esta suíte exercita o verificador, não a persistência —
+ *  e um jornal apontado ao repositório sujaria `dados/` a cada rodada. */
+const JORNAL_DESCARTAVEL = mkdtempSync(path.join(tmpdir(), 'iara-jornal-'));
 import { criarPasta } from '../servidor/nucleo/kernel/habilidades/agenteLocal';
 import {
   confirmaAcontecimento,
@@ -38,6 +43,8 @@ function pedido(id: string, parametros: Record<string, unknown> = {}) {
     id_usuario: 'operador_teste',
     sessao: 's1',
     sinal: new AbortController().signal,
+    registro: new RegistroOperacoes(JORNAL_DESCARTAVEL),
+    operacao: null,
     concedidas: [...CONCEDIDAS],
   };
 }
@@ -58,6 +65,10 @@ function dubl(
       timeout_ms: 1000,
       custo: 'zero',
       risco,
+      // Dublê de teste: a semântica declarada é a conservadora que não perturba
+      // o comportamento que este arquivo já provava. A suíte de escrita declara
+      // `escrita_nao_idempotente` explicitamente onde a duplicidade é o assunto.
+      idempotencia: risco === 'baixo' ? 'leitura' : 'escrita_idempotente',
       esquema: {},
     },
     async executar() {
@@ -169,6 +180,8 @@ test('criar_pasta confirma contra o disco e detecta ausência', async (t) => {
     id_usuario: 'operador_teste',
     parametros: { nome: 'Relatorios', local: 'downloads' },
     sinal: new AbortController().signal,
+    registro: new RegistroOperacoes(JORNAL_DESCARTAVEL),
+    operacao: null,
     enunciado: 'crie uma pasta chamada Relatorios',
   };
   const relato = { texto: 'Pasta criada', detalhe: '', resolveu: true };
@@ -197,6 +210,8 @@ test('criar_pasta com nome inválido não confirma nada', async () => {
       id_usuario: 'operador_teste',
       parametros: { nome: '../escapando', local: 'downloads' },
       sinal: new AbortController().signal,
+      registro: new RegistroOperacoes(JORNAL_DESCARTAVEL),
+      operacao: null,
       enunciado: 'x',
     },
   );

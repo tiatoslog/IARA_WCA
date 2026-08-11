@@ -8,6 +8,9 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 dados/memoria/
+# Jornal das operações de escrita: dado de runtime por operador, mesma classe
+# dos shards. Versionar isto publicaria o que cada pessoa mandou a IARA fazer.
+dados/operacoes/
 # gerados pelo beforeDevCommand do apps/desktop (ver copiar-bolha.mjs).
 # A fonte da marca é public/marca/iara-simbolo.png, essa sim versionada.
 public/bolha.html

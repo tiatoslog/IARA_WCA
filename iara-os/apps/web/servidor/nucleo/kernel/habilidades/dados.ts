@@ -32,6 +32,7 @@ export const executarConsultaSql: Habilidade = {
     timeout_ms: 6000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: {
       consulta: { tipo: 'texto', obrigatorio: true, dentre: Object.keys(CONSULTAS) },
       // Validado de novo, contra o esquema da consulta escolhida.
@@ -159,6 +160,7 @@ export const consultarMemoriaCorporativa: Habilidade = {
     timeout_ms: 4000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: { consulta: { tipo: 'texto', obrigatorio: true } },
   },
 
@@ -263,6 +265,7 @@ export const extrairTextoDocumento: Habilidade = {
     timeout_ms: 12000,
     custo: 'zero',
     risco: 'baixo',
+    idempotencia: 'leitura',
     esquema: { arquivo: { tipo: 'texto', obrigatorio: true } },
   },
 

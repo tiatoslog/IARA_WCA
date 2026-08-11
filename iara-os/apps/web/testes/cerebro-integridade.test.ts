@@ -444,6 +444,10 @@ test('13. verificação desconhecida: sem verificador, risco não-baixo termina 
       timeout_ms: 1000,
       custo: 'zero',
       risco: 'medio',
+      // Dublê de teste: a semântica declarada é a conservadora que não perturba
+      // o comportamento que este arquivo já provava. A suíte de escrita declara
+      // `escrita_nao_idempotente` explicitamente onde a duplicidade é o assunto.
+      idempotencia: 'escrita_idempotente',
       esquema: {},
     },
     async executar() {
@@ -496,6 +500,10 @@ test('14b. verificador que lança vira desconhecido, nunca sucesso', async () =>
       timeout_ms: 1000,
       custo: 'zero',
       risco: 'medio',
+      // Dublê de teste: a semântica declarada é a conservadora que não perturba
+      // o comportamento que este arquivo já provava. A suíte de escrita declara
+      // `escrita_nao_idempotente` explicitamente onde a duplicidade é o assunto.
+      idempotencia: 'escrita_idempotente',
       esquema: {},
     },
     async executar() {
