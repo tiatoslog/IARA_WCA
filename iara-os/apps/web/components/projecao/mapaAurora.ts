@@ -36,9 +36,30 @@ export interface EstadoEntidade {
   brilho: number;
   /** Incandescência do núcleo (o encante). */
   interno: number;
-  /** Faixa de matiz, em voltas do círculo HSV (m0..m1). */
+  /**
+   * Faixa que o estado ocupa no espectro da marca (m0..m1), na escala 0..1 de
+   * `paletaMarca`: 0 aço · 0,30 azul · 0,58 violeta · 0,80 champanhe · 1 aço.
+   *
+   * ATÉ 11/08 ISTO ERA MATIZ HSV, e a diferença não é de unidade, é de
+   * arquitetura. Como matiz, o estado tingia por fora um gradiente que já
+   * varria o espectro inteiro sozinho — o sinal chegava à tela com ~6% de
+   * força contra um fundo que mostrava todas as cores ao mesmo tempo, e
+   * nenhum estado conseguia parecer diferente de outro. Como faixa da paleta,
+   * o estado escolhe QUAL PEDAÇO do espectro a entidade mostra, e a cortina
+   * inteira se move com ele.
+   */
   m0: number;
   m1: number;
+  /**
+   * 1 no alerta, 0 no resto. Sinalizador explícito, não deduzido da faixa.
+   *
+   * O alerta era detectado por `m0 < 0,2` — o coral saía de "matiz baixo".
+   * Isso amarrava um comportamento a um acidente de numeração: renumerar as
+   * faixas (que é o que aconteceu) fazia estados normais dispararem coral.
+   * Vive aqui, e não fora da interpolação, para atravessar o mesmo suavizador
+   * de todos os outros campos — assim o coral entra e sai sem salto.
+   */
+  alerta: number;
 }
 
 /**
@@ -67,19 +88,57 @@ export interface EstadoEntidade {
  *   respondendo — amplitude máxima, na energia da voz.
  *   alerta      — a única faixa quente, e a única que tinge o vidro.
  *
- * Matiz em voltas (0..1). As faixas não se sobrepõem entre estados vizinhos,
- * e a de 0.02–0.09 é o coral do alerta — nunca vermelho saturado, invariante
- * mantido. Nenhuma outra faixa desce abaixo de 0,2, que é o limiar que liga o
- * tingimento do vidro e das cortinas.
+ * O verde saiu do repertório inteiro em 11/08, junto com a PALETA GRAFITE: as
+ * faixas antigas eram as cores da identidade "água" de 10/08, e com a peça
+ * virando cromo sobre laca elas deixaram de ter origem no produto — cor sem
+ * origem é exatamente o que se lê como arbitrária.
+ *
+ * AS FAIXAS SÃO POSIÇÕES NA PALETA DA MARCA, não matizes HSV — ver `m0`/`m1`
+ * acima para a razão. A escala é a de `paletaMarca` no shader:
+ *
+ *     0 ── aço ──0,30── azul ──0,58── violeta ──0,80── champanhe ──1 ── aço
+ *
+ * A ordem dos estados sobe monotonicamente por esse eixo, e isso é decisão de
+ * projeto, não arrumação. Duas razões:
+ *
+ *  1. SEMÂNTICA. O repouso fica no ponto mais neutro do espectro (aço) e cada
+ *     estado se afasta dele na medida em que a entidade se afasta do repouso.
+ *     Escuta esfria um passo, ação é azul pleno, raciocínio vira violeta,
+ *     leitura chega ao champanhe. Quem olha não precisa decorar código de
+ *     cores: percebe DISTÂNCIA do repouso, que é a informação que importa.
+ *
+ *  2. TRANSIÇÃO. O controlador interpola m0 e m1 como qualquer outro número.
+ *     Com a ordem monotônica, trocar entre estados vizinhos percorre um trecho
+ *     curto da paleta; sem ela, a mesma troca varreria o espectro inteiro e a
+ *     tela daria um arco-íris a cada mudança. Nenhum valor passa de 1 nem cai
+ *     abaixo de 0 pelo mesmo motivo: a paleta fecha o círculo, mas a
+ *     interpolação não sabe disso e daria a volta longa.
+ *
+ * O ALERTA NÃO TEM FAIXA PRÓPRIA porque coral não é uma cor da paleta: é a
+ * saída dela, e é justamente por não pertencer ao espectro do cromo que ele
+ * funciona como alerta. Entra pelo campo `alerta`, por cima. A faixa dele fica
+ * na do repouso só para a transição de volta não ter nada a atravessar.
+ * Nunca vermelho saturado — invariante mantido.
  */
 const ESTADOS = {
-  disponivel:  { amp: 0.15, vel: 0.25, raio: 1.0,  brilho: 0.62, interno: 0.3,  m0: 0.42, m1: 0.72 },
-  observando:  { amp: 0.1,  vel: 0.5,  raio: 0.85, brilho: 0.65, interno: 0.4,  m0: 0.42, m1: 0.58 },
-  pensando:    { amp: 0.18, vel: 0.7,  raio: 0.95, brilho: 0.35, interno: 1.0,  m0: 0.60, m1: 0.78 },
-  trabalhando: { amp: 0.30, vel: 0.95, raio: 1.18, brilho: 0.68, interno: 0.55, m0: 0.28, m1: 0.46 },
-  revisando:   { amp: 0.22, vel: 0.8,  raio: 0.88, brilho: 0.5,  interno: 0.72, m0: 0.78, m1: 0.95 },
-  respondendo: { amp: 0.9,  vel: 1.1,  raio: 1.1,  brilho: 1.0,  interno: 0.55, m0: 0.38, m1: 0.95 },
-  alerta:      { amp: 0.4,  vel: 0.55, raio: 1.02, brilho: 0.8,  interno: 0.65, m0: 0.02, m1: 0.09 },
+  /* repouso: aço com um sopro de azul. NÃO é aço puro, e a razão é de uso:
+     este é o estado em que a IARA passa a maior parte do tempo, e no extremo
+     zero da paleta a cena inteira chega acromática — a entidade some como
+     presença e vira fumaça cinza. 0,04–0,18 mantém o repouso como o ponto
+     MAIS neutro do repertório sem torná-lo ausência de cor. */
+  disponivel:  { amp: 0.15, vel: 0.25, raio: 1.0,  brilho: 0.62, interno: 0.3,  m0: 0.04, m1: 0.18, alerta: 0 },
+  /* escuta: esfria um passo, e recolhe */
+  observando:  { amp: 0.1,  vel: 0.5,  raio: 0.85, brilho: 0.65, interno: 0.4,  m0: 0.20, m1: 0.32, alerta: 0 },
+  /* ação para fora: azul pleno, aberta e brilhante */
+  trabalhando: { amp: 0.30, vel: 0.95, raio: 1.18, brilho: 0.68, interno: 0.55, m0: 0.32, m1: 0.44, alerta: 0 },
+  /* raciocínio: violeta, aurora apagada e encante no máximo */
+  pensando:    { amp: 0.18, vel: 0.7,  raio: 0.95, brilho: 0.35, interno: 1.0,  m0: 0.48, m1: 0.60, alerta: 0 },
+  /* leitura: champanhe — recolhida como quem escuta, quente como quem pensa */
+  revisando:   { amp: 0.22, vel: 0.8,  raio: 0.88, brilho: 0.5,  interno: 0.72, m0: 0.64, m1: 0.78, alerta: 0 },
+  /* fala: varre quase todo o espectro — é o estado que mais se move */
+  respondendo: { amp: 0.9,  vel: 1.1,  raio: 1.1,  brilho: 1.0,  interno: 0.55, m0: 0.06, m1: 0.74, alerta: 0 },
+  /* alerta: faixa do repouso; quem pinta é o coral, por cima */
+  alerta:      { amp: 0.4,  vel: 0.55, raio: 1.02, brilho: 0.8,  interno: 0.65, m0: 0.04, m1: 0.18, alerta: 1 },
 } satisfies Record<string, EstadoEntidade>;
 
 export type NomeEstadoEntidade = keyof typeof ESTADOS;

@@ -16,9 +16,12 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait-primary',
-    // A tela de abertura do PWA é a casca escura da IARA, não o creme antigo.
-    background_color: '#06110e',
-    theme_color: '#06110e',
+    /* A tela de abertura do PWA é a casca da IARA. Grafite, não o verde-d'água
+       de 10/08 — este é `--iara-bg`, e os dois têm de andar juntos: a splash
+       do sistema aparece ANTES do CSS, então divergir aqui produz um flash de
+       cor errada na abertura, que é o primeiro quadro que o usuário vê. */
+    background_color: '#0b0d0f',
+    theme_color: '#0b0d0f',
     lang: 'pt-BR',
     categories: ['productivity', 'business'],
     icons: [

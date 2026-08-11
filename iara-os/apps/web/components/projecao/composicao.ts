@@ -42,7 +42,11 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 const ShaderLente = {
   uniforms: {
     tDiffuse: { value: null as unknown },
-    uAberracao: { value: 0.0045 },
+    /* Dispersão de lente em três milésimos, não quatro e meio. Sobre um fundo
+       chapado ninguém a via; sobre um degradê de laca ela vira franja colorida
+       visível na borda do quadro, e franja visível não é lente boa — é lente
+       ruim. O papel dela aqui é ser sentida, nunca notada. */
+    uAberracao: { value: 0.003 },
     uVinheta: { value: 0.58 },
     /* Abaixo de 0,6 a curva ACES deixa de ter o pré-ganho que preserva o
        cinza médio e passa a fechar a sombra. É intencional: a referência é
@@ -158,7 +162,7 @@ export function criarComposicao(
        preenche o vão entre um risco e o seguinte e transforma a cortina de luz
        numa fita de cetim — deixa de ser luz e vira pano. Halo largo é
        assinatura de videogame; lente de verdade espalha pouco e perto. */
-    bloom = new UnrealBloomPass(new Vector2(1, 1), 0.26, 0.15, 1.1);
+    bloom = new UnrealBloomPass(new Vector2(1, 1), 0.2, 0.12, 1.25);
     composer.addPass(bloom);
   }
 

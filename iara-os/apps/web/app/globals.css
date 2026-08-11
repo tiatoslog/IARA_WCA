@@ -48,37 +48,51 @@
   /* Tokens canônicos do design system (V4). Os --c-* abaixo são apelidos
    * históricos dos mesmos valores — um fato, um lugar: mudar a paleta é
    * mudar SÓ os --iara-*. */
-  /* PALETA ÁGUA (design aprovado em 10/08/2026): a casca migra da prata
-   * neutra para o verde-d'água quase preto da nova identidade — água funda,
-   * espuma, limo e um único acento menta. A iridescência policromática é
-   * EXCLUSIVA da entidade: a interface é pedra, só a IARA tem cor viva. */
-  /* LEGIBILIDADE (11/08/2026): a escada de tinta é medida contra o fundo do
-   * painel, não escolhida no olho. Antes ela era 16,2 / 6,9 / 3,5:1 — o
-   * terciário ficava abaixo do mínimo AA de 4,5:1 e era justamente ele que
-   * carregava o rótulo de seção, o placeholder do campo e a linha de dica.
-   * Agora é 16,2 / 9,4 / 5,6:1: os três degraus passam de AA e cada um ainda
-   * fica ~1,7× do seguinte, então a hierarquia continua legível como
-   * hierarquia. Discrição se faz com degrau de contraste, não com texto que
-   * some.
+  /* PALETA GRAFITE (11/08/2026): a casca deixa o verde-d'água e volta ao
+   * grafite frio com acento cromo.
    *
-   * Superfície e borda subiram junto pelo mesmo motivo do outro lado: ficha de
-   * sugestão e cápsula de escrita a 4,5% / 10% de alfa não tinham aresta, e
-   * componente sem aresta não é discreto, é ilegível. */
-  --iara-bg: #06110e;
-  --iara-bg-alto: #0a1a15;
-  --iara-surface: rgba(159, 235, 208, 0.07);
+   * A paleta água nasceu em 10/08 junto com a entidade "pedra encantada", e
+   * fazia sentido enquanto a identidade era vidro dispersivo verde-azulado.
+   * A identidade mudou: é cromo líquido sobre laca — é o que está na tela de
+   * entrada e é o que a entidade virou. Uma casca verde ao lado disso não lê
+   * como escolha, lê como sobra: o verde não vem de lugar nenhum do produto.
+   *
+   * A regra que substitui: A INTERFACE NÃO TEM COR. Fundo grafite, superfícies
+   * e bordas em prata de baixíssimo alfa, acento cromo. Cor no quadro só
+   * aparece por dois motivos declarados — a entidade (que é policromática por
+   * identidade) e o STATUS (alerta, atenção, ligado), que é informação, não
+   * decoração. Nada mais tem permissão de ter matiz.
+   *
+   * A escada de tinta foi remedida contra o novo fundo, não convertida no
+   * olho: 15,9 / 9,5 / 5,9:1. Os três degraus passam de AA e cada um fica
+   * ~1,65× do seguinte, então a hierarquia continua legível como hierarquia. */
+  /* LEGIBILIDADE: a escada de tinta é MEDIDA contra o fundo do painel, nunca
+   * escolhida no olho — os números vivem no bloco acima e foram refeitos
+   * quando o fundo mudou de verde para grafite. Discrição se faz com degrau de
+   * contraste, não com texto que some.
+   *
+   * Superfície e borda seguem a mesma regra: a 4,5% / 10% de alfa a ficha de
+   * sugestão e a cápsula de escrita não tinham aresta, e componente sem aresta
+   * não é discreto, é ilegível. */
+  --iara-bg: #0b0d0f;
+  --iara-bg-alto: #14171a;
+  --iara-surface: rgba(222, 232, 240, 0.065);
   /* Opacidade alta é invariante, não gosto: o painel de trabalho não pode
    * mudar de piso porque a aurora passou atrás dele. Presença ≠ informação. */
-  --iara-surface-elevated: rgba(10, 26, 21, 0.86);
-  --iara-border: rgba(159, 235, 208, 0.16);
-  --iara-border-strong: rgba(159, 235, 208, 0.32);
-  --iara-text: #ecf6f0;
-  --iara-text-secondary: #a8c2b6;
-  --iara-text-tertiary: #7d968b;
-  --iara-accent: #9febd0;
+  --iara-surface-elevated: rgba(17, 20, 23, 0.86);
+  --iara-border: rgba(214, 224, 233, 0.14);
+  --iara-border-strong: rgba(214, 224, 233, 0.28);
+  --iara-text: #eef1f4;
+  --iara-text-secondary: #b3bcc4;
+  --iara-text-tertiary: #8b959d;
+  /* Cromo, não menta. O acento é a própria identidade: prata levemente fria,
+   * do mesmo material da entidade. */
+  --iara-accent: #d7e2ea;
   --iara-danger: #f0876a; /* coral quente — nunca vermelho saturado */
   --iara-warning: #e6c98a;
-  --iara-success: #9fd6a8;
+  /* Status "ligado". Dessaturado até quase encostar na prata: precisa ser
+   * distinguível de um indicador apagado, não precisa ser verde de semáforo. */
+  --iara-success: #a6c8b4;
 
   --c-fundo: var(--iara-bg);
   --c-fundo-alto: var(--iara-bg-alto);
@@ -94,6 +108,54 @@
   --c-verde: var(--iara-success);
   --c-alerta: var(--iara-danger);
   --c-brilho: 0 0 24px rgba(255, 255, 255, 0.06);
+
+  /* ------------------------------------------------------------------------
+   * ESCALA TIPOGRÁFICA (11/08/2026)
+   *
+   * A folha tinha TREZE tamanhos de fonte entre 9 e 17px, em passos de meio
+   * pixel, mais sete trackings e doze raios. Isso não é escala — é uma decisão
+   * tomada de novo, do zero, em cada componente. E é a resposta para "a
+   * tipografia não condiz com a marca": a portaria usa exatamente a mesma
+   * pilha de fontes que o resto do app. O que ela tem e o app não tinha é
+   * DISCIPLINA. Um sistema tipográfico não se percebe item a item; percebe-se
+   * no conjunto, como coerência — e quatorze exceções destroem o conjunto
+   * mesmo quando cada exceção, sozinha, parece razoável.
+   *
+   * Seis degraus, razão de ~1,15 entre vizinhos. É apertado de propósito:
+   * interface densa precisa de degraus curtos, senão o passo seguinte grita.
+   * Nenhum valor antigo se moveu mais de 1px, então nada de layout quebra —
+   * o que muda é que agora existe um lugar para decidir isto.
+   *
+   * REGRA DE USO: nada de `font-size` cru fora daqui. Se um componente parece
+   * precisar de um sétimo tamanho, quase sempre o que ele precisa é de outro
+   * PESO ou de outro tom de tinta — a hierarquia tem três eixos, e mexer no
+   * tamanho é o mais grosseiro dos três.
+   * ---------------------------------------------------------------------- */
+  --t-micro: 10px;    /* dado, telemetria, selo — o que se lê de relance */
+  --t-rotulo: 11.5px; /* rótulo de seção, legenda, nota de rodapé */
+  --t-ui: 12.5px;     /* controle: botão pequeno, cápsula, metadado */
+  --t-corpo: 14px;    /* leitura: mensagem, campo, botão principal */
+  --t-titulo: 16px;   /* título de painel */
+  --t-marca: 17px;    /* a palavra IARA — só ela */
+
+  /* O tracking segue o TAMANHO e a CAIXA, não o gosto: quanto menor e mais
+     versal, mais espaço entre letras precisa para não fechar. É a mesma lei
+     que a portaria já aplicava (0,22em na marca, 0,06em nos rótulos) — aqui
+     ela vira token em vez de ficar implícita em dois lugares. */
+  --tr-marca: 0.22em;  /* versal espaçada, só a marca */
+  --tr-versal: 0.16em; /* rótulo de seção em caixa alta */
+  --tr-rotulo: 0.06em; /* rótulo pequeno, legenda */
+  --tr-ui: 0.02em;     /* texto corrido de interface */
+
+  /* Cinco raios. O salto entre eles é grande de propósito: raio é o que diz
+     QUE TIPO de superfície é aquilo (aresta técnica, controle, cartão,
+     painel), e valores próximos demais apagam justamente essa distinção. */
+  --r-min: 4px;      /* aresta técnica: barra, medidor, marcador */
+  --r-p: 10px;       /* etiqueta, aviso, bloco pequeno */
+  --r-m: 12px;       /* campo, botão, cápsula de escrita */
+  --r-g: 18px;       /* cartão, balão */
+  --r-gg: 22px;      /* painel, placa */
+  --r-capsula: 999px;
 }
 
 * {
@@ -267,7 +329,7 @@ body {
 
 .medidor {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--r-min);
   background: var(--linha);
   overflow: hidden;
 }
@@ -275,7 +337,7 @@ body {
 .medidor > i {
   display: block;
   height: 100%;
-  border-radius: 3px;
+  border-radius: var(--r-min);
   transition: width 900ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -290,16 +352,16 @@ body {
 }
 .rolagem::-webkit-scrollbar-thumb {
   background: var(--linha);
-  border-radius: 4px;
+  border-radius: var(--r-min);
 }
 
 .campo {
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--t-corpo);
   color: var(--tinta);
   background: #fff;
   border: 1px solid var(--linha);
-  border-radius: 10px;
+  border-radius: var(--r-p);
   padding: 11px 13px;
   outline: none;
   resize: none;
@@ -313,7 +375,7 @@ body {
 
 .botao {
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--t-corpo);
   font-weight: 600;
   letter-spacing: 0.1px;
   display: inline-flex;
@@ -323,7 +385,7 @@ body {
   border: 1px solid var(--linha);
   background: linear-gradient(180deg, #fffdf9 0%, var(--painel) 100%);
   color: var(--tinta);
-  border-radius: 10px;
+  border-radius: var(--r-p);
   padding: 9px 15px;
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(60, 48, 32, 0.07);
@@ -385,7 +447,7 @@ body {
   flex-wrap: wrap;
   justify-content: center;
   padding: 10px 16px;
-  border-radius: 12px;
+  border-radius: var(--r-m);
   background: rgba(251, 248, 242, 0.8);
   border: 1px solid var(--linha);
   max-width: 100%;
@@ -404,7 +466,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: var(--t-corpo);
   color: var(--tinta-fraca);
 }
 
@@ -415,9 +477,9 @@ body {
   right: 0;
   z-index: 60;
   padding: 5px 14px;
-  font-size: 10.5px;
+  font-size: var(--t-micro);
   line-height: 1.4;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tr-ui);
   text-align: center;
   color: rgba(240, 170, 148, 0.9);
   background: rgba(20, 12, 10, 0.6);
@@ -472,7 +534,7 @@ body {
 
   .hud .medidor,
   .hud > div > div {
-    font-size: 9.5px;
+    font-size: var(--t-micro);
   }
 }
 
@@ -543,8 +605,8 @@ body {
   background: rgba(18, 18, 24, 0.55);
   color: var(--palco-tinta);
   border: 1px solid var(--c-linha-forte);
-  border-radius: 999px;
-  font-size: 12px;
+  border-radius: var(--r-capsula);
+  font-size: var(--t-ui);
   backdrop-filter: blur(18px) saturate(1.4);
   box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
 }
@@ -578,7 +640,7 @@ body {
 
 .presenca-vazio h2 {
   margin: 4px 0 0;
-  font-size: 15px;
+  font-size: var(--t-titulo);
   font-weight: 600;
   color: var(--palco-tinta);
 }
@@ -586,7 +648,7 @@ body {
 .presenca-vazio p {
   margin: 0;
   max-width: 46ch;
-  font-size: 12.5px;
+  font-size: var(--t-ui);
   line-height: 1.6;
 }
 
@@ -605,7 +667,7 @@ body {
   color: var(--iara-text-tertiary);
   background: rgba(18, 18, 24, 0.55);
   border: 1px solid var(--iara-border);
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   cursor: pointer;
   backdrop-filter: blur(18px) saturate(1.4);
   transition: color 180ms ease, border-color 180ms ease;
@@ -623,7 +685,7 @@ body {
   display: flex;
   gap: 4px;
   padding: 3px;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   background: var(--iara-surface);
   border: 1px solid var(--iara-border);
 }
@@ -631,13 +693,13 @@ body {
 .seletor-desempenho button {
   flex: 1;
   font-family: inherit;
-  font-size: 10px;
+  font-size: var(--t-micro);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tr-ui);
   color: var(--iara-text-tertiary);
   background: none;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   padding: 5px 0;
   cursor: pointer;
   transition: background 180ms ease, color 180ms ease;
@@ -677,19 +739,19 @@ body {
   align-items: center;
   justify-content: space-between;
   margin: 0 0 12px;
-  font-size: 10px;
+  font-size: var(--t-micro);
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--tr-versal);
   text-transform: uppercase;
   color: var(--c-tinta-3);
 }
 
 .selo {
   font-style: normal;
-  font-size: 9px;
-  letter-spacing: 0.06em;
+  font-size: var(--t-micro);
+  letter-spacing: var(--tr-rotulo);
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   background: var(--c-superficie);
   border: 1px solid var(--c-linha);
   color: var(--c-tinta-2);
@@ -712,8 +774,8 @@ body {
   justify-content: space-between;
   align-items: baseline;
   margin-bottom: 5px;
-  font-size: 12px;
-  letter-spacing: 0.01em;
+  font-size: var(--t-ui);
+  letter-spacing: var(--tr-ui);
 }
 
 .capacidade-nome {
@@ -728,14 +790,14 @@ body {
 
 .capacidade-valor {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--t-micro);
   font-variant-numeric: tabular-nums;
   color: var(--c-tinta-3);
 }
 
 .capacidade-trilho {
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--r-min);
   background: var(--c-superficie);
   overflow: hidden;
 }
@@ -758,7 +820,7 @@ body {
 
 .presenca-objetivo {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: var(--t-ui);
   line-height: 1.5;
   color: var(--c-tinta);
 }
@@ -772,7 +834,7 @@ ol.plano {
 }
 
 .passo {
-  font-size: 11.5px;
+  font-size: var(--t-rotulo);
   line-height: 1.45;
   color: var(--c-tinta-2);
   transition: color 300ms ease;
@@ -804,14 +866,14 @@ ol.plano {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 10px;
-  letter-spacing: 0.04em;
+  font-size: var(--t-micro);
+  letter-spacing: var(--tr-rotulo);
   color: var(--c-tinta-3);
 }
 
 .telemetria-item b {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: var(--t-rotulo);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--c-tinta);
@@ -819,7 +881,7 @@ ol.plano {
 
 .presenca-nota {
   margin: 12px 0 0;
-  font-size: 11px;
+  font-size: var(--t-rotulo);
   line-height: 1.5;
   color: var(--c-tinta-3);
 }
@@ -829,7 +891,7 @@ ol.plano {
 .seletor-projecao {
   display: inline-flex;
   padding: 2px;
-  border-radius: 9px;
+  border-radius: var(--r-p);
   background: rgba(251, 248, 242, 0.82);
   border: 1px solid var(--linha);
   backdrop-filter: blur(8px);
@@ -837,12 +899,12 @@ ol.plano {
 
 .seletor-projecao button {
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: var(--t-rotulo);
   font-weight: 600;
   color: var(--tinta-fraca);
   background: none;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--r-p);
   padding: 5px 11px;
   cursor: pointer;
   transition:
@@ -865,13 +927,13 @@ ol.plano {
   transform: translateX(-50%);
   z-index: 70;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: var(--t-ui);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: var(--tr-ui);
   color: var(--c-fundo);
   background: var(--c-prata);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   padding: 10px 20px;
   cursor: pointer;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
@@ -912,18 +974,18 @@ ol.plano {
 }
 
 .conversa-titulo {
-  font-size: 15px;
+  font-size: var(--t-titulo);
   font-weight: 700;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--tr-marca);
   color: var(--c-tinta);
 }
 
 .conversa-estagio {
-  font-size: 11px;
-  letter-spacing: 0.02em;
+  font-size: var(--t-rotulo);
+  letter-spacing: var(--tr-ui);
   color: var(--c-tinta-2);
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   background: var(--c-superficie);
   border: 1px solid var(--c-linha);
 }
@@ -932,11 +994,11 @@ ol.plano {
    linguagem da cápsula de estágio ao lado — são dois fatos do mesmo nível. */
 .conversa-operador {
   font-family: inherit;
-  font-size: 11px;
-  letter-spacing: 0.02em;
+  font-size: var(--t-rotulo);
+  letter-spacing: var(--tr-ui);
   color: var(--c-tinta-2);
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
@@ -970,8 +1032,8 @@ ol.plano {
 .conversa-aviso {
   margin-top: 10px;
   padding: 7px 11px;
-  border-radius: 10px;
-  font-size: 11px;
+  border-radius: var(--r-p);
+  font-size: var(--t-rotulo);
   line-height: 1.5;
   color: rgba(240, 170, 148, 0.95);
   background: rgba(240, 135, 106, 0.08);
@@ -981,12 +1043,12 @@ ol.plano {
 /* Religar depois de uma recusa terminal: ação pequena, dentro do aviso. */
 .conversa-aviso .religar {
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--t-rotulo);
   font-weight: 600;
   color: var(--iara-bg);
   background: var(--iara-accent);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   padding: 3px 12px;
   margin-left: 6px;
   cursor: pointer;
@@ -1007,7 +1069,7 @@ ol.plano {
 
 .balao {
   max-width: 86%;
-  font-size: 13.5px;
+  font-size: var(--t-corpo);
   line-height: 1.55;
   padding: 10px 14px;
   white-space: pre-wrap;
@@ -1020,14 +1082,14 @@ ol.plano {
   color: var(--c-fundo);
   background: var(--c-prata);
   border-color: transparent;
-  border-radius: 18px 18px 6px 18px;
+  border-radius: var(--r-g) 18px 6px 18px;
 }
 
 .balao.iara {
   align-self: flex-start;
   color: var(--c-tinta);
   background: var(--c-vidro-alto);
-  border-radius: 18px 18px 18px 6px;
+  border-radius: var(--r-g) 18px 18px 6px;
 }
 
 .balao .reticencias {
@@ -1054,9 +1116,9 @@ ol.plano {
 }
 
 .sugestoes-titulo {
-  font-size: 10px;
+  font-size: var(--t-micro);
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--tr-versal);
   text-transform: uppercase;
   color: var(--c-tinta-3);
   margin: 0 0 4px;
@@ -1064,13 +1126,13 @@ ol.plano {
 
 .sugestao {
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: var(--t-ui);
   line-height: 1.45;
   text-align: left;
   color: var(--c-tinta-2);
   background: var(--c-superficie);
   border: 1px solid var(--c-linha);
-  border-radius: 12px;
+  border-radius: var(--r-m);
   padding: 9px 13px;
   cursor: pointer;
   transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
@@ -1104,22 +1166,22 @@ ol.plano {
 
 .ficha-cabecalho h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--t-corpo);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: var(--tr-ui);
   color: var(--c-tinta);
 }
 
 .ficha-fechar {
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--t-corpo);
   line-height: 1;
   margin-left: auto;
   padding: 4px 6px;
   color: var(--c-tinta-2);
   background: none;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--r-p);
   cursor: pointer;
   transition: color 160ms ease, background 160ms ease;
 }
@@ -1131,7 +1193,7 @@ ol.plano {
 
 .ficha-nota {
   margin: -8px 0 0;
-  font-size: 11.5px;
+  font-size: var(--t-rotulo);
   line-height: 1.55;
   color: var(--c-tinta-2);
 }
@@ -1147,15 +1209,15 @@ ol.plano {
 
 .ficha-campo > span,
 .ficha-campo > legend {
-  font-size: 11.5px;
+  font-size: var(--t-rotulo);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: var(--tr-ui);
   color: var(--c-tinta);
   padding: 0;
 }
 
 .ficha-campo small {
-  font-size: 10.5px;
+  font-size: var(--t-micro);
   line-height: 1.5;
   color: var(--c-tinta-3);
 }
@@ -1167,12 +1229,12 @@ ol.plano {
 .ficha-campo input,
 .ficha-campo textarea {
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--t-corpo);
   line-height: 1.5;
   color: var(--c-tinta);
   background: var(--c-superficie);
   border: 1px solid var(--c-linha);
-  border-radius: 12px;
+  border-radius: var(--r-m);
   padding: 9px 12px;
   outline: none;
   resize: none;
@@ -1198,7 +1260,7 @@ ol.plano {
   display: flex;
   gap: 5px;
   padding: 3px;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   background: var(--c-superficie);
   border: 1px solid var(--c-linha);
 }
@@ -1206,12 +1268,12 @@ ol.plano {
 .ficha-opcoes button {
   flex: 1;
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: var(--t-rotulo);
   font-weight: 600;
   color: var(--c-tinta-2);
   background: none;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   padding: 6px 0;
   cursor: pointer;
   transition: background 180ms ease, color 180ms ease;
@@ -1235,12 +1297,12 @@ ol.plano {
 
 .ficha-salvar {
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--t-ui);
   font-weight: 600;
   color: var(--c-fundo);
   background: var(--c-prata);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   padding: 8px 20px;
   cursor: pointer;
   transition: background 160ms ease, opacity 160ms ease;
@@ -1256,7 +1318,7 @@ ol.plano {
 }
 
 .ficha-estado {
-  font-size: 11px;
+  font-size: var(--t-rotulo);
   color: var(--c-tinta-2);
 }
 
@@ -1264,8 +1326,8 @@ ol.plano {
 .escuta-faixa {
   margin: 0 0 10px;
   padding: 9px 13px;
-  border-radius: 12px;
-  font-size: 12px;
+  border-radius: var(--r-m);
+  font-size: var(--t-ui);
   line-height: 1.45;
   min-height: 38px;
   display: flex;
@@ -1310,12 +1372,12 @@ ol.plano {
 
 .campo-conversa {
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: var(--t-corpo);
   line-height: 1.5;
   color: var(--c-tinta);
   background: var(--c-superficie);
   border: 1px solid var(--c-linha);
-  border-radius: 16px;
+  border-radius: var(--r-g);
   padding: 11px 14px;
   outline: none;
   resize: none;
@@ -1421,8 +1483,8 @@ ol.plano {
 }
 
 .conversa-dica {
-  font-size: 10.5px;
-  letter-spacing: 0.02em;
+  font-size: var(--t-micro);
+  letter-spacing: var(--tr-ui);
   color: var(--c-tinta-3);
   margin-top: 8px;
 }
@@ -1522,7 +1584,7 @@ ol.plano {
   flex-direction: column;
   gap: 14px;
   padding: 30px 28px 26px;
-  border-radius: 22px;
+  border-radius: var(--r-gg);
   background: rgba(6, 12, 14, 0.62);
   border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(30px) saturate(1.3);
@@ -1551,9 +1613,9 @@ ol.plano {
 .portaria-nome {
   margin: 2px 0 4px;
   text-align: center;
-  font-size: 17px;
+  font-size: var(--t-marca);
   font-weight: 600;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--tr-marca);
   /* O tracking empurra a palavra para a esquerda: sem compensar o espaço que
      sobra depois da última letra, ela fica descentrada dentro do card. */
   text-indent: 0.22em;
@@ -1566,9 +1628,9 @@ ol.plano {
 .portaria-natureza {
   margin: 14px 0 0;
   text-align: center;
-  font-size: 11.5px;
+  font-size: var(--t-rotulo);
   line-height: 1.5;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tr-rotulo);
   color: var(--c-tinta-3);
 }
 
@@ -1579,20 +1641,20 @@ ol.plano {
 }
 
 .portaria-campo > span {
-  font-size: 11px;
+  font-size: var(--t-rotulo);
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tr-rotulo);
   text-transform: uppercase;
   color: var(--c-tinta-3);
 }
 
 .portaria-campo input {
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--t-corpo);
   color: var(--c-tinta);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--c-linha);
-  border-radius: 12px;
+  border-radius: var(--r-m);
   padding: 11px 13px;
   outline: none;
   width: 100%;
@@ -1606,31 +1668,32 @@ ol.plano {
 }
 
 .portaria-erro {
-  font-size: 12px;
+  font-size: var(--t-ui);
   line-height: 1.45;
   padding: 9px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-p);
   color: rgba(240, 170, 148, 0.95);
   background: rgba(240, 135, 106, 0.1);
   border: 1px solid rgba(240, 135, 106, 0.28);
 }
 
-/* Metal, e não o acento da casa.
+/* Metal, e não uma cor.
  *
- * O `--c-prata` do app é menta (#9febd0) — cor viva, que pertence à ENTIDADE
- * lá dentro. A portaria é a marca, e a marca é acromática por decisão: cromo,
- * prata, branco, preto e grafite, mais nada. Um botão verde na porta anunciava
- * uma identidade que o produto não tem. O degradê de três paradas é chapa
- * polida: claro em cima, sombra na dobra, luz de volta na base. */
+ * A portaria é a marca, e a marca é acromática por decisão: cromo, prata,
+ * branco, preto e grafite, mais nada. Este botão foi o primeiro lugar do
+ * produto a assumir isso — em 11/08 a casca inteira veio atrás (ver PALETA
+ * GRAFITE no topo), e `--c-prata` deixou de ser menta para ser prata de fato.
+ * O degradê de três paradas é chapa polida: claro em cima, sombra na dobra,
+ * luz de volta na base. */
 .portaria-entrar {
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: var(--t-corpo);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tr-ui);
   color: #14171a;
   background: linear-gradient(180deg, #ffffff 0%, #d5dade 46%, #a9b0b6 54%, #e6eaed 100%);
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-capsula);
   padding: 12px 18px;
   margin-top: 4px;
   cursor: pointer;

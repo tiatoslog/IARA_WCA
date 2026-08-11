@@ -27,8 +27,6 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   AdditiveBlending,
   Color,
-  CylinderGeometry,
-  DoubleSide,
   IcosahedronGeometry,
   Matrix3,
   Matrix4,
@@ -58,6 +56,8 @@ import {
   type ModoDesempenho,
 } from './desempenho';
 import { criarComposicao, type Composicao } from './composicao';
+import { GLSL_COMUM, GLSL_PALETA } from './glsl';
+import { criarAurora } from './aurora';
 import {
   criarCenaEstudio,
   criarFundo,
@@ -67,59 +67,7 @@ import {
   type RigInterno,
 } from './estudio';
 
-/* ------------------------------------------------------------------------- */
-/* GLSL compartilhado                                                        */
-/* ------------------------------------------------------------------------- */
-
-const GLSL_COMUM = /* glsl */ `
-float hash(vec3 p){ p=fract(p*0.3183099+vec3(0.1,0.2,0.3)); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
-float noise(vec3 p){
-  vec3 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
-  return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),
-                 mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
-             mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),
-                 mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);
-}
-float fbm(vec3 p){ float v=0., a=0.5; for(int i=0;i<3;i++){ v+=a*noise(p); p*=2.03; a*=0.5; } return v; }
-vec3 hsv2rgb(vec3 c){
-  vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0);
-  vec3 p = abs(fract(c.xxx + K.xyz)*6.0 - K.www);
-  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
-/* Radiância, não valor de tela.
-   A cor da aurora e do encante foi afinada quando o shader escrevia direto no
-   canvas sRGB — o número saía como o olho o via. Com a composição no meio, o
-   quadro inteiro é linear até o passe de lente, e escrever o mesmo número ali
-   estoura tudo (foi exatamente o que aconteceu: chapado pastel com borda dura,
-   que é o formato do corte de faixa). Esta conversão devolve o valor afinado
-   para radiância; a curva do sensor o traz de volta ao mesmo lugar, agora com
-   o joelho de filme no alto em vez de tesoura.
-
-   O grau não é sempre 2,2. A conversão exata devolve a luminância, mas também
-   devolve a saturação que o corte antigo lavava: a aurora vinha pastel porque
-   estourava, e em 2,2 ela reaparece azul-marinho e vinho — outra cor, não
-   outra exposição. 1,5 é o meio-termo que preserva o pastel da identidade. O
-   encante não tem esse problema e usa a conversão inteira. */
-vec3 paraLinear(vec3 c, float grau){ return pow(max(c, vec3(0.0)), vec3(grau)); }
-`;
-
-/* Espectro da marca com o toque coral num segmento estreito. */
-const GLSL_PALETA = /* glsl */ `
-vec3 paletaMarca(float t){
-  vec3 verde   = vec3(0.345, 0.902, 0.776);
-  vec3 azul    = vec3(0.435, 0.714, 1.000);
-  vec3 lilas   = vec3(0.706, 0.549, 1.000);
-  vec3 laranja = vec3(1.000, 0.550, 0.360);
-  vec3 ambar   = vec3(1.000, 0.851, 0.541);
-  t = fract(t);
-  vec3 c = mix(verde, azul, smoothstep(0.0, 0.26, t));
-  c = mix(c, lilas, smoothstep(0.26, 0.52, t));
-  c = mix(c, laranja, smoothstep(0.52, 0.68, t));
-  c = mix(c, ambar, smoothstep(0.68, 0.80, t));
-  c = mix(c, verde, smoothstep(0.80, 1.0, t));
-  return c;
-}
-`;
+/* GLSL compartilhado com a aurora — ver `glsl.ts`. */
 
 interface UniformesEntidade {
   uT: { value: number };
@@ -129,7 +77,22 @@ interface UniformesEntidade {
   uRaio: { value: number };
   uBrilho: { value: number };
   uInterno: { value: number };
+  /**
+   * A faixa da `paletaMarca` que o estado corrente ocupa (início, fim), na
+   * mesma escala 0..1 da paleta. NÃO é matiz HSV — foi, até 11/08, e a troca
+   * é o que devolveu legibilidade ao canal de cor: o estado agora escolhe uma
+   * REGIÃO do espectro da marca em vez de tingir por fora um gradiente que o
+   * ignorava.
+   */
   uMatiz: { value: Vector2 };
+  /**
+   * 0 no repertório normal, 1 no alerta. Substituiu o teste `uMatiz.x < 0.2`,
+   * que era um acoplamento escondido: o alerta era deduzido de "matiz baixo",
+   * então qualquer faixa que começasse embaixo disparava coral por engano —
+   * e a renumeração das faixas passa exatamente por lá. Sinalizador explícito
+   * não tem esse problema, e interpola junto com o resto no controlador.
+   */
+  uAlerta: { value: number };
 }
 
 /* ------------------------------------------------------------------------- */
@@ -157,9 +120,11 @@ function AmbienteEstudio() {
     const alvo = pmrem.fromScene(estudio, 0.035);
     descartarCenaEstudio(estudio);
     cena.environment = alvo.texture;
-    // Preto quase absoluto: o ciclorama é que desenha a profundidade, e o
-    // buffer de transmissão precisa de fundo real para o vidro não lavar.
-    cena.background = new Color(0x030807);
+    /* Grafite neutro, não preto esverdeado. O ciclorama cobre o quadro inteiro
+       e é ele que desenha a profundidade — isto aqui só aparece no buffer de
+       transmissão, e mesmo lá a temperatura importa: o verde antigo tingia o
+       que o cromo refrata. */
+    cena.background = new Color(0x080a0c);
 
     return () => {
       cena.environment = null;
@@ -202,6 +167,19 @@ function Composicao() {
   useEffect(() => {
     const alvo = criarComposicao(gl as WebGLRenderer, cena, camera as Camera, {
       bloom: modo !== 'baixo',
+      /* MSAA de volta, e a causa do apagão ficou PROVADA por eliminação.
+         Durante o desvio das fitas de vidro, ligar `samples: 4` aqui deixava a
+         tela inteiramente preta: nenhum programa de shader chegava a ser
+         compilado, nenhum quadro era desenhado, e não havia erro no console.
+         Preto silencioso, a pior falha possível.
+         Na época a suspeita era interação entre o passe de transmissão do three
+         e um alvo multiamostrado de meia precisão, mas ficou escrita como
+         suspeita porque as fitas eram a única evidência. Removidas as fitas —
+         as únicas superfícies com `transmission` além da própria pedra — o MSAA
+         voltou a funcionar sem tocar em mais nada. A suspeita era a resposta.
+         CONSEQUÊNCIA PRÁTICA: introduzir uma SEGUNDA superfície transmissiva na
+         cena reabre o bug. Se um dia isso for necessário, este é o primeiro
+         lugar a desligar. */
       amostras: modo === 'baixo' ? 0 : 4,
     });
     alvo.redimensionar(tamanho.width, tamanho.height, densidade);
@@ -235,8 +213,8 @@ function Composicao() {
  * de verdade não tem espessura única, e é a variação que produz a mancha de
  * cor que anda pela superfície em vez do verniz uniforme.
  */
-const FILME_MIN = 150;
-const FILME_MAX = 540;
+const FILME_MIN = 210;
+const FILME_MAX = 430;
 
 /**
  * O corpo da pedra. Vidro óptico: transmissão total, dispersão, iridescência,
@@ -263,29 +241,58 @@ function criarMaterialPedra(
   matrizNormal: { value: Matrix3 },
 ) {
   const mat = new MeshPhysicalMaterial({
-    color: new Color(0xffffff),
+    /* A cor da fração NÃO transmitida. Com transmissão total ela não existia e
+       o branco era inócuo; agora ela é o corpo grafite sob o cromo, e é dela
+       que vem o peso da peça. Grafite claro, não preto: em 0x0b1216 a metade
+       sem luz fechava por completo e a peça virava bola de boliche — o corpo
+       precisa de meio-tom para as dobras existirem na sombra. */
+    color: new Color(0x4a545b),
     metalness: 0,
-    roughness: 0.012,
-    transmission: 1.0,
-    thickness: 2.6,
-    ior: 1.62,
-    // O franjado de cor é identidade — está na referência e está na pedra
-    // desde o primeiro dia. Só recuou de 14 para 10: acima disso as três
-    // amostras que a transmissão de tela oferece param de ler como arco e
-    // passam a ler como três fantasmas separados, que é aparência de efeito.
-    dispersion: 4.0,
-    /* Absorção mais curta. O vidro não escurece por igual: escurece por
-       caminho percorrido, e é justamente esse gradiente que faz a peça ter
-       volume em vez de ser casca acesa. Com 5,0 o corpo inteiro chegava claro
-       e a pedra lia como mármore leitoso. */
-    attenuationColor: new Color(0xd0eaff),
-    attenuationDistance: 2.6,
-    iridescence: 0.26,
-    iridescenceIOR: 1.3,
+    roughness: 0.006,
+    /* A mudança que mais mexe na leitura do material, e a que precisou de duas
+       tentativas para achar o ponto.
+
+       Em 1,0 a superfície é dominada pela refração: a luz atravessa, o
+       interior fica claro e a peça lê como bala de vidro — sem peso, sem
+       metade escura, sem o reflexo contínuo que faz cromo ser cromo.
+
+       Em 0,72 o pêndulo passou do outro lado: 28% de base opaca escura é muita
+       base, e o que sobrou na tela foi uma esfera preta com três realces. Preto
+       polido é UMA das referências, mas o pedido é cromo AQUÁTICO — e água
+       precisa deixar luz passar para ter profundidade.
+
+       0,84 é o meio-termo com função: sobra base o bastante (16%) para o
+       reflexo do estúdio ter contra o que se destacar e para a peça ter peso,
+       e passa luz o bastante para o corpo ter interior. */
+    transmission: 0.84,
+    thickness: 1.9,
+    ior: 1.55,
+    /* O franjado saiu de 4,0 para 1,3, e é aqui que mora a delicadeza.
+       Dispersão alta com dezenas de lóbulos multiplica o arco por lóbulo: o que
+       chega à tela não é prisma, é confete de arco-íris — foi o que deixou o
+       interior sujo. Em 1,3 a separação só aparece onde o caminho óptico é
+       longo (borda, vale de dobra), que é onde uma peça real a mostra. */
+    dispersion: 1.3,
+    /* Absorção fria de aço: o corpo escurece por caminho percorrido, e é esse
+       gradiente — borda clara, miolo denso — que dá volume. Sem ele o vidro é
+       casca. A cor recuou de grafite escuro para azul-aço claro pelo mesmo
+       motivo da transmissão: absorção escura somada a base escura fechava o
+       interior duas vezes. */
+    /* Valor inicial apenas: o loop reescreve isto todo quadro a partir de
+       `corAgua`/`corAlerta` na cena. Os dois precisam concordar. */
+    attenuationColor: new Color(0xbcd2e2),
+    attenuationDistance: 3.6,
+    /* Um décimo, não um quarto. A iridescência é sofisticação quando é
+       insinuação na borda e é verniz de bijuteria quando cobre o corpo. */
+    iridescence: 0.1,
+    iridescenceIOR: 1.28,
     iridescenceThicknessRange: [FILME_MIN, FILME_MAX],
     clearcoat: 1.0,
-    clearcoatRoughness: 0.035,
-    envMapIntensity: 1.9,
+    clearcoatRoughness: 0.012,
+    /* Cromo é quase só ambiente: o que se vê na superfície é o estúdio, não a
+       cor do objeto. Subir isto e agrandar os difusores em `estudio.ts` são a
+       mesma decisão vista de dois lados. */
+    envMapIntensity: 3.6,
   });
 
   mat.onBeforeCompile = (shader) => {
@@ -303,11 +310,11 @@ function criarMaterialPedra(
         /* glsl */ `
         vPedra = position;
         vec3 mOff = vec3(uMorph, uMorph*0.7, uMorph*1.3);
-        float n0 = fbm(position*1.5 + mOff);
+        float n0 = campoPedra(position, mOff);
         float eD = 0.07;
-        float nDx = fbm((position + vec3(eD,0.,0.))*1.5 + mOff);
-        float nDy = fbm((position + vec3(0.,eD,0.))*1.5 + mOff);
-        float nDz = fbm((position + vec3(0.,0.,eD))*1.5 + mOff);
+        float nDx = campoPedra(position + vec3(eD,0.,0.), mOff);
+        float nDy = campoPedra(position + vec3(0.,eD,0.), mOff);
+        float nDz = campoPedra(position + vec3(0.,0.,eD), mOff);
         // h = (n0 - 0.5) * uDeform * 2  =>  grad(h) = grad(n) * uDeform * 2
         vec3 gradH = ((vec3(nDx,nDy,nDz) - n0) / eD) * uDeform * 2.0;
         vec3 gradT = gradH - dot(gradH, normal) * normal;
@@ -329,7 +336,7 @@ function criarMaterialPedra(
         '#include <roughnessmap_fragment>',
         /* glsl */ `
         #include <roughnessmap_fragment>
-        vec3 pMicro = vPedra * 15.0;
+        vec3 pMicro = vPedra * 11.0;
         float micro0 = noise(pMicro);
         const float eMicro = 0.16;
         vec3 gradMicro = (vec3(
@@ -337,16 +344,20 @@ function criarMaterialPedra(
           noise(pMicro + vec3(0.0, eMicro, 0.0)),
           noise(pMicro + vec3(0.0, 0.0, eMicro))) - micro0) / eMicro;
         vec3 gradMicroVista = uMatrizNormal * gradMicro;
-        float polimento = noise(vPedra * 5.5 + 11.0);
+        float polimento = noise(vPedra * 4.2 + 11.0);
         float densidade = fbm(vPedra * 1.7 + 3.0);
-        roughnessFactor = clamp(roughnessFactor + 0.048*polimento*polimento + 0.012*micro0, 0.004, 0.24);
+        /* A variação de polimento caiu quase pela metade e o teto desceu de
+           0,24 para 0,11. Numa peça que agora é espelho, meio ponto de
+           rugosidade já é uma mancha fosca do tamanho de um dedo — e mancha
+           fosca em cromo lê como sujeira, não como microimperfeição. */
+        roughnessFactor = clamp(roughnessFactor + 0.026*polimento*polimento + 0.007*micro0, 0.003, 0.11);
         `,
       )
       .replace(
         '#include <normal_fragment_maps>',
         /* glsl */ `
         #include <normal_fragment_maps>
-        normal = normalize(normal + (gradMicroVista - dot(gradMicroVista, normal)*normal) * 0.005);
+        normal = normalize(normal + (gradMicroVista - dot(gradMicroVista, normal)*normal) * 0.0032);
         `,
       )
       .replace(
@@ -354,7 +365,7 @@ function criarMaterialPedra(
         /* glsl */ `
         #include <clearcoat_normal_fragment_maps>
         #ifdef USE_CLEARCOAT
-        clearcoatNormal = normalize(clearcoatNormal + (gradMicroVista - dot(gradMicroVista, clearcoatNormal)*clearcoatNormal) * 0.011);
+        clearcoatNormal = normalize(clearcoatNormal + (gradMicroVista - dot(gradMicroVista, clearcoatNormal)*clearcoatNormal) * 0.0065);
         #endif
         `,
       )
@@ -430,101 +441,34 @@ function criarMaterialNucleo(uniformes: UniformesEntidade) {
       }
     `,
     fragmentShader: /* glsl */ `
-      uniform float uT; uniform float uInterno; uniform vec2 uMatiz;
+      uniform float uT; uniform float uInterno; uniform float uAlerta; uniform vec2 uMatiz;
       varying vec3 vPos; varying vec3 vN; varying vec3 vV;
       ${GLSL_COMUM}
+      ${GLSL_PALETA}
       void main(){
         float n = fbm(vPos*3.2 + vec3(0.0, uT*0.08, 0.0));
-        float hue = mix(uMatiz.x, uMatiz.y, fract(n*2.1 + uT*0.02));
+        /* Mesma escala das cortinas: uMatiz é a faixa da paleta do estado, e
+           o encante fica DENTRO dela. Antes isto era matiz HSV cru, o que
+           dava ao núcleo um sistema de cores próprio — a peça podia estar num
+           tom e o miolo dela em outro, e nada no contrato dizia qual dos dois
+           era o estado. Um fato, uma cor.
+           O branco no centro é físico, não estilo: onde a vista atravessa mais
+           matéria luminosa a soma satura, e é o que separa "luz presa no
+           vidro" de "bola colorida". Por isso a cor mora na borda do encante e
+           some no miolo. */
+        float tGrad = mix(uMatiz.x, uMatiz.y, fract(n*2.1 + uT*0.02));
+        vec3 tom = mix(paletaMarca(tGrad), vec3(0.941, 0.529, 0.416), uAlerta * 0.9);
         float face = clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0);
         float centro = pow(face, 2.4);
         float pulso = mix(0.75 + 0.25*sin(uT*0.6), 0.5 + 0.5*sin(uT*3.8), step(0.8, uInterno));
-        float sat = mix(0.7, 0.28, centro);
-        vec3 c = hsv2rgb(vec3(hue, sat, 1.0)) * (0.3 + 3.0*uInterno*uInterno*pulso) * (0.4 + 0.6*n);
+        vec3 c = mix(tom, vec3(1.0), centro*0.65)
+               * (0.3 + 3.0*uInterno*uInterno*pulso) * (0.4 + 0.6*n);
         gl_FragColor = vec4(paraLinear(c * centro, 2.2), 1.0);
       }
     `,
   });
 }
 
-/* ------------------------------------------------------------------------- */
-/* Cortinas de aurora: gradiente fluido preenchido, topos arredondados       */
-/* ------------------------------------------------------------------------- */
-
-function criarMaterialCortina(uniformes: UniformesEntidade, indice: number, forca: number) {
-  return new ShaderMaterial({
-    uniforms: {
-      ...(uniformes as unknown as Record<string, { value: unknown }>),
-      uIdx: { value: indice },
-      uForca: { value: forca },
-    },
-    transparent: true,
-    blending: AdditiveBlending,
-    depthWrite: false,
-    side: DoubleSide,
-    vertexShader: /* glsl */ `
-      uniform float uT, uAmp, uVel, uEnv, uRaio, uIdx;
-      varying vec2 vUv;
-      ${GLSL_COMUM}
-      void main(){
-        vUv = uv;
-        vec3 p = position;
-        float ang = atan(p.z, p.x);
-        float vy = uv.y;
-        float ondaViaja = sin(5.0*ang - uT*uVel*2.0 + uIdx*1.7) + 0.5*sin(9.0*ang + uT*uVel*1.3 + uIdx*3.1);
-        float dobraLenta = 0.16*sin(3.0*ang + uT*uVel*1.0 + uIdx*2.0)
-                         + 0.30*(noise(vec3(ang*1.5 + uIdx*3.0, uT*0.18, uIdx)) - 0.5);
-        float forca = 0.5 + 0.7*uAmp*(0.3 + uEnv);
-        float fator = uRaio * (1.0 + dobraLenta*forca*0.6 + ondaViaja*forca*(0.14 + 0.20*vy));
-        p.x *= fator; p.z *= fator;
-        p.y += (0.10 + 0.10*vy) * sin(2.0*ang + uT*uVel*0.5 + uIdx)
-             + 0.10 * ondaViaja * uAmp * (0.3 + uEnv) * vy;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      uniform float uT, uBrilho, uIdx, uForca; uniform vec2 uMatiz;
-      varying vec2 vUv;
-      ${GLSL_COMUM}
-      ${GLSL_PALETA}
-      void main(){
-        float v = vUv.y;
-        float r1 = noise(vec3(vUv.x*180.0 + uIdx*13.0, v*2.5 - uT*0.35, uT*0.30));
-        float r2 = noise(vec3(vUv.x*60.0 - uT*0.18, v*1.2, uIdx*5.0 + 3.0));
-        float r3 = noise(vec3(vUv.x*340.0, v*4.0 - uT*0.55, uIdx*9.0));
-        float riscos = pow(0.30 + 0.70*(r1*0.55 + r2*0.45), 1.6) * (0.6 + 0.4*r3);
-        // topo ondulado por ângulo, terminação em cúpula — nunca corte reto
-        float topo = 0.55 + 0.35*noise(vec3(vUv.x*5.0 + uIdx*3.0, uT*0.08, uIdx*2.0));
-        float vn = clamp(v / topo, 0.0, 1.0);
-        float perfil = smoothstep(0.0, 0.16, v) * pow(1.0 - vn*vn, 1.8);
-        // gradiência preenchida: o riscado modula e se dissolve perto do topo
-        float corpo = 0.5 + 0.5*mix(riscos, 0.55, smoothstep(0.35, 0.95, vn));
-        // gradiente fluido com domain warping
-        float w1 = noise(vec3(vUv.x*3.0 + uT*0.15, v*2.0, uIdx*2.0));
-        float w2 = noise(vec3(vUv.x*2.0 - uT*0.10, v*1.5 + w1*1.5, uIdx*2.0 + 5.0));
-        float tGrad = fract(vUv.x + w2*0.7 - uT*0.05 + uIdx*0.3);
-        vec3 grad = paletaMarca(tGrad);
-        float hue = mix(uMatiz.x, uMatiz.y, tGrad);
-        vec3 tinta = hsv2rgb(vec3(hue, 0.85, 1.0));
-        // espectro da marca domina; só o alerta (matiz baixo) tinge forte
-        float pesoTinta = mix(0.3, 0.9, step(uMatiz.x, 0.2));
-        vec3 c = mix(grad, tinta, pesoTinta);
-        c = c * c * 1.9; // satura — soma aditiva tende ao branco sem isso
-        vec3 rosa = vec3(1.0, 0.42, 0.60);
-        c = mix(c, rosa * rosa * 1.9, smoothstep(0.30, 0.0, v) * 0.5);
-        /* O 0,42 é recuo, e é a única mudança de intenção nas cortinas.
-           Escrevendo direto no canvas elas cortavam no branco: o miolo virava
-           chapa saturada e só a franja mostrava estrutura — era o corte que
-           desenhava a aurora. Numa curva de filme nada corta, e o miolo inteiro
-           passa a aparecer: a cortina de luz vira fita de cetim e disputa o
-           primeiro plano com a pedra. Baixar o nível devolve a franja ao lugar
-           de sempre e devolve a pedra ao papel de protagonista. Movimento,
-           forma, cor e resposta à voz continuam exatamente os mesmos. */
-        gl_FragColor = vec4(paraLinear(c * corpo * perfil * uBrilho * 0.95 * uForca, 1.5), 1.0);
-      }
-    `,
-  });
-}
 
 /* ------------------------------------------------------------------------- */
 /* A cena                                                                    */
@@ -556,7 +500,11 @@ function CenaEntidade({
       uRaio: { value: 1 },
       uBrilho: { value: 0.62 },
       uInterno: { value: 0.3 },
-      uMatiz: { value: new Vector2(0.42, 0.72) },
+      // A faixa de `disponivel` em mapaAurora — o primeiro quadro desenha
+      // antes de o controlador rodar, e divergir aqui pinta a abertura na cor
+      // de outro estado.
+      uMatiz: { value: new Vector2(0.0, 0.14) },
+      uAlerta: { value: 0 },
     }),
     [],
   );
@@ -571,11 +519,8 @@ function CenaEntidade({
    */
   const uMatrizNormal = useMemo(() => ({ value: new Matrix3() }), []);
 
-  const { geoPedra, matPedra, geoNucleo, matNucleo, cortinas } = useMemo(() => {
-    const alturas = [0.85, 1.05, 1.3];
-    const raios = [1.75, 2.25, 2.8];
-    const forcas = [1.0, 0.65, 0.4];
-    return {
+  const { geoPedra, matPedra, geoNucleo, matNucleo } = useMemo(
+    () => ({
       // Icosaedro subdividido — a mesma esfera de antes, agora indexada. O
       // poliedro do three nasce sem índice e repete cada vértice em toda face
       // que o toca; com o campo de ruído avaliado no vértice, isso era o mesmo
@@ -585,13 +530,15 @@ function CenaEntidade({
       matPedra: criarMaterialPedra(uDeform, uMorph, uMatrizNormal),
       geoNucleo: new IcosahedronGeometry(0.34, 5),
       matNucleo: criarMaterialNucleo(uniformes),
-      cortinas: raios.map((raio, i) => ({
-        geo: new CylinderGeometry(raio, raio * 1.03, alturas[i], 320, 48, true),
-        mat: criarMaterialCortina(uniformes, i, forcas[i]),
-        y: [0.08, 0.14, 0.2][i],
-      })),
-    };
-  }, [uniformes, uDeform, uMorph, uMatrizNormal]);
+    }),
+    [uniformes, uDeform, uMorph, uMatrizNormal],
+  );
+
+  /* As cortinas de aurora — agora com rede de cáustica. Ver `aurora.ts` para
+     o desvio inteiro: foram tentadas quatro formas em vidro PBR antes de ficar
+     claro que superfície em volta da peça vira OBJETO, e objeto compete. O que
+     envolve tem de ser ambiente, e ambiente é luz. */
+  const aurora = useMemo(() => criarAurora(uniformes), [uniformes]);
 
   /* Iluminação de estúdio que não cabe no ambiente: o rig escondido atrás da
      pedra (única coisa que a transmissão de tela consegue refratar) e o
@@ -607,16 +554,19 @@ function CenaEntidade({
       matNucleo.dispose();
       rig.descartar();
       fundo.descartar();
-      for (const c of cortinas) {
-        c.geo.dispose();
-        c.mat.dispose();
-      }
+      aurora.descartar();
     },
-    [geoPedra, matPedra, geoNucleo, matNucleo, cortinas, rig, fundo],
+    [geoPedra, matPedra, geoNucleo, matNucleo, aurora, rig, fundo],
   );
 
-  // Cores de atenuação: o vidro muda de humor junto com o alerta.
-  const corAgua = useMemo(() => new Color(0xe4f4ff), []);
+  /* Cores de atenuação: o vidro muda de humor junto com o alerta.
+     ATENÇÃO — estas duas MANDAM. O `useFrame` reescreve
+     `matPedra.attenuationColor` todo quadro, então o valor declarado em
+     `criarMaterialPedra` é só o estado inicial de um quadro; quem se vê na
+     tela é sempre `corAgua` interpolada com `corAlerta`. Afinar a absorção
+     mexendo lá e não aqui não muda um pixel — os dois lugares existem e
+     precisam concordar. */
+  const corAgua = useMemo(() => new Color(0xcedbe4), []);
   const corAlerta = useMemo(() => new Color(0xf0876a), []);
 
   const pedraRef = useRef<Mesh>(null);
@@ -661,14 +611,29 @@ function CenaEntidade({
     uniformes.uBrilho.value = quadro.brilho;
     uniformes.uInterno.value = quadro.interno;
     uniformes.uMatiz.value.set(quadro.m0, quadro.m1);
+    uniformes.uAlerta.value = quadro.alerta;
 
     // Ondulação orgânica: sempre viva, mais intensa com a voz.
     morphRef.current += passo * (0.1 + 0.3 * quadro.vel);
     uMorph.value = morphRef.current;
-    uDeform.value = 0.14 + 0.05 * quadro.amp + 0.14 * quadro.amp * quadro.env;
+    /* Subiu de 0,14 para 0,19 de base (máximo 0,41 contra 0,33) para COMPENSAR
+       a frequência mais baixa do campo, não para deformar mais. O relevo
+       percebido vai com amplitude vezes frequência ao quadrado; a frequência
+       caiu de 1,5 para 1,12, o que sozinho custaria quase metade do relevo
+       visível. A amplitude devolve parte disso: mesma quantidade de forma,
+       distribuída em dobras maiores em vez de caroços.
 
-    const pesoAlerta = quadro.m0 < 0.2 ? 1 - quadro.m0 / 0.2 : 0;
-    matPedra.attenuationColor.copy(corAgua).lerp(corAlerta, pesoAlerta);
+       Este número tem consequência em estudio.ts: o raio mínimo da silhueta vai
+       de 0,67 para 0,59, e o RAIO_MAXIMO_RIG foi recontado junto. Mexer aqui
+       sem mexer lá expõe as fontes do rig nuas ao lado da pedra. */
+    uDeform.value = 0.19 + 0.06 * quadro.amp + 0.16 * quadro.amp * quadro.env;
+
+    /* O tingimento do vidro segue o mesmo sinalizador das cortinas e do
+       encante. Era deduzido da faixa de matiz (`m0 < 0,2`), o que fazia a cor
+       do VIDRO depender de onde o estado calhava de cair no círculo — um
+       acoplamento que ninguém declarou e que quebra sozinho toda vez que as
+       faixas mudam. Um fato, um lugar. */
+    matPedra.attenuationColor.copy(corAgua).lerp(corAlerta, quadro.alerta);
 
     /* ---------------------------------------------------------------------
      * O movimento.
@@ -721,15 +686,20 @@ function CenaEntidade({
 
   return (
     <>
-      <directionalLight position={[-2.2, 3.0, 2.4]} intensity={1.6} color="#eafff5" />
-      <directionalLight position={[2.4, -0.6, -2.2]} intensity={0.5} color="#9fd0ff" />
+      {/* Direcionais recuadas: numa superfície de rugosidade 0,006 uma fonte
+          pontual não vira realce, vira um ponto duro de um pixel — e ponto duro
+          é a marca registrada de luz de cena 3D. Quem faz o realce agora são os
+          difusores do estúdio, via ambiente, que é como um set real trabalha.
+          Estas duas ficam só para dar direção e cor de temperatura ao volume. */}
+      <directionalLight position={[-2.2, 3.0, 2.4]} intensity={0.85} color="#f5f9fd" />
+      <directionalLight position={[2.4, -0.6, -2.2]} intensity={0.3} color="#a8cfff" />
       <primitive object={fundo.malha} />
       <primitive object={rig.grupo} />
       <mesh ref={pedraRef} geometry={geoPedra} material={matPedra} />
       <mesh ref={nucleoRef} geometry={geoNucleo} material={matNucleo} renderOrder={-4} />
       <group ref={fitasRef} rotation={[0.32, 0, 0]}>
-        {cortinas.map((c, i) => (
-          <mesh key={i} geometry={c.geo} material={c.mat} position={[0, c.y, 0]} />
+        {aurora.cortinas.map((c, i) => (
+          <mesh key={i} geometry={c.geo} material={c.mat} position={c.pos} rotation={c.rot} />
         ))}
       </group>
     </>
@@ -748,7 +718,15 @@ function CenaEntidade({
  * pedra tem raio 1, a fração da altura do palco que ela ocupa é exatamente
  * `1 / (DISTANCIA * tan(ABERTURA/2))`. Em 5.6 / 30° isso dava 0,67: a pedra
  * tomava dois terços do palco, e presença nesse tamanho vira volume, não
- * refinamento. Em 11.6 / 24° cai para 0,41 — joia sobre campo escuro.
+ * refinamento. Em 11.6 caiu para 0,41, em 14.8 para 0,32, e em 18.5 chega a
+ * 0,25 — um quarto da altura do palco, que é onde ficou.
+ *
+ * As duas coisas andam juntas e por isso foram feitas na mesma passada:
+ * encostar a cortina na peça faz o CONJUNTO ficar mais compacto, e um conjunto
+ * compacto no mesmo enquadramento parece um objeto pequeno num quadro grande
+ * demais. Recuar a câmera devolve a proporção — a peça perde um quinto do
+ * tamanho aparente e ganha campo negativo em volta, que é o que separa uma joia
+ * exposta de um ícone centralizado.
  *
  * A lente longa anda junto com o recuo, e é decisão de direção, não
  * consequência aritmética: 24° achata a perspectiva e o vidro passa a ler como
@@ -759,7 +737,7 @@ function CenaEntidade({
  * lente troca o caráter da imagem, não o tamanho do objeto.
  */
 const ABERTURA = 24;
-const DISTANCIA_CAMERA = 11.6;
+const DISTANCIA_CAMERA = 18.5;
 /** Leve mergulho de ~4°, o mesmo do enquadramento anterior. */
 const ALTURA_CAMERA = 0.8;
 
@@ -876,7 +854,10 @@ export function EntidadePresenca({
   return (
     <Canvas
       className="palco-presenca"
-      camera={{ fov: ABERTURA, near: 0.1, far: 40 }}
+      /* `far` com folga: o ciclorama mora em z = -13 e a câmera recuou para
+         18.5, então o plano de fundo está a 31,5 da lente. Em 40 a margem ficou
+         fina demais para o próximo recuo — 60 devolve espaço sem custo. */
+      camera={{ fov: ABERTURA, near: 0.1, far: 60 }}
       dpr={[1, 1.5]}
       /* O antialias do canvas ficou sem função: nada é desenhado direto na
          tela, tudo passa pelo alvo do composer — e é lá que o MSAA mora. */

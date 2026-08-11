@@ -12,7 +12,7 @@
     "vozes": "node scripts/vozes.mjs",
     "limpar": "node -e \"const f=require('node:fs');for(const d of f.readdirSync('.').filter(n=>n==='.next'||n.startsWith('.next-')))f.rmSync(d,{recursive:true,force:true})\"",
     "test": "node --import tsx --test \"testes/**/*.test.ts\"",
-    "verificar": "tsc --noEmit && npm test"
+    "verificar": "node scripts/verificar-glsl.mjs && tsc --noEmit && npm test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

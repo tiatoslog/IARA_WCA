@@ -100,26 +100,66 @@ interface Painel {
 }
 
 /**
- * O set. Uma key grande e macia, duas strips longas (as strips é que fazem o
- * risco especular comprido que denuncia a forma), rim atrás, kicker quente e
- * uma bandeja de rebote embaixo — nenhum estúdio real é preto absoluto no
- * chão, e o vidro fica morto sem esse pouco de retorno.
+ * O set — reescrito para cromo.
+ *
+ * O set anterior era um set de JOIA: fontes médias, coloridas, distribuídas em
+ * volta. Funciona para uma pedra que se vê por dentro, e foi por isso que ele
+ * existiu. Superfície de espelho não tem interior para mostrar: o que ela
+ * mostra é o estúdio, e um estúdio de fontes médias vira, num espelho curvo,
+ * um punhado de manchas pequenas — que é exatamente a "aparência de renderizado"
+ * que o pedido recusa.
+ *
+ * A gramática de fotografar cromo é outra, e tem duas peças obrigatórias:
+ *
+ *  · O CÉU. Um difusor enorme em cima, de queda longa. Num corpo esférico ele
+ *    se enrola como uma varredura contínua do alto até o equador — é a única
+ *    coisa que produz aquele degradê branco largo e sem costura que toda foto
+ *    de cromo tem. Painel pequeno não faz varredura, faz ponto.
+ *
+ *  · O HORIZONTE. Um chão grande e escuro embaixo. O espelho reflete a metade
+ *    de baixo do mundo, e se essa metade for vazio preto o objeto perde o
+ *    fundo do corpo e passa a flutuar sem massa. O chão escuro é o que dá a
+ *    linha onde claro e escuro se encontram — a assinatura visual de cromo.
+ *
+ * As strips continuam, porque são elas que fazem o risco especular comprido, e
+ * as fontes de cor continuam, porque a identidade é da IARA — mas todas
+ * recuaram em intensidade e subiram em brancura. Num espelho, cor de fonte vira
+ * cor de objeto: o mesmo lilás que era um toque na pedra translúcida pintaria a
+ * peça inteira de lilás aqui.
  */
 const PAINEIS: Painel[] = [
+  /* céu — o difusor de teto. A varredura contínua do alto do cromo é ele. */
+  { cor: 0xffffff, intensidade: 30, larg: 15.0, alt: 10.0, x: 0, y: 6.8, z: 1.6, redondo: 0.85, nucleo: 1.15 },
   /* key — difusor grande, alto à esquerda, à frente */
-  { cor: 0xffffff, intensidade: 44, larg: 5.2, alt: 3.2, x: -3.6, y: 3.9, z: 3.2, redondo: 0.75, nucleo: 0.9 },
+  { cor: 0xffffff, intensidade: 42, larg: 7.2, alt: 4.4, x: -3.8, y: 3.5, z: 3.4, redondo: 0.8, nucleo: 1.0 },
+  /* A PLACA DE REBOTE, atrás da câmera. É o que faltava, e é a razão de a peça
+     chegar escura mesmo com key forte.
+     Um espelho não tem meia-luz própria: cada ponto da superfície mostra o que
+     está na direção espelhada, e num estúdio de fontes isoladas a maior parte
+     dessas direções aponta para vazio preto. Foi isso que se viu — uma peça
+     acesa em três lugares e morta no resto, que é aparência de renderizado.
+     A referência em p&b não tem fonte a mais: tem uma PAREDE inteira na frente
+     do objeto, e é ela que preenche a face voltada para a câmera com um
+     degradê em vez de preto.
+     Fica em z = 7,0, atrás da câmera (que está em 18,5): nunca é vista
+     diretamente, só refletida — que é exatamente o papel de uma placa. */
+  { cor: 0xffffff, intensidade: 17, larg: 15.0, alt: 10.0, x: 0.6, y: 1.0, z: 7.0, redondo: 0.85, nucleo: 1.2 },
   /* strip fria à direita — o risco vertical longo */
-  { cor: 0x9fd0ff, intensidade: 34, larg: 0.5, alt: 6.4, x: 5.2, y: 0.4, z: -0.4, redondo: 0.15, nucleo: 0.55 },
+  { cor: 0xdae9ff, intensidade: 27, larg: 0.44, alt: 7.4, x: 5.2, y: 0.4, z: -0.3, redondo: 0.12, nucleo: 0.5 },
   /* strip quente embaixo à esquerda — o risco horizontal */
-  { cor: 0xffc08a, intensidade: 22, larg: 3.8, alt: 0.42, x: -4.4, y: -2.9, z: -1.4, redondo: 0.15, nucleo: 0.6 },
+  { cor: 0xffe8d6, intensidade: 10, larg: 4.6, alt: 0.4, x: -4.4, y: -2.9, z: -1.3, redondo: 0.12, nucleo: 0.55 },
   /* rim violeta, atrás e acima à direita */
-  { cor: 0xc9a6ff, intensidade: 13, larg: 0.55, alt: 3.8, x: 2.9, y: 2.8, z: -4.2, redondo: 0.3, nucleo: 0.7 },
-  /* kicker água atrás à esquerda */
-  { cor: 0x7ff0d0, intensidade: 11, larg: 0.5, alt: 3.2, x: -5.0, y: 0.1, z: -3.0, redondo: 0.3, nucleo: 0.7 },
+  { cor: 0xd6c2ff, intensidade: 7.5, larg: 0.5, alt: 4.2, x: 2.9, y: 2.8, z: -4.2, redondo: 0.28, nucleo: 0.7 },
+  /* kicker frio atrás à esquerda. Era menta (0xa8ece0) e ficava verde na
+     superfície: num espelho a cor da fonte vira a cor do objeto, e o verde não
+     tem de onde vir depois da PALETA GRAFITE. */
+  { cor: 0xbdd8ea, intensidade: 6.0, larg: 0.48, alt: 3.6, x: -5.0, y: 0.1, z: -3.0, redondo: 0.28, nucleo: 0.7 },
   /* pino quente baixo à direita, à frente — o toque coral do repertório */
-  { cor: 0xffa060, intensidade: 9, larg: 1.8, alt: 0.4, x: 3.6, y: -3.2, z: 2.0, redondo: 0.4, nucleo: 0.8 },
-  /* bandeja de rebote — quase nada, mas tira o vidro do preto morto */
-  { cor: 0x0e1c1a, intensidade: 2.2, larg: 9.0, alt: 9.0, x: 0, y: -5.2, z: 0, redondo: 0.9, nucleo: 1.4 },
+  { cor: 0xffbb8c, intensidade: 4.5, larg: 1.8, alt: 0.4, x: 3.6, y: -3.2, z: 2.0, redondo: 0.4, nucleo: 0.8 },
+  /* o chão — grande, grafite, discreto. É o horizonte. Sobe junto com o resto
+     porque a metade de baixo do espelho é ele: chão apagado devolve barriga
+     preta, e a peça perde o fundo do corpo. */
+  { cor: 0x2b353b, intensidade: 5.0, larg: 14.0, alt: 11.0, x: 0, y: -5.4, z: 0, redondo: 0.9, nucleo: 1.1 },
 ];
 
 /** A cena que vira o `environment` por PMREM. Descartável logo após gerar. */
@@ -153,18 +193,33 @@ export function descartarCenaEstudio(cena: Scene): void {
 
 /**
  * LIMITE DE SILHUETA. A pedra tem raio 1 e a deformação a leva, no pior caso,
- * a ~0,67. Com a lente de 24° a 11,6, um ponto em z = −2,4 encolhe para 0,83×
- * na projeção. Por isso nada aqui passa de 0,62 medido do eixo até a ponta:
- * projetado dá 0,52, e mesmo no lóbulo mais fundo da ondulação a fonte
+ * a 1 − 0,41 = 0,59 (o `uDeform` máximo mora em `EntidadePresenca`, no
+ * `useFrame`; ele subiu de 0,33 para 0,41 quando a frequência do campo caiu e
+ * a amplitude teve de compensar). Com a lente de 24° a 18,5, um ponto em
+ * z = −2,4 encolhe para 0,885×
+ * na projeção. Por isso nada aqui passa de 0,55 medido do eixo até a ponta:
+ * projetado dá 0,49, e mesmo no lóbulo mais fundo da ondulação a fonte
  * continua coberta pelo vidro e nunca é vista diretamente — só refratada.
  *
  * A verificação abaixo é guarda de regressão, não decoração: fonte que estoure
  * o limite simplesmente não entra na cena, porque aparecer nua ao lado da
- * pedra é pior do que faltar dentro dela.
+ * pedra é pior do que faltar dentro dela. Hoje a fonte mais larga mede 0,533,
+ * então todas passam — a folga é de sete centésimos, não de meia unidade.
  *
- * Se algum dia a deformação crescer, este é o número a revisitar.
+ * O RECUO DA CÂMERA (11,6 → 14,8) MEXE NESTA CONTA e por isso está anotado:
+ * quanto mais longe a câmera, MENOS o rig encolhe na projeção (0,83× em 11,6
+ * virou 0,885× em 18,5), ou seja, ele fica proporcionalmente maior dentro da
+ * silhueta. A margem CAI a cada recuo, não sobe — é contra-intuitivo e é o
+ * motivo de esta conta estar escrita por extenso.
+ * Hoje: 0,49 projetado contra 0,59 de silhueta mínima. Sobram dez centésimos.
+ * No limite (câmera no infinito) o fator vai a 1 e o rig projetaria 0,533 —
+ * ainda cabe, mas com folga de seis centésimos. Ou seja: recuar mais é seguro,
+ * ENGORDAR o rig ou a deformação da pedra é que não é.
+ *
+ * Se a deformação crescer de novo, este é o número a revisitar, e o cálculo
+ * inteiro está acima para poder ser refeito em vez de chutado.
  */
-const RAIO_MAXIMO_RIG = 0.62;
+const RAIO_MAXIMO_RIG = 0.55;
 
 interface Barra {
   cor: number;
@@ -266,30 +321,54 @@ export interface Fundo {
 }
 
 /**
- * O fundo do estúdio. Quase preto — a poça central mal chega a 4% de luz —
- * mas é sobre ela que a borda do vidro se desenha. Fundo chapado devolve
- * refração invisível, que é a diferença entre "vidro" e "bola escura".
+ * O ciclorama — laca preta, não vazio preto.
+ *
+ * A versão anterior era preta chapada com uma poça central minúscula (raio
+ * 0,09 em UV, do tamanho da própria pedra). Na tela isso não lê como fundo:
+ * lê como AUSÊNCIA de fundo, e objeto sobre ausência é o formato de imagem
+ * gerada — falta o quarto onde a coisa está.
+ *
+ * O que substitui é a superfície que o pedido nomeia: piano black. Laca preta
+ * de verdade nunca é uma cor só — é um gradiente longo e sem costura que vai do
+ * grafite iluminado ao quase-nada, com uma reflexão macia onde a luz do
+ * ambiente bate. Três camadas fazem isso, nesta ordem:
+ *
+ *  1. o degradê vertical, longo — a laca pegando a luz do céu do estúdio;
+ *  2. a poça atrás da peça, larga e de baixíssimo contraste — profundidade,
+ *     não holofote. É ela que dá à borda do cromo algo para distorcer;
+ *  3. o fechamento nos cantos, que é onde a laca escurece de verdade.
+ *
+ * O grão e o dither do passe de lente são obrigatórios com um fundo assim: um
+ * degradê deste comprimento em 8 bits sem ruído vira faixa, e faixa entrega
+ * digital na hora. Eles já estão lá (`composicao.ts`) — esta é a razão.
  */
 export function criarFundo(): Fundo {
   const geo = new PlaneGeometry(48, 30);
   const mat = new ShaderMaterial({
-    uniforms: { uCentro: { value: new Color(0x0a1614) }, uBorda: { value: new Color(0x010303) } },
+    uniforms: {
+      uAlto: { value: new Color(0x2a3238) },
+      uBaixo: { value: new Color(0x0b0e10) },
+      uPoca: { value: new Color(0x1a2126) },
+    },
     side: DoubleSide,
     vertexShader: /* glsl */ `
       varying vec2 vUv;
       void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
     `,
     fragmentShader: /* glsl */ `
-      uniform vec3 uCentro; uniform vec3 uBorda;
+      uniform vec3 uAlto; uniform vec3 uBaixo; uniform vec3 uPoca;
       varying vec2 vUv;
       void main(){
-        vec2 p = (vUv - vec2(0.5, 0.52)) * vec2(1.9, 1.0);
+        // O plano tem 48 por 30 e a lente enquadra ~10 de altura nele: o
+        // quadro inteiro vive na faixa vUv.y ≈ 0,33..0,67. Todos os intervalos
+        // abaixo estão medidos NESSA faixa, não no plano inteiro.
+        vec2 p = (vUv - vec2(0.5, 0.53)) * vec2(1.9, 1.0);
         float d = length(p);
-        // O plano tem 48 por 30 e a lente enquadra ~10 de altura nele: uma
-        // poça de raio 0,26 em UV cobriria o quadro inteiro e viraria névoa.
-        // 0,09 é do tamanho da pedra, que é o que uma poça de estúdio deve ser.
-        float poca = 1.0 - smoothstep(0.005, 0.09, d);
-        vec3 c = mix(uBorda, uCentro, poca);
+        float v = smoothstep(0.30, 0.72, vUv.y);
+        vec3 c = mix(uBaixo, uAlto, v);
+        c += uPoca * (1.0 - smoothstep(0.02, 0.26, d));
+        // fechamento: a laca não termina, ela some
+        c *= mix(0.30, 1.0, 1.0 - smoothstep(0.12, 0.60, d));
         gl_FragColor = vec4(c, 1.0);
       }
     `,
