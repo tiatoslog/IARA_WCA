@@ -6,24 +6,11 @@
   "build": {
     "beforeDevCommand": "node copiar-bolha.mjs",
     "beforeBuildCommand": "node copiar-bolha.mjs",
-    "devUrl": "http://localhost:3000",
     "frontendDist": "../ui"
   },
   "app": {
     "withGlobalTauri": true,
     "windows": [
-      {
-        "label": "principal",
-        "title": "IARA",
-        "url": "http://localhost:3000",
-        "width": 1280,
-        "height": 800,
-        "minWidth": 900,
-        "minHeight": 600,
-        "visible": true,
-        "theme": "Dark",
-        "backgroundColor": "#0b0d0f"
-      },
       {
         "label": "bolha",
         "title": "IARA — bolha",

@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IARA</title>
+    <!--
+      A tela que aparece quando a IARA não é alcançável.
+
+      Ela existe porque a virada para a nuvem transformou "sem rede" no caso
+      COMUM: Wi-Fi caindo, VPN subindo, host reiniciando, notebook acordando da
+      suspensão. Antes disso o webview mostrava o erro cru do WebView2 — um
+      retângulo branco com texto em inglês dentro da moldura da IARA, que parece
+      o produto quebrado e não a rede ausente.
+
+      Não há animação de "carregando" fingindo progresso. O que há é o estado
+      real, o endereço tentado e o horário da última tentativa. A sonda continua
+      rodando no Rust a cada 15 s e a janela navega sozinha quando o motor
+      responder — o botão existe para quem não quer esperar, não porque o clique
+      seja necessário.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --fundo: #0b0d0f;
+        --tinta: #eef1f4;
+        --tinta-fraca: #8b959d;
+        --linha: rgba(238, 241, 244, 0.12);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      body {
+        background: var(--fundo);
+        color: var(--tinta);
+        font: 14px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        /* A janela inteira é área de arrasto: sem barra de título nativa com
+           conteúdo, o operador precisa conseguir mover a janela por algum
+           lugar. Os controles abaixo se excluem com `no-drag`. */
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      main {
+        max-width: 30rem;
+        text-align: center;
+      }
+      .marca {
+        letter-spacing: 0.34em;
+        font-weight: 600;
+        font-size: 0.82rem;
+        margin: 0 0 2rem;
+        padding-left: 0.34em;
+        color: var(--tinta);
+      }
+      .esfera {
+        width: 76px;
+        height: 76px;
+        margin: 0 auto 1.75rem;
+        border-radius: 50%;
+        background: radial-gradient(circle at 34% 30%, #6d7a84 0%, #3a444c 42%, #171d22 100%);
+        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
+        /* AMBIENTE, não reativo: ciclo longo e amplitude mínima. A esfera
+           respirar aqui não afirma nada sobre a conexão — quem afirma é o
+           texto. Se ela pulsasse "tentando", estaria mentindo sobre um fato
+           que este documento não observa. */
+        animation: respirar 9s ease-in-out infinite;
+      }
+      @keyframes respirar {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.9;
+        }
+        50% {
+          transform: scale(1.035);
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .esfera {
+          animation: none;
+        }
+      }
+      h1 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin: 0 0 0.6rem;
+      }
+      p {
+        margin: 0 0 1rem;
+        color: var(--tinta-fraca);
+      }
+      .endereco {
+        display: inline-block;
+        margin-bottom: 1.5rem;
+        padding: 0.45rem 0.8rem;
+        border: 1px solid var(--linha);
+        border-radius: 7px;
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 0.78rem;
+        color: var(--tinta-fraca);
+        word-break: break-all;
+        -webkit-user-select: text;
+        user-select: text;
+      }
+      button {
+        -webkit-app-region: no-drag;
+        appearance: none;
+        border: 1px solid var(--linha);
+        background: rgba(238, 241, 244, 0.06);
+        color: var(--tinta);
+        font: inherit;
+        padding: 0.55rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 160ms ease, border-color 160ms ease;
+      }
+      button:hover:not(:disabled) {
+        background: rgba(238, 241, 244, 0.11);
+        border-color: rgba(238, 241, 244, 0.22);
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+      .rodape {
+        margin-top: 1.6rem;
+        font-size: 0.75rem;
+        color: var(--tinta-fraca);
+        min-height: 1.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="esfera" aria-hidden="true"></div>
+      <p class="marca">I A R A</p>
+      <h1>Não consegui alcançar a IARA</h1>
+      <p>
+        O computador está sem conexão com o servidor da IARA, ou o servidor não
+        respondeu. Nada foi perdido — assim que a conexão voltar, esta janela
+        abre sozinha.
+      </p>
+      <div class="endereco" id="endereco">—</div>
+      <div>
+        <button id="tentar" type="button">Tentar agora</button>
+      </div>
+      <p class="rodape" id="rodape"></p>
+    </main>
+
+    <script>
+      const invocar = (comando) => window.__TAURI__?.core?.invoke?.(comando);
+
+      // O Rust injeta o destino real via `eval` depois de carregar a página.
+      // Ele não é chumbado aqui porque muda por IARA_URL, por destino.json e
+      // pelo padrão assado no instalador — três fontes, e o HTML não conhece
+      // nenhuma delas.
+      window.definirDestino = (url) => {
+        document.getElementById('endereco').textContent = url;
+      };
+
+      window.definirAviso = (texto) => {
+        document.getElementById('rodape').textContent = texto;
+      };
+
+      const botao = document.getElementById('tentar');
+      botao.addEventListener('click', async () => {
+        botao.disabled = true;
+        botao.textContent = 'Tentando…';
+        window.definirAviso('');
+        try {
+          const alcancou = await invocar('tentar_destino');
+          // Se alcançou, o Rust navega a janela e esta página deixa de existir.
+          // Chegar aqui com `false` significa que a tentativa falhou de novo.
+          if (alcancou === false) {
+            window.definirAviso('Ainda sem resposta. Continuo tentando a cada 15 segundos.');
+          }
+        } catch {
+          window.definirAviso('Não consegui tentar agora.');
+        } finally {
+          botao.disabled = false;
+          botao.textContent = 'Tentar agora';
+        }
+      });
+
+      // Avisa o Rust que a página está pronta para receber o destino. Sem isso,
+      // um `eval` disparado antes do parse do script se perderia em silêncio.
+      invocar('offline_pronta');
+    </script>
+  </body>
+</html>

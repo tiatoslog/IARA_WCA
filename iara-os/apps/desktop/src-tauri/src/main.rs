@@ -1,17 +1,30 @@
 // Sem console preto atrás do app em release. Em debug o console fica: é onde
-// os avisos de "motor não subiu" aparecem durante o desenvolvimento.
+// os avisos de "não alcancei a IARA" aparecem durante o desenvolvimento.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 //! Shell desktop da IARA — Tauri 2.
 //!
-//! O Rust aqui cuida SÓ de janela e de ciclo de vida do motor. Nenhuma ação no
-//! computador do operador acontece neste processo: criar pasta, abrir
-//! aplicativo e energia moram no `AgenteLocal` do motor Node, com allowlist,
-//! raízes autorizadas e confirmação R2. O webview conversa com ele em
-//! localhost:3000 — mesma origem e mesmo contrato do navegador.
+//! CASCA FINA. Até 12/08/2026 este processo subia um motor Node completo na
+//! máquina do operador: Next, tsx transpilando TypeScript em runtime, o
+//! WebSocket e o ciclo cognitivo, tudo por pessoa. Era o sistema inteiro
+//! instalado em cada computador, e é de onde vinha a máquina ficar lenta.
+//!
+//! Agora o motor mora na nuvem e este processo é o que sempre deveria ter sido:
+//! uma janela. Ele abre o webview no endereço da IARA, mantém a bolha, a
+//! bandeja e o Alt+Space, e não instala nada — sem Node, sem npm, sem build.
+//!
+//! O caminho antigo continua no arquivo, atrás de `IARA_MOTOR_LOCAL=1`, porque
+//! quem DESENVOLVE a IARA precisa rodar o motor local e a janela junto. Isso é
+//! ferramenta de desenvolvimento, não o produto.
+//!
+//! Nenhuma ação no computador do operador acontece aqui — criar pasta, abrir
+//! aplicativo e energia continuam no `AgenteLocal` do motor, com allowlist,
+//! raízes autorizadas e confirmação R2. Isso MUDA na Fase 3, quando o motor na
+//! nuvem deixar de alcançar esta máquina sozinho e o braço passar a ser aqui;
+//! até lá, o Rust só desenha janela.
 
-use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpStream};
+use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -20,45 +33,284 @@ use std::time::{Duration, Instant};
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
+use tauri::{AppHandle, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
-/// A porta do motor é a mesma do navegador. Uma origem só, um contrato só.
-const PORTA_MOTOR: u16 = 3000;
-
-/// Janela principal e bolha vêm declaradas em `tauri.conf.json`; o Rust só as
-/// referencia por rótulo. Trocar tamanho ou posição é edição de config, não de
-/// código.
+/// Janela principal e bolha. A bolha vem declarada em `tauri.conf.json` porque
+/// é asset local e não muda; a principal NÃO pode vir de lá — o destino dela é
+/// decidido em runtime por três fontes (ver `destino`), e o JSON do Tauri é
+/// estático.
 const JANELA_PAINEL: &str = "principal";
 const JANELA_BOLHA: &str = "bolha";
 
-/// Fechar no X recolhe a janela — encerrar de verdade é decisão explícita, pela
-/// bandeja. Esta trava distingue os dois casos para o `CloseRequested`.
+/// Último recurso, quando nenhuma das outras fontes responde.
+const DESTINO_PADRAO: &str = "https://iara.atoslog.com.br";
+
+/// Porta do motor local. Só é usada no modo de desenvolvimento.
+const PORTA_MOTOR_LOCAL: u16 = 3000;
+
+/// De quanto em quanto tempo a sonda tenta de novo enquanto a IARA está fora de
+/// alcance. 15 s é o compromisso: rápido o bastante para a janela voltar
+/// sozinha antes de a pessoa desistir, lento o bastante para não martelar um
+/// host que está reiniciando.
+const RITMO_SONDA: Duration = Duration::from_secs(15);
+
+/// Fechar no X recolhe — encerrar de verdade é decisão explícita, pela bandeja.
 static ENCERRANDO: AtomicBool = AtomicBool::new(false);
 
-/// PID do motor que ESTE processo subiu. Fica vazio quando o motor já estava de
-/// pé (`npm run dev` do operador): nesse caso o shell não é dono dele e não o
-/// derruba ao sair.
+/// PID do motor que ESTE processo subiu (só no modo local). Fica vazio quando o
+/// motor já estava de pé: nesse caso o shell não é dono dele e não o derruba.
 static MOTOR_FILHO: Mutex<Option<u32>> = Mutex::new(None);
 
+/// Uma sonda por vez. Sem isto, cliques repetidos em "Tentar agora" empilham
+/// requisições e a janela pode navegar duas vezes.
+static SONDANDO: AtomicBool = AtomicBool::new(false);
+
 // ---------------------------------------------------------------------------
-// Comandos chamados pela bolha (ui/bolha.html)
+// Destino
 // ---------------------------------------------------------------------------
 
-/// Arrasto nativo. O HTML decide *quando* é arrasto (mouse andou mais que o
-/// limiar); aqui só entregamos o gesto ao gerenciador de janelas — arrastar no
-/// JS, recolocando a janela a cada mousemove, tremeria.
-#[tauri::command]
-fn arrastar_bolha(app: AppHandle) {
-    if let Some(bolha) = app.get_webview_window(JANELA_BOLHA) {
-        let _ = bolha.start_dragging();
+/// Onde a IARA mora, nesta ordem:
+///
+/// 1. `IARA_URL` — o loop de desenvolvimento (`http://localhost:3000`).
+/// 2. `%APPDATA%\br.com.atoslog.iara\destino.json` — permite trocar de
+///    homologação para produção numa máquina instalada, sem recompilar nada.
+/// 3. `IARA_URL_PADRAO` assada em tempo de build — é assim que o instalador de
+///    cada cliente sai apontando para o lugar certo.
+/// 4. O literal acima.
+fn destino() -> String {
+    if let Ok(indicado) = std::env::var("IARA_URL") {
+        let limpo = indicado.trim().trim_end_matches('/').to_string();
+        if destino_aceitavel(&limpo) {
+            return limpo;
+        }
+        eprintln!("[iara] IARA_URL recusada: {limpo}");
+    }
+
+    if let Some(arquivo) = destino_do_arquivo() {
+        return arquivo;
+    }
+
+    if let Some(assado) = option_env!("IARA_URL_PADRAO") {
+        let limpo = assado.trim().trim_end_matches('/').to_string();
+        if destino_aceitavel(&limpo) {
+            return limpo;
+        }
+    }
+
+    DESTINO_PADRAO.to_string()
+}
+
+fn destino_do_arquivo() -> Option<String> {
+    let base = std::env::var("APPDATA").ok()?;
+    let caminho = PathBuf::from(base)
+        .join("br.com.atoslog.iara")
+        .join("destino.json");
+    let bruto = fs::read_to_string(&caminho).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&bruto).ok()?;
+    let url = json.get("url")?.as_str()?.trim().trim_end_matches('/');
+    if destino_aceitavel(url) {
+        return Some(url.to_string());
+    }
+    eprintln!("[iara] destino.json recusado ({caminho:?}): {url}");
+    None
+}
+
+/// Só HTTPS, exceto localhost.
+///
+/// Uma janela do PRODUTO carregando `http://` de um host remoto é um
+/// intermediário podendo reescrever a página inteira — e a página em questão é
+/// aquela onde a operadora digita a senha. Recusar é barato; o caso legítimo de
+/// HTTP é o motor rodando na própria máquina, onde não há rede no meio.
+fn destino_aceitavel(url: &str) -> bool {
+    if let Some(resto) = url.strip_prefix("https://") {
+        let host = hospedeiro(resto);
+        // Userinfo não tem uso legítimo aqui e tem uso ilegítimo óbvio:
+        // `https://iara.atoslog.com.br@evil.com` conecta em evil.com e exibe o
+        // nome de casa na barra de quem olhar rápido.
+        return !host.is_empty() && !host.contains('@');
+    }
+    if let Some(resto) = url.strip_prefix("http://") {
+        let host = hospedeiro(resto);
+        // COMPARAÇÃO EXATA, nunca prefixo. `starts_with("localhost")` aceita
+        // `localhost.evil.com` — um domínio de outra pessoa, servido em texto
+        // puro, dentro da moldura da IARA. Foi assim que esta função nasceu
+        // errada, e é o que o teste `nao_se_engana_com_prefixo_parecido` trava.
+        return host == "localhost" || host == "127.0.0.1" || host == "[::1]";
+    }
+    false
+}
+
+/// O hospedeiro, sem porta, sem caminho e sem query.
+///
+/// IPv6 vem entre colchetes (`[::1]:3000`), então o `:` que separa a porta é o
+/// que vem DEPOIS do `]` — cortar no primeiro `:` transformaria `[::1]` em `[`.
+fn hospedeiro(resto: &str) -> &str {
+    let fim = resto.find(['/', '?', '#']).unwrap_or(resto.len());
+    let autoridade = &resto[..fim];
+
+    if let Some(fecha) = autoridade.find(']') {
+        return &autoridade[..=fecha];
+    }
+    match autoridade.find(':') {
+        Some(i) => &autoridade[..i],
+        None => autoridade,
     }
 }
 
-/// Clique na bolha e Alt+Space caem os dois aqui: um gesto, um comportamento.
-#[tauri::command]
-fn alternar_painel(app: AppHandle) {
-    alternar(&app);
+#[cfg(test)]
+mod testes {
+    use super::{destino_aceitavel, tem_assinatura};
+
+    #[test]
+    fn assinatura_reconhece_o_saude_real() {
+        // A resposta que `servidor/principal.ts` emite hoje, nos dois modos.
+        let unificado = r#"{"app":"iara","ok":true,"uptime_s":3,"modo":"producao","projecao":"anexa","autenticacao":"supabase"}"#;
+        let headless = r#"{"app":"iara","ok":true,"uptime_s":3,"modo":"producao","projecao":"externa","autenticacao":"supabase"}"#;
+        assert!(tem_assinatura(unificado));
+        assert!(tem_assinatura(headless));
+        // Campo novo no /saude não pode quebrar a checagem: ela olha a chave,
+        // não a forma do objeto.
+        assert!(tem_assinatura(r#"{"app":"iara","dispositivos":2,"novo":null}"#));
+        assert!(tem_assinatura(r#"{ "app": "iara" }"#));
+    }
+
+    #[test]
+    fn assinatura_recusa_quem_nao_e_a_iara() {
+        // O caso real: portal de Wi-Fi ou proxy corporativo devolvendo 200.
+        assert!(!tem_assinatura("<h1>portal de wifi</h1>"));
+        assert!(!tem_assinatura("<html><body>Faça login para acessar a rede</body></html>"));
+        assert!(!tem_assinatura(""));
+        // Outro servidor de desenvolvimento na mesma porta.
+        assert!(!tem_assinatura(r#"{"app":"outro-produto","ok":true}"#));
+        // E o quase-acerto: nome parecido não é a assinatura.
+        assert!(!tem_assinatura(r#"{"app":"iara-clone"}"#));
+        assert!(!tem_assinatura(r#"{"aplicativo":"iara"}"#));
+    }
+
+    #[test]
+    fn https_passa() {
+        assert!(destino_aceitavel("https://iara.atoslog.com.br"));
+        assert!(destino_aceitavel("https://iara-homologacao.up.railway.app"));
+    }
+
+    #[test]
+    fn http_remoto_e_recusado() {
+        // O caso que esta função existe para barrar: a janela do PRODUTO
+        // carregando a tela de senha por um canal que qualquer intermediário
+        // reescreve.
+        assert!(!destino_aceitavel("http://iara.atoslog.com.br"));
+        assert!(!destino_aceitavel("http://192.168.0.10:3000"));
+    }
+
+    #[test]
+    fn http_local_passa() {
+        // O caso legítimo de HTTP: o motor na própria máquina, sem rede no meio.
+        assert!(destino_aceitavel("http://localhost:3000"));
+        assert!(destino_aceitavel("http://127.0.0.1:3000"));
+        assert!(destino_aceitavel("http://[::1]:3000"));
+    }
+
+    #[test]
+    fn nao_se_engana_com_prefixo_parecido() {
+        // `localhost.evil.com` COMEÇA com "localhost" — e é um domínio de outra
+        // pessoa, servido em texto puro. Este teste pegou a função errada na
+        // primeira escrita; é ele que separa a checagem correta de uma que só
+        // parece correta.
+        assert!(!destino_aceitavel("http://localhost.evil.com"));
+        assert!(!destino_aceitavel("http://127.0.0.1.evil.com"));
+        assert!(!destino_aceitavel("http://localhost@evil.com"));
+        assert!(!destino_aceitavel("https://iara.atoslog.com.br@evil.com"));
+    }
+
+    #[test]
+    fn caminho_e_porta_nao_confundem_o_hospedeiro() {
+        assert!(destino_aceitavel("http://localhost:3000/painel"));
+        assert!(destino_aceitavel("https://iara.atoslog.com.br/entrar?x=1"));
+        // O host continua sendo localhost; o resto é caminho.
+        assert!(destino_aceitavel("http://localhost/#/evil.com"));
+        // Mas isto é um domínio de terceiro com "localhost" no caminho.
+        assert!(!destino_aceitavel("http://evil.com/localhost"));
+    }
+
+    #[test]
+    fn esquema_ausente_ou_estranho_e_recusado() {
+        assert!(!destino_aceitavel("iara.atoslog.com.br"));
+        assert!(!destino_aceitavel("file:///C:/Windows/System32"));
+        assert!(!destino_aceitavel("javascript:alert(1)"));
+        assert!(!destino_aceitavel(""));
+        assert!(!destino_aceitavel("https://"));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Sonda de saúde
+// ---------------------------------------------------------------------------
+
+/// Quem atende no destino.
+///
+/// A pergunta "o endereço responde?" é insuficiente de um jeito perigoso, e
+/// continua sendo depois da virada para a nuvem — só mudou o vilão. Antes era a
+/// porta 3000 tomada por outro servidor de desenvolvimento; agora é um portal
+/// de Wi-Fi público ou um proxy corporativo devolvendo uma página de login com
+/// status 200. Nos dois casos a janela carregaria o app de um estranho dentro
+/// da moldura da IARA, sem um aviso sequer.
+///
+/// Por isso a prova continua sendo a ASSINATURA do `/saude`, não o status HTTP.
+enum Alcance {
+    /// O motor da IARA. Pode navegar.
+    Motor,
+    /// Ninguém respondeu: rede caída, host fora do ar, DNS falhando.
+    Mudo,
+    /// Alguém respondeu, e não é a IARA.
+    Estranho,
+}
+
+fn sondar(base: &str) -> Alcance {
+    let alvo = format!("{}/saude", base.trim_end_matches('/'));
+    let resposta = ureq::get(&alvo)
+        .timeout(Duration::from_secs(3))
+        .set("Accept", "application/json")
+        .call();
+
+    let corpo = match resposta {
+        Ok(r) => r,
+        // Status de erro É resposta: alguém está lá, só não é a IARA.
+        Err(ureq::Error::Status(_, _)) => return Alcance::Estranho,
+        Err(_) => return Alcance::Mudo,
+    };
+
+    // Teto de leitura: o /saude cabe de sobra em 4 KB, e sem o teto um host
+    // estranho respondendo algo enorme travaria o arranque.
+    let mut texto = String::new();
+    if corpo
+        .into_reader()
+        .take(4096)
+        .read_to_string(&mut texto)
+        .is_err()
+    {
+        return Alcance::Estranho;
+    }
+
+    if tem_assinatura(&texto) {
+        Alcance::Motor
+    } else {
+        Alcance::Estranho
+    }
+}
+
+/// A prova de que quem respondeu é a IARA.
+///
+/// A assinatura mora em `servidor/principal.ts` — mudar a string de lá quebra
+/// esta checagem. Aceita com e sem espaço depois dos dois-pontos porque o
+/// FORMATO do JSON não é contrato; a chave e o valor são.
+///
+/// Isto é uma função à parte, e não uma linha dentro de `sondar`, porque é a
+/// única decisão do arranque que pode errar de um jeito que ninguém percebe: um
+/// portal de Wi-Fi ou um proxy corporativo devolve 200 com HTML, e sem esta
+/// checagem a janela carregaria a página deles dentro da moldura da IARA.
+fn tem_assinatura(texto: &str) -> bool {
+    texto.contains("\"app\":\"iara\"") || texto.contains("\"app\": \"iara\"")
 }
 
 // ---------------------------------------------------------------------------
@@ -93,234 +345,266 @@ fn revelar(app: &AppHandle) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Motor: descoberta, subida e encerramento
-// ---------------------------------------------------------------------------
-
-/// Quem atende na porta do motor.
+/// Cria a janela principal apontada para `url`.
 ///
-/// A pergunta ANTIGA era "a porta responde?", e ela é insuficiente de um jeito
-/// perigoso: 3000 é a porta mais disputada que existe em máquina de
-/// desenvolvimento. Qualquer outro servidor ali fazia o shell desistir de subir
-/// o motor E a janela carregar o app do estranho — dentro da moldura da IARA,
-/// sem um aviso sequer. Falha silenciosa que se parece com um bug do produto.
-enum NaPorta {
-    /// Ninguém atende. O shell sobe o motor.
-    Muda,
-    /// O motor da IARA, já de pé (o `npm run dev` do operador, ou outra
-    /// instância do app). Reusar, e não assumir posse do processo.
-    Motor,
-    /// Alguém atende, mas não é o motor. Subir por cima é impossível — a porta
-    /// está tomada — e mostrar o que está lá seria mentir sobre o que a janela
-    /// é. O caso certo é parar e dizer.
-    Estranho,
+/// Em Rust e não no `tauri.conf.json` porque o destino é decidido em runtime.
+/// O JSON continua descrevendo a bolha, que não tem essa necessidade.
+fn abrir_painel(app: &AppHandle, url: WebviewUrl) -> tauri::Result<()> {
+    WebviewWindowBuilder::new(app, JANELA_PAINEL, url)
+        .title("IARA")
+        .inner_size(1280.0, 800.0)
+        .min_inner_size(900.0, 600.0)
+        .visible(true)
+        .build()?;
+    Ok(())
 }
 
-/// Uma requisição HTTP escrita à mão, para não trazer um cliente HTTP inteiro
-/// como dependência por causa de uma linha. `Connection: close` faz o servidor
-/// encerrar sozinho e a leitura terminar sem precisar entender o corpo.
-fn quem_esta_na_porta() -> NaPorta {
-    let endereco = SocketAddr::from(([127, 0, 0, 1], PORTA_MOTOR));
-    let Ok(mut conexao) = TcpStream::connect_timeout(&endereco, Duration::from_millis(300)) else {
-        return NaPorta::Muda;
-    };
-
-    let _ = conexao.set_read_timeout(Some(Duration::from_millis(1200)));
-    let _ = conexao.set_write_timeout(Some(Duration::from_millis(600)));
-
-    let pedido = format!(
-        "GET /saude HTTP/1.1
-Host: 127.0.0.1:{PORTA_MOTOR}
-Connection: close
-
-"
-    );
-    if conexao.write_all(pedido.as_bytes()).is_err() {
-        return NaPorta::Estranho;
-    }
-
-    // O /saude cabe de sobra em 4 KB. Ler mais do que isso só abriria espaço
-    // para um servidor estranho responder algo enorme e travar o arranque.
-    let mut resposta = Vec::new();
-    let mut pedaco = [0u8; 1024];
-    while resposta.len() < 4096 {
-        match conexao.read(&mut pedaco) {
-            Ok(0) => break,
-            Ok(n) => resposta.extend_from_slice(&pedaco[..n]),
-            Err(_) => break,
-        }
-    }
-
-    let texto = String::from_utf8_lossy(&resposta);
-    // A assinatura mora em `servidor/principal.ts`. Aceita com e sem espaço
-    // porque o formato do JSON não é contrato — a chave e o valor são.
-    if texto.contains("\"app\":\"iara\"") || texto.contains("\"app\": \"iara\"") {
-        NaPorta::Motor
-    } else {
-        NaPorta::Estranho
-    }
-}
-
-/// Uma pasta só serve como motor se tiver o `package.json` do app web.
-fn e_pasta_do_motor(caminho: &Path) -> bool {
-    caminho.join("package.json").is_file() && caminho.join("servidor").is_dir()
-}
-
-/// Ordem de busca declarada no README: variável de ambiente, pasta `motor` ao
-/// lado do executável, e por fim o repositório subindo a árvore (o que cobre
-/// `target\debug` e `target\release` no desenvolvimento).
-fn achar_motor() -> Option<PathBuf> {
-    if let Ok(indicado) = std::env::var("IARA_MOTOR_DIR") {
-        let caminho = PathBuf::from(indicado);
-        if e_pasta_do_motor(&caminho) {
-            return Some(caminho);
-        }
-        eprintln!("[iara] IARA_MOTOR_DIR não aponta para o motor: {caminho:?}");
-    }
-
-    let executavel = std::env::current_exe().ok()?;
-    let pasta_exe = executavel.parent()?;
-
-    // Instalado: o motor viaja junto, ao lado do .exe.
-    let vizinho = pasta_exe.join("motor");
-    if e_pasta_do_motor(&vizinho) {
-        return Some(vizinho);
-    }
-
-    // Desenvolvimento: subir até reencontrar o repositório.
-    for ancestral in pasta_exe.ancestors() {
-        for tentativa in [
-            ancestral.join("motor"),
-            ancestral.join("web"),
-            ancestral.join("apps").join("web"),
-            ancestral.join("iara-os").join("apps").join("web"),
-        ] {
-            if e_pasta_do_motor(&tentativa) {
-                return Some(tentativa);
-            }
-        }
-    }
-
-    None
-}
-
-/// A porta está tomada por outro processo. Isto não tem conserto automático:
-/// o motor não pode subir e o que está lá não é a IARA.
-///
-/// A mensagem vai para o log E para a janela. O log sozinho não basta porque em
-/// release não há console — o operador veria uma janela com o app de outra
-/// pessoa e nenhuma explicação. O `eval` roda no contexto da página do
-/// estranho, então pode ser barrado pela CSP dele; por isso é a segunda linha
-/// de defesa, e não a única.
-fn avisar_porta_tomada(app: &AppHandle) {
-    eprintln!(
-        "[iara] a porta {PORTA_MOTOR} está ocupada por outro processo (não respondeu          /saude como IARA). O motor não subiu. Libere a porta ou encerre o outro          servidor e abra a IARA de novo."
-    );
-
-    if let Some(painel) = app.get_webview_window(JANELA_PAINEL) {
-        let aviso = format!(
-            "document.documentElement.innerHTML =              '<body style=\"margin:0;display:flex;align-items:center;justify-content:center;             height:100vh;background:#0b0d0f;color:#eef1f4;font:14px system-ui;text-align:center\">             <div style=\"max-width:34rem;padding:2rem;line-height:1.6\">             <p style=\"letter-spacing:.22em;font-weight:600\">I A R A</p>             <p>A porta {PORTA_MOTOR} está ocupada por outro programa.</p>             <p style=\"color:#8b959d\">O motor da IARA não pôde subir. Encerre o outro              servidor que está usando essa porta e abra a IARA de novo.</p></div></body>'"
-        );
-        let _ = painel.eval(&aviso);
-    }
-}
-
-/// Sobe o motor em modo produção, sem janela de terminal.
-///
-/// `CREATE_NO_WINDOW` é o ponto todo do V4: a experiência final é abrir
-/// IARA.exe, nunca "primeiro rode npm num cmd preto".
-fn subir_motor(pasta: &Path) -> std::io::Result<u32> {
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-
-    let mut comando = Command::new("cmd");
-    comando.args(["/C", "npm", "run", "start"]).current_dir(pasta);
-
-    // Sem Supabase no ambiente, o motor recusaria subir por falta de
-    // identidade. Aqui é o processo localhost do próprio operador — decisão
-    // consciente, registrada no README. Com Supabase no .env.local a
-    // autenticação real assume e esta variável passa a ser irrelevante.
-    comando.env("IARA_PERMITIR_MODO_LOCAL", "1");
-
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        comando.creation_flags(CREATE_NO_WINDOW);
-    }
-
-    comando.spawn().map(|filho| filho.id())
-}
-
-/// Espera o motor atender, com teto. Se estourar, o webview mostra o erro do
-/// próprio Windows — melhor que uma janela em branco sem explicação.
-///
-/// A espera aceita SÓ o motor identificado, não "a porta abriu". Durante o
-/// arranque o Next abre o socket antes de servir, e um TCP aberto aqui daria
-/// verde cedo demais: a janela recarregaria contra um servidor que ainda não
-/// responde e o operador veria o erro de conexão que este método existe para
-/// evitar. Só o /saude com a assinatura prova que dá para recarregar.
-fn esperar_motor(limite: Duration) -> bool {
-    let inicio = Instant::now();
-    while inicio.elapsed() < limite {
-        if matches!(quem_esta_na_porta(), NaPorta::Motor) {
-            return true;
-        }
-        std::thread::sleep(Duration::from_millis(400));
-    }
-    false
-}
-
-/// `npm` no Windows é uma árvore: cmd → npm.cmd → node. Matar só o PID do topo
-/// deixaria o motor rodando órfão, segurando a porta 3000 até o reboot. `/T`
-/// derruba a árvore inteira.
-fn derrubar_motor() {
-    let Some(pid) = MOTOR_FILHO.lock().ok().and_then(|mut t| t.take()) else {
+/// O HTML da página offline não conhece nenhuma das três fontes de destino —
+/// quem sabe é o Rust. Isto entrega o endereço tentado para a tela.
+fn anunciar_destino(app: &AppHandle, alvo: &str, motivo: &str) {
+    let Some(painel) = app.get_webview_window(JANELA_PAINEL) else {
         return;
     };
-    let _ = Command::new("taskkill")
-        .args(["/PID", &pid.to_string(), "/T", "/F"])
-        .output();
+    let alvo = alvo.replace('\\', "\\\\").replace('\'', "\\'");
+    let motivo = motivo.replace('\\', "\\\\").replace('\'', "\\'");
+    let _ = painel.eval(&format!(
+        "window.definirDestino && window.definirDestino('{alvo}'); \
+         window.definirAviso && window.definirAviso('{motivo}');"
+    ));
 }
 
-/// Só sobe o motor se a porta estiver muda. Com `npm run dev` já rodando em
-/// `apps/web`, o shell detecta a porta ocupada e não duplica nada — e não
-/// assume a posse de um processo que não é dele.
-fn garantir_motor(app: &AppHandle) {
-    match quem_esta_na_porta() {
-        NaPorta::Motor => return,
-        NaPorta::Estranho => {
-            avisar_porta_tomada(app);
+// ---------------------------------------------------------------------------
+// Comandos chamados pelas janelas locais (bolha e offline)
+// ---------------------------------------------------------------------------
+
+/// Arrasto nativo. O HTML decide *quando* é arrasto (mouse andou mais que o
+/// limiar); aqui só entregamos o gesto ao gerenciador de janelas — arrastar no
+/// JS, recolocando a janela a cada mousemove, tremeria.
+#[tauri::command]
+fn arrastar_bolha(app: AppHandle) {
+    if let Some(bolha) = app.get_webview_window(JANELA_BOLHA) {
+        let _ = bolha.start_dragging();
+    }
+}
+
+/// Clique na bolha e Alt+Space caem os dois aqui: um gesto, um comportamento.
+#[tauri::command]
+fn alternar_painel(app: AppHandle) {
+    alternar(&app);
+}
+
+/// A página offline avisa que terminou de carregar. Sem este aperto de mão, o
+/// `eval` do destino poderia disparar antes do parse do script e se perder.
+#[tauri::command]
+fn offline_pronta(app: AppHandle) {
+    anunciar_destino(&app, &destino(), "");
+}
+
+/// "Tentar agora". Devolve `true` se navegou; a página só continua existindo
+/// quando devolve `false`.
+#[tauri::command]
+fn tentar_destino(app: AppHandle) -> bool {
+    if SONDANDO.swap(true, Ordering::SeqCst) {
+        return false;
+    }
+    let alvo = destino();
+    let resultado = sondar(&alvo);
+    SONDANDO.store(false, Ordering::SeqCst);
+
+    match resultado {
+        Alcance::Motor => {
+            if let Some(painel) = app.get_webview_window(JANELA_PAINEL) {
+                if let Ok(url) = alvo.parse() {
+                    let _ = painel.navigate(url);
+                    return true;
+                }
+            }
+            false
+        }
+        Alcance::Estranho => {
+            anunciar_destino(
+                &app,
+                &alvo,
+                "Esse endereço respondeu, mas não é a IARA. Pode ser um portal de Wi-Fi ou um proxy.",
+            );
+            false
+        }
+        Alcance::Mudo => false,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Vigia: traz a janela de volta sozinha quando a IARA reaparece
+// ---------------------------------------------------------------------------
+
+fn vigiar(app: AppHandle, alvo: String) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(RITMO_SONDA);
+        if ENCERRANDO.load(Ordering::SeqCst) {
             return;
         }
-        NaPorta::Muda => {}
-    }
-
-    let Some(pasta) = achar_motor() else {
-        eprintln!("[iara] motor não encontrado. Defina IARA_MOTOR_DIR ou rode `npm run dev` em apps/web.");
-        return;
-    };
-
-    match subir_motor(&pasta) {
-        Ok(pid) => {
-            if let Ok(mut trava) = MOTOR_FILHO.lock() {
-                *trava = Some(pid);
-            }
-            let app = app.clone();
-            // Fora da thread da UI: esperar aqui congelaria a janela e a bolha.
-            std::thread::spawn(move || {
-                if esperar_motor(Duration::from_secs(90)) {
-                    // As janelas nasceram antes do motor atender e carregaram
-                    // um erro de conexão. Recarregar agora é o que faz a tela
-                    // certa aparecer sem o operador apertar nada.
-                    if let Some(painel) = app.get_webview_window(JANELA_PAINEL) {
-                        let _ = painel.eval("window.location.reload()");
-                    }
-                } else {
-                    eprintln!("[iara] o motor não respondeu em 90 s. Rodou `npm run build` em apps/web?");
-                }
-            });
+        if SONDANDO.swap(true, Ordering::SeqCst) {
+            continue;
         }
-        Err(erro) => eprintln!("[iara] falha ao subir o motor: {erro}"),
+        let resultado = sondar(&alvo);
+        SONDANDO.store(false, Ordering::SeqCst);
+
+        if let Alcance::Motor = resultado {
+            if let Some(painel) = app.get_webview_window(JANELA_PAINEL) {
+                if let Ok(url) = alvo.parse() {
+                    let _ = painel.navigate(url);
+                }
+            }
+            return; // alcançou: o vigia cumpriu o papel e sai.
+        }
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Motor local — SÓ desenvolvimento, atrás de IARA_MOTOR_LOCAL=1
+// ---------------------------------------------------------------------------
+
+/// Este bloco inteiro é ferramenta de quem desenvolve a IARA, não o produto.
+///
+/// Ele NÃO é código morto e não deve ser apagado: sem ele, trabalhar no motor e
+/// na janela ao mesmo tempo obriga a abrir o navegador ao lado do app, e a
+/// diferença entre os dois ambientes é justamente onde os defeitos do shell se
+/// escondem.
+mod local {
+    use super::*;
+
+    fn e_pasta_do_motor(caminho: &Path) -> bool {
+        caminho.join("package.json").is_file() && caminho.join("servidor").is_dir()
     }
+
+    /// Variável de ambiente, pasta `motor` ao lado do executável, e por fim o
+    /// repositório subindo a árvore (cobre `target\debug` e `target\release`).
+    fn achar_motor() -> Option<PathBuf> {
+        if let Ok(indicado) = std::env::var("IARA_MOTOR_DIR") {
+            let caminho = PathBuf::from(indicado);
+            if e_pasta_do_motor(&caminho) {
+                return Some(caminho);
+            }
+            eprintln!("[iara] IARA_MOTOR_DIR não aponta para o motor: {caminho:?}");
+        }
+
+        let executavel = std::env::current_exe().ok()?;
+        let pasta_exe = executavel.parent()?;
+
+        for ancestral in pasta_exe.ancestors() {
+            for tentativa in [
+                ancestral.join("motor"),
+                ancestral.join("web"),
+                ancestral.join("apps").join("web"),
+                ancestral.join("iara-os").join("apps").join("web"),
+            ] {
+                if e_pasta_do_motor(&tentativa) {
+                    return Some(tentativa);
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Sobe o motor sem janela de terminal.
+    fn subir_motor(pasta: &Path) -> std::io::Result<u32> {
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+        let mut comando = Command::new("cmd");
+        comando.args(["/C", "npm", "run", "start"]).current_dir(pasta);
+
+        // Sem Supabase no ambiente, o motor recusaria subir por falta de
+        // identidade. Aqui é o processo localhost do próprio desenvolvedor.
+        comando.env("IARA_PERMITIR_MODO_LOCAL", "1");
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            comando.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        comando.spawn().map(|filho| filho.id())
+    }
+
+    /// Espera o motor atender, com teto. A espera aceita SÓ o motor
+    /// identificado, não "a porta abriu": durante o arranque o Next abre o
+    /// socket antes de servir, e um TCP aberto daria verde cedo demais.
+    fn esperar_motor(base: &str, limite: Duration) -> bool {
+        let inicio = Instant::now();
+        while inicio.elapsed() < limite {
+            if matches!(sondar(base), Alcance::Motor) {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(400));
+        }
+        false
+    }
+
+    /// Só sobe o motor se ninguém estiver atendendo. Com `npm run dev` já
+    /// rodando em `apps/web`, o shell reusa e não assume a posse do processo.
+    pub fn garantir_motor(app: &AppHandle) {
+        let base = format!("http://localhost:{PORTA_MOTOR_LOCAL}");
+
+        match sondar(&base) {
+            Alcance::Motor => return,
+            Alcance::Estranho => {
+                eprintln!(
+                    "[iara] a porta {PORTA_MOTOR_LOCAL} está ocupada por outro processo (não \
+                     respondeu /saude como IARA). O motor não subiu."
+                );
+                return;
+            }
+            Alcance::Mudo => {}
+        }
+
+        let Some(pasta) = achar_motor() else {
+            eprintln!(
+                "[iara] motor não encontrado. Defina IARA_MOTOR_DIR ou rode `npm run dev` em apps/web."
+            );
+            return;
+        };
+
+        match subir_motor(&pasta) {
+            Ok(pid) => {
+                if let Ok(mut trava) = MOTOR_FILHO.lock() {
+                    *trava = Some(pid);
+                }
+                let app = app.clone();
+                // Fora da thread da UI: esperar aqui congelaria a janela.
+                std::thread::spawn(move || {
+                    if esperar_motor(&base, Duration::from_secs(90)) {
+                        if let Some(painel) = app.get_webview_window(JANELA_PAINEL) {
+                            if let Ok(url) = base.parse() {
+                                let _ = painel.navigate(url);
+                            }
+                        }
+                    } else {
+                        eprintln!(
+                            "[iara] o motor não respondeu em 90 s. Rodou `npm run build` em apps/web?"
+                        );
+                    }
+                });
+            }
+            Err(erro) => eprintln!("[iara] falha ao subir o motor: {erro}"),
+        }
+    }
+
+    /// `npm` no Windows é uma árvore: cmd → npm.cmd → node. Matar só o PID do
+    /// topo deixaria o motor órfão segurando a porta até o reboot. `/T` derruba
+    /// a árvore inteira.
+    pub fn derrubar_motor() {
+        let Some(pid) = MOTOR_FILHO.lock().ok().and_then(|mut t| t.take()) else {
+            return;
+        };
+        let _ = Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .output();
+    }
+}
+
+fn modo_motor_local() -> bool {
+    std::env::var("IARA_MOTOR_LOCAL").is_ok_and(|v| v == "1")
 }
 
 // ---------------------------------------------------------------------------
@@ -334,9 +618,9 @@ fn montar_bandeja(app: &AppHandle) -> tauri::Result<()> {
 
     let mut bandeja = TrayIconBuilder::with_id("bandeja")
         .tooltip("IARA")
-        .menu(&menu)
         // Clique esquerdo alterna o painel; o menu fica no direito, como manda
         // a convenção do Windows.
+        .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, evento| match evento.id().as_ref() {
             "abrir" => revelar(app),
@@ -384,10 +668,55 @@ fn main() {
                 })
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![arrastar_bolha, alternar_painel])
+        .invoke_handler(tauri::generate_handler![
+            arrastar_bolha,
+            alternar_painel,
+            offline_pronta,
+            tentar_destino
+        ])
         .setup(move |app| {
             let handle = app.handle().clone();
-            garantir_motor(&handle);
+            let alvo = destino();
+
+            /* A JANELA NASCE NO LUGAR CERTO, e essa é a diferença que o
+               operador percebe. Antes ela nascia apontada para o motor e
+               carregava um erro de conexão enquanto ele subia; agora sondamos
+               primeiro e só então decidimos o que mostrar. Trocar a ordem
+               custa 3 s no pior caso e economiza a tela de erro do WebView2
+               piscando dentro da moldura da IARA. */
+            let alcance = sondar(&alvo);
+            // `destino_aceitavel` já garantiu o esquema, então a falha de parse
+            // aqui é praticamente impossível — mas "praticamente impossível"
+            // envelhece mal, e o custo de tratá-la é uma linha.
+            let url_valida = alvo.parse().ok();
+
+            match (&alcance, url_valida) {
+                (Alcance::Motor, Some(url)) => {
+                    abrir_painel(&handle, WebviewUrl::External(url))?;
+                }
+                _ => {
+                    // A janela JÁ nasce na página offline — nada de abrir no
+                    // destino e navegar para o erro depois, que é o piscar de
+                    // tela que esta ordem existe para evitar.
+                    abrir_painel(&handle, WebviewUrl::App("offline.html".into()))?;
+                    let motivo = match alcance {
+                        Alcance::Estranho => {
+                            "Esse endereço respondeu, mas não é a IARA. Pode ser um portal de Wi-Fi ou um proxy."
+                        }
+                        Alcance::Motor => "O endereço configurado não é uma URL válida.",
+                        Alcance::Mudo => "",
+                    };
+                    if !motivo.is_empty() {
+                        anunciar_destino(&handle, &alvo, motivo);
+                    }
+                    vigiar(handle.clone(), alvo.clone());
+                }
+            }
+
+            if modo_motor_local() {
+                local::garantir_motor(&handle);
+            }
+
             montar_bandeja(&handle)?;
 
             // Um atalho global tomado por outro app não é motivo para o shell
@@ -412,7 +741,10 @@ fn main() {
 
     app.run(|_app, evento| {
         if let RunEvent::Exit = evento {
-            derrubar_motor();
+            ENCERRANDO.store(true, Ordering::SeqCst);
+            if modo_motor_local() {
+                local::derrubar_motor();
+            }
         }
     });
 }

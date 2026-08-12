@@ -1,9 +1,16 @@
 # Shell desktop da IARA — Tauri 2.
 #
 # O Rust aqui cuida SÓ de janela: bolha flutuante, atalho global, bandeja.
-# As ações no computador (pasta, aplicativo, energia) moram no motor Node
-# (`servidor/nucleo/AgenteLocal.ts`) — o webview conversa com ele em
-# localhost:3000, mesma origem, mesmo contrato do navegador.
+# As ações no computador (pasta, aplicativo, energia) continuam no motor
+# (`servidor/nucleo/AgenteLocal.ts`). O que MUDOU em 12/08/2026 é onde esse
+# motor mora: ele deixou de ser um processo subido nesta máquina e passou a
+# viver na nuvem. O webview aponta para lá.
+#
+# Consequência prática desta virada, e ela é o motivo do `ureq` abaixo: a sonda
+# de saúde deixou de ser um GET em texto puro para 127.0.0.1 e passou a ser
+# HTTPS para um host remoto. TLS escrito à mão não é opção, e é por isso que o
+# argumento antigo de "não trazer um cliente HTTP inteiro por causa de uma
+# linha" deixou de valer.
 
 [package]
 name = "iara-desktop"
@@ -19,6 +26,10 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Cliente HTTP bloqueante com rustls. Bloqueante de propósito: a sonda roda
+# numa thread própria e não há nada de assíncrono neste processo para justificar
+# arrastar um runtime inteiro para dentro do instalador.
+ureq = "2"
 
 [profile.release]
 panic = "abort"
