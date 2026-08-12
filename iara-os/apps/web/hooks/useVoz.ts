@@ -26,6 +26,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { urlVoz } from '@/lib/supabaseNavegador';
 import type { Fala } from './useIaraSocket';
 
 const CHAVE_PREFERENCIA = 'iara.voz_navegador';
@@ -444,7 +445,10 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
      */
     if (!lider) return;
     // `tocar` já cala tudo (fallback agendado e síntese em curso) antes.
-    tocar(fala.voz);
+    // `urlVoz` resolve o caminho contra o host do motor: com a interface na
+    // nuvem e o motor noutro endereço, um caminho relativo bateria no host do
+    // front, onde o áudio não existe — os bytes vivem na MEMÓRIA do motor.
+    tocar(urlVoz(fala.voz));
   }, [fala, ativa, vozLigada, lider, tocar]);
 
   // Caminho 2 — síntese do navegador quando o servidor não manda áudio.

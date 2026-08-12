@@ -1,19 +1,30 @@
 /**
- * Processo único: Next + motor cognitivo na MESMA porta.
+ * O motor cognitivo, em dois modos.
  *
- * Por que unificar: dois processos em portas diferentes obrigam a expor duas
- * URLs, dois certificados e um WebSocket cross-origin. Num processo só, o
- * barramento é same-origin em `/barramento`, herda o TLS do host e roda em
- * qualquer lugar que execute Node — Railway, Render, Fly, Docker, VPS.
+ * `unificado` (padrão) — Next + motor na MESMA porta, um processo só. Dois
+ * processos em portas diferentes obrigariam a expor duas URLs, dois
+ * certificados e um WebSocket cross-origin; aqui o barramento é same-origin em
+ * `/barramento`, herda o TLS do host e roda em qualquer lugar que execute Node.
  *
- * Vercel continua fora: serverless não mantém processo longo nem WebSocket.
+ * `headless` — o motor SEM a interface. O Next é servido noutro host (Vercel), e
+ * este processo entrega só o que exige estado vivo: o WebSocket, o áudio da voz
+ * (que mora em memória, não em disco) e o webhook do WhatsApp. Serverless nunca
+ * serviu para isto — não mantém processo longo, não preserva memória entre
+ * invocações e tem filesystem somente-leitura.
+ *
+ * O PADRÃO é `unificado` de propósito, e isso é uma decisão de operação, não de
+ * estética: `npm run dev` continua idêntico, e no dia em que o front na nuvem
+ * quebrar — domínio expirado, NEXT_PUBLIC_IARA_WS apontando para o lugar
+ * errado, deploy travado — trocar UMA variável no host devolve o sistema
+ * inteiro num endereço só. É por isso que o Dockerfile continua rodando
+ * `npm run build` mesmo quando este processo sobe headless.
  */
 
 import { createServer, type IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
-import next from 'next';
 import { WebSocketServer } from 'ws';
 import { config as carregarEnv } from 'dotenv';
+import { origemNaLista, temCuringa } from '../lib/origens';
 import { conectarOperador, encerrarResidentes, prepararMotor } from './barramento/Porta';
 import { persistenciaEmUso } from './nucleo/ClienteSupabase';
 import { autenticacaoAtiva } from './nucleo/Autenticacao';
@@ -38,6 +49,10 @@ const DEV = process.argv.includes('--dev') || process.env.NODE_ENV === 'developm
 const PORTA = Number(process.env.PORT ?? process.env.IARA_PORTA ?? 3000);
 const CAMINHO_WS = '/barramento';
 
+/** Ver o cabeçalho do arquivo. Qualquer valor que não seja `headless` é unificado. */
+type ModoMotor = 'unificado' | 'headless';
+const MODO: ModoMotor = process.env.IARA_MODO === 'headless' ? 'headless' : 'unificado';
+
 /**
  * Trava de origem. Sem isto, qualquer página na internet abre um WebSocket
  * para o motor e conversa com ele. Navegador não aplica CORS a WebSocket — a
@@ -46,6 +61,9 @@ const CAMINHO_WS = '/barramento';
  * `IARA_ORIGENS` é uma lista separada por vírgula. Vazio em produção = só
  * mesma origem (requisições sem header `Origin`, como cliente nativo, são
  * recusadas).
+ *
+ * Em modo headless a "mesma origem" deixa de existir: o front mora noutro
+ * domínio, e a lista passa a ser a ÚNICA coisa que separa a IARA da internet.
  */
 const ORIGENS = (process.env.IARA_ORIGENS ?? '')
   .split(',')
@@ -55,12 +73,29 @@ const ORIGENS = (process.env.IARA_ORIGENS ?? '')
 function origemPermitida(req: IncomingMessage): boolean {
   const origem = req.headers.origin;
   if (!origem) return DEV; // sem Origin: só tolerado em desenvolvimento
-  if (ORIGENS.includes(origem)) return true;
+  if (origemNaLista(origem, ORIGENS)) return true;
   if (DEV && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origem)) return true;
   // Mesma origem do próprio host: compara com o Host do request.
   const host = req.headers.host;
   if (host && (origem === `https://${host}` || origem === `http://${host}`)) return true;
   return false;
+}
+
+/**
+ * A interface, quando ela mora neste processo.
+ *
+ * Devolve os dois tratadores que o Next expõe. O de upgrade não é detalhe: o
+ * Next tem o próprio WebSocket de HMR em dev, e sem devolver o upgrade para ele
+ * o hot reload morre.
+ */
+async function montarAnexoNext(dev: boolean): Promise<{
+  requisicao: (req: IncomingMessage, res: import('node:http').ServerResponse) => Promise<void>;
+  upgrade: (req: IncomingMessage, socket: Duplex, head: Buffer) => Promise<void>;
+}> {
+  const { default: next } = await import('next');
+  const app = next({ dev });
+  await app.prepare();
+  return { requisicao: app.getRequestHandler(), upgrade: app.getUpgradeHandler() };
 }
 
 async function subir(): Promise<void> {
@@ -81,12 +116,41 @@ async function subir(): Promise<void> {
     process.exit(1);
   }
 
-  const app = next({ dev: DEV });
-  await app.prepare();
-  const tratarRequisicao = app.getRequestHandler();
-  // O Next tem o próprio WebSocket de HMR em dev; se não devolvermos o upgrade
-  // para ele, o hot reload morre.
-  const tratarUpgrade = app.getUpgradeHandler();
+  /**
+   * FALHA-FECHADA nº 2: curinga de origem em produção.
+   *
+   * `https://*.vercel.app` parece "um pouco mais frouxo" e não é: qualquer
+   * pessoa consegue um subdomínio `vercel.app` de graça em minutos. O curinga
+   * não alarga a lista de origens autorizadas — ele a substitui pela internet
+   * inteira, e faz isso silenciosamente, porque tudo continua funcionando.
+   *
+   * A trava de token do Supabase ainda barraria a impersonação. Mas esta
+   * checagem existe justamente por ser a camada que NÃO depende de o token
+   * estar certo, e uma defesa em profundidade que se anula sozinha em produção
+   * não é defesa nenhuma.
+   *
+   * Preview de deploy é um caso legítimo — e o lugar dele é um motor separado,
+   * com `IARA_AMBIENTE=homologacao` e banco próprio, nunca o de produção.
+   */
+  if (!DEV && temCuringa(ORIGENS) && process.env.IARA_AMBIENTE !== 'homologacao') {
+    console.error(
+      '[iara] RECUSANDO SUBIR: curinga em IARA_ORIGENS sem IARA_AMBIENTE=homologacao.\n' +
+        `       Origens declaradas: ${ORIGENS.join(', ')}\n` +
+        '       Um curinga de subdomínio em produção equivale a autorizar a internet: qualquer\n' +
+        '       pessoa registra um subdomínio no mesmo host em minutos. Use o domínio exato, ou\n' +
+        '       suba um motor de homologação separado (banco próprio) e declare IARA_AMBIENTE.',
+    );
+    process.exit(1);
+  }
+
+  /**
+   * O anexo da interface. Só existe em modo unificado — e o import é DINÂMICO
+   * por isso: com `import next from 'next'` no topo, o módulo seria resolvido
+   * na subida mesmo sem nunca ser instanciado, e o container headless passaria
+   * a exigir um `.next` construído para começar a existir. Headless que carrega
+   * o Next não é headless, é Next com a interface desligada.
+   */
+  const anexo = MODO === 'unificado' ? await montarAnexoNext(DEV) : null;
 
   /**
    * Áudio da voz, servido pelo próprio processo.
@@ -123,6 +187,9 @@ async function subir(): Promise<void> {
           ok: true,
           uptime_s: Math.round((Date.now() - inicioProcesso) / 1000),
           modo: DEV ? 'desenvolvimento' : 'producao',
+          // A interface está NESTE processo ou noutro host? O shell desktop e
+          // quem for diagnosticar um deploy precisam da resposta sem adivinhar.
+          projecao: MODO === 'unificado' ? 'anexa' : 'externa',
           autenticacao: autenticacaoAtiva() ? 'supabase' : 'local',
         }),
       );
@@ -150,18 +217,55 @@ async function subir(): Promise<void> {
         res.writeHead(404).end();
         return;
       }
-      res.writeHead(200, {
+      /**
+       * CORS aqui não é o que faz o áudio tocar. Um `new Audio(url)` cross-origin
+       * toca sem cabeçalho nenhum — é mídia, não `fetch`.
+       *
+       * O que estes dois cabeçalhos impedem é a falha SILENCIOSA de amanhã: no
+       * dia em que alguém ligar um `AudioContext` no elemento para medir
+       * amplitude e alimentar a articulação da boca, sem CORS o elemento vira
+       * *tainted* e a saída é silêncio — sem erro, sem exceção, sem pista. E o
+       * `Cross-Origin-Resource-Policy` é o que mantém o áudio alcançável se a
+       * página do outro host algum dia mandar COEP.
+       */
+      const origem = req.headers.origin;
+      const cabecalhos: Record<string, string | number> = {
         'Content-Type': audio.tipo,
         'Content-Length': audio.bytes.length,
         // Imutável: o nome do arquivo É o hash do conteúdo. Se o texto mudar,
         // muda o hash, muda a URL — nunca há cache servindo áudio velho.
         'Cache-Control': 'public, max-age=86400, immutable',
-      });
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+      };
+      // A MESMA trava do barramento decide: nada de `*`. A fala da IARA é
+      // conteúdo do operador, e a lista de origens já é a resposta para "quem
+      // pode ler isto".
+      if (origem && origemPermitida(req)) {
+        cabecalhos['Access-Control-Allow-Origin'] = origem;
+        cabecalhos.Vary = 'Origin';
+      }
+      res.writeHead(200, cabecalhos);
       res.end(audio.bytes);
       return;
     }
 
-    void tratarRequisicao(req, res);
+    if (anexo) {
+      void anexo.requisicao(req, res);
+      return;
+    }
+
+    /**
+     * Headless: este processo não tem interface para servir, e dizer isso é
+     * melhor que uma página em branco. Quem chegou aqui ou digitou o endereço
+     * do motor no navegador, ou tem um NEXT_PUBLIC_IARA_WS apontando para o
+     * lugar errado — e as duas confusões se resolvem lendo esta linha.
+     */
+    res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(
+      JSON.stringify({
+        erro: 'motor headless: este processo serve o barramento, a voz e os canais — a interface mora noutro host',
+      }),
+    );
   });
 
   const wss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
@@ -190,12 +294,23 @@ async function subir(): Promise<void> {
     const caminho = (req.url ?? '').split('?')[0];
 
     if (caminho !== CAMINHO_WS) {
-      void tratarUpgrade(req, socket, head);
+      // Só o HMR do Next tem outro motivo legítimo para pedir upgrade aqui.
+      // Sem anexo não há HMR, e um upgrade para caminho desconhecido é ruído
+      // ou sondagem: fecha.
+      if (anexo) void anexo.upgrade(req, socket, head);
+      else socket.destroy();
       return;
     }
 
     if (!origemPermitida(req)) {
-      console.warn(`[iara] upgrade recusado, origem "${req.headers.origin ?? '(vazia)'}"`);
+      // A lista esperada vai junto de propósito. O erro nº 1 deste deploy é
+      // "https://app.com" contra "https://app.com/", ou http contra https — e
+      // ver as duas strings uma embaixo da outra resolve em segundos o que sem
+      // isso vira uma tarde procurando no lugar errado.
+      console.warn(
+        `[iara] upgrade recusado, origem "${req.headers.origin ?? '(vazia)'}" — ` +
+          `autorizadas: ${ORIGENS.length ? ORIGENS.join(', ') : '(nenhuma; só mesma origem)'}`,
+      );
       socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
       socket.destroy();
       return;
@@ -209,8 +324,16 @@ async function subir(): Promise<void> {
   });
 
   servidorHttp.listen(PORTA, () => {
-    console.log(`[iara] IARA OS em http://localhost:${PORTA}`);
-    console.log(`[iara] barramento em ${CAMINHO_WS} (mesma porta, mesma origem)`);
+    console.log(
+      anexo
+        ? `[iara] IARA OS em http://localhost:${PORTA}`
+        : `[iara] motor HEADLESS na porta ${PORTA} — sem interface; ela é servida noutro host`,
+    );
+    console.log(
+      anexo
+        ? `[iara] barramento em ${CAMINHO_WS} (mesma porta, mesma origem)`
+        : `[iara] barramento em ${CAMINHO_WS} (o cliente chega por NEXT_PUBLIC_IARA_WS)`,
+    );
     console.log(`[iara] persistência: ${persistenciaEmUso()}`);
     console.log(`[iara] ${diagnosticoWhatsapp()}`);
     console.log(`[iara] voz: ${diagnosticoVoz()}`);
@@ -221,7 +344,12 @@ async function subir(): Promise<void> {
     );
     if (!DEV && ORIGENS.length === 0) {
       console.warn(
-        '[iara] IARA_ORIGENS vazio em produção: só a própria origem é aceita no barramento.',
+        anexo
+          ? '[iara] IARA_ORIGENS vazio em produção: só a própria origem é aceita no barramento.'
+          : '[iara] ATENÇÃO: headless com IARA_ORIGENS vazio. A interface mora noutro domínio e\n' +
+              '       "mesma origem" não existe aqui — nenhum navegador vai conseguir conectar.\n' +
+              '       O sintoma é a IARA presa em "reconectando…" sem erro nenhum no painel.\n' +
+              '       Declare IARA_ORIGENS com o domínio exato do front.',
       );
     }
   });

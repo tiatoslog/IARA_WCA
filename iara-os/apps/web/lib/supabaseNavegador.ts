@@ -39,3 +39,39 @@ export function enderecoBarramento(): string {
   const protocolo = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocolo}//${window.location.host}/barramento`;
 }
+
+/**
+ * Origem HTTP do motor. Vazia quando ele É este host — o caso unificado, em que
+ * caminho relativo já resolve sozinho.
+ *
+ * DERIVADA de `NEXT_PUBLIC_IARA_WS`, e isso é deliberado: uma variável só, uma
+ * verdade só. Duas variáveis independentes (uma para o WebSocket, outra para o
+ * HTTP) divergem no dia em que alguém troca o domínio do motor e atualiza
+ * apenas a primeira — e o sintoma dessa divergência é a IARA conversar
+ * normalmente e ficar MUDA, sem erro no console, porque só o áudio quebrou.
+ *
+ * `NEXT_PUBLIC_IARA_MOTOR` existe como escape para o caso em que os dois de
+ * fato moram em endereços diferentes (um proxy de WebSocket na frente, por
+ * exemplo). Não é o caminho esperado.
+ */
+export function origemMotor(): string {
+  const explicito = process.env.NEXT_PUBLIC_IARA_MOTOR;
+  if (explicito) return explicito.replace(/\/$/, '');
+  const ws = process.env.NEXT_PUBLIC_IARA_WS;
+  if (ws) return ws.replace(/^ws/, 'http').replace(/\/barramento\/?$/, '');
+  return '';
+}
+
+/**
+ * `/voz/<hash>.mp3` → URL absoluta quando o motor mora noutro host.
+ *
+ * O `SnapshotCognitivo` carrega um CAMINHO, não uma URL, e continua assim: ele
+ * é o contrato do sistema, e enfiar o endereço do motor dentro dele faria o
+ * contrato de domínio carregar detalhe de transporte — um snapshot só válido no
+ * deployment que o gerou. Quem sabe onde esse caminho mora é esta camada, a
+ * mesma que já sabe onde o barramento mora.
+ */
+export function urlVoz(caminho: string): string {
+  if (/^https?:\/\//.test(caminho)) return caminho;
+  return `${origemMotor()}${caminho}`;
+}
