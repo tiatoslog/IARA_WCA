@@ -1,0 +1,44 @@
+# O que NÃO entra na imagem.
+#
+# Este arquivo não é higiene: sem ele o deploy quebra. O Dockerfile faz
+#
+#     COPY package.json package-lock.json ./
+#     RUN npm ci          ← instala para linux/musl
+#     COPY . .            ← e isto copiava o node_modules do WINDOWS por cima
+#
+# `sharp` e qualquer outro binário nativo são compilados por plataforma. O
+# `npm ci` do container fazia a coisa certa e a linha seguinte a desfazia, com
+# um erro que aparece só no `next build` e culpa o código.
+
+# A causa do parágrafo acima.
+node_modules
+
+# Estado de build local. O `.next` da máquina de quem publica não tem nada a
+# ver com o que o container vai construir, e `.next-XXXX` são resíduos das
+# instâncias por porta (ver next.config.mjs).
+.next
+.next-*
+
+# Segredos. `.env.local` tem service_role do Supabase e chave da Anthropic —
+# as variáveis do runtime vêm do painel do host, nunca de arquivo na imagem.
+.env.local
+.env*.local
+
+# Fontes de assets, não assets. O GLB de 12 MB e as fotografias de referência
+# existem para os testes e para `npm run marca`; o container só serve o que já
+# está em `public/`. Testes não rodam na imagem.
+ativos
+
+# Shards privados de operador e jornal de operações. São dados de máquina de
+# desenvolvimento; em produção a persistência é o Supabase.
+dados/memoria
+dados/operacoes
+
+# Ruído de repositório e de ferramenta.
+.git
+.gitignore
+.claude
+*.log
+Dockerfile
+.dockerignore
+README.md

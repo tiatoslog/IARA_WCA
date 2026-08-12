@@ -1,17 +1,23 @@
 # Railway — deploy do motor da IARA (decisão de arquitetura de 08/08/2026:
-# kernel na nuvem, agente local nas máquinas; Vercel só entra depois, se
-# fizer sentido separar o frontend).
+# kernel na nuvem, agente local nas máquinas; a separação do frontend foi
+# decidida em 12/08/2026 — Next na Vercel, motor aqui).
 #
 # Variáveis a configurar no painel do Railway antes do primeiro deploy:
 #   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  → sem elas o motor RECUSA subir
 #                                              em produção (falha-fechada), a
 #                                              menos que IARA_PERMITIR_MODO_LOCAL=1
 #   ANTHROPIC_API_KEY                        → camada de raciocínio
-#   IARA_ORIGENS                             → ex.: https://iara.atoslog.com.br
+#   IARA_ORIGENS                             → o domínio EXATO do front, ex.:
+#                                              https://iara.atoslog.com.br
+#                                              Curinga faz o motor recusar subir
+#                                              sem IARA_AMBIENTE=homologacao.
+#   IARA_MODO=headless                       → não instancia o Next; a interface
+#                                              é servida pela Vercel
 #
 # O agente local (criar pasta, abrir app, energia) NÃO age aqui — age na
-# máquina de cada operador, via IARA Desktop. No Railway essas habilidades
-# operam no container e nada além dele.
+# máquina de cada operador, via IARA Desktop. Enquanto o canal reverso não
+# existir, essas habilidades operam no container e nada além dele: é o motivo
+# de a IARA precisar RECUSÁ-LAS em vez de fingir que criou a pasta.
 
 [build]
 builder = "dockerfile"
