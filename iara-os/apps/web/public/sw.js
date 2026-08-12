@@ -20,7 +20,7 @@
  *
  * v2 — 11/08/2026: a marca passou a ser a fotografia de cromo.
  */
-const VERSAO = 'iara-v2';
+const VERSAO = 'iara-v3';
 const CASCA = ['/', '/icones/icone-192.png', '/icones/icone-512.png'];
 
 self.addEventListener('install', (evento) => {
