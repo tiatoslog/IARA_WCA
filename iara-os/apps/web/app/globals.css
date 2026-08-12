@@ -34,8 +34,11 @@
   --painel: #fbfcfd;
   --sombra: rgba(30, 34, 40, 0.14);
 
-  --fonte: -apple-system, "SF Pro Display", "SF Pro Text", ui-sans-serif,
-    "Segoe UI Variable Display", "Segoe UI", system-ui, Roboto, sans-serif;
+  /* Inter variável, carregada por `next/font` em app/layout.tsx e servida do
+     próprio domínio. A pilha de sistema fica como rede de segurança, para o
+     intervalo entre a página pintar e a fonte chegar. */
+  --fonte: var(--fonte-inter), -apple-system, "SF Pro Display", "SF Pro Text",
+    ui-sans-serif, "Segoe UI Variable Display", "Segoe UI", system-ui, Roboto, sans-serif;
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace;
 
   /* ------------------------------------------------------------------------
@@ -175,6 +178,50 @@ body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+
+  /* OS DETALHES QUE SEPARAM "trocar a fonte" DE TIPOGRAFIA.
+     Nenhum deles aparece sozinho; juntos são a diferença entre a tela parecer
+     desenhada e parecer padrão do navegador.
+
+     cv11  o `a` e o `g` de andar único. A forma de dois andares do Inter é
+           correta para texto longo impresso e pesada numa interface escura,
+           onde cada contraforma pequena vira um ponto de ruído.
+     ss01  alternativas de `t`, `f` e do `l` — terminais mais retos, que é o
+           que faz o conjunto ler como instrumento e não como texto de blog.
+     cv05  o `l` com cauda: separa `1`, `I` e `l` numa tela que mostra número
+           de central, coordenada e hash.
+
+     SOZINHA nesta regra, de propósito. Declarar `font-variant-ligatures` ao
+     lado fazia o minificador fundir as duas numa só — o resultado era
+     `font-feature-settings:"cv11","ss01","cv05",common-ligatures contextual`,
+     sintaxe inválida que o navegador descarta inteira. O sintoma foi
+     `getComputedStyle(document.body).fontFeatureSettings === 'normal'` com o
+     CSS "certo" no arquivo-fonte. Ligadura comum e contextual já é o padrão do
+     navegador; a linha não fazia falta e custava as três variantes. */
+  font-feature-settings: 'cv11', 'ss01', 'cv05';
+}
+
+/* Números que se ALINHAM em coluna. Sem isto, cada `1` é mais estreito que
+   cada `8`, e uma lista de temperaturas, horários ou quantidades treme na
+   vertical a cada atualização — o olho lê movimento onde só houve troca de
+   dígito. Vale para tudo que a IARA informa em números. */
+.conversa-mensagem,
+.conversa-estagio,
+.painel-tecnico,
+code,
+kbd,
+samp {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Texto grande precisa de MENOS espaço entre letras, não do mesmo. O
+   espacejamento que faz um rótulo de 12 px respirar deixa um título de 28 px
+   frouxo — é a regra de tracking óptico, e é o que mais denuncia tipografia
+   não trabalhada. */
+h1,
+h2,
+.conversa-titulo {
+  letter-spacing: -0.011em;
 }
 
 ::selection {
@@ -615,60 +662,6 @@ body {
   background: rgba(40, 40, 48, 0.65);
 }
 
-/* Quem está nesta sessão, ao lado do Sair. Uma cápsula só, dividida por um
-   hairline: o nome e a saída são a mesma informação — de onde você sai. */
-.sessao {
-  display: inline-flex;
-  align-items: stretch;
-  border-radius: var(--r-capsula);
-  overflow: hidden;
-  border: 1px solid var(--c-linha-forte);
-  background: rgba(18, 18, 24, 0.55);
-  backdrop-filter: blur(18px) saturate(1.4);
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
-}
-
-.sessao-nome {
-  display: inline-flex;
-  align-items: center;
-  padding: 9px 13px;
-  font-size: var(--t-ui);
-  font-weight: 600;
-  color: var(--palco-tinta);
-  /* Nome longo não empurra o botão para fora da tela. */
-  max-width: 14ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* O botão dentro da cápsula perde a moldura própria: a cápsula já é a moldura,
-   e duas bordas concêntricas leem como caixa dentro de caixa. */
-.presenca-controles .sessao .botao {
-  border: 0;
-  border-left: 1px solid var(--c-linha-forte);
-  border-radius: 0;
-  background: transparent;
-  backdrop-filter: none;
-  box-shadow: none;
-  font-weight: 500;
-}
-
-.presenca-controles .sessao .botao:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.09);
-}
-
-/* Em tela estreita o nome sai e fica só o Sair: o celular é de uma pessoa só,
-   e ali a pergunta "de quem é esta sessão?" não se faz. */
-@media (max-width: 480px) {
-  .sessao-nome {
-    display: none;
-  }
-  .presenca-controles .sessao .botao {
-    border-left: 0;
-  }
-}
-
 /* Aviso honesto: modelo ausente ou sem rig. Ocupa o palco inteiro, porque não
    há rosto nenhum para dividir espaço com ele. */
 .presenca-vazio {
@@ -1064,6 +1057,50 @@ ol.plano {
   color: var(--c-tinta);
   background: var(--c-superficie);
   border-color: var(--c-linha);
+}
+
+/* A saudação ocupa a vaga do rótulo de estágio enquanto a IARA está em
+   repouso. Herda a mecânica do botão do operador — é a mesma porta para a
+   ficha — e muda só a tipografia: a cortesia recua, o nome avança. */
+.conversa-saudacao {
+  font-family: inherit;
+  font-size: var(--t-rotulo);
+  padding: 3px 9px;
+  border-radius: var(--r-capsula);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.conversa-saudacao:hover,
+.conversa-saudacao.aberto {
+  background: var(--c-superficie);
+  border-color: var(--c-linha);
+}
+
+/* Peso e cor separam as duas metades sem separar o espaço: a palavra de
+   cortesia é moldura, o nome é o assunto. Dois tamanhos fariam a linha
+   tropeçar; peso e opacidade não. */
+.saudacao-cortesia {
+  color: var(--c-tinta-2);
+  font-weight: 400;
+  letter-spacing: var(--tr-ui);
+}
+
+.saudacao-nome {
+  color: var(--c-tinta);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* Em tela estreita o painel é curto e a linha do cabeçalho disputa espaço com
+   o enlace e o título. Fica o nome, que é o que identifica a sessão. */
+@media (max-width: 480px) {
+  .saudacao-cortesia {
+    display: none;
+  }
 }
 
 .conversa-enlace {

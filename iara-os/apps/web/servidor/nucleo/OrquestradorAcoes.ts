@@ -151,9 +151,33 @@ export class OrquestradorAcoes {
    * que não foi criada.
    */
   private async consultarClima(horizonte: Horizonte): Promise<{ texto: string; ok: boolean }> {
-    const lat = process.env.IARA_LATITUDE ?? '-15.6014';
-    const lon = process.env.IARA_LONGITUDE ?? '-56.0979';
-    const cidade = process.env.IARA_CIDADE ?? 'perímetro operacional';
+    /**
+     * AS TRÊS VARIÁVEIS VIAJAM JUNTAS, e não ter padrão é a correção.
+     *
+     * Antes, coordenada sem declaração caía em Cuiabá (-15.6014, -56.0979) e o
+     * NOME caía em "perímetro operacional". As duas quedas eram diferentes, e a
+     * combinação produzia a pior resposta possível: a previsão de uma cidade
+     * específica, entregue sob um rótulo genérico que escondia qual. Um deploy
+     * feito de Valinhos recebia o tempo de Cuiabá sem nada na frase denunciando
+     * a troca — e "provavelmente não chove hoje" estava simplesmente errado
+     * para quem perguntou.
+     *
+     * Chutar a localização de alguém é da mesma família de afirmar uma pasta
+     * que não foi criada: a resposta tem a forma de um fato e não é um.
+     */
+    const lat = process.env.IARA_LATITUDE?.trim();
+    const lon = process.env.IARA_LONGITUDE?.trim();
+    const cidade = process.env.IARA_CIDADE?.trim() || 'perímetro operacional';
+
+    if (!lat || !lon) {
+      return {
+        ok: false,
+        texto:
+          'Não sei de qual lugar responder: este ambiente não tem coordenadas declaradas ' +
+          '(IARA_LATITUDE e IARA_LONGITUDE). Prefiro dizer isso a dar a previsão de uma ' +
+          'cidade que talvez não seja a sua.',
+      };
+    }
 
     // Endpoint correto da API. `open-meteo.com` (sem o `api.`) devolve o site
     // institucional em HTML e quebra o JSON.parse — erro clássico.

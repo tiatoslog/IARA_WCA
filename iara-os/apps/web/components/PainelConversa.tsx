@@ -129,6 +129,30 @@ export function PainelConversa({
   const nomeOperador = preferencias.como_chamar || estado.operador?.nome || '';
 
   /**
+   * O nome vem do login em caixa baixa (`daiane`) porque é derivado do e-mail.
+   * Numa saudação isso lê como campo de banco de dados vazando para a tela.
+   * Só a primeira letra: `de`, `da`, `dos` de sobrenome não são nomes próprios
+   * e capitalizá-los seria pior que não tocar em nada.
+   */
+  const nomeExibido = nomeOperador
+    ? nomeOperador.charAt(0).toLocaleUpperCase('pt-BR') + nomeOperador.slice(1)
+    : '';
+
+  /**
+   * O cabeçalho tem UMA vaga, e quem a ocupa depende do que está acontecendo.
+   *
+   * Trocar "à disposição" por uma saudação não esconde nada: `ocioso` É a
+   * ausência de trabalho, e dizer isso com o nome de quem chegou informa mais
+   * que um rótulo de estado. No instante em que a IARA começa a pensar, agir ou
+   * falar, o estado real toma a vaga de volta — porque aí ele é fato observado,
+   * e fato observado ganha da cortesia.
+   *
+   * "Boas-vindas" e não "bem-vindo": a IARA atende uma equipe inteira e não
+   * pergunta o gênero de ninguém para montar uma frase.
+   */
+  const saudando = conexao === 'conectado' && estado.estagio === 'ocioso' && Boolean(nomeExibido);
+
+  /**
    * Modo ligação. A IARA "está falando" quando há fala em curso não concluída
    * — é esse sinal que transforma voz do operador em interrupção em vez de
    * nova pergunta.
@@ -178,30 +202,33 @@ export function PainelConversa({
       <header className="conversa-cabecalho">
         <div className="conversa-cabecalho-linha">
           <span className="conversa-titulo">IARA</span>
-          <span className="conversa-estagio">
-            {conexao === 'conectado'
-              ? ROTULO_ESTAGIO[estado.estagio]
-              : conexao === 'desconectado'
-                ? 'desconectada'
-                : conexao === 'conectando'
-                  ? 'abrindo…'
-                  : 'reconectando…'}
-          </span>
           {/*
-            A porta da ficha é o NOME de quem está na sala — não uma
-            engrenagem de configurações. Preferência sobre como ser tratado não
-            é ajuste de sistema; é sobre a pessoa, e o lugar dela é onde a
-            pessoa aparece.
+            A porta da ficha continua sendo o NOME de quem está na sala — não
+            uma engrenagem de configurações. Preferência sobre como ser tratado
+            não é ajuste de sistema; é sobre a pessoa, e o lugar dela é onde a
+            pessoa aparece. O que mudou é a moldura: em repouso o nome vem
+            dentro de uma saudação, e é ela que abre a ficha.
           */}
-          {onSalvarPreferencias && nomeOperador && (
+          {saudando && onSalvarPreferencias ? (
             <button
-              className={fichaAberta ? 'conversa-operador aberto' : 'conversa-operador'}
+              className={fichaAberta ? 'conversa-saudacao aberto' : 'conversa-saudacao'}
               onClick={() => setFichaAberta((v) => !v)}
               title="Como a IARA deve chamar e atender você"
               aria-expanded={fichaAberta}
             >
-              {nomeOperador}
+              <span className="saudacao-cortesia">Boas-vindas,</span>{' '}
+              <span className="saudacao-nome">{nomeExibido}</span>
             </button>
+          ) : (
+            <span className="conversa-estagio">
+              {conexao === 'conectado'
+                ? ROTULO_ESTAGIO[estado.estagio]
+                : conexao === 'desconectado'
+                  ? 'desconectada'
+                  : conexao === 'conectando'
+                    ? 'abrindo…'
+                    : 'reconectando…'}
+            </span>
           )}
           <span
             className={conectado ? 'conversa-enlace ligado' : 'conversa-enlace'}

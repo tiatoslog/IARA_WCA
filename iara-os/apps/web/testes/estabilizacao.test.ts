@@ -102,6 +102,52 @@ test('horizonte inválido vindo de um plano da LLM cai no padrão seguro', () =>
 // que ninguém mediu.
 // ---------------------------------------------------------------------------
 
+/**
+ * O clima só responde com coordenadas declaradas — sem elas a habilidade recusa
+ * em vez de cair num lugar que ninguém escolheu (ver `consultarClima` em
+ * `OrquestradorAcoes.ts`). Os testes daqui para baixo declaram onde estão, pela
+ * mesma razão que produção precisa declarar: a previsão é DE algum lugar.
+ *
+ * O teste logo abaixo remove e restaura por conta própria, porque a ausência é
+ * justamente o que ele mede.
+ */
+process.env.IARA_LATITUDE = '-22.9707';
+process.env.IARA_LONGITUDE = '-46.9958';
+
+test('clima sem coordenadas declaradas RECUSA, em vez de chutar a cidade', async () => {
+  const antes = { lat: process.env.IARA_LATITUDE, lon: process.env.IARA_LONGITUDE };
+  delete process.env.IARA_LATITUDE;
+  delete process.env.IARA_LONGITUDE;
+  const fetchOriginal = globalThis.fetch;
+  let bateuNaRede = false;
+  globalThis.fetch = (async () => {
+    bateuNaRede = true;
+    throw new Error('não devia ter consultado nada');
+  }) as typeof fetch;
+  try {
+    const r = await consultarClima.executar({
+      parametros: { horizonte: 'hoje' },
+      enunciado: 'vai chover?',
+      id_usuario: 'teste',
+      sessao: 'teste',
+      sinal: new AbortController().signal,
+      concedidas: ['rede'],
+    } as unknown as Parameters<typeof consultarClima.executar>[0]);
+
+    assert.equal(r.resolveu, false, 'sem lugar declarado não há previsão a declarar');
+    assert.equal(bateuNaRede, false, 'consultou a previsão de um lugar que ninguém escolheu');
+    // A recusa precisa dizer O QUE falta — quem lê isso é quem pode configurar.
+    assert.ok(
+      /IARA_LATITUDE/.test(r.texto),
+      `a recusa devia nomear a variável ausente; veio "${r.texto}"`,
+    );
+  } finally {
+    globalThis.fetch = fetchOriginal;
+    if (antes.lat !== undefined) process.env.IARA_LATITUDE = antes.lat;
+    if (antes.lon !== undefined) process.env.IARA_LONGITUDE = antes.lon;
+  }
+});
+
 test('clima com a fonte externa fora NÃO se declara resolvido', async () => {
   const fetchOriginal = globalThis.fetch;
   globalThis.fetch = (async () => {

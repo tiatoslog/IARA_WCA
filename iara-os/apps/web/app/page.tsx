@@ -68,19 +68,13 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         voz={voz}
         controles={
           aoSair ? (
-            /* O NOME ao lado do botão não é enfeite. Com uma conta por pessoa e
-               a mesma URL para todo mundo, "de quem é esta sessão?" passa a ser
-               uma pergunta real — em máquina compartilhada, em aba esquecida
-               aberta, no celular que alguém pegou emprestado. Sair sem saber de
-               onde se está saindo é como se troca de conta sem perceber. */
-            <span className="sessao">
-              <span className="sessao-nome" title={credencial.nome}>
-                {credencial.nome}
-              </span>
-              <button className="botao" onClick={aoSair}>
-                Sair
-              </button>
-            </span>
+            /* Só o botão. O nome de quem está na sessão vive no cabeçalho da
+               conversa, junto da saudação — dizê-lo duas vezes na mesma tela
+               não informa nada e enche o palco, que é a camada que deveria
+               ficar mais vazia. */
+            <button className="botao" onClick={aoSair}>
+              Sair
+            </button>
           ) : (
             <SeletorLocal />
           )

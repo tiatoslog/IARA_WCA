@@ -1,6 +1,29 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
 import { RegistrarPWA } from '../components/RegistrarPWA';
 import './globals.css';
+
+/**
+ * A tipografia deixa de depender do sistema operacional.
+ *
+ * A pilha antiga começava em `-apple-system` e caía em `Segoe UI` no Windows —
+ * que é a máquina de TODA a equipe. Resultado: a IARA era desenhada num Mac e
+ * lida numa fonte de sistema com outra métrica, outro peso e outro
+ * espaçamento. Não é questão de gosto; é a tela mudando conforme quem olha.
+ *
+ * Inter variável, servida pelo PRÓPRIO domínio: o `next/font` baixa em tempo
+ * de build e nunca faz requisição a terceiro em runtime — o que mantém a
+ * página inteira funcionando instalada como PWA e sem rede.
+ *
+ * `display: 'swap'` é deliberado: texto legível na hora, com a fonte final
+ * entrando em seguida. A alternativa esconde o texto por até 3 s, e uma tela
+ * em branco esperando fonte é pior que uma troca de fonte visível.
+ */
+const inter = Inter({
+  subsets: ['latin', 'latin-ext'],
+  display: 'swap',
+  variable: '--fonte-inter',
+});
 
 export const metadata: Metadata = {
   title: 'IARA OS',
@@ -38,7 +61,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={inter.variable}>
       <body>
         {children}
         <RegistrarPWA />
