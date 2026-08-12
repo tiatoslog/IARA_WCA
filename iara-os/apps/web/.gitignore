@@ -12,6 +12,9 @@ dados/memoria/
 # dos shards. Versionar isto publicaria o que cada pessoa mandou a IARA fazer.
 dados/operacoes/
 # gerados pelo beforeDevCommand do apps/desktop (ver copiar-bolha.mjs).
-# A fonte da marca é public/marca/iara-simbolo.png, essa sim versionada.
+# A fonte é public/marca/iara-esfera.png, essa sim versionada.
 public/bolha.html
+public/iara-esfera.png
+# Sobra do tempo em que a bolha carregava o rosto cromado. Fica para a cópia
+# antiga em disco não voltar ao versionamento por descuido.
 public/iara-simbolo.png

@@ -69,7 +69,7 @@ import {
 
 /* GLSL compartilhado com a aurora — ver `glsl.ts`. */
 
-interface UniformesEntidade {
+export interface UniformesEntidade {
   uT: { value: number };
   uAmp: { value: number };
   uVel: { value: number };
@@ -107,7 +107,7 @@ interface UniformesEntidade {
  * A resposta do sensor mora no passe de lente (`composicao.ts`) — se voltar a
  * ligar aqui, a imagem apanha ACES duas vezes e lava.
  */
-function AmbienteEstudio() {
+export function AmbienteEstudio() {
   const gl = useThree((e) => e.gl);
   const cena = useThree((e) => e.scene);
 
@@ -146,7 +146,7 @@ function AmbienteEstudio() {
  * quem desenha é o composer. O MSAA vive no alvo dele (o `antialias` do canvas
  * não vale mais nada quando nada é desenhado direto na tela).
  */
-function Composicao() {
+export function Composicao() {
   const gl = useThree((e) => e.gl);
   const cena = useThree((e) => e.scene);
   const camera = useThree((e) => e.camera);
@@ -235,7 +235,7 @@ const FILME_MAX = 430;
  * normal, que antes esquecia o fator 2 da amplitude e por isso devolvia
  * reflexo raso demais para o relevo que a geometria realmente tem.
  */
-function criarMaterialPedra(
+export function criarMaterialPedra(
   deform: { value: number },
   morph: { value: number },
   matrizNormal: { value: Matrix3 },
@@ -424,7 +424,7 @@ function criarMaterialPedra(
  * transparente sumiria de dentro do vidro — que é o único lugar onde ele
  * deveria aparecer.
  */
-function criarMaterialNucleo(uniformes: UniformesEntidade) {
+export function criarMaterialNucleo(uniformes: UniformesEntidade) {
   return new ShaderMaterial({
     uniforms: uniformes as unknown as Record<string, { value: unknown }>,
     transparent: false,

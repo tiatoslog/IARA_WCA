@@ -1,5 +1,8 @@
-# Cópia da marca publicada em ui/ por copiar-bolha.mjs, que roda tanto no
-# beforeDevCommand quanto no beforeBuildCommand. A FONTE é
-# apps/web/public/marca/iara-simbolo.png — essa sim versionada. Guardar o
+# Cópia da imagem da bolha publicada em ui/ por copiar-bolha.mjs, que roda
+# tanto no beforeDevCommand quanto no beforeBuildCommand. A FONTE é
+# apps/web/public/marca/iara-esfera.png — essa sim versionada. Guardar o
 # duplicado aqui só criaria uma segunda verdade para o mesmo arquivo.
+ui/iara-esfera.png
+# O rosto cromado saiu da bolha em 11/08 (virou a esfera), mas a linha fica:
+# quem tiver a cópia antiga em disco não deve versioná-la sem querer.
 ui/iara-simbolo.png

@@ -25,17 +25,23 @@
       margin: 4px;
       border-radius: 50%;
       cursor: pointer;
-      /* A escultura, em quadro fechado, cortada em disco. É a MESMA fotografia
-         da portaria e do ícone da barra de tarefas — uma identidade, três
-         escalas. Imagem assada, não WebGL: esta janela fica sempre visível, e
-         um contexto 3D permanente aqui custaria GPU o dia inteiro por
-         estética. */
-      background: #b4b8bd url('iara-simbolo.png') center / cover no-repeat;
+      /* A ENTIDADE, cortada em disco — não a marca.
+         O ícone da barra de tarefas e a portaria carregam o rosto cromado, que
+         é o que identifica o PRODUTO. A bolha carrega a esfera, que é a IARA em
+         si: quem está com o app aberto não precisa da marca no canto da tela,
+         precisa da presença.
+         Imagem assada por `app/marca/esfera`, não WebGL: esta janela fica
+         sempre visível, e um contexto 3D permanente aqui custaria GPU o dia
+         inteiro por estética.
+         O grafite de trás é o mesmo `--iara-bg` da casca — antes era o cinza de
+         estúdio da fotografia, e cinza claro atrás de uma esfera escura
+         desenharia um anel pálido em volta dela. */
+      background: #0b0d0f url('iara-esfera.png') center / cover no-repeat;
       /* Sem sombra externa: a janela é minúscula e o desfoque era CORTADO na
          borda, desenhando um quadrado em volta da bolha. A profundidade vem
          só do brilho interno. */
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
-      opacity: 0.72;
+      box-shadow: inset 0 0 0 1px rgba(214, 224, 233, 0.28);
+      opacity: 0.82;
       transition: opacity 0.25s ease;
     }
     /* A respiração anima OPACITY num pseudo-elemento (composited), não
