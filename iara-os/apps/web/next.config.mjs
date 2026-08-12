@@ -14,19 +14,32 @@
  * conviverem sem combinar nada. A porta padrão mantém `.next` puro, para não
  * quebrar cache, script nem instrução existente.
  *
- * MAS: o problema acima é de MÁQUINA DE DESENVOLVIMENTO. Em nuvem não existem
- * duas instâncias na mesma cópia do repositório, e o build da Vercel procura
- * `.next` POR NOME. Se o ambiente de build tiver um `PORT` qualquer ≠ 3000, o
- * output vai para `.next-XXXX` e o deploy morre com
+ * MAS ISSO É PROBLEMA DE MÁQUINA DE DESENVOLVIMENTO, e derivar o diretório de
+ * uma variável que o HOST controla custou caro duas vezes:
  *
- *     Error: No Output Directory named ".next" found after the Build completed.
+ * 1. No build: um `PORT` qualquer no ambiente manda o output para `.next-XXXX`
+ *    e a Vercel morre com "No Output Directory named .next found" — mensagem
+ *    que não menciona porta nenhuma.
  *
- * — uma mensagem que não menciona porta nenhuma e leva horas para ser ligada à
- * causa. Derivar o diretório de uma variável que o HOST controla troca um bug
- * local raro por um deploy que não sobe. Em nuvem, `.next` e ponto final.
+ * 2. Pior, e foi o que aconteceu no Railway: BUILD e RUNTIME resolvem a porta
+ *    em momentos diferentes. O build roda sem `PORT` e escreve `.next`; o
+ *    container sobe com `PORT=8080` injetado pelo host, o Next procura
+ *    `.next-8080`, não acha, e o processo não sobe. O sintoma é healthcheck
+ *    falhando com o build ali, íntegro, no diretório de sempre.
+ *
+ * A primeira tentativa de guarda olhava `VERCEL` e `CI` — e não pegava o caso 2,
+ * porque num container em produção nenhuma das duas existe. O sinal correto não
+ * é "estou num CI", é **"isto é um build de produção"**: só em desenvolvimento
+ * existem duas instâncias disputando a mesma pasta.
+ *
+ * `NODE_ENV` é confiável nos três caminhos: `next build` roda como production,
+ * `servidor/principal.ts` o define explicitamente antes de instanciar o Next
+ * (linha 36), e `next dev` é development.
  */
-const emNuvem = Boolean(process.env.VERCEL || process.env.CI);
-const porta = emNuvem ? '3000' : (process.env.PORT ?? process.env.IARA_PORTA ?? '3000');
+const desenvolvimento = process.env.NODE_ENV !== 'production';
+const porta = desenvolvimento
+  ? (process.env.PORT ?? process.env.IARA_PORTA ?? '3000')
+  : '3000';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
