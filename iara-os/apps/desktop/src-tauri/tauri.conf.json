@@ -20,7 +20,9 @@
         "height": 800,
         "minWidth": 900,
         "minHeight": 600,
-        "visible": true
+        "visible": true,
+        "theme": "Dark",
+        "backgroundColor": "#0b0d0f"
       },
       {
         "label": "bolha",

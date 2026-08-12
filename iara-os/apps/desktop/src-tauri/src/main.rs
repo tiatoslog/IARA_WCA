@@ -10,6 +10,7 @@
 //! raízes autorizadas e confirmação R2. O webview conversa com ele em
 //! localhost:3000 — mesma origem e mesmo contrato do navegador.
 
+use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -96,9 +97,68 @@ fn revelar(app: &AppHandle) {
 // Motor: descoberta, subida e encerramento
 // ---------------------------------------------------------------------------
 
-fn motor_responde() -> bool {
+/// Quem atende na porta do motor.
+///
+/// A pergunta ANTIGA era "a porta responde?", e ela é insuficiente de um jeito
+/// perigoso: 3000 é a porta mais disputada que existe em máquina de
+/// desenvolvimento. Qualquer outro servidor ali fazia o shell desistir de subir
+/// o motor E a janela carregar o app do estranho — dentro da moldura da IARA,
+/// sem um aviso sequer. Falha silenciosa que se parece com um bug do produto.
+enum NaPorta {
+    /// Ninguém atende. O shell sobe o motor.
+    Muda,
+    /// O motor da IARA, já de pé (o `npm run dev` do operador, ou outra
+    /// instância do app). Reusar, e não assumir posse do processo.
+    Motor,
+    /// Alguém atende, mas não é o motor. Subir por cima é impossível — a porta
+    /// está tomada — e mostrar o que está lá seria mentir sobre o que a janela
+    /// é. O caso certo é parar e dizer.
+    Estranho,
+}
+
+/// Uma requisição HTTP escrita à mão, para não trazer um cliente HTTP inteiro
+/// como dependência por causa de uma linha. `Connection: close` faz o servidor
+/// encerrar sozinho e a leitura terminar sem precisar entender o corpo.
+fn quem_esta_na_porta() -> NaPorta {
     let endereco = SocketAddr::from(([127, 0, 0, 1], PORTA_MOTOR));
-    TcpStream::connect_timeout(&endereco, Duration::from_millis(300)).is_ok()
+    let Ok(mut conexao) = TcpStream::connect_timeout(&endereco, Duration::from_millis(300)) else {
+        return NaPorta::Muda;
+    };
+
+    let _ = conexao.set_read_timeout(Some(Duration::from_millis(1200)));
+    let _ = conexao.set_write_timeout(Some(Duration::from_millis(600)));
+
+    let pedido = format!(
+        "GET /saude HTTP/1.1
+Host: 127.0.0.1:{PORTA_MOTOR}
+Connection: close
+
+"
+    );
+    if conexao.write_all(pedido.as_bytes()).is_err() {
+        return NaPorta::Estranho;
+    }
+
+    // O /saude cabe de sobra em 4 KB. Ler mais do que isso só abriria espaço
+    // para um servidor estranho responder algo enorme e travar o arranque.
+    let mut resposta = Vec::new();
+    let mut pedaco = [0u8; 1024];
+    while resposta.len() < 4096 {
+        match conexao.read(&mut pedaco) {
+            Ok(0) => break,
+            Ok(n) => resposta.extend_from_slice(&pedaco[..n]),
+            Err(_) => break,
+        }
+    }
+
+    let texto = String::from_utf8_lossy(&resposta);
+    // A assinatura mora em `servidor/principal.ts`. Aceita com e sem espaço
+    // porque o formato do JSON não é contrato — a chave e o valor são.
+    if texto.contains("\"app\":\"iara\"") || texto.contains("\"app\": \"iara\"") {
+        NaPorta::Motor
+    } else {
+        NaPorta::Estranho
+    }
 }
 
 /// Uma pasta só serve como motor se tiver o `package.json` do app web.
@@ -144,6 +204,27 @@ fn achar_motor() -> Option<PathBuf> {
     None
 }
 
+/// A porta está tomada por outro processo. Isto não tem conserto automático:
+/// o motor não pode subir e o que está lá não é a IARA.
+///
+/// A mensagem vai para o log E para a janela. O log sozinho não basta porque em
+/// release não há console — o operador veria uma janela com o app de outra
+/// pessoa e nenhuma explicação. O `eval` roda no contexto da página do
+/// estranho, então pode ser barrado pela CSP dele; por isso é a segunda linha
+/// de defesa, e não a única.
+fn avisar_porta_tomada(app: &AppHandle) {
+    eprintln!(
+        "[iara] a porta {PORTA_MOTOR} está ocupada por outro processo (não respondeu          /saude como IARA). O motor não subiu. Libere a porta ou encerre o outro          servidor e abra a IARA de novo."
+    );
+
+    if let Some(painel) = app.get_webview_window(JANELA_PAINEL) {
+        let aviso = format!(
+            "document.documentElement.innerHTML =              '<body style=\"margin:0;display:flex;align-items:center;justify-content:center;             height:100vh;background:#0b0d0f;color:#eef1f4;font:14px system-ui;text-align:center\">             <div style=\"max-width:34rem;padding:2rem;line-height:1.6\">             <p style=\"letter-spacing:.22em;font-weight:600\">I A R A</p>             <p>A porta {PORTA_MOTOR} está ocupada por outro programa.</p>             <p style=\"color:#8b959d\">O motor da IARA não pôde subir. Encerre o outro              servidor que está usando essa porta e abra a IARA de novo.</p></div></body>'"
+        );
+        let _ = painel.eval(&aviso);
+    }
+}
+
 /// Sobe o motor em modo produção, sem janela de terminal.
 ///
 /// `CREATE_NO_WINDOW` é o ponto todo do V4: a experiência final é abrir
@@ -171,10 +252,16 @@ fn subir_motor(pasta: &Path) -> std::io::Result<u32> {
 
 /// Espera o motor atender, com teto. Se estourar, o webview mostra o erro do
 /// próprio Windows — melhor que uma janela em branco sem explicação.
+///
+/// A espera aceita SÓ o motor identificado, não "a porta abriu". Durante o
+/// arranque o Next abre o socket antes de servir, e um TCP aberto aqui daria
+/// verde cedo demais: a janela recarregaria contra um servidor que ainda não
+/// responde e o operador veria o erro de conexão que este método existe para
+/// evitar. Só o /saude com a assinatura prova que dá para recarregar.
 fn esperar_motor(limite: Duration) -> bool {
     let inicio = Instant::now();
     while inicio.elapsed() < limite {
-        if motor_responde() {
+        if matches!(quem_esta_na_porta(), NaPorta::Motor) {
             return true;
         }
         std::thread::sleep(Duration::from_millis(400));
@@ -198,8 +285,13 @@ fn derrubar_motor() {
 /// `apps/web`, o shell detecta a porta ocupada e não duplica nada — e não
 /// assume a posse de um processo que não é dele.
 fn garantir_motor(app: &AppHandle) {
-    if motor_responde() {
-        return;
+    match quem_esta_na_porta() {
+        NaPorta::Motor => return,
+        NaPorta::Estranho => {
+            avisar_porta_tomada(app);
+            return;
+        }
+        NaPorta::Muda => {}
     }
 
     let Some(pasta) = achar_motor() else {

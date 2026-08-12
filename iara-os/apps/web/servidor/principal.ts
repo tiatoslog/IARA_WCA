@@ -107,11 +107,19 @@ async function subir(): Promise<void> {
     /**
      * Health check para orquestradores (Railway, Docker, monitor de uptime).
      * Sem segredo nenhum na resposta: é estado operacional, não diagnóstico.
+     *
+     * O campo `app` existe para o shell desktop. Ele precisa decidir se sobe o
+     * motor ou reusa o que já está na porta 3000, e "a porta responde" NÃO
+     * responde essa pergunta: 3000 é a porta mais disputada que existe. Sem uma
+     * assinatura, o Tauri carregaria o app de qualquer outro processo dentro da
+     * janela da IARA, em silêncio. Mudar esta string quebra essa checagem —
+     * ver `apps/desktop/src-tauri/src/main.rs`.
      */
     if (caminho === '/saude') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(
         JSON.stringify({
+          app: 'iara',
           ok: true,
           uptime_s: Math.round((Date.now() - inicioProcesso) / 1000),
           modo: DEV ? 'desenvolvimento' : 'producao',
