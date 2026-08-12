@@ -68,9 +68,19 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         voz={voz}
         controles={
           aoSair ? (
-            <button className="botao" onClick={aoSair}>
-              Sair
-            </button>
+            /* O NOME ao lado do botão não é enfeite. Com uma conta por pessoa e
+               a mesma URL para todo mundo, "de quem é esta sessão?" passa a ser
+               uma pergunta real — em máquina compartilhada, em aba esquecida
+               aberta, no celular que alguém pegou emprestado. Sair sem saber de
+               onde se está saindo é como se troca de conta sem perceber. */
+            <span className="sessao">
+              <span className="sessao-nome" title={credencial.nome}>
+                {credencial.nome}
+              </span>
+              <button className="botao" onClick={aoSair}>
+                Sair
+              </button>
+            </span>
           ) : (
             <SeletorLocal />
           )
@@ -109,9 +119,21 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
 }
 
 /**
- * Seletor de operador do MODO LOCAL. Só existe quando não há Supabase Auth
- * configurado. Trocar de operador aqui é desenvolvimento, não segurança — e a
- * faixa de aviso na página deixa isso explícito.
+ * Cada operadora tem a própria conta, e o login é a única porta.
+ *
+ * Este seletor era o FALLBACK AUTOMÁTICO de quando o Supabase não estava
+ * configurado no cliente — e essa automação era um defeito. Em 12/08/2026 o
+ * primeiro deploy real subiu com o bundle sem `NEXT_PUBLIC_SUPABASE_*` (as
+ * variáveis do host não entram no `docker build` sem `ARG`), e o resultado foi
+ * a tela mostrando "modo local sem autenticação" e "a sessão expirou ou foi
+ * recusada" ao mesmo tempo: cliente sem login, servidor exigindo token,
+ * ninguém entrando. Degradar em silêncio para "escolha quem você é" escondeu a
+ * causa e ainda ofereceu uma identidade que o servidor jamais aceitaria.
+ *
+ * Agora ele exige `NEXT_PUBLIC_IARA_MODO_LOCAL=1`, declarado de propósito. Sem
+ * essa variável, falta de login vira TELA DE ERRO — ver `SemLogin`. A regra é a
+ * mesma do motor recusando subir sem autenticação em produção: configuração
+ * incompleta aparece, não se disfarça de funcionalidade.
  */
 function SeletorLocal() {
   const [id, setId] = useState(OPERADORES[0].id);
@@ -140,8 +162,45 @@ function SeletorLocal() {
   );
 }
 
+/**
+ * A tela de quando não há login E ninguém pediu o modo local.
+ *
+ * Ela existe para o caso que já aconteceu: deploy que sobe, healthcheck que
+ * passa, página que abre — e um bundle construído sem as chaves do cliente.
+ * Sem esta tela o sintoma era um seletor de identidade convidando a operadora a
+ * tentar entrar por uma porta que o servidor tinha acabado de trancar.
+ *
+ * O texto nomeia a variável que falta porque quem vê isto é quem pode corrigir.
+ */
+function SemLogin() {
+  return (
+    <main className="carregando">
+      <div style={{ maxWidth: '34rem', textAlign: 'center', lineHeight: 1.7 }}>
+        <p style={{ letterSpacing: '0.34em', fontWeight: 600, marginBottom: '1.5rem' }}>
+          I A R A
+        </p>
+        <p>Esta instalação está sem login configurado.</p>
+        <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+          O navegador precisa de <code>NEXT_PUBLIC_SUPABASE_URL</code> e{' '}
+          <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> em <strong>tempo de build</strong> — elas
+          são escritas dentro do bundle, não lidas quando o processo sobe. Num deploy por
+          Docker, precisam estar declaradas como <code>ARG</code>.
+        </p>
+        <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+          Nenhuma conversa foi perdida: a IARA não chegou a ser aberta.
+        </p>
+      </div>
+    </main>
+  );
+}
+
 export default function Pagina() {
   const comAuth = autenticacaoDisponivel();
+  /**
+   * Modo local é OPT-IN, nunca consequência de configuração faltando. Ver o
+   * comentário de `SeletorLocal`.
+   */
+  const modoLocal = process.env.NEXT_PUBLIC_IARA_MODO_LOCAL === '1';
   const [credencial, setCredencial] = useState<Credencial | null>(null);
   const [verificando, setVerificando] = useState(comAuth);
 
@@ -168,7 +227,9 @@ export default function Pagina() {
 
   useEffect(() => {
     if (!comAuth) {
-      // Modo local: identidade vem do seletor. Nunca em produção.
+      // Sem login. Só monta identidade se o modo local foi PEDIDO; do
+      // contrário a página para em `SemLogin` e diz o que falta.
+      if (!modoLocal) return;
       const salvo = window.localStorage.getItem('iara.operador');
       const alvo = OPERADORES.find((o) => o.id === salvo) ?? OPERADORES[0];
       setCredencial({ id_usuario: alvo.id, nome: alvo.nome });
@@ -181,7 +242,7 @@ export default function Pagina() {
     // reconecta com ele, porque `token` está nas dependências do efeito.
     const { data } = bd!.auth.onAuthStateChange(() => void lerSessao());
     return () => data.subscription.unsubscribe();
-  }, [comAuth, lerSessao]);
+  }, [comAuth, modoLocal, lerSessao]);
 
   if (verificando) {
     return (
@@ -194,6 +255,9 @@ export default function Pagina() {
   if (comAuth && !credencial) {
     return <Portaria aoEntrar={() => void lerSessao()} />;
   }
+
+  // Sem login e sem modo local pedido: a falta de configuração aparece.
+  if (!comAuth && !modoLocal) return <SemLogin />;
 
   if (!credencial) return null;
 

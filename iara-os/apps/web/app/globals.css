@@ -615,6 +615,60 @@ body {
   background: rgba(40, 40, 48, 0.65);
 }
 
+/* Quem está nesta sessão, ao lado do Sair. Uma cápsula só, dividida por um
+   hairline: o nome e a saída são a mesma informação — de onde você sai. */
+.sessao {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: var(--r-capsula);
+  overflow: hidden;
+  border: 1px solid var(--c-linha-forte);
+  background: rgba(18, 18, 24, 0.55);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
+.sessao-nome {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 13px;
+  font-size: var(--t-ui);
+  font-weight: 600;
+  color: var(--palco-tinta);
+  /* Nome longo não empurra o botão para fora da tela. */
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* O botão dentro da cápsula perde a moldura própria: a cápsula já é a moldura,
+   e duas bordas concêntricas leem como caixa dentro de caixa. */
+.presenca-controles .sessao .botao {
+  border: 0;
+  border-left: 1px solid var(--c-linha-forte);
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+  font-weight: 500;
+}
+
+.presenca-controles .sessao .botao:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* Em tela estreita o nome sai e fica só o Sair: o celular é de uma pessoa só,
+   e ali a pergunta "de quem é esta sessão?" não se faz. */
+@media (max-width: 480px) {
+  .sessao-nome {
+    display: none;
+  }
+  .presenca-controles .sessao .botao {
+    border-left: 0;
+  }
+}
+
 /* Aviso honesto: modelo ausente ou sem rig. Ocupa o palco inteiro, porque não
    há rosto nenhum para dividir espaço com ele. */
 .presenca-vazio {
