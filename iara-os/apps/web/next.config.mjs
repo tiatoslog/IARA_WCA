@@ -13,8 +13,20 @@
  * o `autoPort` do .claude/launch.json). Derivar o diretório dela faz as duas
  * conviverem sem combinar nada. A porta padrão mantém `.next` puro, para não
  * quebrar cache, script nem instrução existente.
+ *
+ * MAS: o problema acima é de MÁQUINA DE DESENVOLVIMENTO. Em nuvem não existem
+ * duas instâncias na mesma cópia do repositório, e o build da Vercel procura
+ * `.next` POR NOME. Se o ambiente de build tiver um `PORT` qualquer ≠ 3000, o
+ * output vai para `.next-XXXX` e o deploy morre com
+ *
+ *     Error: No Output Directory named ".next" found after the Build completed.
+ *
+ * — uma mensagem que não menciona porta nenhuma e leva horas para ser ligada à
+ * causa. Derivar o diretório de uma variável que o HOST controla troca um bug
+ * local raro por um deploy que não sobe. Em nuvem, `.next` e ponto final.
  */
-const porta = process.env.PORT ?? process.env.IARA_PORTA ?? '3000';
+const emNuvem = Boolean(process.env.VERCEL || process.env.CI);
+const porta = emNuvem ? '3000' : (process.env.PORT ?? process.env.IARA_PORTA ?? '3000');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -25,8 +37,13 @@ const nextConfig = {
   // escritório. Erro de compilação continua aparecendo no terminal do motor,
   // que é onde ele pertence.
   devIndicators: false,
-  // O motor cognitivo roda fora do Next (porta 8787). Nada de rewrites aqui:
-  // o WebSocket é aberto direto pelo cliente via NEXT_PUBLIC_IARA_WS.
+  // Nada de rewrites aqui, nos dois modos: unificado, o motor É este processo e
+  // o barramento é same-origin em /barramento; headless (Next na Vercel, motor
+  // noutro host), o cliente abre o WebSocket direto no endereço que
+  // `enderecoBarramento()` monta a partir de NEXT_PUBLIC_IARA_WS. Um rewrite
+  // não serviria de qualquer jeito: proxy de WebSocket não é coisa que a Vercel
+  // faça, e o áudio da voz vive na MEMÓRIA do motor — ver `urlVoz()` em
+  // lib/supabaseNavegador.ts.
 };
 
 export default nextConfig;
