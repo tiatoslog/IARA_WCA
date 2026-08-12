@@ -12,7 +12,7 @@ https://opengameart.org/users/arlantr
 
 ---
 
-Identidade visual da marca (public/marca/referencia/):
+Identidade visual da marca (ativos/referencia/):
 As duas fotografias de origem vieram do Cosmos, salvas pelo cliente:
   cabeca.jpeg  cosmos_828860608    1080x1350  — rosto cromado, vira o logotipo
   cromo.jpeg   cosmos_1097809541   1792x2688  — metal líquido, vira o fundo
@@ -22,7 +22,7 @@ está identificada nos arquivos — ANTES de publicar, rastrear o autor no
 Cosmos e registrar aqui nome e licença. Os arquivos são servidos por HTTP e
 ficam baixáveis por URL direta.
 
-Rosto 3D da projeção Presença (public/identidade_iara/source.glb):
+Rosto 3D da projeção Presença (ativos/identidade_iara/source.glb):
 "Lisa - Woman Head with BlendShapes", de skullvez
 https://sketchfab.com/3d-models/lisa-woman-head-with-blendshapes-7670d1c2742b4188a989f1b3205a628b
 Licença: Creative Commons Attribution 4.0 (CC-BY 4.0)

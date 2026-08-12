@@ -4,7 +4,7 @@ O Projection Engine está pronto e ligado. O que falta é o modelo.
 
 ## O problema com o arquivo atual
 
-`public/identidade_iara/source.glb` foi verificado byte a byte:
+`ativos/identidade_iara/source.glb` foi verificado byte a byte:
 
 | campo | valor |
 | --- | --- |
@@ -26,7 +26,7 @@ Por isso o caminho é re-exportar da engine, e não converter o que já está aq
 
 ## O que o engine precisa receber
 
-Um único `.glb` em `public/identidade_iara/source.glb`, com:
+Um único `.glb` em `ativos/identidade_iara/source.glb`, com:
 
 **1. Face e corpo na mesma malha ou no mesmo arquivo.** Incluir olhos, dentes e
 língua — sem a malha dos olhos o olhar não existe, e o rosto fica com dois

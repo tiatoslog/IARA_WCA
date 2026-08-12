@@ -4,7 +4,7 @@
  * A identidade da IARA NÃO é um logotipo desenhado: é uma FOTOGRAFIA de uma
  * escultura de cromo. Reflexo, especular, profundidade e distorção são o
  * material da marca, não enfeite dela — e material não se desenha, se
- * fotografa. As imagens de origem estão em `public/marca/referencia/`; tudo o
+ * fotografa. As imagens de origem estão em `ativos/referencia/`; tudo o
  * que a aplicação usa é recorte delas, feito por `scripts/gerar-marca.ts`.
  *
  * Este módulo guarda só o que é FATO da marca e não vem da fotografia: a

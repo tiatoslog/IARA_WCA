@@ -22,6 +22,23 @@ import type { RelogioVoz } from '../../hooks/useVoz';
 import { ControladorFacial } from './ControladorFacial';
 import { resolverAlvos, rigSuficiente, type AlvoMorph, type ParametroFacial } from './mapaFacial';
 
+/**
+ * ⚠️ ESTE CAMINHO NÃO RESOLVE HOJE, e isso é deliberado.
+ *
+ * A projeção viva é a `EntidadePresenca` — geometria procedural, sem GLB, sem
+ * rig. Este componente não é montado por ninguém, e em 12/08/2026 o modelo saiu
+ * de `public/` para `ativos/identidade_iara/source.glb`: 12 MB que nunca
+ * chegavam ao navegador mas subiam para o CDN a cada publicação.
+ *
+ * O arquivo continua no repositório e os testes de `testes/projecao.test.ts` e
+ * `testes/rig-lisa.test.ts` continuam provando que o rig facial está lá. Para
+ * trazer o avatar de volta: mover a pasta para `public/` e montar este
+ * componente. Nada mais precisa mudar.
+ *
+ * A constante fica apontando para onde o arquivo TERIA que estar para ser
+ * servido — não para onde ele está agora. Um caminho de `ativos/` aqui seria
+ * mentira de outro tipo: `useGLTF` busca por HTTP, e `ativos/` não é servido.
+ */
 export const CAMINHO_MODELO = '/identidade_iara/source.glb';
 
 /** Uma malha já preparada para receber escrita por índice. */

@@ -1,29 +1,29 @@
 /**
  * Recorta a marca a partir das FOTOGRAFIAS de referência.
  *
- * A identidade da IARA é a imagem que está em `public/marca/referencia/` — não
+ * A identidade da IARA é a imagem que está em `ativos/referencia/` — não
  * um desenho nosso, não um render. Este script não interpreta nada: ele corta,
  * compõe e redimensiona. Se o resultado ficar diferente da referência, o
  * problema está no corte, e o corte está todo em constantes aqui embaixo.
  *
  * Entra (a extensão não importa, só o nome):
- *   public/marca/referencia/cabeca.*   o rosto cromado
- *   public/marca/referencia/cromo.*    o metal líquido
+ *   ativos/referencia/cabeca.*   o rosto cromado
+ *   ativos/referencia/cromo.*    o metal líquido
  *
  * Sai:
  *   public/marca/iara-simbolo.png   quadrado, com IARA gravada na face
- *   public/marca/iara-hero.png      o fundo da portaria
+ *   public/marca/iara-hero.avif     o fundo da portaria (+ .webp)
  *
  * Uso: npm run marca   (depois: npm run icones)
  */
 
-import { mkdir, readdir } from 'node:fs/promises';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import { palavraSvg } from '../lib/marca.js';
 
 const raiz = process.cwd();
-const referencia = path.join(raiz, 'public', 'marca', 'referencia');
+const referencia = path.join(raiz, 'ativos', 'referencia');
 const destino = path.join(raiz, 'public', 'marca');
 
 /* --------------------------------------------------------------------------
@@ -77,7 +77,7 @@ const INSCRICAO = {
   bisel: 1.3,
 };
 
-const HERO = { largura: 1920, altura: 1200 };
+const HERO = { largura: 1600, altura: 1000 };
 
 /* -------------------------------------------------------------------------- */
 
@@ -154,13 +154,40 @@ async function fazerSimbolo(origem: string): Promise<void> {
   );
 }
 
-/** O fundo da portaria. Sem desfoque: a profundidade de campo mora no CSS. */
+/**
+ * O fundo da portaria. Sem desfoque: a profundidade de campo mora no CSS.
+ *
+ * SAI EM AVIF E WEBP, NÃO EM PNG, e a razão é a mesma que dispensa detalhe:
+ * este arquivo é a ÚNICA imagem pesada que o navegador realmente baixa, e o CSS
+ * a exibe sob `filter: blur(7px)`. Um PNG sem perdas de 1920×1200 custava 3,9 MB
+ * para entregar precisão que o desfoque destrói antes do primeiro pixel chegar
+ * à tela — a pessoa esperava megabytes para ver uma mancha cromada.
+ *
+ * 1600 px de largura, e não 1920: sob 7 px de desfoque mais resolução não é
+ * visível nem num monitor grande, porque o desfoque é aplicado em pixels de
+ * TELA, depois do `cover`. AVIF fica em ~63 KB, WebP em ~127 KB — 62× e 31×
+ * menor. É a diferença entre a portaria abrir no 4G do celular e não abrir.
+ *
+ * Os dois formatos existem porque o `image-set()` do CSS precisa de degrau:
+ * AVIF onde há suporte, WebP no resto. Não há degrau para PNG — todo navegador
+ * que roda React 19 com WebGL2 lê WebP.
+ */
 async function fazerHero(origem: string): Promise<void> {
-  await sharp(origem)
-    .resize(HERO.largura, HERO.altura, { fit: 'cover', position: 'centre' })
-    .png()
-    .toFile(path.join(destino, 'iara-hero.png'));
-  console.log(`iara-hero.png — ${HERO.largura}×${HERO.altura}`);
+  const base = sharp(origem).resize(HERO.largura, HERO.altura, {
+    fit: 'cover',
+    position: 'centre',
+  });
+
+  const avif = await base.clone().avif({ quality: 52, effort: 6 }).toBuffer();
+  const webp = await base.clone().webp({ quality: 72 }).toBuffer();
+
+  await writeFile(path.join(destino, 'iara-hero.avif'), avif);
+  await writeFile(path.join(destino, 'iara-hero.webp'), webp);
+
+  const kb = (b: Buffer): string => `${Math.round(b.length / 1024)} KB`;
+  console.log(
+    `iara-hero — ${HERO.largura}×${HERO.altura} · avif ${kb(avif)} · webp ${kb(webp)}`,
+  );
 }
 
 async function principal(): Promise<void> {
@@ -180,7 +207,7 @@ async function principal(): Promise<void> {
     // Falha explícita, e não silêncio: sem a referência a marca não existe, e
     // um script que "termina bem" sem produzir nada é pior que um que quebra.
     throw new Error(
-      `Falta em public/marca/referencia/: ${faltando.join(', ')} ` +
+      `Falta em ativos/referencia/: ${faltando.join(', ')} ` +
         `(qualquer extensão de imagem serve). Veja o LEIA-ME.txt daquela pasta.`,
     );
   }

@@ -1544,7 +1544,16 @@ ol.plano {
   /* Estoura a caixa: o desfoque come a borda, e sem essa folga sobrava um halo
      claro na moldura da janela. */
   inset: -8%;
-  background: url('/marca/iara-hero.png') center / cover no-repeat;
+  /* WebP como base e AVIF por cima: quem não entende `image-set()` fica no
+     WebP, que todo navegador capaz de rodar esta tela lê. O PNG de 3,9 MB que
+     morava aqui saiu em 12/08/2026 — era a única imagem pesada que o navegador
+     realmente baixava, e o `blur(7px)` logo abaixo destrói toda a precisão que
+     ele pagava para entregar. Ver `scripts/gerar-marca.ts`. */
+  background: url('/marca/iara-hero.webp') center / cover no-repeat;
+  background-image: image-set(
+    url('/marca/iara-hero.avif') type('image/avif'),
+    url('/marca/iara-hero.webp') type('image/webp')
+  );
   /* Profundidade de campo, não névoa: o desfoque simula a lente aberta de uma
      foto de produto — o rosto cromado tem de continuar CLARAMENTE visível
      atrás do card. Acima de ~14 px o metal vira fundo cinza e a marca some. */

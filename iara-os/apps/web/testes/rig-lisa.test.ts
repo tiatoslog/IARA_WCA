@@ -2,7 +2,7 @@
  * O rig da Lisa sustenta presença.
  *
  * O dicionário abaixo é a lista REAL dos 62 blendshapes do GLB em
- * `public/identidade_iara/source.glb` (lida do binário FBX original, canal a
+ * `ativos/identidade_iara/source.glb` (lida do binário FBX original, canal a
  * canal). Se o mapa facial deixar de casar com ela, a projeção Presença cai no
  * aviso de rig ausente — e este teste conta o porquê antes de a tela contar.
  */

@@ -2,7 +2,7 @@
  * Testes da camada de projeção — visemas, ligação com o rig e o asset real.
  *
  * O último bloco é o mais importante do arquivo: ele abre o GLB que está em
- * `public/identidade_iara/` e afirma o que esse arquivo REALMENTE tem. Hoje ele
+ * `ativos/identidade_iara/` e afirma o que esse arquivo REALMENTE tem. Hoje ele
  * falha em ter rig facial, e o teste documenta isso em vez de deixar a
  * descoberta para quem abrir a tela. No dia em que o modelo for re-exportado do
  * Unreal com blendshapes, o teste vira o sinal de que o pipeline ficou pronto.
@@ -201,7 +201,18 @@ function lerGlb(caminho: string): {
   };
 }
 
-const CAMINHO_GLB = fileURLToPath(new URL('../public/identidade_iara/source.glb', import.meta.url));
+/**
+ * O modelo saiu de `public/` em 12/08/2026 e veio para `ativos/`.
+ *
+ * Motivo: a projeção viva é a `EntidadePresenca`, geometria procedural sem GLB.
+ * Estes 12 MB nunca chegavam ao navegador — mas em `public/` eram servidos por
+ * HTTP, entravam no artefato de deploy e subiam para o CDN a cada publicação.
+ *
+ * Não foi apagado, e a diferença importa: estes testes são a PROVA de que o
+ * avatar humanoide pode voltar (ver o comentário de `Presenca.tsx`). Apagar o
+ * arquivo destruiria a evidência junto com o peso.
+ */
+const CAMINHO_GLB = fileURLToPath(new URL('../ativos/identidade_iara/source.glb', import.meta.url));
 
 test('o modelo publicado é um glTF válido e servível', () => {
   const glb = lerGlb(CAMINHO_GLB);
