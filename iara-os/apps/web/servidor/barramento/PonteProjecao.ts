@@ -39,6 +39,21 @@ export class PonteProjecao {
    * então a comparação precisa ignorá-los.
    */
   private ultimaAssinatura = '';
+  /**
+   * Falas cuja síntese está EM VOO agora. É o que `voz_prevista` publica.
+   *
+   * Antes `voz_prevista` era `vozDisponivel()` — uma leitura de CONFIGURAÇÃO,
+   * não um fato sobre esta fala. Ela dizia "o servidor tem voz ligada", e o
+   * cliente lia como "o áudio desta resposta vem aí". Quando a síntese falhava,
+   * o servidor sabia disso e não contava a ninguém: o cliente esperava um timer
+   * cego de 6 s antes de deixar o navegador falar. Era esse timer, somado ao
+   * kernel, que produzia os ~7 s até a IARA abrir a boca.
+   *
+   * Agora o conjunto esvazia quando a síntese termina — de qualquer jeito. Se
+   * deu certo, `voz` carrega o áudio; se falhou, `voz_prevista` cai para falso
+   * no mesmo instante e o navegador assume sem esperar nada.
+   */
+  private readonly vozEmVoo = new Set<string>();
 
   constructor(
     private readonly barramento: BarramentoEventos,
@@ -58,6 +73,7 @@ export class PonteProjecao {
     this.desassinar();
     if (this.pendente) clearTimeout(this.pendente);
     this.pendente = null;
+    this.vozEmVoo.clear();
   }
 
   /** Snapshot imediato — usado na conexão e na reconexão. */
@@ -73,29 +89,53 @@ export class PonteProjecao {
 
     // Fala não espera a janela.
     if (e.tipo === 'RESPOSTA_TRECHO' || e.tipo === 'TAREFA_CONCLUIDA') {
+      /**
+       * A síntese é MARCADA antes de o snapshot sair, e não depois.
+       *
+       * A ordem é o ponto: `emitir()` publica `voz_prevista`, então marcar
+       * depois faria o primeiro snapshot com `concluida: true` — justamente o
+       * que o cliente usa para decidir se espera o áudio — sair dizendo que
+       * não vem voz nenhuma. O navegador falaria por cima do áudio que chegava
+       * meio segundo depois.
+       */
+      if (e.tipo === 'TAREFA_CONCLUIDA') {
+        const vocalizavel = vozDisponivel() && e.texto.trim().length > 0;
+        if (vocalizavel) this.vozEmVoo.add(e.id_mensagem);
+        this.emitir();
+        // A voz é sintetizada sobre o texto FINAL, uma vez por turno.
+        // Sintetizar trecho a trecho picotaria a fala em pedaços com prosódia
+        // própria — e, medido em 12/08, cada pedaço pagaria um handshake novo
+        // de ~1 s: a fala começaria mais TARDE. Ver `scripts/medir-voz.ts`.
+        if (vocalizavel) this.vocalizar(e.id_mensagem, e.texto);
+        return;
+      }
       this.emitir();
-      // A voz é sintetizada sobre o texto FINAL, uma vez por turno. Sintetizar
-      // trecho a trecho picotaria a fala em pedaços com prosódia própria, e a
-      // frase sairia com entonação de lista.
-      if (e.tipo === 'TAREFA_CONCLUIDA') this.vocalizar(e.id_mensagem, e.texto);
       return;
     }
     this.agendar();
   }
 
   /**
-   * Dispara a síntese e reemite quando o áudio existe.
+   * Dispara a síntese e reemite quando o resultado é conhecido — CERTO OU
+   * ERRADO.
    *
    * Deliberadamente fora do caminho de resposta: o texto já chegou na tela e o
-   * operador já pode ler. Se a Convai demorar ou falhar, o turno inteiro
-   * continua válido — só sai mudo.
+   * operador já pode ler. Se a síntese demorar ou falhar, o turno inteiro
+   * continua válido — só sai mudo, e o navegador assume a voz.
+   *
+   * O `finally` é o que conserta a latência: a falha é publicada com a mesma
+   * pressa que o sucesso. Um `if (ok)` aqui deixaria o cliente esperando um
+   * áudio que nunca vem, que é exatamente o defeito que o timer de 6 s tentava
+   * remendar do outro lado da fronteira.
    */
   private vocalizar(idMensagem: string, texto: string): void {
-    if (!vozDisponivel()) return;
-    void sintetizar(idMensagem, texto).then((ok) => {
-      // `encerrar()` pode ter rodado enquanto a rede respondia.
-      if (ok && !this.encerrada) this.emitir();
-    });
+    void sintetizar(idMensagem, texto)
+      .catch(() => false)
+      .then(() => {
+        this.vozEmVoo.delete(idMensagem);
+        // `encerrar()` pode ter rodado enquanto a rede respondia.
+        if (!this.encerrada) this.emitir();
+      });
   }
 
   private agendar(): void {
@@ -150,12 +190,14 @@ export class PonteProjecao {
     if (!snapshot.fala) return snapshot;
     const voz = caminhoDaVoz(snapshot.fala.id);
     /**
-     * `voz_prevista` avisa o cliente que o áudio está a caminho. É o que
-     * impede a síntese do navegador de disparar no instante da conclusão e o
-     * áudio da Convai chegar um segundo depois POR CIMA — as duas vozes
-     * juntas eram a fala dobrada e embolada.
+     * `voz_prevista` avisa o cliente que o áudio DESTA fala está a caminho —
+     * um fato sobre o turno, não uma leitura da configuração do servidor. É o
+     * que impede a síntese do navegador de disparar no instante da conclusão e
+     * o áudio do servidor chegar um segundo depois POR CIMA (as duas vozes
+     * juntas eram a fala dobrada e embolada) SEM cobrar do cliente uma espera
+     * cega quando o áudio não vem.
      */
-    const prevista = vozDisponivel();
+    const prevista = this.vozEmVoo.has(snapshot.fala.id);
     if (voz === snapshot.fala.voz && prevista === (snapshot.fala.voz_prevista ?? false)) {
       return snapshot;
     }
@@ -196,10 +238,39 @@ export class PonteProjecao {
           nivel: 'traco',
           texto: `Passo ${e.passo.indice + 1}/${e.total}: ${e.passo.descricao}`,
         };
+      /**
+       * O RESULTADO DO PASSO — e ele faltava aqui.
+       *
+       * O Kernel publicava `PASSO_CONCLUIDO` desde sempre; a tradução parava
+       * em `PASSO_INICIADO`. O console mostrava "Passo 1/1: Ler a previsão do
+       * modelo" e emudecia: o que a ferramenta DEVOLVEU nunca chegava ao
+       * operador. Era o elo que faltava para diagnosticar uma resposta errada
+       * — dava para ver que a IARA decidiu consultar o clima, e não dava para
+       * ver o que o clima respondeu, então não havia como saber se o erro
+       * nasceu na decisão, na ferramenta ou na redação.
+       */
+      case 'PASSO_CONCLUIDO':
+        return {
+          nivel: 'traco',
+          texto: `Passo ${e.passo.indice + 1} concluído em ${e.ms}ms — ${e.resumo}`,
+        };
       case 'HABILIDADE_CONCLUIDA':
         return {
           nivel: e.ok ? 'traco' : 'alerta',
           texto: `Habilidade "${e.habilidade}" ${e.ok ? 'ok' : 'sem resolver'} em ${e.ms}ms — ${e.detalhe}`,
+        };
+      /**
+       * A APURAÇÃO, separada do relato do executor de propósito: um diz "eu
+       * fiz", o outro diz "o mundo confirma". Confundir os dois é a mentira
+       * operacional que `Verdade.ts` inteiro existe para impedir — e ela
+       * também precisa ser VISÍVEL, não só respeitada internamente.
+       */
+      case 'HABILIDADE_VERIFICADA':
+        return {
+          nivel: e.confirmado ? 'traco' : 'alerta',
+          texto:
+            `Verificação de "${e.habilidade}": ` +
+            `${e.confirmado ? 'o mundo confirma' : 'NÃO confirmado'} — ${e.evidencia}`,
         };
       case 'RACIOCINIO_INICIADO':
         return { nivel: 'info', texto: `Acionando ${e.modelo} na nuvem.` };

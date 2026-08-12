@@ -282,8 +282,21 @@ export function PainelConversa({
           </div>
         )}
 
+        {/*
+          A escuta indisponível DIZ o que houve e oferece a volta. Antes o
+          reconhecedor podia falhar em laço para sempre sem uma palavra, e os
+          dois botões de voz ficavam desabilitados sem explicação — o operador
+          só via "nada acontece". Ver o orçamento de falha em `useEscuta`.
+        */}
         {escuta.motivoIndisponivel && (
-          <div className="escuta-faixa alerta">{escuta.motivoIndisponivel}</div>
+          <div className="escuta-faixa alerta">
+            {escuta.motivoIndisponivel}{' '}
+            {escuta.estado === 'indisponivel' && (
+              <button className="religar" onClick={escuta.religar}>
+                Tentar de novo
+              </button>
+            )}
+          </div>
         )}
 
         {/*

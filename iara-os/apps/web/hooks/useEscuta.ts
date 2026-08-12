@@ -101,6 +101,31 @@ const OCIO_VIGILIA_MS = 45_000;
 const CHAVE_VIGILIA = 'iara.vigilia';
 
 /**
+ * ORÇAMENTO DE FALHA DO RECONHECEDOR — e o defeito que ele encerra.
+ *
+ * `SpeechRecognition` responde `error: 'network'` quando o serviço de fala do
+ * navegador não atende. Isso NÃO é raro: acontece em WebView2 (a moldura do
+ * app desktop), em builds de Chromium sem a chave do serviço do Google, atrás
+ * de proxy corporativo e simplesmente sem internet.
+ *
+ * O tratamento anterior era `atrasoReligar = 2000; return;` — sem contador,
+ * sem teto, sem uma palavra ao operador. O resultado era o pior estado
+ * possível de um sistema: `start()` funciona, `onstart` dispara, a faixa
+ * escreve "vigília ligada — diga 'ei IARA'", e dois segundos depois tudo
+ * recomeça, para sempre, sem nunca reconhecer nada. O operador dizia "ei
+ * IARA" e NADA ACONTECIA, sem nenhum sinal de que havia algo errado.
+ *
+ * Falha que se repete sem parar não é resiliência, é silêncio disfarçado de
+ * saúde. Depois deste teto a escuta se declara indisponível, diz por quê, e
+ * oferece uma nova tentativa — que é um gesto humano, como toda religação
+ * depois de uma recusa neste sistema.
+ */
+const TETO_FALHAS_SEGUIDAS = 4;
+
+/** Espera antes de religar após falha de infraestrutura: 2 s, 4 s, 8 s… */
+const ESPERA_BASE_FALHA_MS = 2000;
+
+/**
  * O chamado exige a interjeição ("ei IARA"), não o nome sozinho: "Iara" é nome
  * de gente e apareceria em conversa de escritório. "yara" cobre a grafia que o
  * reconhecedor às vezes prefere.
@@ -192,6 +217,12 @@ export interface Escuta {
   /** Ligar/desligar a vigília (preferência persistida por navegador). */
   alternarVigilia: () => void;
   motivoIndisponivel: string | null;
+  /**
+   * Nova tentativa depois de a escuta se declarar indisponível. Existe porque
+   * a alternativa a um gesto humano é o religamento automático eterno — que é
+   * exatamente o defeito que o orçamento de falha encerrou.
+   */
+  religar: () => void;
 }
 
 export interface OpcoesEscuta {
@@ -255,6 +286,15 @@ export function useEscuta({
   const relogioReligar = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Religamento atrasado após falha de rede/captura (anti loop quente). */
   const atrasoReligar = useRef(0);
+  /**
+   * Falhas de infraestrutura desde o último reconhecimento BEM-SUCEDIDO. Conta
+   * só as seguidas: um tropeço de rede isolado numa sessão de horas não pode
+   * somar com outro tropeço três horas depois e derrubar a escuta. Ver
+   * `TETO_FALHAS_SEGUIDAS`.
+   */
+  const falhasSeguidas = useRef(0);
+  /** Gesto humano de nova tentativa — remonta o efeito da escuta. */
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
     falandoRef.current = iaraFalando;
@@ -336,6 +376,15 @@ export function useEscuta({
     r.onstart = () => setEstado(ativaRef.current ? 'ouvindo' : 'vigiando');
 
     r.onresult = (evento) => {
+      /**
+       * PROVA DE VIDA do serviço de fala, e o único lugar que a produz.
+       *
+       * `start()` e `onstart` não provam nada: em WebView2 os dois acontecem e
+       * o reconhecimento nunca funciona. Chegar aqui significa que áudio virou
+       * texto de verdade — é o que zera o orçamento de falha.
+       */
+      falhasSeguidas.current = 0;
+
       let novoFinal = '';
       let emCurso = '';
 
@@ -432,10 +481,35 @@ export function useEscuta({
       // toda vez que a pessoa fica quieta. Tratar como falha faria o modo
       // ligação se desligar sozinho a cada pausa.
       if (evento.error === 'no-speech' || evento.error === 'aborted') return;
-      // Falha de infraestrutura (rede do serviço de voz, captura): religar
-      // imediatamente vira loop quente erro→onend→start. Espera 2 s.
+      /**
+       * Falha de infraestrutura (serviço de fala do navegador, captura de
+       * áudio). Religar imediatamente vira loop quente erro→onend→start; mas
+       * religar PARA SEMPRE é pior, porque some com o problema em vez de
+       * mostrá-lo. Recua em dobro a cada tentativa e desiste no teto,
+       * dizendo o que houve. Ver `TETO_FALHAS_SEGUIDAS`.
+       */
       if (evento.error === 'network' || evento.error === 'audio-capture') {
-        atrasoReligar.current = 2000;
+        falhasSeguidas.current += 1;
+        if (falhasSeguidas.current < TETO_FALHAS_SEGUIDAS) {
+          atrasoReligar.current = ESPERA_BASE_FALHA_MS * 2 ** (falhasSeguidas.current - 1);
+          return;
+        }
+        // Orçamento estourado: parar de tentar e CONTAR.
+        querendoOuvir.current = false;
+        ativaRef.current = false;
+        vigiliaRef.current = false;
+        origemChamado.current = false;
+        setAtiva(false);
+        setVigilia(false);
+        setEstado('indisponivel');
+        setMotivo(
+          evento.error === 'network'
+            ? 'O serviço de reconhecimento de voz do navegador não respondeu ' +
+                `(${TETO_FALHAS_SEGUIDAS} tentativas). Ele exige internet e não existe em ` +
+                'toda moldura de aplicativo. Você pode escrever normalmente.'
+            : 'Não consegui capturar áudio do microfone ' +
+                `(${TETO_FALHAS_SEGUIDAS} tentativas). Verifique se outro programa está usando o dispositivo.`,
+        );
         return;
       }
       if (evento.error === 'not-allowed' || evento.error === 'service-not-allowed') {
@@ -518,7 +592,7 @@ export function useEscuta({
       setParcial('');
       setEstado((e) => (e === 'indisponivel' ? e : 'inativa'));
     };
-  }, [escutando, rearmarSilencio, rearmarOcio]);
+  }, [escutando, tentativa, rearmarSilencio, rearmarOcio]);
 
   const alternar = useCallback(() => {
     if (!construtor()) return;
@@ -527,6 +601,14 @@ export function useEscuta({
     origemChamado.current = false;
     if (relogioOcio.current) clearTimeout(relogioOcio.current);
     setAtiva(nova);
+    /**
+     * Abrir a ligação PUBLICA o estado. Faltava esta linha: com a vigília já
+     * ligada, `escutando` não mudava, o efeito não remontava, `onstart` não
+     * disparava — e o estado ficava preso em `vigiando` com a ligação aberta.
+     * A tela continuava escrevendo "diga 'ei IARA' para abrir a ligação"
+     * DEPOIS de a ligação ter sido aberta pelo botão.
+     */
+    if (nova) setEstado('ouvindo');
     if (!nova) {
       acumulado.current = '';
       if (relogioSilencio.current) clearTimeout(relogioSilencio.current);
@@ -552,5 +634,30 @@ export function useEscuta({
     if (nova && !ativaRef.current) setEstado('vigiando');
   }, []);
 
-  return { estado, parcial, alternar, ativa, vigilia, alternarVigilia, motivoIndisponivel };
+  /**
+   * Nova tentativa depois da desistência. Zera o orçamento, limpa o motivo e
+   * religa a vigília — o mesmo desenho do `religar()` do barramento, e pelo
+   * mesmo motivo: depois de uma recusa, quem decide voltar é a pessoa.
+   */
+  const religar = useCallback(() => {
+    if (!construtor()) return;
+    falhasSeguidas.current = 0;
+    atrasoReligar.current = 0;
+    setMotivo(null);
+    vigiliaRef.current = true;
+    setVigilia(true);
+    setEstado('vigiando');
+    setTentativa((n) => n + 1);
+  }, []);
+
+  return {
+    estado,
+    parcial,
+    alternar,
+    ativa,
+    vigilia,
+    alternarVigilia,
+    motivoIndisponivel,
+    religar,
+  };
 }

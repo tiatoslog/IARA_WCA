@@ -179,14 +179,81 @@ async function buscar(texto: string, hash: string): Promise<boolean> {
 }
 
 /**
+ * A CONEXÃO DE SÍNTESE É REUSADA — e isto vale ~2,4 s por resposta.
+ *
+ * Cada `new MsEdgeTTS()` + `setMetadata()` abre um WebSocket novo com o
+ * serviço da Microsoft. Medido em 12/08/2026 (`npm run medir:voz`):
+ *
+ *     conexão nova por fala ....... 2515–3343 ms
+ *     só o handshake .............. 1007 ms
+ *     na conexão já aberta ........ 499–746 ms
+ *
+ * O custo é de CONEXÃO, não de comprimento: sintetizar uma sentença custava
+ * praticamente o mesmo que sintetizar seis. Foi essa medição que descartou a
+ * ideia de picotar a resposta em segmentos — cada segmento pagaria um
+ * handshake novo e a fala começaria MAIS tarde, não antes.
+ *
+ * As duas disciplinas que o reuso obriga:
+ *
+ *  1. SERIALIZAÇÃO. Uma conexão, um stream por vez. Dois `toStream` em voo
+ *     na mesma conexão entrelaçariam os quadros de áudio de duas falas.
+ *  2. DESCARTE EM FALHA. Socket morto não se recupera sozinho; qualquer erro
+ *     joga a conexão fora e a próxima fala reconstrói. Reusar um socket em
+ *     estado desconhecido é como o fallback que mascara erro: funciona até
+ *     não funcionar, e aí falha para sempre.
+ */
+let conexao: MsEdgeTTS | null = null;
+let conexaoDeVoz = '';
+/** Fila de um: a próxima síntese espera a anterior soltar a conexão. */
+let vez: Promise<unknown> = Promise.resolve();
+
+async function conexaoViva(): Promise<MsEdgeTTS> {
+  const voz = vozEdge();
+  if (conexao && conexaoDeVoz === voz) return conexao;
+  // Trocar de voz em tempo de execução (IARA_VOZ_EDGE) exige metadados novos.
+  descartarConexao();
+  const nova = new MsEdgeTTS();
+  await nova.setMetadata(voz, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+  conexao = nova;
+  conexaoDeVoz = voz;
+  return nova;
+}
+
+function descartarConexao(): void {
+  const morta = conexao;
+  conexao = null;
+  conexaoDeVoz = '';
+  try {
+    morta?.close();
+  } catch {
+    /* já fechada: fechar duas vezes não é erro que interesse a ninguém */
+  }
+}
+
+/** Só para o teste de encerramento — o processo não deve segurar socket. */
+export function encerrarVoz(): void {
+  descartarConexao();
+}
+
+/**
  * Síntese pelo serviço neural do Edge. O mp3 chega em stream via WebSocket da
  * biblioteca; aqui só se acumula em buffer e entra na MESMA cache e rota
  * `/voz/<hash>.mp3` da Convai — nenhum caminho novo no sistema.
  */
 async function buscarEdge(texto: string, hash: string): Promise<boolean> {
+  // Encadeia na fila e devolve a vez mesmo se esta síntese explodir.
+  const minhaVez = vez.then(
+    () => undefined,
+    () => undefined,
+  );
+  let liberar!: () => void;
+  vez = new Promise<void>((r) => {
+    liberar = r;
+  });
+  await minhaVez;
+
   try {
-    const tts = new MsEdgeTTS();
-    await tts.setMetadata(vozEdge(), OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    const tts = await conexaoViva();
     const { audioStream } = tts.toStream(texto);
 
     const bytes = await new Promise<Buffer>((resolver, rejeitar) => {
@@ -206,11 +273,10 @@ async function buscarEdge(texto: string, hash: string): Promise<boolean> {
       });
     });
 
-    tts.close();
-
     // Corpo minúsculo é erro disfarçado — áudio de verdade não cabe em 1 KB.
     if (bytes.length < 1024) {
       console.warn(`[iara] voz neural: resposta de ${bytes.length} bytes, não parece áudio`);
+      descartarConexao();
       return false;
     }
 
@@ -219,10 +285,17 @@ async function buscarEdge(texto: string, hash: string): Promise<boolean> {
     return true;
   } catch (erro) {
     const motivo = erro instanceof Error ? erro.message : String(erro);
-    // Sem rede (ou serviço mudou): a conversa segue e o navegador assume a
-    // voz pelo fallback de 6 s do cliente — atrasado é melhor que mudo.
+    // Socket em estado desconhecido não se reusa: a próxima fala reconstrói.
+    descartarConexao();
+    /**
+     * A conversa segue e o navegador assume a voz — AGORA IMEDIATAMENTE, não
+     * depois de seis segundos. O cliente costumava adivinhar essa falha com um
+     * timer cego; hoje ela viaja como fato no snapshot. Ver `PonteProjecao`.
+     */
     console.warn(`[iara] voz neural indisponível: ${motivo}`);
     return false;
+  } finally {
+    liberar();
   }
 }
 

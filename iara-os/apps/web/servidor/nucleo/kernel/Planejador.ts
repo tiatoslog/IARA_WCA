@@ -41,11 +41,29 @@ function passo(
  * teste, mova esta referência junto.
  */
 const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
-  clima: () => ({
-    objetivo: 'Informar a condição externa do perímetro operacional',
-    origem: 'deterministico',
-    passos: [passo(0, 'Consultar radar meteorológico', 'consultar_clima')],
-  }),
+  clima: (p) => {
+    const horizonte = extrairHorizonteClima(p.bruto);
+    return {
+      objetivo:
+        horizonte === 'agora'
+          ? 'Informar a condição externa corrente do perímetro operacional'
+          : `Informar a previsão do tempo para ${horizonte === 'amanha' ? 'amanhã' : 'hoje'}`,
+      origem: 'deterministico',
+      // A descrição do passo é o que o operador lê no console. Ela dizia
+      // "Consultar radar meteorológico" para os dois casos — e não há radar
+      // nenhum: a fonte é modelo numérico. Ver `OrquestradorAcoes.consultarClima`.
+      passos: [
+        passo(
+          0,
+          horizonte === 'agora'
+            ? 'Ler a estação meteorológica (condição corrente)'
+            : 'Ler a previsão do modelo meteorológico',
+          'consultar_clima',
+          { horizonte },
+        ),
+      ],
+    };
+  },
 
   infraestrutura: (p) => ({
     objetivo: 'Responder sobre o estado da infraestrutura',
@@ -170,6 +188,31 @@ export function extrairAcaoEnergia(bruto: string): string {
   if (/\b(reinicie|reinicia|reiniciar)\b/.test(t)) return 'reiniciar';
   if (/\b(suspenda|suspender|hiberne|hibernar)\b/.test(t)) return 'suspender';
   return 'desligar';
+}
+
+/**
+ * "Vai chover hoje?" ou "está chovendo?" — a MESMA âncora, perguntas
+ * diferentes, e essa diferença é o defeito que este extrator corrige.
+ *
+ * Até 12/08 a receita de clima ignorava o tempo verbal e sempre chamava a
+ * medição corrente. A IARA respondia "céu limpo, sem precipitação na última
+ * hora" para quem perguntou sobre a tarde — dado verdadeiro respondendo a
+ * pergunta errada, que é indistinguível de mentira para quem lê.
+ *
+ * A ordem das checagens importa: "amanhã" vence, porque quem diz "hoje e
+ * amanhã" está pedindo o horizonte mais longo; futuro vence o presente pelo
+ * mesmo motivo. Sem sinal nenhum de tempo, o padrão é `agora` — é a leitura
+ * mais conservadora, e a única que a IARA pode MEDIR em vez de estimar.
+ */
+const AMANHA = /\b(amanha|amanhã)\b/;
+const HOJE = /\b(hoje|a tarde|à tarde|de tarde|hoje a noite|mais tarde|ainda hoje|o dia)\b/;
+const FUTURO = /\b(vai|vao|ira|irao|deve|previsao|prevista|previsto|previsão)\b/;
+
+export function extrairHorizonteClima(bruto: string): 'agora' | 'hoje' | 'amanha' {
+  const t = normalizarLocal(bruto);
+  if (AMANHA.test(t)) return 'amanha';
+  if (HOJE.test(t) || FUTURO.test(t)) return 'hoje';
+  return 'agora';
 }
 
 const UFS: Record<string, string> = {

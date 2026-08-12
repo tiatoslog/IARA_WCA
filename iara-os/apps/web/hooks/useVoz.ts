@@ -30,9 +30,36 @@ import type { Fala } from './useIaraSocket';
 
 const CHAVE_PREFERENCIA = 'iara.voz_navegador';
 
+/**
+ * O relógio da voz — e ele responde DUAS perguntas, não uma.
+ *
+ * `progresso()` sozinho não bastava, e a falta se via na tela. A síntese do
+ * navegador (`speechSynthesis`) não tem linha do tempo: não existe elemento de
+ * áudio para perguntar, então `progresso()` devolve `null` o tempo todo. A
+ * presença lia esse `null` como "não há voz", saía do estado `respondendo` no
+ * instante em que a fala era concluída, e a entidade voltava ao repouso —
+ * cor de repouso, amplitude de repouso — enquanto a IARA ainda estava
+ * FALANDO em voz alta. Era isso que se via como "a animação quase não muda de
+ * cor e trava": ela não estava travando, estava desligada durante a fala.
+ *
+ * As duas perguntas são independentes de propósito:
+ *  - `audivel()` — sai som da IARA agora? Verdadeiro para os DOIS caminhos.
+ *  - `progresso()` — onde a fala está na linha do tempo? Só o áudio do
+ *    servidor sabe; a síntese do navegador devolve `null` e a presença cai
+ *    para a cadência de leitura, ancorada em `audivelDesde()`.
+ */
 export interface RelogioVoz {
   /** 0..1 enquanto há áudio carregado e tocando; `null` quando não há voz. */
   progresso(): number | null;
+  /** Sai som da IARA agora — por áudio do servidor OU síntese do navegador. */
+  audivel(): boolean;
+  /**
+   * `performance.now()` do instante em que a voz corrente ficou audível, ou
+   * `null`. É a âncora da cadência de leitura: sem ela a articulação começava
+   * na ABERTURA DO TURNO e terminava antes de a voz sair, deixando a fala
+   * inteira sem presença nenhuma.
+   */
+  audivelDesde(): number | null;
 }
 
 export interface EstadoVoz {
@@ -215,10 +242,15 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
    * chegava um segundo depois por cima.
    */
   const vistas = useRef<Set<string> | null>(null);
-  /** Fallback agendado: síntese local esperando o áudio do servidor chegar. */
-  const esperaAudio = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Mantém o Chrome acordado durante síntese longa (bug de pausa). */
   const despertador = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /**
+   * Instante em que a voz corrente ficou audível. Ref, e não estado: o loop de
+   * animação lê isto a 60 Hz e um `setState` por quadro derrubaria o orçamento
+   * de quadro da cena 3D — a mesma razão pela qual `relogio` é estável.
+   */
+  const audivelDesde = useRef<number | null>(null);
 
   // Estável por toda a vida do componente: o loop de animação guarda esta
   // referência uma vez e nunca mais pergunta por ela.
@@ -227,6 +259,12 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
       const a = elemento.current;
       if (!a || !a.duration || !Number.isFinite(a.duration) || a.paused) return null;
       return a.currentTime / a.duration;
+    },
+    audivel() {
+      return audivelDesde.current !== null;
+    },
+    audivelDesde() {
+      return audivelDesde.current;
     },
   }).current;
 
@@ -237,6 +275,17 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
     // Primeira chamada dispara o carregamento assíncrono da lista de vozes —
     // assim ela já está pronta quando a primeira fala precisar dela.
     if (tem) window.speechSynthesis.getVoices();
+  }, []);
+
+  /**
+   * UM lugar move os dois: `tocando` (que a UI lê) e `audivelDesde` (que o
+   * loop de animação lê). Mover cada um no seu handler foi o que já produziu
+   * `tocando` preso em true depois de um `cancel()`; dois fatos derivados do
+   * mesmo evento não podem ter dois donos.
+   */
+  const marcarAudivel = useCallback((soando: boolean) => {
+    audivelDesde.current = soando ? performance.now() : null;
+    setTocando(soando);
   }, []);
 
   const pararSintese = useCallback(() => {
@@ -257,6 +306,7 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
   const calarTudo = useCallback(() => {
     geracao.current += 1;
     setTextoAvulso(null);
+    audivelDesde.current = null;
     const a = elemento.current;
     if (a) {
       a.onended = null;
@@ -265,10 +315,6 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
       a.src = '';
     }
     elemento.current = null;
-    if (esperaAudio.current) {
-      clearTimeout(esperaAudio.current);
-      esperaAudio.current = null;
-    }
     pararSintese();
   }, [pararSintese]);
 
@@ -302,16 +348,16 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
            */
           u.rate = 1.04;
           u.pitch = 1.0;
-          if (i === 0) u.onstart = () => setTocando(true);
+          if (i === 0) u.onstart = () => marcarAudivel(true);
           if (i === ultima) {
             u.onend = () => {
-              setTocando(false);
+              marcarAudivel(false);
               setTextoAvulso(null);
             };
             // `cancel()` dispara onerror, não onend — sem isto, interromper a
             // síntese deixaria `tocando` preso em true.
             u.onerror = () => {
-              setTocando(false);
+              marcarAudivel(false);
               setTextoAvulso(null);
             };
           }
@@ -348,27 +394,27 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
        */
       const atual = () => elemento.current === audio;
       audio.onended = () => {
-        if (atual()) setTocando(false);
+        if (atual()) marcarAudivel(false);
       };
       audio.onerror = () => {
-        if (atual()) setTocando(false);
+        if (atual()) marcarAudivel(false);
       };
 
       void audio
         .play()
         .then(() => {
           if (!atual()) return;
-          setTocando(true);
+          marcarAudivel(true);
           setBloqueado(false);
         })
         .catch(() => {
           if (!atual()) return;
           // Autoplay barrado. O áudio fica carregado esperando o gesto.
-          setTocando(false);
+          marcarAudivel(false);
           setBloqueado(true);
         });
     },
-    [calarTudo],
+    [calarTudo, marcarAudivel],
   );
 
   /**
@@ -414,26 +460,31 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
     }
 
     const falar = () => {
-      esperaAudio.current = null;
       if (vistas.current!.has(fala.id)) return;
       vistas.current!.add(fala.id);
       sintetizar(fala.texto);
     };
 
     /**
-     * O servidor avisou que o áudio está a caminho (`voz_prevista`): espera.
-     * Se a Convai falhar ou demorar demais, o fallback fala — atrasado é
-     * melhor que mudo, e mudo é melhor que as duas vozes ao mesmo tempo.
+     * O servidor avisou que o áudio DESTA fala está sendo sintetizado agora
+     * (`voz_prevista`): espera — sem relógio.
+     *
+     * ATÉ 12/08/2026 AQUI HAVIA UM `setTimeout(falar, 6000)`, e ele era metade
+     * dos ~7 s que o operador contava entre mandar a mensagem e ouvir a IARA.
+     * A espera era CEGA: o servidor já sabia que a síntese tinha falhado e não
+     * tinha como dizer, porque `voz_prevista` era a configuração do servidor
+     * ("tenho voz ligada"), não um fato sobre este turno ("o áudio vem aí").
+     *
+     * Hoje é fato: a ponte tira a fala de `vozEmVoo` assim que a síntese
+     * resolve — dando certo ou dando errado — e reemite. O snapshot seguinte
+     * chega com `voz` (caminho 1 toca) ou com `voz_prevista: false` (este
+     * efeito reexecuta e fala na hora). Um timer aqui só poderia atrasar uma
+     * decisão que já chegou pronta.
+     *
+     * Nada se perde se o servidor morrer no meio da síntese: o socket cai, a
+     * reconexão hidrata, e uma fala sem `voz` e sem `voz_prevista` é falada.
      */
-    if (fala.voz_prevista) {
-      esperaAudio.current = setTimeout(falar, 6000);
-      return () => {
-        if (esperaAudio.current) {
-          clearTimeout(esperaAudio.current);
-          esperaAudio.current = null;
-        }
-      };
-    }
+    if (fala.voz_prevista) return;
 
     falar();
   }, [fala, ativa, vozLigada, lider, sinteseDisponivel, sintetizar]);
@@ -442,8 +493,8 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
   useEffect(() => {
     if (ativa) return;
     calarTudo();
-    setTocando(false);
-  }, [ativa, calarTudo]);
+    marcarAudivel(false);
+  }, [ativa, calarTudo, marcarAudivel]);
 
   useEffect(() => () => calarTudo(), [calarTudo]);
 
@@ -453,21 +504,17 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
     void a
       .play()
       .then(() => {
-        setTocando(true);
+        marcarAudivel(true);
         setBloqueado(false);
       })
       .catch(() => setBloqueado(true));
-  }, []);
+  }, [marcarAudivel]);
 
   const silenciar = useCallback(() => {
-    /**
-     * Interromper cala TUDO — inclusive o fallback de 6 s que esperava o
-     * áudio do servidor. Sem isso, cortar a IARA deixava um timer vivo que
-     * seis segundos depois falava o texto do turno já morto (fala fantasma).
-     */
+    // Interromper cala TUDO: o áudio do servidor e a síntese em curso.
     calarTudo();
-    setTocando(false);
-  }, [calarTudo]);
+    marcarAudivel(false);
+  }, [calarTudo, marcarAudivel]);
 
   const alternarVoz = useCallback(() => {
     setVozLigada((v) => {
@@ -475,11 +522,11 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
       window.localStorage.setItem(CHAVE_PREFERENCIA, novo ? '1' : '0');
       if (!novo) {
         calarTudo();
-        setTocando(false);
+        marcarAudivel(false);
       }
       return novo;
     });
-  }, [calarTudo]);
+  }, [calarTudo, marcarAudivel]);
 
   const falar = useCallback(
     (texto: string): boolean => {

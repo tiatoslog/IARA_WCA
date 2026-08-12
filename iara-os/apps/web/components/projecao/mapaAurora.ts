@@ -16,13 +16,8 @@
 import type { SnapshotCognitivo } from '../../lib/snapshot';
 import type { Fala } from '../../hooks/useIaraSocket';
 import type { RelogioVoz } from '../../hooks/useVoz';
-import {
-  ABERTURA_DO_VISEMA,
-  trilhaDeVisemas,
-  visemaAgora,
-  visemaNoProgresso,
-  type Visema,
-} from '../../lib/visemas';
+import { ABERTURA_DO_VISEMA, trilhaDeVisemas, type Visema } from '../../lib/visemas';
+import { visemaCorrente } from './articulacao';
 
 /** Parâmetros físicos da entidade — o vocabulário inteiro do shader. */
 export interface EstadoEntidade {
@@ -201,20 +196,15 @@ export class ControladorEntidade {
   }
 
   /**
-   * O mesmo fato que articulava a boca: o visema corrente da fala, com o
-   * relógio do áudio quando há voz e a cadência de leitura quando não há.
-   * A abertura do visema vira o envelope de energia das ondas.
+   * O mesmo fato que articula a boca do avatar: o visema corrente da fala,
+   * decidido em `articulacao.ts` — um lugar só para as duas projeções. Aqui a
+   * abertura do visema vira o envelope de energia das ondas.
    */
   private energiaDaVoz(fala: Fala | null, voz: RelogioVoz | null, agora: number): number | null {
-    const fracaoDaVoz = voz?.progresso() ?? null;
-    if (!fala || fala.papel !== 'iara' || (fracaoDaVoz === null && fala.concluida)) return null;
-
+    if (!fala || fala.papel !== 'iara') return null;
     this.garantirTrilha(fala);
-    const { visema } =
-      fracaoDaVoz !== null
-        ? visemaNoProgresso(this.trilha, fracaoDaVoz)
-        : visemaAgora(this.trilha, fala.texto.length, agora - fala.iniciada_em);
-    return ABERTURA_DO_VISEMA[visema];
+    const visema = visemaCorrente(this.trilha, fala, voz, agora);
+    return visema === null ? null : ABERTURA_DO_VISEMA[visema];
   }
 
   atualizar(

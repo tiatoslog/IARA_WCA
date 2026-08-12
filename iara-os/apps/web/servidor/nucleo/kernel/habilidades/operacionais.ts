@@ -21,7 +21,10 @@ export const consultarClima: Habilidade = {
     id: 'consultar_clima',
     nome: 'Radar meteorológico',
     descricao:
-      'Condição meteorológica atual do perímetro operacional (temperatura, umidade, precipitação). Use para perguntas sobre tempo, chuva, calor ou frio.',
+      'Tempo no perímetro operacional. `horizonte: agora` devolve a MEDIÇÃO corrente ' +
+      '(temperatura, umidade, precipitação da última hora); `hoje` e `amanha` devolvem a ' +
+      'PREVISÃO do dia (probabilidade de chuva, acumulado, máxima e mínima). ' +
+      'Escolha pelo tempo verbal da pergunta: "está chovendo" é agora, "vai chover" é previsão.',
     dominio: 'pesquisa',
     capacidade: 'percepcao',
     permissoes: ['rede'],
@@ -29,11 +32,15 @@ export const consultarClima: Habilidade = {
     custo: 'zero',
     risco: 'baixo',
     idempotencia: 'leitura',
-    esquema: {},
+    esquema: {
+      horizonte: { tipo: 'texto', padrao: 'agora', dentre: ['agora', 'hoje', 'amanha'] },
+    },
   },
-  async executar() {
-    const r = await acoes.executar('clima', {});
-    return { texto: r.texto, detalhe: `Open-Meteo em ${r.latencia_ms}ms`, resolveu: true };
+  async executar(ctx) {
+    const r = await acoes.executar('clima', { horizonte: ctx.parametros.horizonte });
+    // `resolveu` é o que a fonte disse, não uma constante. Ver ResultadoAcao.ok:
+    // com `true` fixo, uma falha de rede subia ao Kernel como passo cumprido.
+    return { texto: r.texto, detalhe: `Open-Meteo em ${r.latencia_ms}ms`, resolveu: r.ok };
   },
 };
 
@@ -70,7 +77,7 @@ export const consultarInfraestrutura: Habilidade = {
     return {
       texto: r.texto,
       detalhe: `consulta UF=${ctx.parametros.uf} em ${r.latencia_ms}ms`,
-      resolveu: true,
+      resolveu: r.ok,
     };
   },
 };
@@ -113,7 +120,7 @@ export const pesquisarWeb: Habilidade = {
   },
   async executar(ctx) {
     const r = await acoes.executar('busca_web', { consulta: ctx.parametros.consulta });
-    return { texto: r.texto, detalhe: `DuckDuckGo em ${r.latencia_ms}ms`, resolveu: true };
+    return { texto: r.texto, detalhe: `DuckDuckGo em ${r.latencia_ms}ms`, resolveu: r.ok };
   },
 };
 

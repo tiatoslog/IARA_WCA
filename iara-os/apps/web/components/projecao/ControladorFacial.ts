@@ -38,10 +38,9 @@ import {
   ABERTURA_DO_VISEMA,
   ARREDONDAMENTO_DO_VISEMA,
   trilhaDeVisemas,
-  visemaAgora,
-  visemaNoProgresso,
   type Visema,
 } from '../../lib/visemas';
+import { visemaCorrente } from './articulacao';
 import type { ParametroFacial } from './mapaFacial';
 
 /**
@@ -234,14 +233,14 @@ export class ControladorFacial {
     // Repare que a fala com áudio continua articulando mesmo depois de
     // `concluida`: o texto termina de chegar bem antes de a voz terminar de
     // dizê-lo. Fechar a boca no fim do texto calaria a IARA no meio da frase.
-    const fracaoDaVoz = voz?.progresso() ?? null;
-
-    if (fala && fala.papel === 'iara' && (fracaoDaVoz !== null || !fala.concluida)) {
+    // A decisão mora em `articulacao.ts` — a mesma que a entidade usa. Esta
+    // regra já esteve escrita aqui e lá, com o mesmo defeito nas duas cópias:
+    // a boca fechava no fim do TEXTO, não no fim da FALA, e a síntese do
+    // navegador (que não tem linha do tempo) calava o rosto no meio da frase.
+    if (fala && fala.papel === 'iara') {
       this.garantirTrilha(fala);
-      const { visema } =
-        fracaoDaVoz !== null
-          ? visemaNoProgresso(this.trilha, fracaoDaVoz)
-          : visemaAgora(this.trilha, fala.texto.length, agora - fala.iniciada_em);
+      const visema = visemaCorrente(this.trilha, fala, voz, agora);
+      if (visema === null) return;
 
       this.alvo.mandibula_abre = ABERTURA_DO_VISEMA[visema];
       this.alvo.labios_arredondam = ARREDONDAMENTO_DO_VISEMA[visema];
