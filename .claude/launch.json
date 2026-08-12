@@ -6,6 +6,15 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "iara-os/apps/web"],
       "port": 3000
+    },
+    {
+      "// ": "O app vivo mora no submódulo IARA_WCA; a cópia da raiz não tem node_modules.",
+      "name": "iara-wca",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "IARA_WCA/iara-os/apps/web"],
+      "port": 3000,
+      "// autoPort": "O servidor lê PORT do ambiente (servidor/principal.ts), então duas sessões podem subir o app ao mesmo tempo.",
+      "autoPort": true
     }
   ]
 }

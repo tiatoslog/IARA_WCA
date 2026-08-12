@@ -1,0 +1,26 @@
+# Mídia é BYTE, não texto.
+#
+# Sem estas linhas o Git aplica conversão de fim de linha em qualquer arquivo
+# que ele ache que é texto — e o palpite dele é por conteúdo, não por extensão.
+# `esfera/cosmos_856448164.mp4` é o caso que expôs isso: apesar da extensão, o
+# arquivo é uma playlist HLS em ASCII, então o Git o classificou como texto e ia
+# reescrever cada quebra de linha na hora do checkout. Para uma playlist o
+# estrago é sutil; para o .gif de 6 MB ao lado seria corrupção silenciosa.
+#
+# `binary` = `-text -diff`: nunca converte, nunca tenta produzir diff textual.
+*.gif  binary
+*.jpg  binary
+*.jpeg binary
+*.png  binary
+*.webp binary
+*.mp4  binary
+*.mov  binary
+*.webm binary
+*.mp3  binary
+*.wav  binary
+*.ico  binary
+*.icns binary
+*.glb  binary
+*.gltf binary
+*.docx binary
+*.pdf  binary
