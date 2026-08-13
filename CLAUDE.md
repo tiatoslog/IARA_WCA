@@ -1,5 +1,32 @@
 # IARA OS — instruções do repositório
 
+## ⚠️ Antes de mexer em código: você está no repositório-pai
+
+Este diretório **não tem código vivo**. Ele carrega o ponteiro do submódulo, a
+documentação e a mídia. O produto inteiro mora em `IARA_WCA/iara-os/apps/web/`.
+
+O pai e o submódulo apontam para o **mesmo** remoto
+(`github.com/tiatoslog/IARA_WCA.git`), em branches diferentes:
+
+| branch | conteúdo |
+|---|---|
+| `main` | o código — é o submódulo `IARA_WCA` |
+| `repositorio-pai` | este diretório: ponteiro, documentação, mídia |
+
+Os dois compartilham a raiz `8764fec` e divergiram em `9db8cd1`, quando este
+repositório virou o pai. **O HEAD do submódulo não é ancestral do HEAD daqui**:
+um `git push origin main` a partir deste diretório é recusado, e um `--force`
+apagaria o código do GitHub. Nunca force `main` daqui.
+
+Havia até 13/08/2026 uma cópia de `iara-os/` versionada neste repositório — um
+retrato de antes da separação, parado desde então. Ela foi removida porque uma
+cópia velha com cara de código bom é pior que nenhuma cópia. Continua na
+história (`fa5d85f` e anteriores); para consultá-la:
+`git show fa5d85f:iara-os/apps/web/<arquivo>`.
+
+Os caminhos citados no resto deste documento são relativos a
+`IARA_WCA/iara-os/apps/web/`.
+
 ## O que é
 
 Escritório digital vivo da Atos Log. **Não é um dashboard futurista.** A

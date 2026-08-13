@@ -36,6 +36,15 @@ IDENTIDADE IARA/
 # PNG em public/escritorio/, o que a licença dele permite.
 *.zip
 
+# --- a cópia velha do produto ---
+# Este repositório é o PAI: ponteiro, documentação e mídia. O código vive no
+# submódulo, em IARA_WCA/iara-os/. Uma cópia de `iara-os/` esteve versionada
+# aqui até 13/08/2026, parada no estado de antes da separação — e uma cópia
+# velha com cara de código bom custa mais caro que a ausência dela. Se o
+# diretório reaparecer no disco, ele não volta ao índice por acidente.
+# Ancorado na raiz de propósito: não alcança IARA_WCA/iara-os/.
+/iara-os/
+
 # --- local ---
 .claude/settings.local.json
 .DS_Store
