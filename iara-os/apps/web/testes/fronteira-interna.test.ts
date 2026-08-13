@@ -211,6 +211,21 @@ test('G3. o EFEITO EXTERNO só é alcançado a partir do portal ou do catálogo'
     'servidor/nucleo/kernel/habilidades/agenteLocal.ts',
     'servidor/nucleo/kernel/habilidades/index.ts',
     'servidor/nucleo/kernel/Kernel.ts',
+    /**
+     * O EXECUTOR DA PONTE. Decisão de arquitetura, não ajuste de teste.
+     *
+     * `ExecutorDesktop` é o único módulo novo que alcança o `AgenteLocal`, e ele
+     * o faz nos dois lados: dentro do motor, quando o motor tem as mãos da
+     * máquina; dentro do braço, quando as mãos estão noutro computador. Uma
+     * implementação só, de propósito — duas fariam a execução local e a remota
+     * divergirem, com os testes rodando numa e o produto usando a outra.
+     *
+     * Ele entra nesta lista, e a habilidade `agenteLocal.ts` CONTINUA nela: as
+     * duas alcançam o agente, mas por caminhos diferentes e com papéis
+     * diferentes. A habilidade importa o agente só para as provas de disco e
+     * para a família de energia, que ainda não atravessa a ponte.
+     */
+    'servidor/nucleo/ExecutorDesktop.ts',
     'servidor/canais/PortaWhatsapp.ts', // usa o portal; não importa o cliente
     'servidor/barramento/Porta.ts',
     'servidor/principal.ts',

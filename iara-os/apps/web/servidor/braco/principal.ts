@@ -1,0 +1,229 @@
+/**
+ * O BRAÇO — o processo que roda no computador do operador e tem as mãos.
+ *
+ * É o outro lado da `PonteDispositivos`. Ele não pensa: não interpreta frase,
+ * não escolhe ação, não conversa com LLM nenhuma. Recebe uma ordem de um
+ * catálogo fechado, executa pelo `ExecutorDesktop` — o MESMO que o motor usa
+ * quando as mãos são dele — e conta o que aconteceu.
+ *
+ * QUEM CONECTA EM QUEM. Este processo liga para o motor, nunca o contrário, e
+ * é a decisão que torna a coisa toda viável: o computador do operador está
+ * atrás de NAT e de um IP que muda, e não tem endereço estável para receber
+ * chamada. Também não abre porta nenhuma nesta máquina — para efeito de rede,
+ * o braço é um cliente, como uma aba de navegador.
+ *
+ * COMO RODAR, hoje:
+ *
+ *   IARA_MOTOR_WS=ws://localhost:3000/dispositivo IARA_ID_USUARIO=daiane npm run braco
+ *
+ * Com o motor na nuvem, `wss://iara.atoslog.com.br/dispositivo` e o token do
+ * Supabase em `IARA_TOKEN`. O destino final deste processo é ser hospedado pelo
+ * shell Tauri (`apps/desktop`), que hoje só desenha janela — é exatamente a
+ * "Fase 3" anunciada no cabeçalho do `main.rs`. Enquanto isso ele é um processo
+ * Node à parte, que é o que permite provar a cadeia inteira hoje em vez de
+ * depois do instalador.
+ */
+
+import { WebSocket } from 'ws';
+import { config as carregarEnv } from 'dotenv';
+import { hostname, platform, release } from 'node:os';
+import {
+  lerPacoteMotor,
+  type OrdemExecucao,
+  type PacoteBraco,
+  type RelatoExecucao,
+} from '../../lib/execucao';
+import { executarOrdem } from '../nucleo/ExecutorDesktop';
+
+carregarEnv({ path: '.env.local' });
+carregarEnv();
+
+const VERSAO = '1.0.0';
+
+const DESTINO = process.env.IARA_MOTOR_WS ?? 'ws://localhost:3000/dispositivo';
+const ID_USUARIO = process.env.IARA_ID_USUARIO ?? 'daiane';
+const NOME = process.env.IARA_NOME_DISPOSITIVO ?? hostname();
+const TOKEN = process.env.IARA_TOKEN;
+
+/**
+ * Recuo exponencial com teto. Sem o teto, um motor fora do ar por uma noite
+ * levaria o braço a tentar de novo daqui a horas — e a pessoa chega de manhã
+ * com o computador "desconectado" sem motivo aparente. Com ele, o pior caso é
+ * meio minuto de atraso depois que o motor volta.
+ */
+const RECUO_INICIAL_MS = 1_000;
+const RECUO_MAXIMO_MS = 30_000;
+
+let recuo = RECUO_INICIAL_MS;
+let encerrando = false;
+let socket: WebSocket | null = null;
+
+/**
+ * Execuções em curso NESTE braço.
+ *
+ * Existe para uma razão só, e ela é de idempotência: o motor pode reenviar uma
+ * ordem quando acha que o socket caiu antes da entrega. Se a ordem de fato
+ * chegou nas duas vezes, executar duas vezes abriria dois Blocos de Notas. O
+ * `execucao_id` é o mesmo nas duas cópias — então a segunda encontra a primeira
+ * aqui e se cala.
+ */
+const emCurso = new Map<string, Promise<RelatoExecucao>>();
+/** Relatos já entregues, por um instante: cobre a reentrega que chega DEPOIS
+ *  de a primeira ter terminado. */
+const concluidas = new Map<string, { relato: RelatoExecucao; em: number }>();
+
+function enviar(pacote: PacoteBraco): void {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  try {
+    socket.send(JSON.stringify(pacote));
+  } catch (erro) {
+    console.warn(`[braço] não consegui responder ao motor: ${(erro as Error).message}`);
+  }
+}
+
+async function atender(ordem: OrdemExecucao): Promise<void> {
+  const guardado = concluidas.get(ordem.execucao_id);
+  if (guardado) {
+    console.log(`[braço] ${ordem.execucao_id} já executada; reenviando o relato original`);
+    enviar({ tipo: 'concluida', relato: guardado.relato });
+    return;
+  }
+  const jaCorrendo = emCurso.get(ordem.execucao_id);
+  if (jaCorrendo) {
+    console.log(`[braço] ${ordem.execucao_id} já está em curso; ignorando a cópia`);
+    return;
+  }
+
+  /**
+   * Os dois avisos ANTES de executar, e nesta ordem. `recebida` é o que
+   * distingue, do lado do motor, "a rede engoliu a ordem" de "o braço está
+   * demorando" — sem ele, um timeout não tem como dizer qual dos dois foi.
+   */
+  enviar({ tipo: 'recebida', execucao_id: ordem.execucao_id });
+  enviar({ tipo: 'executando', execucao_id: ordem.execucao_id });
+
+  const trabalho = executarOrdem(ordem, 'dispositivo', NOME);
+  emCurso.set(ordem.execucao_id, trabalho);
+
+  const relato = await trabalho;
+  emCurso.delete(ordem.execucao_id);
+
+  const agora = Date.now();
+  concluidas.set(ordem.execucao_id, { relato, em: agora });
+  for (const [k, v] of concluidas) if (agora - v.em > 5 * 60_000) concluidas.delete(k);
+
+  console.log(
+    `[braço] ${ordem.execucao_id} ${ordem.acao} → ${relato.estado} ` +
+      `(${relato.duracao_ms} ms) — ${relato.prova.evidencia}`,
+  );
+  enviar({ tipo: 'concluida', relato });
+}
+
+function conectar(): void {
+  if (encerrando) return;
+  console.log(`[braço] conectando em ${DESTINO}…`);
+
+  const ws = new WebSocket(DESTINO, {
+    /**
+     * A ORIGEM é obrigatória, e descobri-la custou tempo: `principal.ts` recusa
+     * o upgrade quando não há cabeçalho `Origin`, exceto em desenvolvimento. Um
+     * cliente Node não manda `Origin` sozinho — o navegador é que manda. Sem
+     * esta linha o braço apanha um 403 mudo contra um motor de produção
+     * configurado corretamente.
+     */
+    headers: { Origin: origemDe(DESTINO) },
+  });
+  socket = ws;
+
+  ws.on('open', () => {
+    console.log('[braço] conectado; apresentando este computador');
+    enviar({
+      tipo: 'apresentacao',
+      id_usuario: ID_USUARIO,
+      nome: NOME,
+      plataforma: `${platform()} ${release()}`,
+      versao: VERSAO,
+      ...(TOKEN ? { token: TOKEN } : {}),
+    });
+  });
+
+  ws.on('message', (dado) => {
+    const pacote = lerPacoteMotor(dado.toString());
+    if (!pacote) return;
+
+    if (pacote.tipo === 'bem_vindo') {
+      // O recuo só volta ao mínimo quando a conexão de fato SERVIU. Zerar no
+      // `open` faria um motor que aceita e recusa em seguida virar laço apertado.
+      recuo = RECUO_INICIAL_MS;
+      console.log(`[braço] registrado no motor como ${pacote.id_dispositivo} (operador ${ID_USUARIO})`);
+      return;
+    }
+
+    if (pacote.tipo === 'recusado') {
+      console.error(`[braço] o motor recusou este computador: ${pacote.motivo}`);
+      return;
+    }
+
+    if (pacote.tipo === 'executar') {
+      void atender(pacote.ordem).catch((erro: Error) => {
+        /**
+         * `atender` já captura o que o executor lança. Este `catch` cobre o que
+         * sobrar — e ele não pode ficar calado: uma ordem que morre aqui sem
+         * relato deixa o motor esperando até o prazo, e o operador recebe
+         * "não sei" no lugar de "deu errado".
+         */
+        console.error(`[braço] falha ao atender ${pacote.ordem.execucao_id}: ${erro.message}`);
+        enviar({
+          tipo: 'concluida',
+          relato: {
+            execucao_id: pacote.ordem.execucao_id,
+            estado: 'falhou',
+            texto: 'O programa da IARA no seu computador falhou ao executar isso.',
+            prova: { confirmado: false, evidencia: `exceção no braço: ${erro.message}`, motivo: 'divergente' },
+            codigo_erro: 'FALHA_NA_EXECUCAO',
+            duracao_ms: 0,
+            dispositivo: NOME,
+            onde: 'dispositivo',
+          },
+        });
+      });
+    }
+  });
+
+  ws.on('close', (codigo, motivo) => {
+    socket = null;
+    if (encerrando) return;
+    const explicacao = motivo.toString() || 'sem motivo declarado';
+    console.warn(`[braço] conexão fechada (${codigo}: ${explicacao}); tentando de novo em ${recuo} ms`);
+    setTimeout(conectar, recuo);
+    recuo = Math.min(recuo * 2, RECUO_MAXIMO_MS);
+  });
+
+  ws.on('error', (erro: Error) => {
+    // O `close` vem logo atrás e é ele quem reagenda; aqui só se explica.
+    console.warn(`[braço] erro de conexão: ${erro.message}`);
+  });
+}
+
+/** `ws://host:porta/caminho` → `http://host:porta`. */
+function origemDe(url: string): string {
+  try {
+    const u = new URL(url);
+    const esquema = u.protocol === 'wss:' ? 'https:' : 'http:';
+    return `${esquema}//${u.host}`;
+  } catch {
+    return 'http://localhost';
+  }
+}
+
+const encerrar = () => {
+  encerrando = true;
+  console.log('\n[braço] encerrando…');
+  socket?.close(1000, 'encerrando');
+  setTimeout(() => process.exit(0), 300).unref();
+};
+process.on('SIGINT', encerrar);
+process.on('SIGTERM', encerrar);
+
+console.log(`[braço] IARA — braço v${VERSAO} em ${NOME} (${platform()} ${release()})`);
+conectar();

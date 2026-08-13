@@ -131,10 +131,64 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     negavel: true,
   },
   {
-    re: /\b(abra|abre|abrir|inicie|iniciar)\s+(o|a|os|as)?\s*(bloco de notas|calculadora|navegador|explorador|terminal|prompt|aplicativo|programa)\b/,
+    /**
+     * A LISTA DE SUBSTANTIVOS ESTAVA INCOMPLETA, e a falta era justamente a do
+     * aplicativo mais pedido: `chrome` não estava aqui. "Abra o Chrome no
+     * computador" — a frase que abre o caderno de testes — não casava âncora
+     * nenhuma, caía com confiança 0,35 no plano de raciocínio e ia depender da
+     * LLM adivinhar a habilidade. Sem chave da nuvem, não abria nada.
+     *
+     * O defeito é da família de `pesquis\w*`: a allowlist do `AgenteLocal`
+     * ganhou entradas (chrome, edge, paint) e este reconhecedor não ganhou
+     * junto. São duas listas que precisam concordar e nada as obrigava a isso —
+     * agora `testes/ponte-execucao.test.ts` percorre a allowlist e exige que
+     * cada rótulo seja reconhecível aqui.
+     */
+    re: /\b(abra|abre|abrir|inicie|iniciar|sobe|subir)\s+(o|a|os|as)?\s*(bloco de notas|notepad|calculadora|navegador|explorador|chrome|google chrome|edge|paint|terminal|prompt|aplicativo|programa)\b/,
     nome: 'abrir_app',
     acionavel: true,
     negavel: true,
+  },
+  {
+    /**
+     * Fechar vem DEPOIS de abrir na lista e não colide com ela: os verbos são
+     * disjuntos. Está separado porque o efeito é oposto, e uma âncora só com a
+     * polaridade decidida depois (como em `confirmacao`) faria "abra e feche o
+     * bloco de notas" virar uma coisa só.
+     */
+    re: /\b(fech[ae]|fechar|encerr[ae]|encerrar|mat[ae]|finaliz[ae]|finalizar)\s+(o|a|os|as)?\s*(bloco de notas|notepad|calculadora|navegador|chrome|google chrome|edge|paint)\b/,
+    nome: 'fechar_app',
+    acionavel: true,
+    negavel: true,
+  },
+  {
+    /**
+     * "o que tem na área de trabalho" é a forma que as pessoas usam de verdade,
+     * e ela não tem verbo de listagem nenhum — por isso a segunda alternativa.
+     * A primeira exige o substantivo (arquivos/pastas/documentos) junto do
+     * verbo: "mostre o relatório" fala de um documento específico, não de uma
+     * listagem, e responder com o conteúdo da pasta seria responder outra coisa.
+     */
+    re: /\b(list[ae]|listar|mostr[ae]|mostrar|ver|vej[ae]|quais|quantos)\s+(os\s+|as\s+|meus\s+|minhas\s+|todos\s+os\s+)?(arquivos|pastas|documentos)\b|\bo que (tem|ha|existe)\s+(na|no|em)\s+(minha\s+|meu\s+)?(area de trabalho|desktop|documentos|downloads|pasta)\b|\bconteudo (da|do)\s+(minha\s+|meu\s+)?(area de trabalho|desktop|pasta|documentos|downloads)\b/,
+    nome: 'listar_arquivos',
+    acionavel: true,
+  },
+  {
+    /**
+     * `memoria` e `processador` NUNCA sozinhos, pela lição de `frota` e de
+     * `tempo`: "não tenho memória de ter pedido isso" e "o processador de
+     * pedidos travou" são frases sobre outra coisa. O que qualifica a âncora é a
+     * referência à MÁQUINA — computador, PC, sistema — ou a forma de pergunta
+     * de medição ("quanto de memória").
+     */
+    re: /\b(quanto de (memoria|ram)|uso de (memoria|ram|cpu|processador)|(memoria|cpu|processador|desempenho) (do|no) (computador|pc|sistema|meu computador)|informacoes (do|sobre o) (computador|sistema)|status (do|de) (computador|pc|meu computador)|como esta (o|meu) (computador|pc)|especificacoes (do|desse) (computador|pc))\b/,
+    nome: 'sistema',
+    acionavel: true,
+  },
+  {
+    re: /\b(diagnostico|diagnosticar|autoteste|auto-teste|checagem geral|status geral|voce esta (ok|bem|funcionando|online)|esta tudo (ok|certo|funcionando))\b/,
+    nome: 'diagnostico',
+    acionavel: true,
   },
   {
     /**
@@ -290,6 +344,10 @@ export class MotorPercepcao {
     if (ancoras.includes('confirmacao')) return 'resolução de ação pendente';
     if (ancoras.includes('pasta')) return 'organização de arquivos';
     if (ancoras.includes('abrir_app')) return 'abertura de aplicativo';
+    if (ancoras.includes('fechar_app')) return 'encerramento de aplicativo';
+    if (ancoras.includes('listar_arquivos')) return 'inventário de pasta';
+    if (ancoras.includes('sistema')) return 'estado da máquina do operador';
+    if (ancoras.includes('diagnostico')) return 'autodiagnóstico do sistema';
     if (ancoras.includes('captura')) return 'registro visual da tela';
     if (ancoras.includes('lembrete')) return 'marcação de lembrete';
     if (ancoras.includes('energia')) return 'controle de energia da máquina';

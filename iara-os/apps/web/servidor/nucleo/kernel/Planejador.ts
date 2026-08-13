@@ -113,6 +113,36 @@ const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
     passos: [passo(0, 'Abrir o aplicativo pedido', 'abrir_aplicativo', { aplicativo: p.bruto })],
   }),
 
+  fechar_app: (p) => ({
+    objetivo: 'Fechar aplicativo autorizado',
+    origem: 'deterministico',
+    passos: [passo(0, 'Fechar o aplicativo pedido', 'fechar_aplicativo', { aplicativo: p.bruto })],
+  }),
+
+  listar_arquivos: (p) => ({
+    objetivo: 'Inventariar uma pasta autorizada',
+    origem: 'deterministico',
+    passos: [
+      passo(0, 'Ler a pasta autorizada no computador do operador', 'listar_arquivos', {
+        // O MESMO extrator de `criar_pasta`. Duas formas de descobrir o local
+        // divergiriam no dia em que alguém acrescentasse um sinônimo a uma só.
+        local: extrairLocalAutorizado(p.bruto),
+      }),
+    ],
+  }),
+
+  sistema: () => ({
+    objetivo: 'Informar o estado da máquina do operador',
+    origem: 'deterministico',
+    passos: [passo(0, 'Ler memória, processador e rede do computador', 'informacoes_sistema', {})],
+  }),
+
+  diagnostico: () => ({
+    objetivo: 'Relatar o estado real de cada elo da cadeia',
+    origem: 'deterministico',
+    passos: [passo(0, 'Consultar motor, banco, dispositivos e trilha', 'diagnosticar_sistema', {})],
+  }),
+
   captura: (p) => ({
     objetivo: 'Registrar a tela em arquivo',
     origem: 'deterministico',

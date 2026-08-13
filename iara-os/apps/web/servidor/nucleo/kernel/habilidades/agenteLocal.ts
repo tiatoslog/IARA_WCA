@@ -14,19 +14,48 @@
  * afrouxar um manifesto não afrouxa uma fronteira.
  */
 
-import { existsSync, statSync } from 'node:fs';
-import path from 'node:path';
-import type { Habilidade } from '../Habilidade';
+import type { Habilidade, Verificacao } from '../Habilidade';
 import {
   agenteLocal,
-  resolverRaiz,
-  validarNomePasta,
   ROTULO_DO_LOCAL,
   type AcaoEnergia,
   type LocalAutorizado,
 } from '../../AgenteLocal';
+import { braco, motorTemMaos } from '../../Braco';
+import type { AcaoDesktop } from '../../../../lib/execucao';
+import type { ContextoHabilidade } from '../Habilidade';
 
 const LOCAIS = Object.keys(ROTULO_DO_LOCAL) as LocalAutorizado[];
+
+/**
+ * A PROVA de um passo que atravessou a ponte.
+ *
+ * As três habilidades que mexem no computador têm o mesmo verificador, e ele é
+ * uma linha: devolver o que o lado das mãos apurou. Cada uma tinha a própria
+ * cópia da checagem de disco, e essa duplicação era inofensiva enquanto motor e
+ * mãos eram a mesma máquina — depois disso, virou três lugares conferindo o
+ * disco errado.
+ *
+ * O RAMO DE FALLBACK não é defensivo, é o caminho legítimo de quando não houve
+ * execução nenhuma nesta conversa (a suíte chama `verificar` isolado, e é bom
+ * que possa) e o motor de fato tem as mãos desta máquina. Fora disso ele recusa
+ * a inventar prova: sem relato e sem mãos, a resposta honesta é que não há como
+ * conferir daqui.
+ */
+function provaDaPonte(
+  ctx: ContextoHabilidade,
+  acao: AcaoDesktop,
+  local: () => Verificacao,
+): Verificacao {
+  const relato = braco.ultimoDe(ctx.id_usuario, ctx.sessao, acao);
+  if (relato) return relato.prova;
+  if (motorTemMaos()) return local();
+  return {
+    confirmado: false,
+    evidencia: 'nenhuma execução registrada nesta conversa e o motor não tem as mãos desta máquina',
+    motivo: 'sem_meio_de_verificar',
+  };
+}
 
 export const criarPasta: Habilidade = {
   manifesto: {
@@ -50,55 +79,46 @@ export const criarPasta: Habilidade = {
     },
   },
   async executar(ctx) {
-    const texto = await agenteLocal.criarPasta(
-      ctx.id_usuario,
-      String(ctx.parametros.nome),
-      String(ctx.parametros.local) as LocalAutorizado,
-    );
-    // `resolveu` reflete o FATO verificado pelo agente (a pasta existe no
-    // disco), não a ausência de exceção. Nome recusado pela regra de segurança
-    // devolve texto útil e `resolveu: false` — não é erro, é recusa.
+    /**
+     * O PEDIDO ATRAVESSA A PONTE em vez de virar chamada de função.
+     *
+     * A troca parece cerimônia e não é: a chamada direta assumia, sem nunca
+     * declarar, que o disco do processo era o disco do operador. Com o motor na
+     * nuvem essa suposição criava a pasta no contêiner Linux e relatava sucesso.
+     * O Braço responde a pergunta que a chamada de função não sabia fazer —
+     * ONDE estão as mãos — e, quando não há nenhuma, recusa em voz alta.
+     */
+    const relato = await braco.executar({
+      acao: 'criar_pasta',
+      parametros: { nome: String(ctx.parametros.nome), local: String(ctx.parametros.local) },
+      id_usuario: ctx.id_usuario,
+      sessao: ctx.sessao,
+      chave_idempotencia: ctx.operacao?.id_operacao,
+    });
     return {
-      texto,
-      detalhe: `criar_pasta em ${ctx.parametros.local}`,
-      resolveu: texto.startsWith('Pasta ') || texto.includes('já existe'),
+      texto: relato.texto,
+      detalhe: `criar_pasta em ${ctx.parametros.local} [${relato.execucao_id}] ${relato.estado}`,
+      // `resolveu` é o ESTADO apurado, nunca a ausência de exceção. Nome
+      // recusado pela regra de segurança devolve texto útil e `false` — não é
+      // erro, é recusa; e `expirou` também é `false`, porque não se sabe.
+      resolveu: relato.estado === 'sucesso',
     };
   },
 
   /**
-   * Confere o DISCO. É a verificação canônica do sistema: nome pedido → nome
-   * validado → raiz resolvida → o diretório está lá?
+   * Confere o DISCO — o da máquina que executou. É a verificação canônica do
+   * sistema: nome pedido → nome validado → raiz resolvida → o diretório está lá?
    *
    * Note que ela não olha o texto devolvido por `executar`. Olhar o próprio
    * relato para confirmar o relato é o que se está tentando evitar.
    */
   async verificar(_resultado, ctx) {
-    const nome = validarNomePasta(String(ctx.parametros.nome));
-    if (!nome) {
-      return {
-        confirmado: false,
-        evidencia: 'nome recusado pela regra de segurança; nada foi criado',
-        motivo: 'nao_encontrado',
-      };
-    }
-
-    const raiz = resolverRaiz(String(ctx.parametros.local) as LocalAutorizado);
-    if (!raiz) {
-      return {
-        confirmado: false,
-        evidencia: `raiz "${ctx.parametros.local}" não existe nesta máquina`,
-        motivo: 'nao_encontrado',
-      };
-    }
-
-    const destino = path.join(raiz, nome);
-    return existsSync(destino)
-      ? { confirmado: true, evidencia: `diretório existe em ${destino}` }
-      : {
-          confirmado: false,
-          evidencia: `${destino} não existe depois da execução`,
-          motivo: 'divergente',
-        };
+    return provaDaPonte(ctx, 'criar_pasta', () =>
+      agenteLocal.provaDaPasta(
+        String(ctx.parametros.nome),
+        String(ctx.parametros.local) as LocalAutorizado,
+      ),
+    );
   },
 };
 
@@ -112,7 +132,14 @@ export const abrirAplicativo: Habilidade = {
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],
-    timeout_ms: 4000,
+    /**
+     * O teto subiu de 4 s porque a habilidade deixou de mentir. Antes ela
+     * respondia na hora — soltava o processo e afirmava "aberto". Agora ela
+     * espera o lançamento e o processo aparecer na tabela, o que numa máquina
+     * fria leva segundos. Tempo gasto para poder afirmar é tempo bem gasto; o
+     * teto precisa acomodar o prazo do Braço (20 s) com folga.
+     */
+    timeout_ms: 25000,
     custo: 'zero',
     risco: 'medio',
     // Mesmo risco de `criar_pasta` e semântica oposta — é o par que prova que as
@@ -122,32 +149,168 @@ export const abrirAplicativo: Habilidade = {
     esquema: { aplicativo: { tipo: 'texto', obrigatorio: true } },
   },
   async executar(ctx) {
-    const texto = agenteLocal.abrirAplicativo(ctx.id_usuario, String(ctx.parametros.aplicativo));
+    const relato = await braco.executar({
+      acao: 'abrir_aplicativo',
+      parametros: { aplicativo: String(ctx.parametros.aplicativo) },
+      id_usuario: ctx.id_usuario,
+      sessao: ctx.sessao,
+      chave_idempotencia: ctx.operacao?.id_operacao,
+    });
     return {
-      texto,
-      detalhe: 'abrir_aplicativo (allowlist)',
-      resolveu: !texto.startsWith('Esse aplicativo não está'),
+      texto: relato.texto,
+      detalhe: `abrir_aplicativo [${relato.execucao_id}] ${relato.estado}`,
+      resolveu: relato.estado === 'sucesso',
     };
   },
 
   /**
-   * ESTE É O CASO HONESTO. O processo é lançado com `detached` e `unref` — a
-   * IARA solta o filho e não o acompanha. Um app pode subir e fechar sozinho,
-   * pode abrir uma janela existente em vez de um processo novo, pode demorar.
+   * ESTA ERA A LIMITAÇÃO DECLARADA, e ela deixou de ser necessária.
    *
-   * Poderíamos varrer a tabela de processos e chamar isso de verificação. Seria
-   * teatro: o resultado não provaria que a janela apareceu para o operador.
-   * Declarar a limitação vale mais que uma confirmação que não confirma — e é
-   * por isso que `sem_meio_de_verificar` existe como motivo de primeira classe.
+   * O texto anterior dizia, com razão para o código de então: "processo lançado
+   * desanexado; não acompanho o ciclo de vida dele". A IARA soltava o filho e
+   * não olhava para trás, então `sem_meio_de_verificar` era a resposta honesta.
+   *
+   * O que mudou não foi a disposição de afirmar — foi a existência de evidência.
+   * O executor agora fotografa a tabela de processos ANTES e DEPOIS, e a
+   * diferença entre as duas fotos é um fato conferível. Quando ela sobe, há
+   * prova; quando o aplicativo já estava aberto, `sem_meio_de_verificar`
+   * continua sendo a resposta certa — e agora é uma ressalva sobre UM caso, não
+   * sobre todos.
    */
-  async verificar(resultado) {
-    if (resultado.texto.startsWith('Esse aplicativo não está')) {
-      return { confirmado: false, evidencia: 'aplicativo fora da allowlist; nada foi lançado', motivo: 'nao_encontrado' };
-    }
-    return {
+  async verificar(_resultado, ctx) {
+    return provaDaPonte(ctx, 'abrir_aplicativo', () => ({
       confirmado: false,
-      evidencia: 'processo lançado desanexado; não acompanho o ciclo de vida dele',
-      motivo: 'sem_meio_de_verificar',
+      evidencia: 'nenhuma execução registrada nesta conversa',
+      motivo: 'nao_encontrado',
+    }));
+  },
+};
+
+/**
+ * Fechar um aplicativo — o par que faltava de `abrir_aplicativo`.
+ *
+ * RISCO `medio`, e não `alto`, porque o executor recusa forçar: sem `/F`, um
+ * programa com trabalho não salvo simplesmente não fecha, e a IARA relata isso.
+ * O que tornaria esta habilidade irreversível — matar o processo por cima do
+ * documento aberto de alguém — é justamente o que ela não faz.
+ */
+export const fecharAplicativo: Habilidade = {
+  manifesto: {
+    id: 'fechar_aplicativo',
+    nome: 'Fechar aplicativo',
+    descricao:
+      'Fecha um aplicativo da lista autorizada no computador do operador, pedindo educadamente ao ' +
+      'Windows (nunca forçando). Se houver trabalho não salvo, o programa recusa e a IARA diz isso. ' +
+      'Use para "feche o bloco de notas", "pode fechar o Chrome".',
+    dominio: 'automacao',
+    capacidade: 'automacao',
+    permissoes: ['escrita'],
+    timeout_ms: 25000,
+    custo: 'zero',
+    risco: 'medio',
+    /**
+     * Fechar duas vezes converge: na segunda o processo já não está lá, e o
+     * executor devolve "já não estava aberto" sem tocar em nada. É o oposto de
+     * `abrir_aplicativo`, e o par continua servindo de exemplo de que risco e
+     * semântica são perguntas independentes.
+     */
+    idempotencia: 'escrita_idempotente',
+    esquema: { aplicativo: { tipo: 'texto', obrigatorio: true } },
+  },
+  async executar(ctx) {
+    const relato = await braco.executar({
+      acao: 'fechar_aplicativo',
+      parametros: { aplicativo: String(ctx.parametros.aplicativo) },
+      id_usuario: ctx.id_usuario,
+      sessao: ctx.sessao,
+      chave_idempotencia: ctx.operacao?.id_operacao,
+    });
+    return {
+      texto: relato.texto,
+      detalhe: `fechar_aplicativo [${relato.execucao_id}] ${relato.estado}`,
+      resolveu: relato.estado === 'sucesso',
+    };
+  },
+  async verificar(_resultado, ctx) {
+    return provaDaPonte(ctx, 'fechar_aplicativo', () => ({
+      confirmado: false,
+      evidencia: 'nenhuma execução registrada nesta conversa',
+      motivo: 'nao_encontrado',
+    }));
+  },
+};
+
+/**
+ * Listar o que está numa pasta autorizada.
+ *
+ * RISCO `baixo` e sem verificador — e as duas coisas andam juntas, por contrato:
+ * quem só lê não implementa `verificar`, porque verificar uma leitura seria
+ * repetir a leitura, pagando duas vezes por nenhuma garantia nova. A resposta É
+ * o resultado.
+ */
+export const listarArquivos: Habilidade = {
+  manifesto: {
+    id: 'listar_arquivos',
+    nome: 'Listar arquivos',
+    descricao:
+      'Lista pastas e arquivos de um local autorizado do computador do operador (Área de Trabalho, ' +
+      'Documentos ou Downloads). Não aceita caminho livre. Use para "o que tem na minha área de ' +
+      'trabalho", "liste os arquivos de Downloads".',
+    dominio: 'automacao',
+    capacidade: 'automacao',
+    permissoes: [],
+    timeout_ms: 15000,
+    custo: 'zero',
+    risco: 'baixo',
+    idempotencia: 'leitura',
+    esquema: {
+      local: { tipo: 'texto', padrao: 'area_de_trabalho', dentre: LOCAIS },
+    },
+  },
+  async executar(ctx) {
+    const relato = await braco.executar({
+      acao: 'listar_arquivos',
+      parametros: { local: String(ctx.parametros.local) },
+      id_usuario: ctx.id_usuario,
+      sessao: ctx.sessao,
+    });
+    return {
+      texto: relato.texto,
+      detalhe: `listar_arquivos em ${ctx.parametros.local} [${relato.execucao_id}] ${relato.estado}`,
+      resolveu: relato.estado === 'sucesso',
+    };
+  },
+};
+
+/** O estado da máquina do operador — memória, processador, tempo ligado, rede. */
+export const informacoesSistema: Habilidade = {
+  manifesto: {
+    id: 'informacoes_sistema',
+    nome: 'Informações do computador',
+    descricao:
+      'Consulta o estado do computador do operador: memória em uso, processador, tempo ligado e ' +
+      'interfaces de rede. Use para "quanto de memória meu computador está usando", "meu computador ' +
+      'está conectado", "como está o PC".',
+    dominio: 'automacao',
+    capacidade: 'automacao',
+    permissoes: [],
+    timeout_ms: 15000,
+    custo: 'zero',
+    risco: 'baixo',
+    idempotencia: 'leitura',
+    esquema: {},
+  },
+  async executar(ctx) {
+    const relato = await braco.executar({
+      acao: 'informacoes_sistema',
+      parametros: {},
+      id_usuario: ctx.id_usuario,
+      sessao: ctx.sessao,
+    });
+    return {
+      texto: relato.texto,
+      detalhe: `informacoes_sistema [${relato.execucao_id}] ${relato.estado}`,
+      resolveu: relato.estado === 'sucesso',
     };
   },
 };
@@ -212,22 +375,25 @@ export const capturarTela: Habilidade = {
    * allowlist.
    */
   async executar(ctx) {
-    const texto = await agenteLocal.capturarTela(
-      ctx.id_usuario,
-      String(ctx.parametros.local) as LocalAutorizado,
-    );
+    const relato = await braco.executar({
+      acao: 'capturar_tela',
+      parametros: { local: String(ctx.parametros.local) },
+      id_usuario: ctx.id_usuario,
+      sessao: ctx.sessao,
+      chave_idempotencia: ctx.operacao?.id_operacao,
+    });
     return {
-      texto,
-      detalhe: `capturar_tela em ${ctx.parametros.local}`,
-      // O FATO é o arquivo registrado pelo agente, não a ausência de exceção:
-      // as duas recusas (sem tela, raiz ausente) devolvem texto útil e nada no
-      // mapa de capturas.
-      resolveu: agenteLocal.capturaRecenteDe(ctx.id_usuario) !== null,
+      texto: relato.texto,
+      detalhe: `capturar_tela em ${ctx.parametros.local} [${relato.execucao_id}] ${relato.estado}`,
+      // O FATO é o arquivo apurado no disco de quem executou, não a ausência de
+      // exceção: as duas recusas (sem tela, raiz ausente) devolvem texto útil e
+      // nada no mapa de capturas.
+      resolveu: relato.estado === 'sucesso',
     };
   },
 
   /**
-   * Confere o DISCO, e confere o tamanho junto.
+   * Confere o DISCO — e confere o tamanho junto, na máquina que fotografou.
    *
    * Só `existsSync` não bastaria: o `Bitmap.Save` do .NET cria o arquivo antes
    * de escrever, e um PNG de zero byte existe sem ser uma foto. Arquivo vazio é
@@ -235,29 +401,7 @@ export const capturarTela: Habilidade = {
    * `nao_encontrado`.
    */
   async verificar(_resultado, ctx) {
-    const caminho = agenteLocal.capturaRecenteDe(ctx.id_usuario);
-    if (!caminho) {
-      return {
-        confirmado: false,
-        evidencia: 'o executor não registrou nenhuma captura; nada foi salvo',
-        motivo: 'nao_encontrado',
-      };
-    }
-    if (!existsSync(caminho)) {
-      return {
-        confirmado: false,
-        evidencia: `${caminho} não existe depois da execução`,
-        motivo: 'divergente',
-      };
-    }
-    const bytes = statSync(caminho).size;
-    return bytes > 0
-      ? { confirmado: true, evidencia: `arquivo existe em ${caminho} com ${bytes} bytes` }
-      : {
-          confirmado: false,
-          evidencia: `${caminho} existe mas está vazio; não é uma imagem`,
-          motivo: 'divergente',
-        };
+    return provaDaPonte(ctx, 'capturar_tela', () => agenteLocal.provaDaCaptura(ctx.id_usuario));
   },
 };
 
@@ -293,6 +437,34 @@ export const acionarEnergia: Habilidade = {
   },
   async executar(ctx) {
     const acao = String(ctx.parametros.acao) as AcaoEnergia;
+
+    /**
+     * ENERGIA AINDA NÃO ATRAVESSA A PONTE — e por isso ela recusa quando as
+     * mãos não são daqui. Esta é a ÚNICA família do Agente Local que continua
+     * executando no processo do motor, e a razão é honesta: a pendência R2 é um
+     * interlock em memória amarrado a (operador, sessão), com uma máquina de
+     * autorização de sete conferências no jornal por cima. Mover isso para o
+     * outro lado de uma rede é um trabalho por si — e fazê-lo às pressas, na
+     * habilidade que desliga computador, seria a pior ordem possível de
+     * prioridades.
+     *
+     * O que NÃO se pode aceitar enquanto isso é o comportamento anterior: com o
+     * motor na nuvem, "desligue o computador" armava uma pendência e o
+     * "confirmo" mandava `shutdown` no CONTÊINER. Um servidor derrubado por um
+     * comando dirigido a um desktop. Recusar em voz alta é a resposta certa
+     * para uma capacidade que existe e não alcança o destino pedido.
+     */
+    if (!motorTemMaos()) {
+      return {
+        texto:
+          'Ainda não consigo desligar, reiniciar ou suspender o seu computador a distância. ' +
+          'Eu chego nele para abrir programas, criar pastas e tirar print, mas o controle de energia ' +
+          'só funciona quando eu estou rodando na própria máquina — e não é o caso agora. ' +
+          'Prefiro dizer isso a mexer na energia do servidor errado.',
+        detalhe: `energia:${acao} recusada: o motor não tem as mãos desta máquina`,
+        resolveu: false,
+      };
+    }
 
     /**
      * DUAS TRAVAS INDEPENDENTES, e é de propósito que sejam duas.
@@ -551,6 +723,9 @@ export const resolverConfirmacao: Habilidade = {
 export const HABILIDADES_AGENTE_LOCAL: readonly Habilidade[] = [
   criarPasta,
   abrirAplicativo,
+  fecharAplicativo,
+  listarArquivos,
+  informacoesSistema,
   capturarTela,
   acionarEnergia,
   resolverConfirmacao,
