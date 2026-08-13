@@ -37,7 +37,10 @@ export const consultarClima: Habilidade = {
     },
   },
   async executar(ctx) {
-    const r = await acoes.executar('clima', { horizonte: ctx.parametros.horizonte });
+    const r = await acoes.executar('clima', {
+      horizonte: ctx.parametros.horizonte,
+      id_usuario: ctx.id_usuario,
+    });
     // `resolveu` é o que a fonte disse, não uma constante. Ver ResultadoAcao.ok:
     // com `true` fixo, uma falha de rede subia ao Kernel como passo cumprido.
     return { texto: r.texto, detalhe: `Open-Meteo em ${r.latencia_ms}ms`, resolveu: r.ok };

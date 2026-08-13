@@ -22,6 +22,7 @@ import { MotorPercepcao } from '../servidor/nucleo/kernel/Percepcao';
 import { Planejador, extrairHorizonteClima } from '../servidor/nucleo/kernel/Planejador';
 import { horizonteValido } from '../servidor/nucleo/OrquestradorAcoes';
 import { consultarClima } from '../servidor/nucleo/kernel/habilidades/operacionais';
+import { esquecerLocal, registrarLocal } from '../servidor/nucleo/LocalOperador';
 import { visemaCorrente } from '../components/projecao/articulacao';
 import { trilhaDeVisemas } from '../lib/visemas';
 import type { Fala } from '../hooks/useIaraSocket';
@@ -113,6 +114,56 @@ test('horizonte inválido vindo de um plano da LLM cai no padrão seguro', () =>
  */
 process.env.IARA_LATITUDE = '-22.9707';
 process.env.IARA_LONGITUDE = '-46.9958';
+
+test('a posição do aparelho VENCE a coordenada configurada', async () => {
+  // O escritório está declarado em Valinhos; a pessoa está longe dali. A
+  // previsão tem de sair de onde ela está — é o caso de uso inteiro da
+  // permissão de localização.
+  registrarLocal('op-viajando', -23.5505, -46.6333); // São Paulo
+  const fetchOriginal = globalThis.fetch;
+  let urlConsultada = '';
+  globalThis.fetch = (async (u: string) => {
+    urlConsultada = String(u);
+    return new Response(
+      JSON.stringify({
+        current: { temperature_2m: 19, relative_humidity_2m: 70, precipitation: 0, weather_code: 0 },
+        daily: {
+          weather_code: [0, 0],
+          temperature_2m_max: [25, 26],
+          temperature_2m_min: [15, 16],
+          precipitation_sum: [0, 0],
+          precipitation_probability_max: [3, 4],
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }) as unknown as typeof fetch;
+  try {
+    const r = await consultarClima.executar({
+      parametros: { horizonte: 'hoje' },
+      enunciado: 'vai chover?',
+      id_usuario: 'op-viajando',
+      sessao: 'teste',
+      sinal: new AbortController().signal,
+      concedidas: ['rede'],
+    } as unknown as Parameters<typeof consultarClima.executar>[0]);
+
+    assert.ok(
+      urlConsultada.includes('latitude=-23.5505'),
+      `consultou o lugar errado: ${urlConsultada}`,
+    );
+    assert.ok(!urlConsultada.includes('-22.9707'), 'usou a coordenada do escritório');
+    // E o rótulo acompanha: nomear "Valinhos" sobre a coordenada de São Paulo
+    // repetiria, ao contrário, o defeito que essa correção existe para matar.
+    assert.ok(
+      /onde voc[êe] est[áa]/i.test(r.texto),
+      `a resposta carimbou um nome de cidade: "${r.texto}"`,
+    );
+  } finally {
+    globalThis.fetch = fetchOriginal;
+    esquecerLocal('op-viajando');
+  }
+});
 
 test('clima sem coordenadas declaradas RECUSA, em vez de chutar a cidade', async () => {
   const antes = { lat: process.env.IARA_LATITUDE, lon: process.env.IARA_LONGITUDE };

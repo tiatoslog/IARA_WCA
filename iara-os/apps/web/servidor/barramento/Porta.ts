@@ -25,6 +25,7 @@ import { lerPacoteCliente } from '../../lib/protocolo';
 import { outrosOperadores } from '../../lib/operadores';
 import { papelDe } from '../nucleo/kernel/Papeis';
 import { LimiteVazao } from '../nucleo/kernel/Seguranca';
+import { esquecerLocal, registrarLocal } from '../nucleo/LocalOperador';
 import {
   autenticacaoAtiva,
   identidadeLocal,
@@ -320,6 +321,17 @@ export function conectarOperador(socket: WebSocket): void {
       return;
     }
 
+    if (pacote.tipo === 'local') {
+      /**
+       * A posição é do OPERADOR RESOLVIDO, não do id que o pacote traria — ele
+       * não traz nenhum, pela mesma razão que a ficha não traz. E não é
+       * gravada em lugar nenhum: `LocalOperador` vive em memória do processo e
+       * não tem caminho para persistência (ver o cabeçalho de lá).
+       */
+      registrarLocal(operador.id_usuario, pacote.latitude, pacote.longitude);
+      return;
+    }
+
     if (pacote.tipo === 'preferencias') {
       /**
        * O shard de destino é `operador.id_usuario` — a identidade RESOLVIDA na
@@ -394,6 +406,11 @@ export function conectarOperador(socket: WebSocket): void {
       residente.kernel?.cancelar('todas as telas encerradas');
       residente.ciclo?.parar();
       residente.ciclo = null;
+
+      /* Saiu a última tela: a posição informada pelo aparelho some junto. Ela
+         já expiraria sozinha, mas expiração é teto, não política — sessão
+         encerrada não deveria deixar rastro de onde a pessoa estava. */
+      if (idResidente) esquecerLocal(idResidente);
 
       /**
        * O RESIDENTE SAI DO MAPA. Sem esta linha, `residentes` só crescia:

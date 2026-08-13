@@ -43,7 +43,20 @@ export type PacoteCliente =
    * derivado da sessão do socket, como toda escrita do sistema. Aceitar um id
    * aqui seria abrir por escrito a porta que o roteador fecha.
    */
-  | { tipo: 'preferencias'; preferencias: PreferenciasOperador };
+  | { tipo: 'preferencias'; preferencias: PreferenciasOperador }
+  /**
+   * Onde o APARELHO está, quando a pessoa concede a permissão do navegador.
+   *
+   * Existe porque uma coordenada fixa no servidor está errada para todo mundo
+   * que sai do escritório — e com a IARA no celular isso é o caso comum. O
+   * pacote é separado do `ola` de propósito: a caixa de permissão do navegador
+   * pode demorar (ou nunca ser respondida), e prender o handshake nela
+   * atrasaria a conversa por causa do clima.
+   *
+   * NÃO CARREGA CIDADE. O nome do lugar seria uma afirmação que este pacote não
+   * pode provar; o servidor tem a coordenada e é ela que a previsão usa.
+   */
+  | { tipo: 'local'; latitude: number; longitude: number };
 
 /**
  * Prioridade de descarte da fila de telemetria. Quanto menor, mais descartável.
@@ -100,6 +113,16 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
   }
   if (obj.tipo === 'interromper') {
     return { tipo: 'interromper' };
+  }
+  if (obj.tipo === 'local') {
+    const lat = typeof obj.latitude === 'number' ? obj.latitude : NaN;
+    const lon = typeof obj.longitude === 'number' ? obj.longitude : NaN;
+    /* Faixa geográfica, não formato. `Number.isFinite` sozinho aceitaria
+       latitude 900 — e uma coordenada impossível não é um erro de digitação do
+       cliente: é a única forma de este pacote mentir. Fora da faixa, descarta. */
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+    return { tipo: 'local', latitude: lat, longitude: lon };
   }
   if (obj.tipo === 'preferencias') {
     // `normalizarPreferencias` já é total: qualquer entrada vira uma ficha

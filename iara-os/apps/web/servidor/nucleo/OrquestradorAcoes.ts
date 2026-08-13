@@ -12,6 +12,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { buscarNaWeb } from './BuscaWeb';
 import { supabase } from './ClienteSupabase';
+import { localDe } from './LocalOperador';
 
 export interface ResultadoAcao {
   texto: string;
@@ -106,7 +107,10 @@ export class OrquestradorAcoes {
 
     switch (modulo) {
       case 'clima':
-        saida = await this.consultarClima(horizonteValido(parametros.horizonte));
+        saida = await this.consultarClima(
+          horizonteValido(parametros.horizonte),
+          String(parametros.id_usuario ?? ''),
+        );
         capacidade = 'percepcao';
         break;
       case 'banco':
@@ -150,7 +154,10 @@ export class OrquestradorAcoes {
    * inventar um método que não foi usado, do mesmo tamanho de afirmar uma pasta
    * que não foi criada.
    */
-  private async consultarClima(horizonte: Horizonte): Promise<{ texto: string; ok: boolean }> {
+  private async consultarClima(
+    horizonte: Horizonte,
+    idUsuario: string,
+  ): Promise<{ texto: string; ok: boolean }> {
     /**
      * AS TRÊS VARIÁVEIS VIAJAM JUNTAS, e não ter padrão é a correção.
      *
@@ -165,17 +172,35 @@ export class OrquestradorAcoes {
      * Chutar a localização de alguém é da mesma família de afirmar uma pasta
      * que não foi criada: a resposta tem a forma de um fato e não é um.
      */
-    const lat = process.env.IARA_LATITUDE?.trim();
-    const lon = process.env.IARA_LONGITUDE?.trim();
-    const cidade = process.env.IARA_CIDADE?.trim() || 'perímetro operacional';
+    /**
+     * O APARELHO GANHA DA CONFIGURAÇÃO, quando existe.
+     *
+     * Uma coordenada fixa no servidor está errada para todo mundo que sai do
+     * escritório — e com a IARA no celular esse é o caso comum. Quando a pessoa
+     * concedeu a permissão do navegador, é de onde ELA está que a previsão sai.
+     *
+     * E o rótulo muda junto. Com a posição do aparelho a IARA diz "onde você
+     * está", não o nome de uma cidade: `IARA_CIDADE` descreve o escritório, e
+     * carimbar esse nome sobre a coordenada de quem está em outro lugar seria
+     * repetir, ao contrário, exatamente o defeito que esta função acabou de
+     * corrigir. Nomear a cidade certa exigiria geocodificação reversa — outro
+     * terceiro recebendo a localização de um funcionário, o que contradiz a
+     * decisão de "usar e descartar".
+     */
+    const doAparelho = idUsuario ? localDe(idUsuario) : null;
+    const lat = doAparelho ? String(doAparelho.latitude) : process.env.IARA_LATITUDE?.trim();
+    const lon = doAparelho ? String(doAparelho.longitude) : process.env.IARA_LONGITUDE?.trim();
+    const cidade = doAparelho
+      ? 'onde você está'
+      : process.env.IARA_CIDADE?.trim() || 'perímetro operacional';
 
     if (!lat || !lon) {
       return {
         ok: false,
         texto:
-          'Não sei de qual lugar responder: este ambiente não tem coordenadas declaradas ' +
-          '(IARA_LATITUDE e IARA_LONGITUDE). Prefiro dizer isso a dar a previsão de uma ' +
-          'cidade que talvez não seja a sua.',
+          'Não sei de qual lugar responder: você não concedeu acesso à localização e este ' +
+          'ambiente não tem coordenadas declaradas (IARA_LATITUDE e IARA_LONGITUDE). Prefiro ' +
+          'dizer isso a dar a previsão de uma cidade que talvez não seja a sua.',
       };
     }
 

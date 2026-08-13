@@ -365,6 +365,51 @@ export function useIaraSocket(credencial: Credencial) {
     [registrarLog],
   );
 
+  /**
+   * A POSIÇÃO DO APARELHO, pedida uma vez por sessão.
+   *
+   * Vive aqui e não em `useVoz`/`Presenca` porque é o socket que a leva ao
+   * motor, e porque o dado tem UM consumidor no servidor: a previsão do tempo.
+   *
+   * Três decisões escritas no comportamento:
+   *
+   *  · UMA VEZ. `pediuLocal` trava a repetição. O navegador lembra a resposta,
+   *    mas insistir a cada reconexão faria a caixa de permissão piscar em toda
+   *    queda de Wi-Fi.
+   *  · SILÊNCIO NA RECUSA. Negar localização é uma resposta legítima e não vira
+   *    log de alerta nem aviso na tela. A IARA só menciona o assunto se alguém
+   *    perguntar sobre o tempo e ela não tiver de onde responder.
+   *  · BAIXA PRECISÃO. `enableHighAccuracy: false` não liga o GPS: usa rede e
+   *    Wi-Fi, resolve em centenas de metros e não drena bateria. Previsão do
+   *    tempo é de cidade; metros não mudam a resposta e só aumentariam o que se
+   *    sabe sobre a pessoa.
+   */
+  const pediuLocal = useRef(false);
+
+  useEffect(() => {
+    if (!conectado || pediuLocal.current) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    pediuLocal.current = true;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const socket = socketRef.current;
+        if (socket?.readyState !== WebSocket.OPEN) return;
+        socket.send(
+          JSON.stringify({
+            tipo: 'local',
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          }),
+        );
+      },
+      // Recusa, indisponibilidade e estouro de tempo caem todos aqui, e todos
+      // são o mesmo fato para a IARA: não há posição. Nada a registrar.
+      () => {},
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 10 * 60 * 1000 },
+    );
+  }, [conectado]);
+
   /** Religa após uma recusa terminal — o gesto humano que zera a decisão. */
   const religar = useCallback(() => {
     tentativas.current = 0;
