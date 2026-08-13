@@ -108,11 +108,25 @@ export function resolverRaiz(local: LocalAutorizado): string | null {
  * Sem barra, sem `..`, sem terminar em ponto/espaço (o NTFS engole e o
  * caminho passa a mentir). O nome NUNCA é interpretado como caminho.
  */
+/**
+ * Nomes de DISPOSITIVO do Windows. Reservados em qualquer diretório, com ou sem
+ * extensão, em qualquer caixa.
+ *
+ * Passavam pela regra acima — são só letras e dígitos — e o `mkdir` falhava com
+ * `EINVAL`, que subia até a rede de segurança do `ExecutorDesktop` e virava
+ * "falhou por um erro interno". A recusa existe para dizer ao operador o que
+ * fazer a seguir; devolver erro interno para um nome previsivelmente impossível
+ * é a recusa falhando no único trabalho que ela tem.
+ */
+const RESERVADOS_WINDOWS =
+  /^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(\.|$)/i;
+
 export function validarNomePasta(nome: string): string | null {
   const limpo = nome.trim();
   if (limpo.length === 0 || limpo.length > 60) return null;
   if (!/^[\p{L}\p{N}][\p{L}\p{N} _.-]*$/u.test(limpo)) return null;
   if (limpo.includes('..') || /[. ]$/.test(limpo)) return null;
+  if (RESERVADOS_WINDOWS.test(limpo)) return null;
   return limpo;
 }
 

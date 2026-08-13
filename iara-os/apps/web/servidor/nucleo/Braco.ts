@@ -130,6 +130,9 @@ const JANELA_IDEMPOTENCIA_MS = 8_000;
 /** Quantas linhas de trilha ficam em memória para diagnóstico. */
 const TETO_TRILHA = 300;
 
+/** Quantos "último desfecho por (operador, sessão, ação)" ficam guardados. */
+const TETO_ULTIMOS = 500;
+
 // ---------------------------------------------------------------------------
 
 export interface PedidoExecucao {
@@ -168,6 +171,22 @@ export class Braco {
   /** Relatos terminais, para responder repetição e diagnóstico. */
   private readonly diario = new Map<string, { relato: RelatoExecucao; em: number }>();
   private readonly porChave = new Map<string, { execucao_id: string; em: number }>();
+  /**
+   * Pedidos IDÊNTICOS ainda em voo, por chave.
+   *
+   * O DEFEITO que este mapa fecha, reproduzido com executor espião: `porChave`
+   * só é escrito em `fechar`, ou seja, DEPOIS do desfecho. Dois pedidos iguais
+   * disparados no mesmo tique — o duplo clique que o cabeçalho deste arquivo diz
+   * cobrir, a aba que reenvia ao reconectar, o webhook reentregue antes de o
+   * primeiro terminar — passavam os dois por `repeticaoDe` com o mapa vazio e
+   * executavam os dois. A fila por operador não salvava: ela SERIALIZA, não
+   * deduplica, então o segundo simplesmente esperava a vez e abria a segunda
+   * janela.
+   *
+   * A janela de vulnerabilidade era exatamente a duração da execução — que é o
+   * intervalo em que o operador, sem resposta na tela, clica de novo.
+   */
+  private readonly emVoo = new Map<string, Promise<RelatoExecucao>>();
   /** (operador|sessão|ação) → último relato. Ver `ultimoDe`. */
   private readonly ultimos = new Map<string, RelatoExecucao>();
   /** Cauda de execução por operador. Ver a nota sobre fila no cabeçalho. */
@@ -234,7 +253,7 @@ export class Braco {
    * pedido a mesma ação; a prova de uma não responde pela outra.
    */
   ultimoDe(idUsuario: string, sessao: string, acao: AcaoDesktop): RelatoExecucao | null {
-    return this.ultimos.get(`${idUsuario}|${sessao}|${acao}`) ?? null;
+    return this.ultimos.get(`${idUsuario}\0${sessao}\0${acao}`) ?? null;
   }
 
   // -------------------------------------------------------------------------
@@ -265,6 +284,48 @@ export class Braco {
     }
 
     /**
+     * O MESMO pedido ainda em voo. Não executa: pendura-se no desfecho do
+     * original e devolve `duplicada`, que é a mesma resposta que a repetição
+     * tardia recebe — a diferença entre chegar durante e chegar depois é do
+     * relógio, não da intenção.
+     */
+    const jaVoando = this.emVoo.get(chave);
+    if (jaVoando) {
+      console.log(
+        JSON.stringify({
+          canal: 'execucao',
+          estado: 'duplicada',
+          acao: pedido.acao,
+          detalhe: 'pedido idêntico ainda em execução; aguardando o desfecho do original',
+        }),
+      );
+      const original = await jaVoando.catch(() => null);
+      if (original) return { ...original, estado: 'duplicada' };
+      /**
+       * O original morreu de um jeito que ele mesmo não soube relatar. Para
+       * ESTE chamador o desfecho é desconhecido — e desconhecido tem nome nesta
+       * camada. Repetir aqui seria o retry cego que o `expirou` existe para
+       * impedir.
+       */
+      return {
+        execucao_id: 'nao-emitida',
+        estado: 'expirou',
+        texto:
+          'Você pediu isso duas vezes quase ao mesmo tempo. Não repeti a execução, e não consegui ' +
+          'ler o desfecho da primeira — confere aí, e se não tiver acontecido é só pedir de novo.',
+        prova: {
+          confirmado: false,
+          evidencia: 'pedido idêntico em voo; a execução original terminou sem relato legível',
+          motivo: 'sem_meio_de_verificar',
+        },
+        codigo_erro: 'EXPIROU',
+        duracao_ms: 0,
+        dispositivo: null,
+        onde: 'nenhum',
+      };
+    }
+
+    /**
      * A FILA. Cada operador tem uma cauda; a próxima ordem só começa quando a
      * anterior terminou. `catch` na cauda para que uma execução que falhou não
      * envenene a corrente inteira — o desfecho dela já foi relatado a quem
@@ -276,21 +337,43 @@ export class Braco {
       pedido.id_usuario,
       minha.catch(() => undefined),
     );
-    const relato = await minha;
+    // A marca de "em voo" é posta ANTES do primeiro await — é o que fecha a
+    // janela em que o segundo pedido idêntico não via nada e seguia adiante.
+    this.emVoo.set(chave, minha);
 
-    // Solta a cauda quando ela sou eu: sem isto o mapa cresce por operador
-    // e a última promessa fica retida para sempre.
-    if (this.filas.get(pedido.id_usuario) === minha) this.filas.delete(pedido.id_usuario);
-    return relato;
+    try {
+      return await minha;
+    } finally {
+      if (this.emVoo.get(chave) === minha) this.emVoo.delete(chave);
+      // Solta a cauda quando ela sou eu: sem isto o mapa cresce por operador
+      // e a última promessa fica retida para sempre.
+      if (this.filas.get(pedido.id_usuario) === minha) this.filas.delete(pedido.id_usuario);
+    }
   }
 
+  /**
+   * A identidade de transporte de um pedido.
+   *
+   * O SEPARADOR É `\0`, e a troca não é estética. A forma anterior era
+   * `usuario|acao|k1=v1&k2=v2`, e `=`/`&`/`|` são caracteres que um valor de
+   * parâmetro pode conter — um `nome` com `&outro=x` dentro produzia a MESMA
+   * chave que um pedido de dois parâmetros. Duas ordens diferentes com a mesma
+   * chave é a cache devolvendo o relato de outra ação, que é exatamente a
+   * mentira com selo de sucesso descrita em `braco/principal.ts`.
+   *
+   * `\0` não sobrevive a JSON nem a nome de arquivo do Windows, e a
+   * serialização canônica (chaves ordenadas, valor via JSON) faz `{a:1,b:2}` e
+   * `{b:2,a:1}` coincidirem sem fazer `"1&b=2"` coincidir com nada. É a mesma
+   * escolha de `Operacao.derivarChaveIdempotencia`, que já usava `\0` — as duas
+   * camadas de idempotência agora concordam sobre o que é "o mesmo pedido".
+   */
   private chaveDe(p: PedidoExecucao): string {
-    /** Chaves ordenadas: `{a:1,b:2}` e `{b:2,a:1}` são o mesmo pedido. */
-    const parametros = Object.keys(p.parametros)
-      .sort()
-      .map((k) => `${k}=${String(p.parametros[k])}`)
-      .join('&');
-    return `${p.id_usuario}|${p.acao}|${parametros}`;
+    const parametros = JSON.stringify(
+      Object.keys(p.parametros)
+        .sort()
+        .map((k) => [k, p.parametros[k]]),
+    );
+    return [p.id_usuario, p.acao, parametros].join('\0');
   }
 
   private repeticaoDe(chave: string): RelatoExecucao | null {
@@ -503,8 +586,30 @@ export class Braco {
      * não verificar.
      */
     const bruto = pacote.relato;
+    /**
+     * A REGRA, e ela precisou ficar mais larga do que era.
+     *
+     * A forma anterior só rebaixava `sucesso` quando a prova vinha
+     * `divergente` — de modo que `sucesso` com `nao_encontrado`, e `sucesso`
+     * com prova negada e SEM motivo, atravessavam intactos. Reproduzido com um
+     * braço mentiroso: os dois viravam `estado: 'sucesso'`, e `resolveu` da
+     * habilidade lê exatamente esse campo.
+     *
+     * Nenhum dos dois é produzível por um executor honesto: `ExecutorDesktop`
+     * deriva `ok` da própria prova, e todo `confirmado: false` do `AgenteLocal`
+     * carrega motivo. São estados IMPOSSÍVEIS, e estado impossível chegando
+     * pela rede é a definição de relato a recusar.
+     *
+     * A única prova negada que continua compatível com `sucesso` é
+     * `sem_meio_de_verificar` — o caso legítimo do aplicativo que já estava
+     * aberto, ou da plataforma sem `tasklist`. Ali a IARA de fato agiu e de
+     * fato não tem como provar, e é a quinta porta que carrega a ressalva
+     * adiante.
+     */
+    const provaNega =
+      !bruto.prova.confirmado && bruto.prova.motivo !== 'sem_meio_de_verificar';
     const coerente: EstadoExecucao =
-      bruto.estado === 'sucesso' && !bruto.prova.confirmado && bruto.prova.motivo === 'divergente'
+      bruto.estado === 'sucesso' && provaNega
         ? 'falhou'
         : ehTerminal(bruto.estado)
           ? bruto.estado
@@ -528,7 +633,20 @@ export class Braco {
     const agora = Date.now();
     this.diario.set(relato.execucao_id, { relato, em: agora });
     this.porChave.set(chave, { execucao_id: relato.execucao_id, em: agora });
-    this.ultimos.set(`${c.ordem.id_usuario}|${c.ordem.sessao}|${c.ordem.acao}`, relato);
+    this.ultimos.set(`${c.ordem.id_usuario}\0${c.ordem.sessao}\0${c.ordem.acao}`, relato);
+    /**
+     * Teto do mapa de últimos desfechos. Ele é indexado por (operador, sessão,
+     * ação) e nada o esvaziava: em modo local o `id_usuario` vem de um campo que
+     * o cliente digita, e um laço de conexões com ids diferentes fazia o mapa
+     * crescer sem credencial nenhuma. `Map` preserva ordem de inserção, então a
+     * entrada mais antiga é a primeira — descartá-la custa a prova de uma
+     * conversa que já não está em curso.
+     */
+    while (this.ultimos.size > TETO_ULTIMOS) {
+      const maisVelha = this.ultimos.keys().next();
+      if (maisVelha.done) break;
+      this.ultimos.delete(maisVelha.value);
+    }
 
     // Diário é memória de curto prazo: o jornal em disco é quem guarda efeito.
     if (this.diario.size > TETO_TRILHA) {

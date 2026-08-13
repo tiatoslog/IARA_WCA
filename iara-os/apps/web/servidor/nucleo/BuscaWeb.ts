@@ -27,6 +27,38 @@ function limparHtml(bruto: string): string {
     .trim();
 }
 
+/**
+ * Teto do corpo lido, em bytes.
+ *
+ * O destino é fixo e de terceiro, então não há SSRF a barrar aqui — o que há é
+ * uma resposta de tamanho que este processo não controla. `resposta.text()`
+ * sem teto materializa o que vier na heap do motor, e uma página de resultados
+ * cabe folgadamente em 2 MB. Cortar é preferível a confiar no bom
+ * comportamento de quem está do outro lado.
+ */
+const MAX_CORPO = 2 * 1024 * 1024;
+
+async function lerComTeto(resposta: Response): Promise<string> {
+  const corpo = resposta.body;
+  if (!corpo) return '';
+  const leitor = corpo.getReader();
+  const decodificador = new TextDecoder();
+  let saida = '';
+  let lidos = 0;
+  try {
+    for (;;) {
+      const { done, value } = await leitor.read();
+      if (done) break;
+      lidos += value.byteLength;
+      saida += decodificador.decode(value, { stream: true });
+      if (lidos >= MAX_CORPO) break;
+    }
+  } finally {
+    await leitor.cancel().catch(() => undefined);
+  }
+  return saida;
+}
+
 export async function buscarNaWeb(consulta: string, limite = 3): Promise<ResultadoBusca[]> {
   const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(consulta)}`;
   const resposta = await fetch(url, {
@@ -34,7 +66,7 @@ export async function buscarNaWeb(consulta: string, limite = 3): Promise<Resulta
     signal: AbortSignal.timeout(6000),
   });
   if (!resposta.ok) throw new Error(`DuckDuckGo respondeu ${resposta.status}`);
-  const html = await resposta.text();
+  const html = await lerComTeto(resposta);
 
   /**
    * Extração POR BLOCO de resultado, nunca em duas listas paralelas: um

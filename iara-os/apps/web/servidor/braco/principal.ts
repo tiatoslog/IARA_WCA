@@ -85,11 +85,19 @@ const concluidas = new Map<string, { relato: RelatoExecucao; assinatura: string;
  * é uma mentira com selo de sucesso, e vale ter duas defesas contra isso.
  */
 function assinaturaDa(ordem: OrdemExecucao): string {
-  const parametros = Object.keys(ordem.parametros)
-    .sort()
-    .map((k) => `${k}=${String(ordem.parametros[k])}`)
-    .join('&');
-  return `${ordem.acao}|${parametros}`;
+  /**
+   * `\0` e JSON, não `=`/`&`/`|`: um valor de parâmetro pode conter os três, e
+   * duas ordens diferentes com a mesma assinatura fariam esta cache — que
+   * existe para impedir mentira — devolver o relato da ação errada. É o mesmo
+   * conserto de `Braco.chaveDe`, e as duas travas precisam concordar sobre o
+   * que é "a mesma ordem" para que a segunda ainda seja uma segunda tranca.
+   */
+  const parametros = JSON.stringify(
+    Object.keys(ordem.parametros)
+      .sort()
+      .map((k) => [k, ordem.parametros[k]]),
+  );
+  return [ordem.acao, parametros].join('\0');
 }
 
 function enviar(pacote: PacoteBraco): void {

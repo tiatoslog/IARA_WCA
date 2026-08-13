@@ -107,6 +107,26 @@ export type EstadoExecucao =
   /** Chegou de novo o que já foi executado. O relato devolvido é o do original. */
   | 'duplicada';
 
+/**
+ * O vocabulário FECHADO de estados, para a fronteira poder recusar o que não
+ * existe. `ehTerminal` responde outra pergunta — "acabou?" — e usá-lo como
+ * validador deixava passar `enfileirada` tanto quanto `sucesso!!`.
+ */
+export const ESTADOS_CONHECIDOS: readonly string[] = [
+  'recebida',
+  'validando',
+  'enfileirada',
+  'enviada_ao_dispositivo',
+  'recebida_pelo_dispositivo',
+  'executando',
+  'sucesso',
+  'falhou',
+  'expirou',
+  'cancelada',
+  'dispositivo_ausente',
+  'duplicada',
+];
+
 export const ESTADOS_TERMINAIS: readonly EstadoExecucao[] = [
   'sucesso',
   'falhou',
@@ -163,6 +183,18 @@ export type CodigoErro =
  * como se envia a mesma mensagem duas vezes. Quem decide repetir é o operador,
  * com a informação na frente.
  */
+export const CODIGOS_ERRO: readonly CodigoErro[] = [
+  'DESKTOP_OFFLINE',
+  'APP_NAO_ENCONTRADO',
+  'ARQUIVO_NAO_ENCONTRADO',
+  'PERMISSAO_NEGADA',
+  'PARAMETRO_INVALIDO',
+  'FERRAMENTA_INDISPONIVEL',
+  'EXPIROU',
+  'ERRO_DE_REDE',
+  'FALHA_NA_EXECUCAO',
+];
+
 export const RETENTAVEL: Record<CodigoErro, boolean> = {
   DESKTOP_OFFLINE: true,
   ERRO_DE_REDE: true,
@@ -335,6 +367,76 @@ const texto = (v: unknown, max = 200): v is string =>
   typeof v === 'string' && v.length > 0 && v.length <= max;
 
 /**
+ * Teto do texto que o braço devolve.
+ *
+ * NÃO é higiene de log: `RelatoExecucao.texto` sobe para a resposta do operador
+ * e, por contrato, é insumo do próximo passo — ou seja, pode acabar no prompt.
+ * Sem teto, um braço comprometido (ou apenas de uma versão com defeito) entrega
+ * megabytes que atravessam o motor inteiro, engordam o snapshot e são cobrados
+ * em tokens. `lerPacoteCliente` sempre limitou o que vem do navegador em 8000
+ * caracteres; esta fronteira estava sem o equivalente, e ela é a que executa
+ * coisas.
+ */
+const MAX_TEXTO_RELATO = 8_000;
+const MAX_EVIDENCIA = 2_000;
+
+const MOTIVOS_PROVA: readonly string[] = ['nao_encontrado', 'divergente', 'sem_meio_de_verificar'];
+const ONDES: readonly string[] = ['motor', 'dispositivo', 'nenhum'];
+
+/**
+ * O relato do braço, campo a campo — nunca `as RelatoExecucao` sobre o que veio
+ * do socket.
+ *
+ * A versão anterior conferia quatro campos (`execucao_id`, `texto`,
+ * `estado` como string qualquer, `prova.confirmado`) e repassava o OBJETO
+ * INTEIRO com uma asserção de tipo. Tudo o mais — `estado` fora do vocabulário,
+ * `evidencia` que não é texto, `codigo_erro` inventado, `onde` arbitrário,
+ * `texto` de qualquer tamanho — entrava tipado por confiança num processo que
+ * mora no computador de outra pessoa e pode ser de outra versão.
+ *
+ * Devolve `null` para qualquer desvio: um relato que não se deixa ler é um
+ * relato que não aconteceu, e o prazo do Braço já sabe tratar silêncio.
+ */
+function lerRelato(bruto: unknown): RelatoExecucao | null {
+  if (!objeto(bruto)) return null;
+  if (!texto(bruto.execucao_id, 80)) return null;
+  if (typeof bruto.texto !== 'string' || bruto.texto.length > MAX_TEXTO_RELATO) return null;
+  if (typeof bruto.estado !== 'string' || !ESTADOS_CONHECIDOS.includes(bruto.estado)) return null;
+
+  const p = bruto.prova;
+  if (!objeto(p) || typeof p.confirmado !== 'boolean') return null;
+  if (typeof p.evidencia !== 'string' || p.evidencia.length > MAX_EVIDENCIA) return null;
+  if (p.motivo !== undefined && !MOTIVOS_PROVA.includes(p.motivo as string)) return null;
+
+  if (bruto.codigo_erro !== null && bruto.codigo_erro !== undefined) {
+    if (typeof bruto.codigo_erro !== 'string') return null;
+    if (!(CODIGOS_ERRO as readonly string[]).includes(bruto.codigo_erro)) return null;
+  }
+  if (bruto.dispositivo !== null && bruto.dispositivo !== undefined && !texto(bruto.dispositivo, 80)) {
+    return null;
+  }
+  if (bruto.onde !== undefined && !ONDES.includes(bruto.onde as string)) return null;
+  if (bruto.dados !== undefined && !objeto(bruto.dados)) return null;
+
+  return {
+    execucao_id: bruto.execucao_id,
+    estado: bruto.estado as EstadoExecucao,
+    texto: bruto.texto,
+    prova: {
+      confirmado: p.confirmado,
+      evidencia: p.evidencia,
+      ...(p.motivo !== undefined ? { motivo: p.motivo as ProvaExecucao['motivo'] } : {}),
+    },
+    codigo_erro: (bruto.codigo_erro as CodigoErro | null) ?? null,
+    duracao_ms:
+      typeof bruto.duracao_ms === 'number' && Number.isFinite(bruto.duracao_ms) ? bruto.duracao_ms : 0,
+    dispositivo: (bruto.dispositivo as string | null) ?? null,
+    onde: (bruto.onde as RelatoExecucao['onde']) ?? 'dispositivo',
+    ...(bruto.dados ? { dados: bruto.dados as Readonly<Record<string, unknown>> } : {}),
+  };
+}
+
+/**
  * Validação estrutural na fronteira, nos DOIS sentidos.
  *
  * O braço valida o que vem do motor pela mesma razão que o motor valida o que
@@ -368,11 +470,8 @@ export function lerPacoteBraco(bruto: string): PacoteBraco | null {
     case 'executando':
       return texto(v.execucao_id, 80) ? { tipo: v.tipo, execucao_id: v.execucao_id } : null;
     case 'concluida': {
-      const r = v.relato;
-      if (!objeto(r) || !texto(r.execucao_id, 80) || typeof r.texto !== 'string') return null;
-      if (typeof r.estado !== 'string') return null;
-      if (!objeto(r.prova) || typeof r.prova.confirmado !== 'boolean') return null;
-      return { tipo: 'concluida', relato: r as unknown as RelatoExecucao };
+      const relato = lerRelato(v.relato);
+      return relato ? { tipo: 'concluida', relato } : null;
     }
     default:
       return null;
