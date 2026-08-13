@@ -58,6 +58,7 @@ import {
 import { criarComposicao, type Composicao } from './composicao';
 import { GLSL_COMUM, GLSL_PALETA } from './glsl';
 import { criarAurora } from './aurora';
+import { ALTURA_CAMERA, ABERTURA, distanciaDoEnquadramento } from './enquadramento';
 import {
   criarCenaEstudio,
   criarFundo,
@@ -676,10 +677,17 @@ function CenaEntidade({
        para ser vista, é para não ser uma câmera perfeitamente imóvel — a única
        câmera que nunca existiu num set de verdade. */
     const camera = estado.camera;
+    /**
+     * A distância vem do enquadramento corrente, não da constante do palco.
+     * Este `set` roda a cada quadro: deixá-lo em `DISTANCIA_CAMERA` desfazia o
+     * recuo do ícone no quadro seguinte ao que a câmera se posicionava — a
+     * gema aparecia por um frame e sumia, que é pior que nunca aparecer,
+     * porque parece defeito de renderização em vez de erro de enquadramento.
+     */
     camera.position.set(
       0.022 * Math.sin(t * 0.0371),
       ALTURA_CAMERA + 0.016 * Math.sin(t * 0.0293 + 1.3),
-      DISTANCIA_CAMERA,
+      distanciaDoEnquadramento(estado.size.width, estado.size.height),
     );
     camera.lookAt(0, 0, 0);
   });
@@ -710,44 +718,23 @@ function CenaEntidade({
 /* Infraestrutura do palco (mesmos padrões do PalcoPresenca)                 */
 /* ------------------------------------------------------------------------- */
 
-/**
- * Enquadramento da entidade — medido, não chutado, e o único lugar onde a
- * proporção da arte se decide.
- *
- * A altura visível no plano da pedra é `DISTANCIA * tan(ABERTURA/2)`. Como a
- * pedra tem raio 1, a fração da altura do palco que ela ocupa é exatamente
- * `1 / (DISTANCIA * tan(ABERTURA/2))`. Em 5.6 / 30° isso dava 0,67: a pedra
- * tomava dois terços do palco, e presença nesse tamanho vira volume, não
- * refinamento. Em 11.6 caiu para 0,41, em 14.8 para 0,32, e em 18.5 chega a
- * 0,25 — um quarto da altura do palco, que é onde ficou.
- *
- * As duas coisas andam juntas e por isso foram feitas na mesma passada:
- * encostar a cortina na peça faz o CONJUNTO ficar mais compacto, e um conjunto
- * compacto no mesmo enquadramento parece um objeto pequeno num quadro grande
- * demais. Recuar a câmera devolve a proporção — a peça perde um quinto do
- * tamanho aparente e ganha campo negativo em volta, que é o que separa uma joia
- * exposta de um ícone centralizado.
- *
- * A lente longa anda junto com o recuo, e é decisão de direção, não
- * consequência aritmética: 24° achata a perspectiva e o vidro passa a ler como
- * objeto fotografado. Com 30° a esfera cresce nas bordas do quadro, que é
- * precisamente a assinatura de grande angular que a referência não tem.
- *
- * Para reenquadrar, mexa só na distância: a abertura é a lente, e trocar de
- * lente troca o caráter da imagem, não o tamanho do objeto.
- */
-const ABERTURA = 24;
-const DISTANCIA_CAMERA = 18.5;
-/** Leve mergulho de ~4°, o mesmo do enquadramento anterior. */
-const ALTURA_CAMERA = 0.8;
-
 function CameraEntidade() {
   const camera = useThree((e) => e.camera);
+  const tamanho = useThree((e) => e.size);
+  const invalidate = useThree((e) => e.invalidate);
+  const distancia = distanciaDoEnquadramento(tamanho.width, tamanho.height);
   useEffect(() => {
-    camera.position.set(0, ALTURA_CAMERA, DISTANCIA_CAMERA);
+    camera.position.set(0, ALTURA_CAMERA, distancia);
     camera.lookAt(0, 0, 0);
     (camera as PerspectiveCamera).updateProjectionMatrix();
-  }, [camera]);
+    /**
+     * Sem isto o reenquadramento só aparece no próximo quadro que alguém
+     * pedir — e em repouso o frameloop é sob demanda (ver `RegenciaVisibilidade`).
+     * Recolher a gema ficaria com a moldura nova e a câmera velha até a IARA
+     * falar alguma coisa.
+     */
+    invalidate();
+  }, [camera, distancia, invalidate]);
   return null;
 }
 
@@ -842,6 +829,13 @@ function RegenciaVisibilidade() {
   return null;
 }
 
+/**
+ * O ÍCONE NÃO É OUTRA ARTE. Quando o palco encolhe para o círculo do celular, o
+ * que muda é UMA coisa — a distância da câmera. Nada de material, nada de
+ * animação, nada de shader, nenhuma imagem estática no lugar. É o mesmo objeto,
+ * visto de perto, e é por isso que a miniatura continua reagindo ao que a IARA
+ * está fazendo em vez de virar um selo parado no canto.
+ */
 export function EntidadePresenca({
   snapshot,
   fala,
