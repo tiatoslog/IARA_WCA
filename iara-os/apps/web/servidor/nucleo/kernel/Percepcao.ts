@@ -137,6 +137,36 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     negavel: true,
   },
   {
+    /**
+     * `print` e `screenshot` NUNCA sozinhos: "manda o print que o cliente
+     * enviou" fala de uma imagem que já existe, e capturar a tela ali seria
+     * responder a uma frase que ninguém disse. O verbo (ou o "da tela") é o que
+     * separa pedir de mencionar — mesma família do bug de `frota`.
+     */
+    re: /\b(tir[ae]|tirar|faz|faca|fazer|bat[ae]|bater|captur\w+|salv[ae]|salvar)\s+(um\s+|uma\s+|o\s+|a\s+)?(print|screenshot|captura|foto)\b|\b(print|screenshot|captura|foto)\s+(da|de|do)\s+tela\b|\bcaptur\w+\s+(a\s+|minha\s+|essa\s+)?tela\b/,
+    nome: 'captura',
+    acionavel: true,
+    negavel: true,
+  },
+  /**
+   * Lembretes vêm ANTES de `confirmacao` na lista, e a ordem é o que resolve um
+   * conflito real: "cancela o lembrete das 15h" casa as duas âncoras, e a
+   * primeira reconhecida é a que vira plano. Sem esta ordem, cancelar um
+   * lembrete resolveria — ou pior, confirmaria — uma pendência de energia
+   * aberta em outra frase.
+   */
+  {
+    /**
+     * `me lembra` exige complemento (`de|do|da|que`): "isso me lembra o
+     * incidente de março" é comentário, não pedido. E `me lembro` fica de fora
+     * de propósito — é o verbo na primeira pessoa, nunca uma ordem.
+     */
+    re: /\blembrete[s]?\b|\bme\s+lembr(e|ar)\b|\bme\s+lembra\s+(de|do|da|que)\b|\blembr[ae]\s*-?\s*me\b|\bnao\s+me\s+deixe\s+esquecer\b/,
+    nome: 'lembrete',
+    acionavel: true,
+    negavel: true,
+  },
+  {
     re: /\b(desligue|desliga|desligar|reinicie|reinicia|reiniciar|suspenda|suspender|hiberne|hibernar)\b/,
     nome: 'energia',
     acionavel: true,
@@ -260,6 +290,8 @@ export class MotorPercepcao {
     if (ancoras.includes('confirmacao')) return 'resolução de ação pendente';
     if (ancoras.includes('pasta')) return 'organização de arquivos';
     if (ancoras.includes('abrir_app')) return 'abertura de aplicativo';
+    if (ancoras.includes('captura')) return 'registro visual da tela';
+    if (ancoras.includes('lembrete')) return 'marcação de lembrete';
     if (ancoras.includes('energia')) return 'controle de energia da máquina';
     if (tipo === 'documento') return 'análise documental';
     if (tipo === 'saudacao') return 'abertura de conversa';

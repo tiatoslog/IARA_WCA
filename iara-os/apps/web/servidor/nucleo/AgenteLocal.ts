@@ -14,7 +14,11 @@
  *     para o que estiver no slot. Cancelar sempre funciona, inclusive depois do
  *     agendamento (shutdown do Windows com atraso + /a) e inclusive de outra
  *     conversa: desistir nunca exige a prova que agir exige.
- *  4. AUDITORIA. Toda ação — executada, recusada ou pendente — vira uma linha
+ *  4. A CAPTURA DE TELA NUNCA É LIDA. O arquivo nasce no disco do operador e o
+ *     processo devolve caminho e tamanho — nunca bytes de imagem. É a mesma
+ *     regra do RAG, que injeta assinatura e não log bruto: o que não entra no
+ *     resultado não tem como vazar para o prompt no passo seguinte.
+ *  5. AUDITORIA. Toda ação — executada, recusada ou pendente — vira uma linha
  *     JSON no canal `agente_local`, sem copiar conteúdo de conversa.
  *
  * A LLM não chega aqui: quem chama são habilidades do catálogo, com esquema
@@ -23,7 +27,7 @@
  */
 
 import { mkdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
@@ -124,6 +128,64 @@ export function aplicativosDisponiveis(): string {
 }
 
 // ---------------------------------------------------------------------------
+// Captura de tela
+// ---------------------------------------------------------------------------
+
+/**
+ * Subpasta fixa dentro da raiz autorizada. O operador escolhe a RAIZ — Área de
+ * Trabalho, Documentos ou Downloads —, nunca um caminho. A subpasta existe para
+ * que a captura tenha um lugar previsível: quem quiser apagar tudo que a IARA
+ * já capturou apaga um diretório, não caça arquivos soltos.
+ */
+export const PASTA_CAPTURAS = 'Capturas IARA';
+
+/**
+ * A captura depende da API gráfica do Windows E de haver uma sessão com tela.
+ *
+ * Isto NÃO vira `indisponivelPorque` na habilidade, e a escolha é deliberada:
+ * uma receita determinística que aponta para habilidade opcional some do
+ * planejador no ambiente errado, e o operador recebe silêncio. Aqui ele recebe
+ * uma frase. O motor publicado no Railway roda em Linux e responde exatamente
+ * isso quando alguém pede uma captura — que é a verdade, dita em voz alta.
+ */
+export function capturaIndisponivelPorque(): string | null {
+  return process.platform === 'win32'
+    ? null
+    : `este motor está rodando em ${process.platform}, sem a API gráfica do Windows e sem tela para capturar`;
+}
+
+/** Nome com carimbo de tempo LOCAL: duas capturas nunca disputam o mesmo arquivo. */
+export function nomeDaCaptura(agora = new Date()): string {
+  const d = (n: number) => String(n).padStart(2, '0');
+  return (
+    `captura-${agora.getFullYear()}-${d(agora.getMonth() + 1)}-${d(agora.getDate())}` +
+    `-${d(agora.getHours())}${d(agora.getMinutes())}${d(agora.getSeconds())}.png`
+  );
+}
+
+/**
+ * O script que tira a foto. `VirtualScreen` e não `PrimaryScreen`: quem opera
+ * com dois monitores tem metade do contexto no segundo, e capturar só o
+ * primeiro produziria uma imagem que mente por omissão.
+ *
+ * O único valor interpolado é o destino, e ele nasce de `resolverRaiz` mais um
+ * nome que este arquivo gera — nada do operador chega aqui. O escape de aspa
+ * simples é cinto de segurança para o caso de o perfil do Windows ter uma.
+ */
+function scriptDeCaptura(destino: string): string {
+  const alvo = destino.replace(/'/g, "''");
+  return [
+    'Add-Type -AssemblyName System.Windows.Forms,System.Drawing;',
+    '$a=[System.Windows.Forms.SystemInformation]::VirtualScreen;',
+    '$m=New-Object System.Drawing.Bitmap($a.Width,$a.Height);',
+    '$g=[System.Drawing.Graphics]::FromImage($m);',
+    '$g.CopyFromScreen($a.Location,[System.Drawing.Point]::Empty,$a.Size);',
+    `$m.Save('${alvo}',[System.Drawing.Imaging.ImageFormat]::Png);`,
+    '$g.Dispose();$m.Dispose()',
+  ].join('');
+}
+
+// ---------------------------------------------------------------------------
 // Energia — pendência com confirmação explícita
 // ---------------------------------------------------------------------------
 
@@ -177,13 +239,49 @@ const executorReal: Executor = (comando, argumentos) => {
   filho.unref();
 };
 
+/**
+ * O SEGUNDO executor, e a razão de existirem dois.
+ *
+ * `Executor` solta o processo e não olha para trás — é o certo para abrir o
+ * Bloco de Notas, e é justamente por isso que `abrir_aplicativo` declara
+ * `sem_meio_de_verificar`. A captura de tela é o caso oposto: ela produz um
+ * ARTEFATO, e prometer um arquivo sem esperar o processo que o escreve seria
+ * relatar sucesso antes de o disco ter qualquer coisa. Quem espera pode provar.
+ *
+ * Devolve o código de saída (-1 se o processo nem chegou a subir), e é
+ * injetável pelo mesmo motivo do outro: testar captura sem tirar foto de tela.
+ */
+export type ExecutorAguardado = (comando: string, argumentos: string[]) => Promise<number>;
+
+const executorAguardadoReal: ExecutorAguardado = (comando, argumentos) =>
+  new Promise((resolver) => {
+    const filho = spawn(comando, argumentos, { stdio: 'ignore', windowsHide: true });
+    filho.on('error', () => resolver(-1));
+    filho.on('close', (codigo) => resolver(codigo ?? -1));
+  });
+
 // ---------------------------------------------------------------------------
 
 export class AgenteLocal {
   /** Pendência R2 por operador — confirmação de A nunca libera ação de B. */
   private pendencias = new Map<string, Pendencia>();
 
-  constructor(private readonly executor: Executor = executorReal) {}
+  /**
+   * Caminho da última captura BEM-SUCEDIDA de cada operador.
+   *
+   * Existe porque o verificador da habilidade não tem como recalcular o
+   * destino: o nome carrega o segundo em que a foto foi tirada. Sem este mapa,
+   * `verificar` só poderia reler o texto que `executar` devolveu — conferir o
+   * relato contra o próprio relato, que é exatamente o que a quinta porta
+   * existe para impedir. Aqui ele confere o DISCO, no caminho que o executor
+   * registrou.
+   */
+  private capturas = new Map<string, string>();
+
+  constructor(
+    private readonly executor: Executor = executorReal,
+    private readonly executorAguardado: ExecutorAguardado = executorAguardadoReal,
+  ) {}
 
   private auditar(idUsuario: string, acao: string, permitido: boolean, detalhe: string): void {
     console.log(
@@ -231,6 +329,77 @@ export class AgenteLocal {
     this.executor(app.comando, app.argumentos);
     this.auditar(idUsuario, 'abrir_aplicativo', true, app.rotulo);
     return `${app.rotulo} aberto.`;
+  }
+
+  /**
+   * Fotografa a tela e devolve ONDE ficou — nunca O QUE tem nela.
+   *
+   * O valor de retorno é uma frase com caminho e tamanho. Nenhum byte de
+   * imagem sai deste método, e é o invariante que sustenta a habilidade
+   * inteira: `ResultadoHabilidade.texto` é descrito no contrato como "insumo do
+   * próximo passo", ou seja, ele PODE acabar no prompt. Uma captura de tela é a
+   * coisa mais indiscriminada que este sistema consegue produzir — senha
+   * visível, conversa de outra pessoa, tela de um terceiro sistema. Ela fica no
+   * disco do operador, onde ele já estava.
+   */
+  async capturarTela(idUsuario: string, local: LocalAutorizado): Promise<string> {
+    const indisponivel = capturaIndisponivelPorque();
+    if (indisponivel) {
+      this.auditar(idUsuario, 'capturar_tela', false, indisponivel);
+      return `Não consigo capturar a tela: ${indisponivel}.`;
+    }
+
+    const raiz = resolverRaiz(local);
+    if (!raiz) {
+      this.auditar(idUsuario, 'capturar_tela', false, `raiz ${local} não encontrada`);
+      return `Não encontrei a pasta ${ROTULO_DO_LOCAL[local]} neste computador.`;
+    }
+
+    /**
+     * O caminho antigo sai do mapa ANTES da tentativa. Se a captura falhar,
+     * `verificar` precisa encontrar ausência — e não a foto da vez passada,
+     * que existe no disco e confirmaria uma captura que não aconteceu.
+     */
+    this.capturas.delete(idUsuario);
+
+    const pasta = path.join(raiz, PASTA_CAPTURAS);
+    await mkdir(pasta, { recursive: true });
+    const destino = path.join(pasta, nomeDaCaptura());
+
+    const codigo = await this.executorAguardado('powershell.exe', [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      scriptDeCaptura(destino),
+    ]);
+
+    /**
+     * As DUAS condições, e nenhuma delas basta sozinha. Código zero com arquivo
+     * ausente acontece quando a sessão do Windows não tem desktop interativo (o
+     * PowerShell sai limpo e não desenha nada); arquivo presente com código
+     * diferente de zero seria um PNG truncado. Exigir as duas é o que impede a
+     * frase "capturei" de sair sem foto.
+     */
+    if (codigo !== 0 || !existsSync(destino)) {
+      this.auditar(idUsuario, 'capturar_tela', false, `powershell saiu ${codigo}`);
+      return (
+        'Tentei capturar a tela e não consegui. Isso acontece quando o motor roda como serviço, ' +
+        'sem uma sessão gráfica aberta — nesse caso não existe tela para fotografar.'
+      );
+    }
+
+    const bytes = statSync(destino).size;
+    this.capturas.set(idUsuario, destino);
+    this.auditar(idUsuario, 'capturar_tela', true, `${destino} (${bytes} bytes)`);
+    return (
+      `Tela capturada: ${destino} (${Math.max(1, Math.round(bytes / 1024))} KB). ` +
+      'O arquivo ficou no seu computador — eu não abri a imagem nem enviei para lugar nenhum.'
+    );
+  }
+
+  /** Caminho da última captura confirmada deste operador. Usado pelo verificador. */
+  capturaRecenteDe(idUsuario: string): string | null {
+    return this.capturas.get(idUsuario) ?? null;
   }
 
   /**

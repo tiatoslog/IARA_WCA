@@ -14,7 +14,7 @@
  * afrouxar um manifesto não afrouxa uma fronteira.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { Habilidade } from '../Habilidade';
 import {
@@ -149,6 +149,115 @@ export const abrirAplicativo: Habilidade = {
       evidencia: 'processo lançado desanexado; não acompanho o ciclo de vida dele',
       motivo: 'sem_meio_de_verificar',
     };
+  },
+};
+
+/**
+ * Captura de tela — a habilidade mais indiscriminada do catálogo, e por isso a
+ * que mais depende de uma fronteira escrita.
+ *
+ * RISCO `medio`, NÃO `alto`, e a distinção é do contrato, não de conveniência:
+ * `alto` é o que é irreversível ou alcança terceiro. Uma captura é um arquivo
+ * no disco do próprio operador — reversível apagando, e ninguém de fora a vê.
+ * Cobrar confirmação prévia aqui gastaria a confirmação, que só funciona
+ * enquanto for rara: um sistema que pergunta "tem certeza?" o tempo todo ensina
+ * a responder "sim" sem ler.
+ *
+ * O QUE DE FATO PROTEGE ESTA HABILIDADE não é o nível de risco, é o que ela
+ * devolve. `executar` entrega caminho e tamanho; nunca bytes. O contrato de
+ * `ResultadoHabilidade.texto` diz, com todas as letras, que ele é "insumo do
+ * próximo passo" — ou seja, pode terminar no prompt. Uma captura de tela leva
+ * junto tudo que estava aberto: senha à mostra, conversa de outra pessoa, tela
+ * de um sistema que não é nosso. Ela fica onde já estava, no computador de quem
+ * pediu, e o kernel aprende apenas que ela existe.
+ *
+ * É a mesma regra do RAG, que injeta assinatura e nunca log bruto.
+ */
+export const capturarTela: Habilidade = {
+  manifesto: {
+    id: 'capturar_tela',
+    nome: 'Captura de tela',
+    descricao:
+      'Fotografa a tela do computador onde o motor roda e salva um PNG numa pasta autorizada ' +
+      '(Área de Trabalho, Documentos ou Downloads). Devolve o caminho e o tamanho do arquivo — ' +
+      'NUNCA o conteúdo da imagem, que não é lido nem transmitido. Use para "tira um print", ' +
+      '"captura a tela", "salva uma foto do que está aberto".',
+    dominio: 'automacao',
+    capacidade: 'automacao',
+    permissoes: ['escrita'],
+    // Add-Type carrega System.Drawing na primeira chamada e isso é lento numa
+    // máquina fria. Timeout curto aqui produziria falha aparente numa captura
+    // que estava a caminho.
+    timeout_ms: 20000,
+    custo: 'zero',
+    risco: 'medio',
+    // Cada chamada nasce com carimbo de segundo no nome e produz um arquivo
+    // novo — duas capturas são dois FATOS distintos, e sobrescrever a primeira
+    // para "convergir" apagaria o instante que alguém quis guardar.
+    idempotencia: 'escrita_nao_idempotente',
+    esquema: {
+      local: { tipo: 'texto', padrao: 'documentos', dentre: LOCAIS },
+    },
+  },
+
+  /**
+   * NÃO existe `indisponivelPorque` aqui, e a ausência é a decisão.
+   *
+   * Plataforma sem tela é um motivo legítimo de indisponibilidade — mas
+   * habilidade indisponível some do que o Planejador pode pedir, e a receita
+   * determinística de `captura` passaria a apontar para o vazio no motor
+   * publicado (Linux). O operador receberia silêncio ou uma exceção. Com a
+   * recusa dentro do executor ele recebe uma frase que explica o motivo, que é
+   * o comportamento que o resto do Agente Local já tem para aplicativo fora da
+   * allowlist.
+   */
+  async executar(ctx) {
+    const texto = await agenteLocal.capturarTela(
+      ctx.id_usuario,
+      String(ctx.parametros.local) as LocalAutorizado,
+    );
+    return {
+      texto,
+      detalhe: `capturar_tela em ${ctx.parametros.local}`,
+      // O FATO é o arquivo registrado pelo agente, não a ausência de exceção:
+      // as duas recusas (sem tela, raiz ausente) devolvem texto útil e nada no
+      // mapa de capturas.
+      resolveu: agenteLocal.capturaRecenteDe(ctx.id_usuario) !== null,
+    };
+  },
+
+  /**
+   * Confere o DISCO, e confere o tamanho junto.
+   *
+   * Só `existsSync` não bastaria: o `Bitmap.Save` do .NET cria o arquivo antes
+   * de escrever, e um PNG de zero byte existe sem ser uma foto. Arquivo vazio é
+   * `divergente` — houve execução e o resultado não presta —, não
+   * `nao_encontrado`.
+   */
+  async verificar(_resultado, ctx) {
+    const caminho = agenteLocal.capturaRecenteDe(ctx.id_usuario);
+    if (!caminho) {
+      return {
+        confirmado: false,
+        evidencia: 'o executor não registrou nenhuma captura; nada foi salvo',
+        motivo: 'nao_encontrado',
+      };
+    }
+    if (!existsSync(caminho)) {
+      return {
+        confirmado: false,
+        evidencia: `${caminho} não existe depois da execução`,
+        motivo: 'divergente',
+      };
+    }
+    const bytes = statSync(caminho).size;
+    return bytes > 0
+      ? { confirmado: true, evidencia: `arquivo existe em ${caminho} com ${bytes} bytes` }
+      : {
+          confirmado: false,
+          evidencia: `${caminho} existe mas está vazio; não é uma imagem`,
+          motivo: 'divergente',
+        };
   },
 };
 
@@ -442,6 +551,7 @@ export const resolverConfirmacao: Habilidade = {
 export const HABILIDADES_AGENTE_LOCAL: readonly Habilidade[] = [
   criarPasta,
   abrirAplicativo,
+  capturarTela,
   acionarEnergia,
   resolverConfirmacao,
 ];

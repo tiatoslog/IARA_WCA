@@ -7,17 +7,23 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import {
   AgenteLocal,
+  capturaIndisponivelPorque,
   resolverAplicativo,
   resolverRaiz,
   validarNomePasta,
 } from '../servidor/nucleo/AgenteLocal';
+import { capturarTela } from '../servidor/nucleo/kernel/habilidades/agenteLocal';
 import { MotorPercepcao } from '../servidor/nucleo/kernel/Percepcao';
 import {
   extrairAcaoEnergia,
   extrairLocalAutorizado,
+  extrairLocalCaptura,
   extrairNomePasta,
 } from '../servidor/nucleo/kernel/Planejador';
 
@@ -101,6 +107,129 @@ test('cancelar descarta a pendência e envia abort de shutdown', () => {
   assert.match(r, /Cancelado/);
   assert.ok(!agente.temPendencia('daiane', SESSAO));
   assert.deepEqual(executados, [['shutdown.exe', '/a']]);
+});
+
+// ---------------------------------------------------------------------------
+// Captura de tela
+// ---------------------------------------------------------------------------
+
+/**
+ * O executor aguardado é injetado pela MESMA razão que o outro: rodar a suíte
+ * não pode tirar foto da tela de quem está rodando.
+ *
+ * O que se testa aqui não é o PowerShell — é a única promessa que a habilidade
+ * faz ao operador: que ela nunca diz "capturei" sem arquivo.
+ */
+test('captura só afirma sucesso com arquivo no disco', async (t) => {
+  if (process.platform !== 'win32') {
+    t.skip('a captura é específica do Windows; aqui só a recusa é observável');
+    return;
+  }
+
+  // Executor que "roda" com sucesso e não escreve nada — o caso exato em que um
+  // agendador ingênuo relataria captura feita.
+  const mentiroso = new AgenteLocal(
+    () => undefined,
+    async () => 0,
+  );
+  const texto = await mentiroso.capturarTela('daiane', 'downloads');
+  assert.match(texto, /não consegui/i, 'código zero sem arquivo não pode virar sucesso');
+  assert.equal(
+    mentiroso.capturaRecenteDe('daiane'),
+    null,
+    'nada pode ser registrado quando nada foi escrito',
+  );
+});
+
+test('captura registra o caminho quando o arquivo de fato nasce', async (t) => {
+  if (process.platform !== 'win32') {
+    t.skip('a captura é específica do Windows');
+    return;
+  }
+
+  const raiz = mkdtempSync(path.join(tmpdir(), 'iara-captura-'));
+  t.after(() => rmSync(raiz, { recursive: true, force: true }));
+
+  /**
+   * O dublê escreve um PNG de mentira no destino que o agente escolheu — é o
+   * papel do PowerShell, sem o PowerShell. O caminho sai do último argumento do
+   * script, que é onde `$m.Save('...')` o coloca.
+   */
+  const honesto = new AgenteLocal(
+    () => undefined,
+    async (_cmd, args) => {
+      const destino = args[args.length - 1].match(/\$m\.Save\('(.+?)'/)?.[1];
+      if (destino) writeFileSync(destino, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+      return 0;
+    },
+  );
+
+  const texto = await honesto.capturarTela('daiane', 'downloads');
+  const caminho = honesto.capturaRecenteDe('daiane');
+
+  // Downloads pode não existir na máquina que roda a suíte; a recusa por raiz
+  // ausente também é comportamento correto e não deve derrubar o teste.
+  if (/Não encontrei a pasta/.test(texto)) {
+    assert.equal(caminho, null);
+    return;
+  }
+
+  assert.ok(caminho, 'captura bem-sucedida precisa registrar o caminho');
+  assert.ok(existsSync(caminho), 'o caminho registrado tem que existir no disco');
+  assert.match(caminho, /Capturas IARA/, 'a captura vive na subpasta fixa, nunca solta na raiz');
+  assert.match(texto, /não abri a imagem/i, 'a resposta precisa declarar que não leu a imagem');
+  rmSync(caminho, { force: true });
+});
+
+/**
+ * O INVARIANTE QUE MAIS IMPORTA nesta habilidade, e o único que não é sobre
+ * segurança de arquivo: o conteúdo da tela não pode existir em lugar nenhum do
+ * fluxo cognitivo. `ResultadoHabilidade.texto` é declarado no contrato como
+ * insumo do próximo passo — ou seja, pode chegar ao prompt.
+ */
+test('a captura devolve caminho e tamanho, jamais bytes de imagem', async () => {
+  const agente = new AgenteLocal(
+    () => undefined,
+    async () => 0,
+  );
+  const texto = await agente.capturarTela('daiane', 'documentos');
+  assert.doesNotMatch(texto, /base64|data:image|iVBOR/i, 'imagem vazando na resposta');
+  assert.ok(texto.length < 400, 'a resposta cresceu além de uma frase — algo entrou junto');
+});
+
+test('sem Windows, a captura recusa em voz alta em vez de sumir do catálogo', () => {
+  const motivo = capturaIndisponivelPorque();
+  if (process.platform === 'win32') {
+    assert.equal(motivo, null);
+  } else {
+    assert.ok(motivo && motivo.length > 10, 'a recusa precisa explicar o porquê');
+  }
+  // A habilidade continua no catálogo em qualquer plataforma: receita
+  // determinística não pode apontar para algo que some do planejador.
+  assert.equal(capturarTela.indisponivelPorque, undefined);
+});
+
+test('print mencionado não é print pedido', () => {
+  const p = new MotorPercepcao();
+  assert.ok(p.perceber('tira um print da tela').ancoras.includes('captura'));
+  assert.ok(p.perceber('captura a tela pra mim').ancoras.includes('captura'));
+  assert.ok(p.perceber('faz um screenshot').ancoras.includes('captura'));
+
+  // Menção, não pedido — a mesma família do bug de `frota` e de `tempo`.
+  assert.ok(
+    !p.perceber('manda o print que o cliente enviou no grupo').ancoras.includes('captura'),
+    'falar de um print existente não pode capturar a tela',
+  );
+  assert.ok(
+    !p.perceber('não tire print dessa tela').ancoras.includes('captura'),
+    'proibir a ação não pode executá-la',
+  );
+});
+
+test('a captura vai para Documentos por padrão, e obedece quando mandam', () => {
+  assert.equal(extrairLocalCaptura('tira um print'), 'documentos');
+  assert.equal(extrairLocalCaptura('tira um print e salva na área de trabalho'), 'area_de_trabalho');
+  assert.equal(extrairLocalCaptura('captura a tela nos downloads'), 'downloads');
 });
 
 // ---------------------------------------------------------------------------

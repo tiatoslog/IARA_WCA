@@ -1,27 +1,41 @@
 /**
  * Ciclo autônomo — o "sonho" computacional.
  *
- * Roda em background como tarefa cancelável. Duas responsabilidades:
+ * Roda em background como tarefa cancelável. Três responsabilidades:
  *
  *  1. RESPIRAR: regenera energia e paciência no ócio. Isso não é enfeite —
  *     é o que faz a IARA de terça de manhã ser diferente da IARA de sexta
  *     às 18h depois de trinta incidentes.
  *  2. CONSOLIDAR: na janela noturna, varre o shard de CADA operador em
  *     isolamento e grava `InsightRelacional` no shard privado dele.
+ *  3. VENCER: a cada tique, procura lembretes que chegaram na hora e os
+ *     entrega.
  *
- * Ele NÃO publica no barramento cognitivo: respirar não é um fato do turno do
- * operador, é metabolismo. Ele apenas avisa que o estado mudou, e quem projeta
- * decide o que fazer com isso.
+ * Respirar e consolidar NÃO publicam no barramento cognitivo — metabolismo não
+ * é fato do turno do operador. Vencer é o oposto, e a diferença importa: um
+ * lembrete que venceu É um fato observado, exatamente como o resultado de uma
+ * habilidade. Por isso ele sai pelo mesmo canal de qualquer outra fala da IARA,
+ * em vez de virar um segundo caminho de conversa.
+ *
+ * O CICLO SÓ EXISTE COM TELA ABERTA (ver `Porta.ts`: nasce com o primeiro
+ * espelho, morre com o último). A consequência é deliberada: um lembrete que
+ * vence com o operador desconectado não é entregue no vazio nem carimbado como
+ * dito — ele fica pendente e sai no primeiro tique depois da reconexão.
+ * Atrasado e entregue vale mais que pontual e perdido.
  */
 
 import type { EstadoAtomico } from './EstadoAtomico';
 import type { MemoriaOperacional } from './MemoriaOperacional';
+import { agenda as agendaPadrao, type Agenda, type Lembrete } from './Agenda';
 
 const INTERVALO_MS = 15_000;
 const HORA_CONSOLIDACAO = 3;
 
 /** Chamado quando o estado mudou por metabolismo e vale reprojetar. */
 export type AvisoDeMudanca = () => void;
+
+/** Chamado quando um lembrete venceu e precisa ser dito ao operador. */
+export type AnuncioDeLembrete = (lembrete: Lembrete) => void;
 
 export class CicloAutonomo {
   private timer: NodeJS.Timeout | null = null;
@@ -33,6 +47,13 @@ export class CicloAutonomo {
     private readonly estado: EstadoAtomico,
     private readonly memoria: MemoriaOperacional,
     private readonly avisar: AvisoDeMudanca,
+    /**
+     * Opcional para não quebrar quem constrói o ciclo só para exercitar o
+     * metabolismo — e porque um ciclo sem anúncio é um ciclo que simplesmente
+     * não entrega lembrete, não um ciclo quebrado.
+     */
+    private readonly anunciar: AnuncioDeLembrete | null = null,
+    private readonly agenda: Agenda = agendaPadrao,
   ) {}
 
   iniciar(): void {
@@ -69,6 +90,7 @@ export class CicloAutonomo {
         this.avisar();
       }
 
+      await this.entregarVencidos(sinal);
       await this.talvezConsolidar(sinal);
     } catch (erro) {
       if (!sinal.aborted) {
@@ -76,6 +98,30 @@ export class CicloAutonomo {
       }
     } finally {
       if (!sinal.aborted) this.agendar();
+    }
+  }
+
+  /**
+   * Os lembretes que chegaram na hora, ditos um a um.
+   *
+   * A ORDEM É ANUNCIAR E DEPOIS CARIMBAR, nunca o contrário. Carimbar antes
+   * transformaria qualquer falha na entrega — sessão caindo no meio, ouvinte
+   * quebrado — num lembrete silenciosamente perdido, e perder é o único
+   * desfecho pior que repetir. Se `anunciar` lançar, o carimbo não sai e o
+   * próximo tique tenta de novo.
+   *
+   * O `sinal` é conferido a cada volta porque a lista pode ter dezenas de itens
+   * depois de uma reconexão longa, e o operador que fechou a tela no meio disso
+   * não deve continuar recebendo recado.
+   */
+  private async entregarVencidos(sinal: AbortSignal): Promise<void> {
+    if (!this.anunciar) return;
+
+    const vencidos = await this.agenda.vencidos(this.idUsuario);
+    for (const lembrete of vencidos) {
+      if (sinal.aborted) return;
+      this.anunciar(lembrete);
+      await this.agenda.marcarEntregue(this.idUsuario, lembrete.id);
     }
   }
 

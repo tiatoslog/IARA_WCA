@@ -16,6 +16,7 @@
  */
 
 import type { Percepcao, Passo, Plano } from './Evento';
+import { extrairAssuntoLembrete } from './Quando';
 
 function passo(
   indice: number,
@@ -112,6 +113,56 @@ const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
     passos: [passo(0, 'Abrir o aplicativo pedido', 'abrir_aplicativo', { aplicativo: p.bruto })],
   }),
 
+  captura: (p) => ({
+    objetivo: 'Registrar a tela em arquivo',
+    origem: 'deterministico',
+    passos: [
+      passo(0, 'Fotografar a tela e salvar na pasta autorizada', 'capturar_tela', {
+        local: extrairLocalCaptura(p.bruto),
+      }),
+    ],
+  }),
+
+  /**
+   * A ÚNICA receita que escolhe entre três habilidades, e é o mesmo desenho de
+   * `confirmacao`: uma âncora, e a polaridade da frase decide o passo. Separar
+   * em três âncoras faria a percepção reconhecer "lembrete" três vezes e a
+   * ordem entre elas virar a regra de desempate — que é precisamente o tipo de
+   * acoplamento invisível que a lista de âncoras já paga caro em `clima`.
+   */
+  lembrete: (p) => {
+    if (ehCancelamentoDeLembrete(p.bruto)) {
+      return {
+        objetivo: 'Cancelar lembrete marcado',
+        origem: 'deterministico',
+        passos: [
+          passo(0, 'Remover o lembrete da agenda do operador', 'cancelar_lembrete', {
+            termo: extrairTermoLembrete(p.bruto),
+          }),
+        ],
+      };
+    }
+    if (ehConsultaDeLembrete(p.bruto)) {
+      return {
+        objetivo: 'Listar lembretes pendentes',
+        origem: 'deterministico',
+        passos: [passo(0, 'Ler a agenda do operador', 'listar_lembretes', {})],
+      };
+    }
+    return {
+      objetivo: 'Marcar lembrete',
+      origem: 'deterministico',
+      passos: [
+        passo(0, 'Gravar o lembrete na agenda do operador', 'agendar_lembrete', {
+          assunto: extrairAssuntoLembrete(p.bruto),
+          // A FRASE, não a data. Quem interpreta é `Quando.ts` — ver o
+          // cabeçalho de `habilidades/agenda.ts`.
+          quando: p.bruto,
+        }),
+      ],
+    };
+  },
+
   energia: (p) => ({
     objetivo: 'Preparar ação de energia com confirmação',
     origem: 'deterministico',
@@ -181,6 +232,56 @@ export function extrairLocalAutorizado(bruto: string): string {
   if (/\b(documentos)\b/.test(t)) return 'documentos';
   if (/\b(downloads)\b/.test(t)) return 'downloads';
   return 'area_de_trabalho';
+}
+
+/**
+ * Onde a captura é salva. Padrão `documentos`, e não a Área de Trabalho como em
+ * `criar_pasta`: print é arquivo que se acumula, e acumular na área de trabalho
+ * é onde ele vira sujeira que ninguém limpa. O operador continua mandando.
+ */
+export function extrairLocalCaptura(bruto: string): string {
+  const t = normalizarLocal(bruto);
+  if (/\b(area de trabalho|desktop)\b/.test(t)) return 'area_de_trabalho';
+  if (/\b(downloads)\b/.test(t)) return 'downloads';
+  return 'documentos';
+}
+
+// ---------------------------------------------------------------------------
+// Lembretes
+// ---------------------------------------------------------------------------
+
+/**
+ * "cancela o lembrete da reunião" cancela; "me lembre de cancelar a reunião"
+ * MARCA. A diferença é o objeto do verbo, e é por isso que o teste exige a
+ * palavra `lembrete` logo depois — sem essa amarra, todo lembrete que contivesse
+ * a palavra "cancelar" no assunto seria lido como um pedido de cancelamento, e a
+ * IARA apagaria justamente o recado que estava sendo criado.
+ */
+const CANCELAR_LEMBRETE =
+  /\b(cancel\w*|apag\w*|remov\w*|desmarc\w*|exclu\w*|esquec\w*|tir[ae]|deleta\w*)\s+(?:(?:o|a|os|as|aquele|aquela|aqueles|esse|essa|este|esta|meu|minha|meus|minhas)\s+)*lembrete/;
+
+const LISTAR_LEMBRETE =
+  /\b(quais|quantos|que)\s+(?:sao\s+)?(?:os\s+|meus\s+)?lembrete|\b(lista|listar|liste|mostra|mostrar|mostre|ver|vejo|tenho)\s+(?:algum\s+|os\s+|meus\s+|meu\s+)?lembrete|\bmeus\s+lembretes\b|\bminha\s+agenda\b|\bo que eu marquei\b/;
+
+export function ehCancelamentoDeLembrete(bruto: string): boolean {
+  return CANCELAR_LEMBRETE.test(normalizarLocal(bruto));
+}
+
+export function ehConsultaDeLembrete(bruto: string): boolean {
+  return LISTAR_LEMBRETE.test(normalizarLocal(bruto));
+}
+
+/**
+ * QUAL lembrete cancelar. Vem do texto ORIGINAL, com acento, porque o termo é
+ * casado contra o assunto que o operador escreveu — e "reunião" não encontra
+ * "reuniao" por acidente feliz nenhum: quem normaliza os dois lados é a
+ * `Agenda`, e ela precisa receber o termo como foi dito.
+ */
+export function extrairTermoLembrete(bruto: string): string {
+  const m = bruto.match(
+    /lembrete\s+(?:d[aeo]s?\s+|sobre\s+|para\s+|pra\s+|que\s+|com\s+)?(.+?)\s*[?.!]*$/i,
+  );
+  return (m?.[1] ?? '').trim().slice(0, 120);
 }
 
 export function extrairAcaoEnergia(bruto: string): string {

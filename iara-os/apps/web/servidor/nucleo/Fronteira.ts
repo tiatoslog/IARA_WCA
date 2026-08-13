@@ -38,6 +38,13 @@
 export const ESTADO_INTERNO: readonly string[] = [
   // Histórico, shards, preferências e insights do operador.
   'servidor/nucleo/MemoriaOperacional.ts',
+  /**
+   * Lembretes do operador. Passa nesta lista pela mesma pergunta que decide
+   * todas as outras: alguém fora da IARA percebe? Não. Um lembrete gravado não
+   * manda mensagem, não marca compromisso em calendário de terceiro, não sai do
+   * processo. Quando vence, quem fala é a própria IARA, pelo canal de sempre.
+   */
+  'servidor/nucleo/Agenda.ts',
   // Cliente do banco onde o estado interno mora.
   'servidor/nucleo/ClienteSupabase.ts',
   // O jornal das operações. É a AUDITORIA, não um executor — ver `Fase 3`.

@@ -84,6 +84,23 @@ create table if not exists public.operador_preferencias (
   atualizado_em timestamptz not null default now()
 );
 
+-- Lembretes que o operador deixou marcados. `entregue_em` nulo = ainda espera;
+-- é esse campo que faz um lembrete tocar UMA vez, e não a cada varredura do
+-- ciclo autônomo. O índice parcial é a consulta quente: "o que vence agora,
+-- deste operador".
+create table if not exists public.agenda_lembretes (
+  id          uuid primary key default gen_random_uuid(),
+  id_usuario  text not null,
+  criado_em   timestamptz not null default now(),
+  vence_em    timestamptz not null,
+  assunto     text not null,
+  entregue_em timestamptz
+);
+
+create index if not exists agenda_pendentes_idx
+  on public.agenda_lembretes (id_usuario, vence_em)
+  where entregue_em is null;
+
 -- -----------------------------------------------------------------------------
 -- 4. RLS: ligado, sem política. Ninguém além da service_role entra.
 -- -----------------------------------------------------------------------------
@@ -92,6 +109,7 @@ alter table public.erros_assinaturas    enable row level security;
 alter table public.memoria_registros    enable row level security;
 alter table public.insights_relacionais enable row level security;
 alter table public.operador_preferencias enable row level security;
+alter table public.agenda_lembretes     enable row level security;
 
 -- Nenhuma policy é criada de propósito. Sem policy + RLS ligado = acesso
 -- negado para anon e authenticated. Se um dia o navegador precisar ler
