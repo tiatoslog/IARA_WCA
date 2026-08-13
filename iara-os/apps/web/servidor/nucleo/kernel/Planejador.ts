@@ -352,16 +352,63 @@ function normalizarLocal(bruto: string): string {
 }
 
 /**
+ * A CAUDA DA FRASE — tudo que vem depois de o nome ter acabado.
+ *
+ * Corta a partir do LOCAL, e não só quando ele encerra a frase. A forma
+ * anterior embutia o local numa parte opcional ancorada em `$`, e o efeito
+ * disso só aparece com a frase que a pessoa realmente fala: "crie uma pasta de
+ * teste na área de trabalho DO MEU COMPUTADOR" não termina no local, a âncora
+ * não casa, e o nome da pasta vira `de teste na área de trabalho do meu
+ * computador` — a frase inteira virando nome de diretório.
+ *
+ * Também corta o "no meu computador" sozinho, sem local nomeado, porque é o
+ * jeito mais natural de pedir isso de um celular: a pessoa diz ONDE justamente
+ * porque não está na frente da máquina.
+ */
+const CAUDA_DO_PEDIDO =
+  /\s*\b(?:n[ao]s?|em|d[ao]s?)\s+(?:minha\s+|meu\s+|minhas\s+|meus\s+)?(?:área de trabalho|area de trabalho|desktop|documentos|downloads|computador|pc|máquina|maquina|notebook)\b.*$/i;
+
+/** Cortesias e vocativos que ninguém quer ver como nome de pasta. */
+const CORTESIA = /\s*\b(?:por favor|pra mim|para mim|pra você|iara)\b\s*[?.!]*$/i;
+
+/**
+ * Preposição ou artigo grudado no começo do nome.
+ *
+ * "crie uma pasta DE teste" pede uma pasta chamada `teste`, não `de teste`. Era
+ * a forma mais comum de pedir isso e a que produzia o nome mais estranho —
+ * estranho o bastante para a operadora achar que a IARA tinha inventado o nome
+ * sozinha, que é uma suspeita bem pior do que a verdade.
+ */
+const LIGACAO_INICIAL = /^(?:de|do|da|dos|das|com|para|pra|em|no|na|o|a|os|as|um|uma)\s+/i;
+
+/**
+ * Sobras que não nomeiam nada. Ficam de fora `teste`, `nova` composta e
+ * qualquer palavra de conteúdo: o critério é "isto é um nome?", não "isto é
+ * curto?" — cortar por tamanho recusaria uma pasta legitimamente chamada `RH`.
+ */
+const SEM_NOME = /^(?:nova|novo|uma|um|a|o|mim|favor|aqui|ali|ai|aí|isso|isto)$/i;
+
+/**
  * O NOME vem do texto ORIGINAL (acentos preservados — a pasta se chama
  * "Contratos Aéreos", não "contratos aereos"); o LOCAL vem do normalizado.
+ *
+ * A limpeza acontece em etapas, e não numa expressão só, porque foi a expressão
+ * só que produziu o defeito: cada pedaço opcional que se acrescenta a ela muda
+ * silenciosamente o que os outros casam. Em etapas, cada corte tem um nome e
+ * uma linha de teste.
  */
 export function extrairNomePasta(bruto: string): string {
   const m = bruto.match(
-    /pasta\s+(?:chamada\s+|com\s+o\s+nome\s+|nomeada\s+)?["“']?(.+?)["”']?\s*(?:(?:na|no|em)\s+(?:minha\s+|meu\s+)?(?:área de trabalho|area de trabalho|desktop|documentos|downloads))?\s*[?.!]*$/i,
+    /pasta\s+(?:chamada\s+|com\s+o\s+nome\s+|nomeada\s+)?["“']?(.+?)["”']?\s*[?.!]*$/i,
   );
-  const nome = m?.[1]?.trim() ?? '';
+  let nome = (m?.[1] ?? '').trim();
+  nome = nome.replace(CAUDA_DO_PEDIDO, '').trim();
+  nome = nome.replace(CORTESIA, '').trim();
+  nome = nome.replace(LIGACAO_INICIAL, '').trim();
+  // Aspas sobrando quando o nome vinha citado e a cauda foi cortada por fora.
+  nome = nome.replace(/^["“']|["”']$/g, '').trim();
   // "crie uma pasta" sem nome, ou sobrou só ruído: nome honesto de fallback.
-  if (!nome || /^(nova|uma|a)$/i.test(nome)) return 'Nova pasta';
+  if (!nome || SEM_NOME.test(nome)) return 'Nova pasta';
   return nome;
 }
 

@@ -245,6 +245,41 @@ test('extração do nome preserva acentos e ignora o local', () => {
   assert.equal(extrairNomePasta('crie uma pasta'), 'Nova pasta');
 });
 
+/**
+ * A FRASE QUE AS PESSOAS DE FATO FALAM.
+ *
+ * Os casos acima são bem-comportados: o nome vem depois de "chamada" e a frase
+ * termina no local. Em 13/08/2026 a operadora pediu do celular "crie uma pasta
+ * de teste na área de trabalho do meu computador", e o extrator devolveu como
+ * NOME a frase quase inteira — `de teste na área de trabalho do meu
+ * computador`. Duas causas, as duas nesta tabela:
+ *
+ *  1. o recorte do local estava ancorado no fim da frase, e "do meu
+ *     computador" depois dele desarmava a âncora;
+ *  2. a preposição de ligação ("pasta DE teste") entrava no nome.
+ *
+ * O efeito colateral era pior que o nome feio: a operadora concluiu que a IARA
+ * tinha inventado o nome sozinha. Suspeitar que a IARA inventa é bem mais caro
+ * que uma pasta com nome errado.
+ */
+test('o nome não engole preposição, local, nem a cauda da frase', () => {
+  const casos: Array<[string, string]> = [
+    ['Crie uma pasta de teste na área de trabalho do meu computador', 'teste'],
+    ['crie uma pasta de teste na área de trabalho', 'teste'],
+    ['crie uma pasta chamada Contratos Aéreos no meu desktop', 'Contratos Aéreos'],
+    ['crie uma pasta chamada "Orçamentos 2026" nos downloads', 'Orçamentos 2026'],
+    ['crie uma pasta de contratos aereos na area de trabalho por favor', 'contratos aereos'],
+    // Duas letras é nome legítimo: o critério é "isto nomeia algo?", nunca
+    // tamanho — cortar por tamanho recusaria a pasta do RH.
+    ['cria uma pasta RH em documentos', 'RH'],
+    // Sem nome nenhum, a IARA não inventa: cai no rótulo honesto.
+    ['cria uma pasta pra mim na área de trabalho', 'Nova pasta'],
+  ];
+  for (const [frase, esperado] of casos) {
+    assert.equal(extrairNomePasta(frase), esperado, `"${frase}"`);
+  }
+});
+
 test('extração de local e ação de energia', () => {
   assert.equal(extrairLocalAutorizado('pasta X em documentos'), 'documentos');
   assert.equal(extrairLocalAutorizado('pasta X nos downloads'), 'downloads');
