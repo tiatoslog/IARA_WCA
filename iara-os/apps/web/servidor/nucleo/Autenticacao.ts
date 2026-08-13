@@ -10,6 +10,7 @@
  */
 
 import { supabase } from './ClienteSupabase';
+import { canonizarIdLocal } from './kernel/Identidade';
 
 export interface OperadorAutenticado {
   id_usuario: string;
@@ -55,10 +56,16 @@ export async function verificarToken(token: string | undefined): Promise<Operado
  * na subida que não se deve expor o processo assim.
  */
 export function identidadeLocal(idBruto: string, nome: string): OperadorAutenticado {
-  const limpo = idBruto.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 48);
+  /**
+   * A ÚNICA canonicalização que conserta em vez de recusar, e é a exceção que
+   * confirma a regra de `kernel/Identidade.ts`: aqui o id é digitado pelo
+   * cliente, não existe autoridade nenhuma por trás dele e não há identidade a
+   * preservar. Daqui para dentro tudo recebe a forma canônica — e recusa.
+   */
+  const limpo = canonizarIdLocal(idBruto);
   return {
-    id_usuario: limpo || 'operador',
-    nome: nome || limpo || 'operador',
+    id_usuario: limpo,
+    nome: nome || limpo,
     email: '',
   };
 }

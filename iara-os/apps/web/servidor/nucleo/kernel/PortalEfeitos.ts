@@ -42,8 +42,8 @@
  */
 
 import type { BarramentoEventos } from './BarramentoEventos';
-import type { Risco, Verificacao } from './Habilidade';
-import { HabilidadeExpirou } from './Habilidade';
+import type { Esquema, Risco, Verificacao } from './Habilidade';
+import { HabilidadeExpirou, validar } from './Habilidade';
 import {
   evidencia,
   podeExecutar,
@@ -53,6 +53,7 @@ import {
   type SemanticaEfeito,
 } from './Operacao';
 import type { RegistroOperacoes } from './RegistroOperacoes';
+import { emitirProva, type Invariante, type ProvaDeterministica } from './Prova';
 
 // ---------------------------------------------------------------------------
 // 1. O contrato de uma integração
@@ -104,6 +105,23 @@ export interface Integracao {
   readonly risco: Risco;
   readonly semantica: SemanticaEfeito;
   readonly timeout_ms: number;
+  /**
+   * O CONTRATO DOS PARÂMETROS, e ele é obrigatório.
+   *
+   * A auditoria zero-trust encontrou aqui o único caminho de efeito do sistema
+   * sem validação de esquema: habilidade tinha `esquema` e o
+   * `GerenciadorHabilidades` o impunha; integração não tinha nada, e
+   * `whatsapp.responder` lia `String(pedido.parametros.telefone ?? '')` —
+   * qualquer chave, qualquer tipo, qualquer tamanho, direto para o `fetch` do
+   * provedor. O comentário do `index.ts` chegava a dizer que integração "não
+   * tem esquema", como se fosse desenho.
+   *
+   * Obrigatório, e não opcional, pelo mesmo motivo que `idempotencia` é
+   * obrigatória no manifesto de habilidade: campo opcional é campo que ninguém
+   * preenche até o dia do incidente. Uma integração nova não COMPILA sem
+   * declarar o que aceita.
+   */
+  readonly esquema: Esquema;
   /** Falta credencial? Devolve o motivo. `null` = pronta. */
   indisponivelPorque?(): string | null;
   executar(pedido: PedidoIntegracao): Promise<RespostaProvedor>;
@@ -156,6 +174,36 @@ export class PortalEfeitos {
     return this.integracoes.has(id);
   }
 
+  /**
+   * A prova vai para o canal de auditoria — uma linha JSON, o mesmo formato de
+   * `Seguranca.AuditoriaEstruturada`, consumível por qualquer coletor.
+   *
+   * `parametros` NÃO entra aqui, e a omissão é a mesma regra que governa o
+   * resto da auditoria do sistema: registra-se qual ação, de quem, sob qual
+   * regra e com que prova — nunca o conteúdo. Os parâmetros já estão no jornal,
+   * que é o lugar deles; copiá-los para o log de auditoria os espalharia para
+   * todo mundo que lê console. A `assinatura` amarra as duas pontas.
+   */
+  private auditarProva(prova: ProvaDeterministica): void {
+    console.log(
+      JSON.stringify({
+        canal: 'auditoria',
+        acao: 'prova_emitida',
+        id_acao: prova.id_acao,
+        hash_intencao: prova.hash_intencao,
+        id_usuario: prova.reivindicacoes.id_usuario,
+        sessao: prova.reivindicacoes.sessao,
+        papel: prova.reivindicacoes.papel,
+        escopo: prova.reivindicacoes.escopo,
+        politica: prova.avaliacao.politica,
+        fonte_autorizacao: prova.avaliacao.fonte_autorizacao,
+        invariantes: prova.invariantes,
+        assinatura: prova.assinatura || 'sem-chave',
+        permitido: true,
+      }),
+    );
+  }
+
   catalogo(): readonly string[] {
     return [...this.integracoes.keys()];
   }
@@ -192,6 +240,23 @@ export class PortalEfeitos {
     motivo_autorizacao: string;
     /** A `origem_pedido` identifica a intenção sozinha? Ver `PedidoOperacao`. */
     origem_confiavel?: boolean;
+    /**
+     * O que o operador escreveu. Vira `hash_intencao` na prova — a ponte entre
+     * a linha de auditoria e o pedido humano que a originou, sem copiar o texto
+     * da conversa para dentro do jornal.
+     */
+    enunciado?: string;
+    /** Papel efetivo da sessão. Entra nas reivindicações da prova. */
+    papel?: string;
+    /** Permissões concedidas ao papel. `scope`, no vocabulário do relatório. */
+    escopo?: readonly string[];
+    /**
+     * Invariantes que o CHAMADOR conferiu e que o portal não tem como conferir
+     * sozinho — hoje, só `PARAMETROS_VALIDADOS`, que depende do esquema da
+     * habilidade. O portal acrescenta as suas e `emitirProva` exige a lista
+     * completa: quem esquecer de passar uma não executa.
+     */
+    invariantes_conferidas?: readonly Invariante[];
   }): Promise<
     { ok: true; operacao: Operacao | null } | { ok: false; estado: EstadoOperacao; motivo: string }
   > {
@@ -237,11 +302,59 @@ export class PortalEfeitos {
 
     const op = reserva.operacao;
     try {
+      /**
+       * A PROVA, e ela vem ANTES do carimbo de `autorizada` de propósito.
+       *
+       * `emitirProva` LANÇA quando falta invariante — e é por isso que ela mora
+       * no caminho da execução em vez de ao lado dele. A regra
+       * `Status != VERIFIED_PROOF => ABORT` não pode depender de alguém lembrar
+       * de escrever um `if` no caminho novo; aqui, o caminho novo simplesmente
+       * não consegue autorizar nada sem emitir a prova primeiro.
+       *
+       * O que ela NÃO faz: decidir. Toda a política já foi aplicada — pelo
+       * `PorteiroAutorizacao`, pelo sandbox de papel, pela `PoliticaRisco` e
+       * pelo `podeExecutar` logo acima. A prova é o CARIMBO dessa decisão, e o
+       * único julgamento que ela emite é sobre si mesma: recusa nascer
+       * incompleta.
+       */
+      const prova = emitirProva({
+        id_acao: op.id_operacao,
+        enunciado: pedido.enunciado ?? pedido.origem_pedido,
+        parametros: op.parametros,
+        reivindicacoes: {
+          id_usuario: op.id_usuario,
+          sessao: op.sessao,
+          papel: pedido.papel ?? 'operador',
+          escopo: pedido.escopo ?? [],
+        },
+        avaliacao: {
+          permitido: true,
+          politica: `risco_${pedido.risco}/${pedido.fonte_autorizacao}`,
+          risco: pedido.risco,
+          fonte_autorizacao: pedido.fonte_autorizacao,
+        },
+        invariantes: [
+          ...(pedido.invariantes_conferidas ?? []),
+          // Conferida logo acima: `podeExecutar` recusou `efeito_desconhecido`.
+          'SEMANTICA_DECLARADA',
+          // O tipo de `fonte_autorizacao` já exclui qualquer outra origem, e
+          // `transicionar` recusa `porteiro` em risco alto.
+          'AUTORIZACAO_TIPADA',
+          // O dono do efeito é o da operação reservada, nunca um campo do pedido.
+          'ISOLAMENTO_SHARD',
+          ...(pedido.origem_pedido ? (['ORIGEM_RASTREAVEL'] as const) : []),
+        ],
+      });
+
       const autorizada = await this.registro.marcar(
         op.id_operacao,
         'autorizada',
-        evidencia(pedido.fonte_autorizacao, pedido.motivo_autorizacao),
+        evidencia(
+          pedido.fonte_autorizacao,
+          `${pedido.motivo_autorizacao} [prova ${prova.assinatura.slice(0, 16) || 'sem-chave'}]`,
+        ),
       );
+      this.auditarProva(prova);
       const executando = await this.registro.marcar(
         autorizada.id_operacao,
         'executando',
@@ -309,6 +422,10 @@ export class PortalEfeitos {
     motivo_autorizacao: string;
     origem_confiavel?: boolean;
     sinal?: AbortSignal;
+    /** Ver `abrir`: vira `hash_intencao` na prova determinística. */
+    enunciado?: string;
+    papel?: string;
+    escopo?: readonly string[];
   }): Promise<ResultadoPortal> {
     const integracao = this.integracoes.get(pedido.integracao);
     if (!integracao) {
@@ -324,17 +441,42 @@ export class PortalEfeitos {
       };
     }
 
+    /**
+     * VALIDAÇÃO DE ESQUEMA, e ela vem ANTES de a operação existir.
+     *
+     * Mesma ordem e mesma função (`validar`) do caminho de habilidade: chave
+     * não declarada derruba, tipo errado derruba, valor fora de `dentre`
+     * derruba. Validar depois de reservar faria a chave de idempotência e a
+     * linha de jornal nascerem de um contrato que ninguém conferiu — e dois
+     * pedidos que só diferissem num campo inexistente teriam chaves diferentes
+     * para o mesmo efeito real.
+     */
+    let parametros: Readonly<Record<string, unknown>>;
+    try {
+      parametros = validar(integracao.esquema, { ...pedido.parametros });
+    } catch (erro) {
+      return {
+        tipo: 'recusada',
+        motivo: `contrato de ${integracao.id} recusou os parâmetros: ${(erro as Error).message}`,
+        operacao: null,
+      };
+    }
+
     const abertura = await this.abrir({
       id_usuario: pedido.id_usuario,
       sessao: pedido.sessao,
       acao: integracao.id,
       risco: integracao.risco,
       semantica: integracao.semantica,
-      parametros: pedido.parametros,
+      parametros,
       origem_pedido: pedido.origem_pedido,
       fonte_autorizacao: pedido.fonte_autorizacao,
       motivo_autorizacao: pedido.motivo_autorizacao,
       origem_confiavel: pedido.origem_confiavel,
+      enunciado: pedido.enunciado,
+      papel: pedido.papel,
+      escopo: pedido.escopo,
+      invariantes_conferidas: ['PARAMETROS_VALIDADOS'],
     });
 
     if (!abertura.ok) {

@@ -46,6 +46,8 @@ import {
   type SemanticaEfeito,
 } from './Operacao';
 import type { Risco } from './Habilidade';
+import { exigirIdCanonico } from './Identidade';
+import { conferirRegistro, selarRegistro, type RegistroSelavel } from './Prova';
 
 const RAIZ_PADRAO = path.join(process.cwd(), 'dados', 'operacoes');
 
@@ -115,11 +117,81 @@ export type Reserva =
    */
   | { readonly tipo: 'bloqueada'; readonly operacao: Operacao; readonly motivo: string };
 
-/** Nome de arquivo derivado do id do operador — nunca informado por ele.
- *  Mesma regra dos shards: sondagem cruzada não passa por aqui. */
+/**
+ * Nome de arquivo derivado do id do operador — nunca informado por ele.
+ * Mesma regra dos shards: sondagem cruzada não passa por aqui.
+ *
+ * RECUSA em vez de SANEAR, e a mudança não é estética. A versão anterior fazia
+ * `replace(/[^\p{L}\p{N}_-]/gu, '_')`: uma função que perde informação, e
+ * função que perde informação mapeia identidades DISTINTAS no mesmo destino —
+ * `"a b"` e `"a_b"` compartilhavam jornal, enquanto `"Ana"` e `"ana"`
+ * compartilhavam shard de memória (que minusculiza) e NÃO compartilhavam
+ * jornal (que preservava a maiúscula). Cada uma dessas divergências é uma trava
+ * de idempotência que não fecha ou um histórico que vaza entre duas pessoas.
+ *
+ * Ver `Identidade.ts`: identificador se recusa, não se conserta.
+ */
 function arquivoDe(idUsuario: string): string {
-  const seguro = idUsuario.replace(/[^\p{L}\p{N}_-]/gu, '_').slice(0, 64) || 'anonimo';
-  return `${seguro}.jsonl`;
+  return `${exigirIdCanonico(idUsuario, 'RegistroOperacoes.arquivoDe')}.jsonl`;
+}
+
+/**
+ * Estados que uma operação pode legitimamente TER no jornal. Existe para que a
+ * reidratação não aceite `estado: "verificada!!"` — ou qualquer outra string —
+ * vinda de uma linha que ninguém escreveu.
+ */
+const ESTADOS_LEGAIS = new Set<string>([
+  'planejada',
+  'aguardando_autorizacao',
+  'autorizada',
+  'executando',
+  'aceita_pelo_provedor',
+  'verificada',
+  'falhou',
+  'desconhecida',
+  'cancelada',
+  'expirada',
+]);
+
+/**
+ * A linha do jornal ANTES de virar operação. `unknown`, não `Operacao`: o
+ * `as Operacao` que existia aqui era a asserção mais cara do arquivo — dizia ao
+ * compilador que um texto lido do disco tem a forma certa, sem que ninguém
+ * tivesse olhado.
+ */
+function lerLinhaDoJornal(
+  bruto: unknown,
+  donoEsperado: string,
+): { ok: true; operacao: Operacao; selo: unknown } | { ok: false; motivo: string } {
+  if (typeof bruto !== 'object' || bruto === null) return { ok: false, motivo: 'não é objeto' };
+  const o = bruto as Record<string, unknown>;
+
+  for (const campo of ['id_operacao', 'chave_idempotencia', 'id_usuario', 'habilidade', 'estado']) {
+    if (typeof o[campo] !== 'string' || !o[campo]) return { ok: false, motivo: `${campo} ausente` };
+  }
+  if (!ESTADOS_LEGAIS.has(o.estado as string)) {
+    return { ok: false, motivo: `estado inexistente: ${String(o.estado).slice(0, 40)}` };
+  }
+  if (!Array.isArray(o.historico)) return { ok: false, motivo: 'histórico ausente' };
+  if (typeof o.parametros !== 'object' || o.parametros === null) {
+    return { ok: false, motivo: 'parâmetros ausentes' };
+  }
+
+  /**
+   * A CHECAGEM QUE FALTAVA POR INTEIRO: o dono da linha é o dono do arquivo?
+   *
+   * `reidratar(x)` lia `x.jsonl` e enfiava tudo que encontrasse no índice do
+   * PROCESSO — que é compartilhado entre todos os operadores. Uma linha com
+   * `id_usuario` de outra pessoa poluía o `porChave` e o `pendentesDeVerdade`
+   * dela. O arquivo é derivado do id; discordar dele é, por definição, uma
+   * linha que não nasceu deste caminho.
+   */
+  if (o.id_usuario !== donoEsperado) {
+    return { ok: false, motivo: `dono divergente: linha diz ${String(o.id_usuario).slice(0, 40)}` };
+  }
+
+  const { selo, ...operacao } = o as Record<string, unknown> & { selo?: unknown };
+  return { ok: true, operacao: operacao as unknown as Operacao, selo };
 }
 
 export class RegistroOperacoes {
@@ -414,13 +486,34 @@ export class RegistroOperacoes {
   // Persistência
   // -------------------------------------------------------------------------
 
+  /**
+   * Grava a linha SELADA. O selo é HMAC sobre os campos do registro — ver
+   * `Prova.ts` — e é o que permite a `reidratar` distinguir uma linha que este
+   * processo escreveu de uma linha que alguém colocou onde ele escreve.
+   *
+   * Sem `IARA_CHAVE_PROVA` o selo sai vazio, e a validação de volta degrada
+   * para estrutural. Isso é dito em voz alta na subida, não escondido aqui.
+   */
   private async gravar(op: Operacao): Promise<void> {
     await mkdir(this.raiz, { recursive: true });
+    const selo = selarRegistro(op as unknown as RegistroSelavel);
     await appendFile(
       path.join(this.raiz, arquivoDe(op.id_usuario)),
-      `${JSON.stringify(op)}\n`,
+      `${JSON.stringify({ ...op, selo })}\n`,
       'utf8',
     );
+  }
+
+  /**
+   * Linhas de jornal recusadas na última reidratação, para diagnóstico e para
+   * o teste de invariante. Uma linha aqui é sempre uma de duas coisas: um
+   * jornal de versão anterior à selagem, ou adulteração. Nenhuma das duas pode
+   * passar em silêncio.
+   */
+  private readonly quarentena: Array<{ motivo: string; trecho: string }> = [];
+
+  get linhasRecusadas(): readonly { motivo: string; trecho: string }[] {
+    return this.quarentena;
   }
 
   /**
@@ -453,18 +546,62 @@ export class RegistroOperacoes {
       return [];
     }
 
+    const dono = exigirIdCanonico(idUsuario, 'RegistroOperacoes.reidratar');
+    this.quarentena.length = 0;
+
+    const recusar = (motivo: string, linha: string) => {
+      this.quarentena.push({ motivo, trecho: linha.slice(0, 120) });
+      console.warn(
+        JSON.stringify({
+          canal: 'auditoria',
+          acao: 'jornal_linha_recusada',
+          id_usuario: dono,
+          permitido: false,
+          detalhe: motivo,
+        }),
+      );
+    };
+
     // Última linha por operação vence: o jornal é cronológico.
     const ultimas = new Map<string, Operacao>();
     for (const linha of bruto.split('\n')) {
       if (!linha.trim()) continue;
+
+      let cru: unknown;
       try {
-        const op = JSON.parse(linha) as Operacao;
-        ultimas.set(op.id_operacao, op);
+        cru = JSON.parse(linha);
       } catch {
         // Linha truncada por um crash no meio da escrita. Descartar a última
         // linha corrompida é seguro: o estado anterior daquela operação já está
-        // no jornal, e é ele que vale.
+        // no jornal, e é ele que vale. NÃO vai para a quarentena — é o defeito
+        // esperado de um append-only, não um sinal de adulteração.
+        continue;
       }
+
+      /**
+       * VALIDAÇÃO ESTRUTURAL, e ela vale mesmo sem chave nenhuma: formato,
+       * estado legal e — sobretudo — DONO. Ver `lerLinhaDoJornal`.
+       */
+      const lida = lerLinhaDoJornal(cru, dono);
+      if (!lida.ok) {
+        recusar(lida.motivo, linha);
+        continue;
+      }
+
+      /**
+       * VALIDAÇÃO CRIPTOGRÁFICA. `sem_chave` não é sucesso — é a admissão de
+       * que não há o que conferir, e ela segue com o que a estrutura garantiu.
+       * `invalido` com chave ativa é adulteração, e adulteração não entra no
+       * índice: uma linha forjada em `verificada` faria a IARA jurar ter
+       * conferido um efeito que nunca existiu.
+       */
+      const veredito = conferirRegistro(lida.operacao as unknown as RegistroSelavel, lida.selo);
+      if (veredito === 'invalido') {
+        recusar('selo ausente ou inválido — linha não nasceu deste sistema', linha);
+        continue;
+      }
+
+      ultimas.set(lida.operacao.id_operacao, lida.operacao);
     }
 
     const recuperadas: Operacao[] = [];

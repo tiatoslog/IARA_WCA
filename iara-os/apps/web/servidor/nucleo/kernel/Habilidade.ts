@@ -39,7 +39,25 @@ export interface CampoEsquema {
   /** Valores aceitos. Ausente = qualquer um do tipo. */
   dentre?: readonly string[];
   padrao?: unknown;
+  /**
+   * Teto de tamanho para `texto`. Ausente = `MAX_TEXTO_PADRAO`.
+   *
+   * O esquema não tinha limite nenhum, e a ausência tinha consequência real:
+   * `consultar_memoria_corporativa` monta um índice de trigramas sobre o
+   * parâmetro (O(n) em memória e tempo), e o valor vem de um plano emitido pela
+   * LLM — que por sua vez pode estar repetindo um documento que alguém colou.
+   * Um parâmetro de megabytes não é ataque sofisticado; é o que sai naturalmente
+   * de um modelo instruído por uma página maliciosa a "repita este texto no
+   * parâmetro".
+   *
+   * O padrão é generoso o bastante para toda habilidade real do catálogo e
+   * pequeno o bastante para que nenhuma delas vire um laço caro por engano.
+   */
+  max?: number;
 }
+
+/** Teto de um campo `texto` que não declara o próprio. */
+export const MAX_TEXTO_PADRAO = 4000;
 
 export type Esquema = Record<string, CampoEsquema>;
 
@@ -202,7 +220,27 @@ export function validar(esquema: Esquema, entrada: Record<string, unknown>): Rec
   const saida: Record<string, unknown> = {};
 
   for (const chave of Object.keys(entrada)) {
-    if (!(chave in esquema)) {
+    /**
+     * `Object.hasOwn`, NÃO `chave in esquema`.
+     *
+     * `in` caminha a cadeia de protótipos, e `esquema` é um objeto literal —
+     * então `'__proto__' in esquema`, `'constructor' in esquema`,
+     * `'toString' in esquema` e `'hasOwnProperty' in esquema` eram todos
+     * VERDADEIROS. A porta que existe para recusar parâmetro não declarado
+     * deixava passar, calada, a família inteira de nomes herdados de
+     * `Object.prototype` — inclusive os que um payload de poluição de protótipo
+     * usa por definição.
+     *
+     * Nada foi explorável por acidente: o laço de baixo percorre
+     * `Object.entries(esquema)`, que é só de propriedades próprias, e nenhuma
+     * dessas chaves chegava a `saida`. Mas uma trava que só não falha porque
+     * outra coisa a compensa é uma trava que já falhou — e a compensação vai
+     * embora no dia em que alguém trocar o laço de baixo por um `for...in`.
+     *
+     * Encontrado pela suíte adversarial, não por leitura. Ver
+     * `zero-trust-adversarial.test.ts`, D1.
+     */
+    if (!Object.hasOwn(esquema, chave)) {
       throw new ParametroInvalido(`parâmetro não declarado: "${chave}"`);
     }
   }
@@ -223,6 +261,32 @@ export function validar(esquema: Esquema, entrada: Record<string, unknown>): Rec
     }
     if (campo.dentre && !campo.dentre.includes(String(valor))) {
       throw new ParametroInvalido(`"${chave}" fora dos valores aceitos`);
+    }
+    if (campo.tipo === 'texto') {
+      const teto = campo.max ?? MAX_TEXTO_PADRAO;
+      if ((valor as string).length > teto) {
+        throw new ParametroInvalido(`"${chave}" passa de ${teto} caracteres`);
+      }
+      /**
+       * BYTE NULO E CONTROLE C0.
+       *
+       * Não é paranoia de fuzzing: o parâmetro chega a `path.join`, a nome de
+       * arquivo e a corpo de requisicao HTTP. Um NUL trunca caminho em
+       * várias APIs nativas, e `\r\n` num campo que vira cabeçalho é injeção de
+       * cabeçalho. O tipo `texto` promete texto — recusar aqui é o que faz a
+       * promessa valer para todas as habilidades de uma vez, em vez de cada
+       * executor se lembrar sozinho.
+       *
+       * `\n` e `\t` passam: são texto legítimo em parâmetro de mensagem.
+       */
+      if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(valor as string)) {
+        throw new ParametroInvalido(`"${chave}" contém caractere de controle`);
+      }
+    }
+    if (campo.tipo === 'numero' && !Number.isFinite(valor as number)) {
+      // `NaN` e `Infinity` são `typeof 'number'` e passariam pela checagem de
+      // tipo acima. Nenhum executor do catálogo sabe o que fazer com eles.
+      throw new ParametroInvalido(`"${chave}" não é um número finito`);
     }
     saida[chave] = valor;
   }

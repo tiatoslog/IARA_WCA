@@ -19,6 +19,7 @@ import {
 } from '../../../lib/capacidades';
 import {
   HabilidadeExpirou,
+  ParametroInvalido,
   PermissaoNegada,
   disponivel,
   validar,
@@ -95,6 +96,28 @@ export class GerenciadorHabilidades {
 
   manifesto(id: string): ManifestoHabilidade | null {
     return this.registro.get(id)?.manifesto ?? null;
+  }
+
+  /**
+   * Valida os parâmetros contra o esquema declarado e devolve a forma
+   * NORMALIZADA — chave desconhecida derruba, tipo errado derruba, valor fora
+   * de `dentre` derruba.
+   *
+   * Existe como método público por um motivo de ORDEM, não de conveniência: o
+   * Kernel abria a operação no jornal ANTES de qualquer validação, e por isso
+   * a chave de idempotência e a linha de auditoria nasciam de parâmetros que
+   * ninguém tinha olhado. Um plano da LLM com `{"local":"downloads","extra":1}`
+   * ganhava identidade persistida e só morria depois. Validar primeiro faz o
+   * jornal registrar a ação REAL, e é o que permite ao portal carimbar
+   * `PARAMETROS_VALIDADOS` na prova sem mentir.
+   *
+   * `validar` é a mesma função que o executor chama — não uma segunda cópia da
+   * regra. Rodar duas vezes é barato e idempotente; ter duas regras não seria.
+   */
+  validarParametros(id: string, parametros: Record<string, unknown>): Record<string, unknown> {
+    const h = this.registro.get(id);
+    if (!h) throw new ParametroInvalido(`habilidade desconhecida: ${id}`);
+    return validar(h.manifesto.esquema, parametros);
   }
 
   /**

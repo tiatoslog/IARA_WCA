@@ -21,6 +21,7 @@ import {
   type PreferenciasOperador,
 } from '../../lib/perfil';
 import { supabase } from './ClienteSupabase';
+import { exigirIdCanonico } from './kernel/Identidade';
 
 const RAIZ = path.resolve(process.cwd(), 'dados');
 const PASTA_SHARDS = path.join(RAIZ, 'memoria');
@@ -34,11 +35,21 @@ interface Shard {
   preferencias?: PreferenciasOperador;
 }
 
-/** Só `[a-z0-9_-]`. Bloqueia travessia de caminho vinda do socket. */
+/**
+ * A chave do shard. RECUSA um id fora da forma canônica em vez de consertá-lo.
+ *
+ * A versão anterior fazia `toLowerCase().replace(...).slice(0, 48)` — e
+ * saneamento é uma função que perde informação. `"Ana"` e `"ana"` caíam no
+ * MESMO shard; `"x".repeat(50) + "a"` e `"x".repeat(50) + "b"` também. Cada
+ * colisão dessas é o histórico de uma pessoa aparecendo para outra, que é
+ * exatamente o invariante que este arquivo existe para sustentar.
+ *
+ * Ver `kernel/Identidade.ts`. A trava de travessia de caminho continua sendo a
+ * mesma — a forma canônica não admite `/`, `\` nem `.` —, só que agora ela
+ * barra em vez de mutilar.
+ */
 function idSeguro(idUsuario: string): string {
-  const limpo = idUsuario.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-  if (!limpo) throw new Error('id_usuario inválido');
-  return limpo.slice(0, 48);
+  return exigirIdCanonico(idUsuario, 'MemoriaOperacional');
 }
 
 export class MemoriaOperacional {

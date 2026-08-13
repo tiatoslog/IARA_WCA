@@ -31,6 +31,7 @@ import { autenticacaoAtiva } from './nucleo/Autenticacao';
 import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
 import { diagnosticoWhatsapp } from './canais/WhatsApp';
 import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
+import { estadoDaChave } from './nucleo/kernel/Prova';
 
 carregarEnv({ path: '.env.local' });
 carregarEnv();
@@ -337,6 +338,28 @@ async function subir(): Promise<void> {
     console.log(`[iara] persistência: ${persistenciaEmUso()}`);
     console.log(`[iara] ${diagnosticoWhatsapp()}`);
     console.log(`[iara] voz: ${diagnosticoVoz()}`);
+    /**
+     * O ESTADO DA CHAVE DE PROVA, dito em voz alta na subida.
+     *
+     * Não é `process.exit`, e a escolha é deliberada: as duas falhas-fechadas
+     * acima recusam subir porque sem elas o sistema fica ABERTO — qualquer um
+     * assume qualquer shard. Esta é de outra natureza: sem a chave, o jornal
+     * continua sendo validado por estrutura e dono, e todas as travas de
+     * runtime seguem de pé. O que se perde é a capacidade de distinguir uma
+     * linha adulterada de uma linha legítima DEPOIS de um restart — integridade
+     * da trilha de auditoria, não controle de acesso.
+     *
+     * Derrubar um deploy em produção por causa disso trocaria um risco de
+     * forense por um risco de disponibilidade, sem consultar quem opera. Dizer
+     * a verdade na subida é o que permite a decisão ser tomada por quem tem
+     * competência para tomá-la.
+     */
+    const chaveProva = estadoDaChave();
+    console.log(
+      chaveProva.ativa
+        ? '[iara] jornal de operações: selado (IARA_CHAVE_PROVA ativa)'
+        : `[iara] jornal de operações: SEM SELO — ${chaveProva.motivo}`,
+    );
     console.log(
       autenticacaoAtiva()
         ? '[iara] autenticação: Supabase Auth (identidade vem do token verificado)'

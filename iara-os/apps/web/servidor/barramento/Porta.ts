@@ -23,6 +23,8 @@ import { CicloAutonomo } from '../nucleo/CicloAutonomo';
 import { prepararOperacionais } from '../nucleo/kernel/habilidades/operacionais';
 import { lerPacoteCliente } from '../../lib/protocolo';
 import { outrosOperadores } from '../../lib/operadores';
+import { papelDe } from '../nucleo/kernel/Papeis';
+import { LimiteVazao } from '../nucleo/kernel/Seguranca';
 import {
   autenticacaoAtiva,
   identidadeLocal,
@@ -54,6 +56,26 @@ interface Residente {
 
 const residentes = new Map<string, Residente>();
 
+/**
+ * ESTRANGULAMENTO PRÉ-AUTENTICAÇÃO — a janela que não tinha dono.
+ *
+ * `Kernel.processar` já tem `LimiteVazao`, e ele protege bem o que vem DEPOIS
+ * da identidade estar resolvida. O `ola` vinha antes: cada apresentação dispara
+ * um `verificarToken`, que é uma chamada de rede ao Supabase, e a única guarda
+ * era `if (operador || abrindo) return` — uma apresentação por CONEXÃO. Abrir
+ * mil conexões é de graça, então eram mil chamadas de autenticação disparadas
+ * sem nenhuma credencial válida: negação de serviço contra o provedor de
+ * identidade, paga pela cota de quem foi atacado.
+ *
+ * Global e não por IP de propósito. Atrás de um proxy (Railway, Cloudflare) o
+ * IP visível é o do proxy, e uma janela por IP viraria uma janela por
+ * infraestrutura inteira — pior que nenhuma, porque parece proteção. O teto é
+ * alto o bastante para uma equipe reconectando junto depois de uma queda de
+ * rede e baixo o bastante para tornar a enxurrada inútil.
+ */
+const APRESENTACOES_POR_MINUTO = 120;
+const vazaoDeApresentacao = new LimiteVazao(APRESENTACOES_POR_MINUTO, 60_000);
+
 function residenteDe(idUsuario: string): Residente {
   let r = residentes.get(idUsuario);
   if (!r) {
@@ -79,6 +101,8 @@ export function conectarOperador(socket: WebSocket): void {
   let residente: Residente | null = null;
   let operador: OperadorAutenticado | null = null;
   let abrindo = false;
+  /** Chave do residente deste socket. Capturada na abertura; o close a devolve. */
+  let idResidente: string | null = null;
   /** A sessão criada para ESTE socket. O close só desmonta o que é dele. */
   let minhaSessao: SessaoOperador | null = null;
 
@@ -95,6 +119,18 @@ export function conectarOperador(socket: WebSocket): void {
 
     if (pacote.tipo === 'ola') {
       if (operador || abrindo) return; // uma apresentação por conexão
+
+      /**
+       * A recusa é MUDA de propósito — fecha sem dizer por quê. Distinguir
+       * "excesso de tentativas" de "token inválido" transformaria esta porta
+       * num oráculo, que é a mesma razão pela qual `verificarToken` não
+       * distingue token expirado de token inexistente.
+       */
+      if (!vazaoDeApresentacao.permitir()) {
+        console.warn('[iara] apresentações acima do limite do processo — socket recusado');
+        socket.close(4429, 'excesso de tentativas');
+        return;
+      }
       abrindo = true;
 
       void (async () => {
@@ -115,6 +151,7 @@ export function conectarOperador(socket: WebSocket): void {
 
           const r = residenteDe(operador.id_usuario);
           residente = r;
+          idResidente = operador.id_usuario;
 
           /**
            * Teto de espelhos: recusa a tela NOVA, nunca derruba as
@@ -167,7 +204,13 @@ export function conectarOperador(socket: WebSocket): void {
           r.kernel ??= new Kernel({
             sessao: operador.id_usuario,
             idUsuario: operador.id_usuario,
-            outrosOperadores: outrosOperadores(operador.id_usuario),
+            /**
+             * O PAPEL EFETIVO. Sem esta linha o Kernel caía no `?? 'operador'`
+             * e os outros dois papéis de `Seguranca.ts` eram inalcançáveis em
+             * produção — ver `Papeis.ts`.
+             */
+            papel: papelDe(operador),
+            outrosOperadores: outrosOperadores(operador.id_usuario, operador.nome),
             estado: r.estado,
             memoria,
             barramento: r.barramento,
@@ -181,8 +224,47 @@ export function conectarOperador(socket: WebSocket): void {
           r.ponte ??= new PonteProjecao(r.barramento, r.compilador, r.estado, r.sessoes);
 
           if (!r.ciclo) {
-            r.ciclo = new CicloAutonomo(operador.id_usuario, r.estado, memoria, () =>
-              r.ponte?.hidratar(),
+            const dono = operador;
+            r.ciclo = new CicloAutonomo(
+              operador.id_usuario,
+              r.estado,
+              memoria,
+              () => r.ponte?.hidratar(),
+              /**
+               * O lembrete vencido é FALADO, não logado — e isso é uma decisão,
+               * não um detalhe de canal.
+               *
+               * O insight noturno logo abaixo sai por `emitirLog` porque é um
+               * comentário sobre a semana; ninguém perde nada se der uma olhada
+               * no console amanhã. Um lembrete é o oposto: ele existe
+               * exatamente porque a pessoa não vai olhar. Recado que só aparece
+               * no console técnico é recado não dado.
+               *
+               * `TAREFA_CONCLUIDA` é o evento honesto para isto. Ele carrega
+               * `rota: 'sistema_local'` e `ms: 0` — que é a verdade: nasceu do
+               * agendador local, não gastou token nenhum e não levou tempo. A
+               * telemetria do turno continua dizendo o que de fato aconteceu.
+               */
+              (lembrete) => {
+                const texto = `Lembrete: ${lembrete.assunto}.`;
+                r.barramento.publicar({
+                  tipo: 'TAREFA_CONCLUIDA',
+                  id_mensagem: `lembrete-${lembrete.id}`,
+                  texto,
+                  rota: 'sistema_local',
+                  ms: 0,
+                });
+                /**
+                 * Gravar no shard é o que faz o lembrete existir para a IARA
+                 * no turno seguinte: sem isto ela avisa e, trinta segundos
+                 * depois, não faz ideia de que avisou. Falha de memória não
+                 * pode derrubar o ciclo — daí o `catch` mudo, no mesmo espírito
+                 * do insight logo abaixo.
+                 */
+                void memoria
+                  .registrar(dono.id_usuario, 'iara', texto, 'sistema_local')
+                  .catch(() => undefined);
+              },
             );
             r.ciclo.iniciar();
           }
@@ -312,6 +394,30 @@ export function conectarOperador(socket: WebSocket): void {
       residente.kernel?.cancelar('todas as telas encerradas');
       residente.ciclo?.parar();
       residente.ciclo = null;
+
+      /**
+       * O RESIDENTE SAI DO MAPA. Sem esta linha, `residentes` só crescia:
+       * `residenteDe` inseria e ninguém removia nunca. Cada operador que
+       * conectasse uma vez deixava para trás um `EstadoAtomico`, um
+       * `BarramentoEventos` e um `Kernel` — com a `MemoriaTrabalho`, o
+       * `RegistroErros` e o índice de habilidades dentro — vivos até o processo
+       * morrer.
+       *
+       * Com autenticação ligada o crescimento é limitado pelo número de
+       * operadores reais, e o desperdício é discreto o bastante para não
+       * aparecer. Em modo local ele não tem teto nenhum: o `id_usuario` vem de
+       * um campo que o cliente digita, e um laço de conexões com ids diferentes
+       * enche a heap sem precisar de nenhuma credencial. A correção vale nos
+       * dois casos e é a mesma.
+       *
+       * O que se perde ao descartar: nada que seja verdade. O jornal de
+       * operações é do PROCESSO (`registroOperacoes`), não do residente; a
+       * memória do operador está no shard; a pendência de energia mora no
+       * `agenteLocal`, que é singleton. O residente é só o aparato vivo da
+       * sessão — e a sessão acabou.
+       */
+      residente.barramento.limpar();
+      if (idResidente) residentes.delete(idResidente);
     } else {
       // A tela que saiu podia ser a líder de voz. Reemitir promove a próxima
       // na hora — sem isto, a IARA ficaria muda até o próximo evento.

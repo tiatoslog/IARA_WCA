@@ -30,9 +30,35 @@ export const OPERADORES: Operador[] = [
   { id: 'operador-5', nome: 'Operador 5' },
 ];
 
-/** Nomes de todo mundo, menos quem está falando agora. */
-export function outrosOperadores(idAtual: string): string[] {
-  return OPERADORES.filter((o) => o.id !== idAtual).map((o) => o.nome);
+/**
+ * Nomes de todo mundo, menos quem está falando agora.
+ *
+ * O `nomeAtual` não é conveniência — é a correção de um defeito que só aparece
+ * com autenticação LIGADA. Com Supabase, `id_usuario` é um uuid, e uuid nunca
+ * casa com `'daiane'` ou `'operador-2'`: o filtro por id não excluía ninguém, e
+ * o próprio nome do operador entrava na lista de "outros". A consequência é o
+ * `PortaoSigilo` tratando uma pergunta da pessoa sobre o registro DELA MESMA
+ * como sondagem entre shards, e recusando com uma frase sobre privacidade de
+ * terceiro — a pior recusa possível, porque parece uma acusação.
+ *
+ * Comparar por nome normalizado resolve o caso real (o roster e o provedor de
+ * identidade se referem à mesma pessoa por nome) sem fingir que o roster é a
+ * fonte de identidade — ela é o token, e continua sendo.
+ */
+export function outrosOperadores(idAtual: string, nomeAtual = ''): string[] {
+  const alvo = chaveNome(nomeAtual);
+  return OPERADORES.filter((o) => o.id !== idAtual && (!alvo || chaveNome(o.nome) !== alvo)).map(
+    (o) => o.nome,
+  );
+}
+
+/** Nome comparável: sem acento, sem caixa, sem espaço sobrando. */
+function chaveNome(bruto: string): string {
+  return bruto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .toLowerCase();
 }
 
 /**

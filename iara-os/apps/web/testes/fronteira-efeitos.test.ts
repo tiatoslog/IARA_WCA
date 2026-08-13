@@ -129,6 +129,14 @@ test('A4. shell e filesystem mutável continuam confinados ao AgenteLocal', () =
   const PERMITIDOS = [
     path.join('servidor', 'nucleo', 'AgenteLocal.ts'), // spawn + mkdir, via habilidades
     path.join('servidor', 'nucleo', 'MemoriaOperacional.ts'), // shard do operador
+    /**
+     * Agenda de lembretes. Escreve em `dados/agenda/`, do lado do motor, pela
+     * mesma razão e com a mesma forma do shard de memória logo acima: é o
+     * registro da IARA sobre um compromisso do operador, não um efeito que
+     * alguém de fora perceba. Não abre `child_process` e não alcança o
+     * `AgenteLocal` — `G1` prova isso pelo grafo, não pela boa-fé desta linha.
+     */
+    path.join('servidor', 'nucleo', 'Agenda.ts'),
     path.join('servidor', 'nucleo', 'kernel', 'RegistroOperacoes.ts'), // o próprio jornal
     /**
      * A DECLARAÇÃO da fronteira. Ela cita os nomes dos padrões proibidos dentro
@@ -208,6 +216,11 @@ function integracaoFalsa(o: {
     risco: o.risco ?? 'medio',
     semantica: 'escrita_nao_idempotente',
     timeout_ms: 60,
+    /** O contrato exigido de toda integração — ver `PortalEfeitos.Integracao`. */
+    esquema: {
+      telefone: { tipo: 'texto', obrigatorio: true },
+      texto: { tipo: 'texto', obrigatorio: true },
+    },
     async executar(pedido): Promise<RespostaProvedor> {
       if (o.modo === 'RECUSA') {
         return { aceito: false, detalhe: 'o provedor rejeitou o destinatário' };

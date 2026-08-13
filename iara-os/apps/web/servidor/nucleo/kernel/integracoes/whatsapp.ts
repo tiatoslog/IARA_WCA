@@ -47,6 +47,18 @@ export const integracaoWhatsapp: Integracao = {
   semantica: 'escrita_nao_idempotente',
   timeout_ms: 12_000,
 
+  /**
+   * O CONTRATO. `telefone` é `texto` e não `numero` de propósito: o formato do
+   * Graph é uma string de dígitos com código de país, e um `number` perderia o
+   * zero à esquerda e estouraria a precisão em número longo. A validação de
+   * FORMATO mora em `entregarTexto`; aqui garante-se apenas que os dois campos
+   * existem, são texto, e que nenhuma chave a mais atravessa até o provedor.
+   */
+  esquema: {
+    telefone: { tipo: 'texto', obrigatorio: true },
+    texto: { tipo: 'texto', obrigatorio: true },
+  },
+
   indisponivelPorque() {
     const falta = ['WHATSAPP_TOKEN', 'WHATSAPP_PHONE_ID'].filter(
       (v) => !process.env[v]?.trim(),

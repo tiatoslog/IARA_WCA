@@ -590,7 +590,55 @@ export class Kernel {
        * A fronteira é a semântica DECLARADA no manifesto, não uma lista de
        * nomes de habilidade. Habilidade nova de escrita nasce coberta.
        */
-      const abertura = await this.abrirOperacao(passo, manifesto, plano.origem);
+      /**
+       * VALIDAR ANTES DE ABRIR. A ordem é a correção, não o gosto.
+       *
+       * O esquema era conferido lá dentro do `GerenciadorHabilidades`, DEPOIS
+       * de a operação já ter identidade, chave de idempotência e linha no
+       * jornal — todas derivadas de parâmetros que ninguém tinha olhado. Um
+       * plano da LLM com um campo a mais gravava a intenção errada no registro
+       * de auditoria e só morria no passo seguinte; pior, dois pedidos que só
+       * diferiam num campo inexistente produziam chaves de idempotência
+       * DIFERENTES para o mesmo efeito real.
+       *
+       * Validar aqui faz o jornal registrar a ação de verdade — e é o que
+       * permite ao portal carimbar `PARAMETROS_VALIDADOS` na prova sem mentir.
+       */
+      let parametrosValidados: Record<string, unknown>;
+      try {
+        parametrosValidados = this.habilidades.validarParametros(passo.habilidade, {
+          ...passo.parametros,
+        });
+      } catch (erro) {
+        this.trabalho.registrarErro();
+        const motivo = (erro as Error).message;
+        passos.push({
+          descricao: passo.descricao,
+          habilidade: passo.habilidade,
+          estado: 'falhou',
+          texto: '',
+          evidencia: motivo,
+        });
+        this.auditoria.registrar({
+          instante: new Date().toISOString(),
+          sessao: this.dep.sessao,
+          id_usuario: this.dep.idUsuario,
+          traco: b.tracoAtual,
+          acao: `parametro_invalido:${passo.habilidade}`,
+          detalhe: motivo,
+          permitido: false,
+        });
+        b.publicar({ tipo: 'FALHA', modulo: 'esquema', mensagem: motivo });
+        b.publicar({ tipo: 'PASSO_CONCLUIDO', passo, resumo: `falhou: ${motivo}`, ms: 0 });
+        continue;
+      }
+
+      const abertura = await this.abrirOperacao(
+        { habilidade: passo.habilidade, parametros: parametrosValidados },
+        manifesto,
+        plano.origem,
+        enunciado,
+      );
       if (!abertura.ok) {
         this.trabalho.registrarErro();
         passos.push({
@@ -784,6 +832,7 @@ export class Kernel {
     passo: { habilidade: string | null; parametros: Readonly<Record<string, unknown>> },
     manifesto: { id: string; risco: Risco; idempotencia: SemanticaEfeito },
     origem: Plano['origem'],
+    enunciado: string,
   ): Promise<
     | { ok: true; operacao: Operacao | null }
     | { ok: false; estado: EstadoExecucao; motivo: string }
@@ -817,6 +866,20 @@ export class Kernel {
         origem === 'deterministico'
           ? 'pedido direto do operador (plano determinístico)'
           : `plano ${origem}, risco ${manifesto.risco}`,
+      /**
+       * As reivindicações da prova. `enunciado` vira `hash_intencao` — a ponte
+       * entre a linha de auditoria e o pedido humano, sem copiar o texto da
+       * conversa para dentro do jornal.
+       */
+      enunciado,
+      papel: this.papel,
+      escopo: this.politica.permissoesDe(this.papel),
+      /**
+       * O portal não conhece esquema de habilidade; esta é a única invariante
+       * que só o Kernel pode atestar, e ele a atesta porque acabou de rodar
+       * `validarParametros` sobre exatamente estes parâmetros.
+       */
+      invariantes_conferidas: ['PARAMETROS_VALIDADOS'],
     });
 
     if (r.ok) return r;

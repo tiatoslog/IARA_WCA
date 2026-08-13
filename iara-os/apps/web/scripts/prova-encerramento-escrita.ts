@@ -195,6 +195,11 @@ function integracaoLab(o: {
     risco: 'medio',
     semantica: 'escrita_nao_idempotente',
     timeout_ms: 60,
+    /** O contrato exigido de toda integração — ver `PortalEfeitos.Integracao`. */
+    esquema: {
+      telefone: { tipo: 'texto', obrigatorio: true },
+      texto: { tipo: 'texto', obrigatorio: true },
+    },
     async executar(p): Promise<RespostaProvedor> {
       if (o.modo === 'RECUSA') return { aceito: false, detalhe: 'destinatário inválido' };
       o.provedor.entregues.push(String(p.parametros.texto));

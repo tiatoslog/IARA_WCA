@@ -17,6 +17,7 @@ import { EstadoAtomico } from '../nucleo/EstadoAtomico';
 import { MemoriaOperacional } from '../nucleo/MemoriaOperacional';
 import { Kernel } from '../nucleo/kernel/Kernel';
 import { outrosOperadores } from '../../lib/operadores';
+import { papelDe } from '../nucleo/kernel/Papeis';
 import { PortalEfeitos } from '../nucleo/kernel/PortalEfeitos';
 import { registroOperacoes } from '../nucleo/kernel/RegistroOperacoes';
 import { ID_WHATSAPP_RESPONDER, INTEGRACOES } from '../nucleo/kernel/integracoes';
@@ -52,7 +53,7 @@ interface Residente {
 }
 const residentes = new Map<string, Residente>();
 
-function residenteDe(idUsuario: string): Residente {
+function residenteDe(idUsuario: string, nomeUsuario = ''): Residente {
   let r = residentes.get(idUsuario);
   if (!r) {
     const estado = new EstadoAtomico();
@@ -63,7 +64,9 @@ function residenteDe(idUsuario: string): Residente {
       kernel: new Kernel({
         sessao: `whatsapp:${idUsuario}`,
         idUsuario,
-        outrosOperadores: outrosOperadores(idUsuario),
+        // Mesmo papel efetivo do navegador: o canal não concede nada a mais.
+        papel: papelDe({ id_usuario: idUsuario }),
+        outrosOperadores: outrosOperadores(idUsuario, nomeUsuario),
         estado,
         memoria,
         barramento,
@@ -165,7 +168,7 @@ export async function tratarWhatsapp(req: IncomingMessage, res: ServerResponse):
     return;
   }
 
-  await atender(identidade.id_usuario, mensagem.telefone, mensagem.texto, mensagem.id);
+  await atender(identidade, mensagem.telefone, mensagem.texto, mensagem.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -178,12 +181,15 @@ export async function tratarWhatsapp(req: IncomingMessage, res: ServerResponse):
  * event bus.
  */
 async function atender(
-  idUsuario: string,
+  identidade: { id_usuario: string; nome: string },
   telefone: string,
   texto: string,
   idMensagem: string,
 ): Promise<void> {
-  const r = residenteDe(idUsuario);
+  const idUsuario = identidade.id_usuario;
+  // O nome vai junto: é o que exclui o PRÓPRIO operador da lista de "outros"
+  // consultada pelo portão de sigilo. Ver `lib/operadores.ts`.
+  const r = residenteDe(idUsuario, identidade.nome);
   let resposta = '';
 
   const desassinar = r.barramento.assinar('TAREFA_CONCLUIDA', (e) => {
