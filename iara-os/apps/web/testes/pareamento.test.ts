@@ -619,3 +619,62 @@ test('P21. um braço SEM credencial durável aparece, e sem prometer o que não 
   assert.equal(maquinas[0].conectada, true);
   assert.equal(maquinas[0].pareada, false, 'a tela ofereceria um "desconectar" que não revoga nada');
 });
+
+// ===========================================================================
+// REGRESSÃO — o código aprovado não responde para quem não é o dono
+//
+// Encontrado na auditoria adversarial de 13/08/2026, reproduzido antes de ser
+// consertado. Ana aprovava o pareamento do computador dela; Bruno mandava o
+// MESMO código e recebia `ok: true` com o nome da máquina da Ana.
+//
+// Nenhuma credencial vazava — o token só sai para quem apresenta a chave, e a
+// chave o Bruno não tem. O dano era outro, e de duas naturezas:
+//
+//  · FALSO SUCESSO. A tela do Bruno dizia "PC-DA-ANA conectado" enquanto a
+//    lista de dispositivos dele continuava vazia. É a mentira com selo de
+//    sucesso que este kernel inteiro existe para impedir.
+//  · ORÁCULO ENTRE OPERADORES. Ele confirmava que aquele código existia e
+//    aprendia o nome do computador de outra pessoa — e sem pagar cota, porque
+//    a janela de erro só é consumida quando o código NÃO é encontrado.
+// ===========================================================================
+
+test('código já aprovado por outro operador é indistinguível de código errado', async () => {
+  const { p, banco } = registro();
+  const pedido = p.abrir({ nome: 'PC-DA-ANA', plataforma: 'win32', versao: '1.0.0' })!;
+
+  const daAna = await p.aprovar(pedido.codigo, ANA);
+  assert.equal(daAna.ok, true, 'a dona precisa conseguir aprovar');
+
+  const doBruno = await p.aprovar(pedido.codigo, BRUNO);
+  assert.equal(doBruno.ok, false, 'aprovar máquina de outro operador não pode dar certo');
+  assert.ok(
+    !JSON.stringify(doBruno).includes('PC-DA-ANA'),
+    'a resposta ao intruso não pode carregar o nome do computador alheio',
+  );
+  assert.match(
+    (doBruno as { motivo: string }).motivo,
+    /não confere ou já expirou/i,
+    'a frase tem que ser a mesma do código inexistente — senão vira oráculo',
+  );
+
+  // E o efeito no mundo continua sendo só o da dona.
+  assert.deepEqual(
+    (await p.listar('u-bruno')).length,
+    0,
+    'o intruso não pode ganhar dispositivo nenhum',
+  );
+  assert.equal((await p.listar('u-ana')).length, 1);
+  assert.equal(banco.linhas.length, 1, 'nenhuma segunda credencial pode nascer da tentativa');
+});
+
+test('a dona ainda pode clicar duas vezes sem emitir duas credenciais', async () => {
+  const { p, banco } = registro();
+  const pedido = p.abrir({ nome: 'PC-DA-ANA', plataforma: 'win32', versao: '1.0.0' })!;
+
+  const primeira = await p.aprovar(pedido.codigo, ANA);
+  const segunda = await p.aprovar(pedido.codigo, ANA);
+
+  assert.equal(primeira.ok, true);
+  assert.equal(segunda.ok, true, 'duplo clique é o caso comum e não pode virar erro');
+  assert.equal(banco.linhas.length, 1, 'o segundo clique não pode deixar credencial órfã no banco');
+});

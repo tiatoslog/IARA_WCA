@@ -316,9 +316,34 @@ export class RegistroPareamento {
     }
 
     if (pedido.aprovado) {
-      /* Uso único: o segundo "autorizar" no mesmo código não emite uma segunda
-         credencial. Duplo clique é o caso comum, e ele não pode deixar uma
-         credencial órfã viva no banco para sempre. */
+      /**
+       * Uso único: o segundo "autorizar" no mesmo código não emite uma segunda
+       * credencial. Duplo clique é o caso comum, e ele não pode deixar uma
+       * credencial órfã viva no banco para sempre.
+       *
+       * QUEM aprovou entra na condição, e essa linha fechou um defeito real
+       * encontrado na auditoria de 13/08/2026. Sem ela, um segundo operador que
+       * mandasse o mesmo código recebia `ok: true` com o NOME da máquina alheia:
+       *
+       *   · falso sucesso — a tela dele dizia "PC-DA-ANA conectado" enquanto a
+       *     lista de dispositivos dele continuava vazia. Nenhuma credencial
+       *     vazava (o token exige a chave), mas a afirmação era mentira, e
+       *     mentira com selo de sucesso é o que este kernel inteiro combate;
+       *   · oráculo entre operadores — ele confirmava que aquele código existia
+       *     e aprendia o nome do computador de outra pessoa, sem pagar cota,
+       *     porque o caminho de acerto não consome a janela de erro.
+       *
+       * Para quem não é o dono, isto agora é indistinguível de um código
+       * errado: mesma frase, mesma cota. É a mesma disciplina de
+       * `verificarToken`, que não separa expirado de inexistente para não virar
+       * oráculo de contas válidas.
+       */
+      if (pedido.aprovado.id_usuario !== quem.id_usuario) {
+        if (!janela.permitir(agora)) {
+          return { ok: false, motivo: 'Tentativas demais. Espere um minuto e peça um código novo.' };
+        }
+        return { ok: false, motivo: 'Esse código não confere ou já expirou. Peça um novo no computador.' };
+      }
       return { ok: true, nome: pedido.nome };
     }
 
