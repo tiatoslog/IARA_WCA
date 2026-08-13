@@ -690,6 +690,9 @@ export class Kernel {
           sinal: controle.signal,
           concedidas: this.politica.permissoesDe(this.papel),
           registro: this.registro,
+          // Os defeitos cognitivos desta sessão. Só a auditoria lê — ver
+          // `ContextoHabilidade.erros`.
+          erros: this.erros,
           operacao,
         });
 
@@ -1003,6 +1006,9 @@ export class Kernel {
           sinal: controle.signal,
           concedidas: this.politica.permissoesDe(this.papel),
           registro: this.registro,
+          // Os defeitos cognitivos desta sessão. Só a auditoria lê — ver
+          // `ContextoHabilidade.erros`.
+          erros: this.erros,
           operacao,
         },
         { texto: '', detalhe: mensagem, resolveu: false },

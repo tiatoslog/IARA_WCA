@@ -15,6 +15,7 @@ import type { CapacidadeAtiva } from '../../../lib/estado';
 import type { Dominio } from '../../../lib/capacidades';
 import type { Operacao, SemanticaEfeito } from './Operacao';
 import type { RegistroOperacoes } from './RegistroOperacoes';
+import type { RegistroErros } from './RegistroErros';
 
 export type Permissao =
   | 'rede' // fala com a internet
@@ -138,6 +139,19 @@ export interface ContextoHabilidade {
    * identidade persistida, ver `Kernel.abrirOperacao`.
    */
   readonly operacao: Operacao | null;
+  /**
+   * Os defeitos cognitivos acumulados NESTA sessão, para quem audita.
+   *
+   * OPCIONAL, e a opcionalidade não é preguiça: o registro é por Kernel, e há
+   * caminhos legítimos que executam habilidade sem um (testes de porta, e o
+   * verificador quando roda isolado). Quem depende dele trata a ausência
+   * dizendo que não conseguiu ler — nunca relatando "nenhum erro", que é a
+   * mesma mentira de um diagnóstico que omite o que não conseguiu medir.
+   *
+   * Só a auditoria usa. Uma segunda habilidade precisando disto é o momento de
+   * revisar se o lugar certo continua sendo o contexto.
+   */
+  readonly erros?: RegistroErros;
 }
 
 export interface ResultadoHabilidade {

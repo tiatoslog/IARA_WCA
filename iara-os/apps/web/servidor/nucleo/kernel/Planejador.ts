@@ -184,6 +184,19 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
     ],
   }),
 
+  auditoria: () => ({
+    objetivo: 'Auditar o que a IARA consegue observar de si mesma',
+    origem: 'deterministico',
+    passos: [
+      passo(
+        0,
+        'Conferir capacidades desligadas, erros repetidos, planos ineficazes e a prova do jornal',
+        'auditar_sistema',
+        {},
+      ),
+    ],
+  }),
+
   diagnostico: () => ({
     objetivo: 'Relatar o estado real de cada elo da cadeia',
     origem: 'deterministico',

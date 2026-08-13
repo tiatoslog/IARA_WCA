@@ -29,7 +29,13 @@ import type { Habilidade } from '../Habilidade';
 import { braco } from '../../Braco';
 import { aplicativoFechavelDoProcesso } from '../../AgenteLocal';
 import { interpretarMedicao } from '../../SondasDesempenho';
-import { investigarLentidao, redigirInvestigacao } from '../MotorAnalise';
+import {
+  confrontar,
+  diagnosticarLentidao,
+  investigarLentidao,
+  redigirInvestigacao,
+} from '../MotorAnalise';
+import { assinar, memoriaDeSolucoes } from '../MemoriaDeSolucoes';
 import { planosPropostos } from '../PlanosPropostos';
 import { passosExecutaveis } from '../Investigacao';
 
@@ -120,6 +126,25 @@ export const investigarLentidaoHabilidade: Habilidade = {
     }
 
     const anterior = planosPropostos.referencia(ctx.id_usuario);
+
+    /**
+     * O APRENDIZADO ACONTECE AQUI, e antes da análise nova de propósito: o
+     * desfecho da tentativa anterior é sobre a assinatura ANTERIOR, não sobre a
+     * situação que acabou de ser medida. Gravar depois faria a IARA aprender que
+     * o plano A resolve o problema que ele produziu ao ser executado.
+     */
+    if (anterior?.plano_tentado && anterior.rotulo_tentado) {
+      const antes = investigarLentidao(anterior.medicao, null, aplicativoFechavelDoProcesso);
+      const desfecho = confrontar(anterior, medicao);
+      if (desfecho) {
+        memoriaDeSolucoes.registrar({
+          id_usuario: ctx.id_usuario,
+          assinatura: assinar(antes.diagnostico),
+          rotulo: anterior.rotulo_tentado,
+          veredito: desfecho.veredito,
+        });
+      }
+    }
     /**
      * A allowlist entra AQUI, e não dentro do `MotorAnalise`.
      *
@@ -128,7 +153,17 @@ export const investigarLentidaoHabilidade: Habilidade = {
      * O catálogo pode: é ele que passa pelo `Kernel.abrirOperacao`, que é o
      * portal. Ver `Fronteira.ts` e o comentário de `PodeFechar`.
      */
-    const investigacao = investigarLentidao(medicao, anterior, aplicativoFechavelDoProcesso);
+    /**
+     * O histórico é consultado pela assinatura da situação de AGORA — que só
+     * existe depois de diagnosticar. Duas passadas pelo diagnóstico é o preço, e
+     * ele é irrisório: tudo aqui é aritmética sobre uma medição já feita, sem
+     * token e sem I/O.
+     */
+    const assinaturaAgora = assinar(diagnosticarLentidao(medicao));
+    const investigacao = investigarLentidao(medicao, anterior, aplicativoFechavelDoProcesso, {
+      relato: memoriaDeSolucoes.contar(ctx.id_usuario, assinaturaAgora),
+      preferido: memoriaDeSolucoes.preferido(ctx.id_usuario, assinaturaAgora),
+    });
 
     /**
      * A TENTATIVA SÓ CONTA COMO FRACASSO SE HOUVE TENTATIVA.

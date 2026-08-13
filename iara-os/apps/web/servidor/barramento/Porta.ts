@@ -21,6 +21,8 @@ import { BarramentoEventos } from '../nucleo/kernel/BarramentoEventos';
 import { CompiladorSnapshot } from '../nucleo/kernel/CompiladorSnapshot';
 import { Kernel } from '../nucleo/kernel/Kernel';
 import { CicloAutonomo } from '../nucleo/CicloAutonomo';
+import { braco } from '../nucleo/Braco';
+import { interpretarMedicao } from '../nucleo/SondasDesempenho';
 import { prepararOperacionais } from '../nucleo/kernel/habilidades/operacionais';
 import { lerPacoteCliente } from '../../lib/protocolo';
 import { outrosOperadores } from '../../lib/operadores';
@@ -286,6 +288,42 @@ export function conectarOperador(socket: WebSocket): void {
                  */
                 void memoria
                   .registrar(dono.id_usuario, 'iara', texto, 'sistema_local')
+                  .catch(() => undefined);
+              },
+              undefined,
+              /**
+               * O VIGIA (§12). Ele mede pela mesma ponte de sempre — o braço —,
+               * e por isso enxerga o computador DO OPERADOR, não o do motor.
+               * Sem braço, a medição falha e o vigia simplesmente cala: é
+               * preferível não avisar a avisar sobre a máquina errada.
+               */
+              async () => {
+                const relato = await braco.executar({
+                  acao: 'medir_desempenho',
+                  parametros: {},
+                  id_usuario: dono.id_usuario,
+                  sessao: 'vigia',
+                });
+                return relato.estado === 'sucesso' ? interpretarMedicao(relato.dados) : null;
+              },
+              /**
+               * O aviso sai pelo MESMO canal de qualquer outra fala da IARA,
+               * exatamente como o lembrete vencido — e pela mesma razão. Um
+               * alerta que só aparece no console técnico é um alerta não dado.
+               *
+               * `rota: 'sistema_local'` e `ms: 0` são a verdade: nasceu do
+               * vigia, não gastou token e não houve turno.
+               */
+              (aviso) => {
+                r.barramento.publicar({
+                  tipo: 'TAREFA_CONCLUIDA',
+                  id_mensagem: `vigia-${aviso.assunto}-${Date.now()}`,
+                  texto: aviso.texto,
+                  rota: 'sistema_local',
+                  ms: 0,
+                });
+                void memoria
+                  .registrar(dono.id_usuario, 'iara', aviso.texto, 'sistema_local')
                   .catch(() => undefined);
               },
             );

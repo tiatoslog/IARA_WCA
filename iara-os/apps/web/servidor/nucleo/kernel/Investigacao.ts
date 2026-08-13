@@ -379,12 +379,29 @@ export interface Recomendacao {
 /**
  * Escolhe e EXPLICA. Lança com lista vazia — recomendar nada não é um resultado,
  * é um erro de quem chamou.
+ *
+ * `preferidoPorHistorico` é o DESEMPATE do §26, e é só isso: o rótulo de um
+ * plano que já resolveu esta mesma situação antes. Ele só age entre planos
+ * EMPATADOS na pontuação — nunca sobrepõe a fórmula. Ver o cabeçalho de
+ * `MemoriaDeSolucoes` para a razão: uma recomendação que se explica por "foi
+ * assim antes" é como um sistema aprende a repetir o próprio erro com confiança
+ * crescente.
  */
-export function recomendar(planos: readonly PlanoDeAcao[]): Recomendacao {
+export function recomendar(
+  planos: readonly PlanoDeAcao[],
+  preferidoPorHistorico?: string | null,
+): Recomendacao {
   if (planos.length === 0) {
     throw new Error('recomendar: nenhuma alternativa para comparar');
   }
-  const ordenados = [...planos].sort((a, b) => pontuarPlano(b) - pontuarPlano(a));
+  const ordenados = [...planos].sort((a, b) => {
+    const p = pontuarPlano(b) - pontuarPlano(a);
+    if (p !== 0) return p;
+    if (!preferidoPorHistorico) return 0;
+    const ha = a.rotulo === preferidoPorHistorico ? 1 : 0;
+    const hb = b.rotulo === preferidoPorHistorico ? 1 : 0;
+    return hb - ha;
+  });
   const escolhido = ordenados[0];
   const descartados = ordenados.slice(1);
 
@@ -398,13 +415,19 @@ export function recomendar(planos: readonly PlanoDeAcao[]): Recomendacao {
    * entrega quase tanto quanto o B com risco menor" é uma recomendação; "escolhi
    * o A" é um sorteio narrado.
    */
+  const porHistorico =
+    preferidoPorHistorico && escolhido.rotulo === preferidoPorHistorico
+      ? ' Ele também é o que já resolveu isto antes.'
+      : '';
+
   const justificativa =
-    melhorBeneficio.id !== escolhido.id
+    (melhorBeneficio.id !== escolhido.id
       ? `Escolhi o plano ${escolhido.id} (${escolhido.rotulo}): o ${melhorBeneficio.id} entrega mais, ` +
         `mas com risco ${melhorBeneficio.risco} contra ${escolhido.risco}. ` +
         `Prefiro o que resolve com o menor risco de estragar outra coisa.`
       : `Escolhi o plano ${escolhido.id} (${escolhido.rotulo}): é o de maior benefício ` +
-        `(${escolhido.beneficio}) e o risco é ${escolhido.risco}, esforço ${escolhido.esforco}.`;
+        `(${escolhido.beneficio}) e o risco é ${escolhido.risco}, esforço ${escolhido.esforco}.`) +
+    porHistorico;
 
   return { escolhido, descartados, justificativa };
 }

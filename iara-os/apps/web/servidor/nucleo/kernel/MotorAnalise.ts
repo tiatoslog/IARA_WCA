@@ -657,6 +657,15 @@ export interface Investigacao {
    * IARA chegou ao fim do que sabe medir.
    */
   readonly esgotado: boolean;
+  /**
+   * O que já se tentou para esta MESMA situação, em outras ocasiões (§26). Vazio
+   * na primeira vez — que é o caso normal.
+   *
+   * Sai como `memoria` no vocabulário de `Verdade.ts`, e a redação o mantém
+   * SEPARADO do que foi medido agora: que o plano A tenha resolvido em julho não
+   * é evidência sobre a máquina de hoje.
+   */
+  readonly historico: string;
 }
 
 export interface ConfrontoAnterior {
@@ -733,10 +742,24 @@ export function confrontar(anterior: Anterior | null, agora: Medicao): Confronto
   };
 }
 
+/**
+ * O que a memória de soluções tem a dizer sobre esta situação — injetado, não
+ * alcançado, pela mesma razão de `PodeFechar`: o motor de análise é puro, e a
+ * memória é estado do processo. Ausente, a investigação simplesmente não
+ * consulta histórico, que é o que acontece na primeira vez.
+ */
+export interface Historico {
+  /** O relato para a resposta, já formatado. Vazio quando não há o que contar. */
+  readonly relato: string;
+  /** O rótulo que desempata entre planos de mesma pontuação. */
+  readonly preferido: string | null;
+}
+
 export function investigarLentidao(
   medicao: Medicao,
   anterior: Anterior | null = null,
   podeFechar?: PodeFechar,
+  historico: Historico | null = null,
 ): Investigacao {
   const diagnostico = diagnosticarLentidao(medicao);
   const planos = planosParaLentidao(medicao, diagnostico, podeFechar);
@@ -750,7 +773,10 @@ export function investigarLentidao(
    * Esgotada a linha de investigação, também não há: insistir com a quarta
    * alternativa depois de três medidas sem sucesso é propor por hábito.
    */
-  const recomendacao = diagnostico.anomalias.length > 0 && !esgotado ? recomendar(planos) : null;
+  const recomendacao =
+    diagnostico.anomalias.length > 0 && !esgotado
+      ? recomendar(planos, historico?.preferido ?? null)
+      : null;
 
   return {
     diagnostico,
@@ -759,6 +785,7 @@ export function investigarLentidao(
     recomendacao,
     veredito: confrontar(anterior, medicao),
     esgotado,
+    historico: historico?.relato ?? '',
   };
 }
 
@@ -862,6 +889,16 @@ export function redigirInvestigacao(inv: Investigacao): string {
         'Me conte o que exatamente fica lento e em que momento, que eu procuro por outro lado.',
     );
     return linhas.join('\n');
+  }
+
+  /**
+   * O HISTÓRICO ENTRA DEPOIS DAS HIPÓTESES E ANTES DOS PLANOS, e a posição é a
+   * mesma disciplina do resto: ele não é medição (não pode ficar junto do que
+   * foi medido agora) e não é conclusão (não pode virar hipótese). É contexto que
+   * ajuda a escolher — e por isso fica encostado na lista de alternativas.
+   */
+  if (inv.historico) {
+    linhas.push('', inv.historico);
   }
 
   if (inv.planos.length > 0) {

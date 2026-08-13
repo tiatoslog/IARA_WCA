@@ -211,6 +211,23 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     nome: 'sistema',
     acionavel: true,
   },
+  /**
+   * AUDITORIA vem antes de `diagnostico` porque as duas casam "checagem" e
+   * respondem coisas diferentes: `diagnostico` é o autoteste dos elos da cadeia
+   * (motor, banco, braço), e esta procura o que está ERRADO — capacidade
+   * desligada, erro que se repete, plano que nunca resolve, prova sem chave.
+   *
+   * `auditoria` NUNCA sozinha, pela lição de `frota`: "auditoria" é palavra do
+   * dia a dia da Atos Log — há até um assunto `auditoria` em `MemoriaFatos`. "a
+   * auditoria da transportadora chega quinta" não é um pedido de autodiagnóstico.
+   * O que qualifica é o verbo de execução junto, ou a referência explícita ao
+   * que a IARA deve olhar.
+   */
+  {
+    re: /\b(faz|faca|fazer|roda|rodar|executa|executar|quero|preciso de)\s+(uma\s+|a\s+)?auditoria\b|\bauditoria\s+(do sistema|da iara|geral|interna)\b|\bo que (esta|ta) (errado|ruim) (por aqui|no sistema|com voce)\b|\bo que precisa de atencao\b/,
+    nome: 'auditoria',
+    acionavel: true,
+  },
   {
     re: /\b(diagnostico|diagnosticar|autoteste|auto-teste|checagem geral|status geral|voce esta (ok|bem|funcionando|online)|esta tudo (ok|certo|funcionando))\b/,
     nome: 'diagnostico',
@@ -406,6 +423,7 @@ export class MotorPercepcao {
     if (ancoras.includes('fechar_app')) return 'encerramento de aplicativo';
     if (ancoras.includes('listar_arquivos')) return 'inventário de pasta';
     if (ancoras.includes('executar_plano')) return 'autorização de um plano proposto';
+    if (ancoras.includes('auditoria')) return 'auditoria do que a IARA observa de si';
     if (ancoras.includes('lentidao')) return 'investigação de lentidão no computador do operador';
     if (ancoras.includes('sistema')) return 'estado da máquina do operador';
     if (ancoras.includes('diagnostico')) return 'autodiagnóstico do sistema';

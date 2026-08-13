@@ -27,15 +27,44 @@
 import type { EstadoAtomico } from './EstadoAtomico';
 import type { MemoriaOperacional } from './MemoriaOperacional';
 import { agenda as agendaPadrao, type Agenda, type Lembrete } from './Agenda';
+import { Vigia, type Aviso } from './kernel/Vigia';
+import type { Medicao } from './SondasDesempenho';
 
 const INTERVALO_MS = 15_000;
 const HORA_CONSOLIDACAO = 3;
+
+/**
+ * De quanto em quanto tempo o vigia MEDE a máquina.
+ *
+ * Muito mais longo que o tique, e a distância é o ponto: o tique custa
+ * praticamente nada (aritmética sobre estado em memória), enquanto uma medição
+ * abre o PowerShell e dorme um segundo amostrando processos. Vigiar na cadência
+ * do tique transformaria a IARA na causa da lentidão que ela procura — que é a
+ * forma mais constrangedora possível de este recurso falhar.
+ *
+ * Dez minutos também é a granularidade certa para o que ele observa: memória e
+ * disco não viram problema em quinze segundos.
+ */
+const INTERVALO_VIGIA_MS = 10 * 60 * 1000;
 
 /** Chamado quando o estado mudou por metabolismo e vale reprojetar. */
 export type AvisoDeMudanca = () => void;
 
 /** Chamado quando um lembrete venceu e precisa ser dito ao operador. */
 export type AnuncioDeLembrete = (lembrete: Lembrete) => void;
+
+/**
+ * Como o ciclo mede a máquina do operador. `null` = não deu para medir agora,
+ * e nesse caso o vigia simplesmente não tem o que dizer.
+ *
+ * INJETADO, e não importado: o ciclo é metabolismo, e metabolismo não abre
+ * PowerShell por conta própria. Quem monta o ciclo (`Porta.ts`) é quem sabe
+ * alcançar o braço. É a mesma disciplina de `anunciar`.
+ */
+export type MedicaoDaMaquina = () => Promise<Medicao | null>;
+
+/** Chamado quando o vigia encontrou algo que vale interromper o operador. */
+export type AnuncioDeAviso = (aviso: Aviso) => void;
 
 export class CicloAutonomo {
   private timer: NodeJS.Timeout | null = null;
@@ -54,7 +83,17 @@ export class CicloAutonomo {
      */
     private readonly anunciar: AnuncioDeLembrete | null = null,
     private readonly agenda: Agenda = agendaPadrao,
+    /**
+     * As duas metades do vigia (§12). Ambas opcionais, e a ausência de qualquer
+     * uma simplesmente desliga a vigilância — um ciclo sem vigia é um ciclo que
+     * não vigia, não um ciclo quebrado. É a mesma escolha de `anunciar`.
+     */
+    private readonly medir: MedicaoDaMaquina | null = null,
+    private readonly alertar: AnuncioDeAviso | null = null,
   ) {}
+
+  private readonly vigia = new Vigia();
+  private vigiadoEm = 0;
 
   iniciar(): void {
     if (this.timer) return;
@@ -91,6 +130,7 @@ export class CicloAutonomo {
       }
 
       await this.entregarVencidos(sinal);
+      await this.talvezVigiar(sinal);
       await this.talvezConsolidar(sinal);
     } catch (erro) {
       if (!sinal.aborted) {
@@ -122,6 +162,38 @@ export class CicloAutonomo {
       if (sinal.aborted) return;
       this.anunciar(lembrete);
       await this.agenda.marcarEntregue(this.idUsuario, lembrete.id);
+    }
+  }
+
+  /**
+   * A vigilância do §12: medir de vez em quando e falar só quando vale.
+   *
+   * A DECISÃO DE FALAR NÃO MORA AQUI — mora no `Vigia`, que confere autonomia,
+   * borda e carência. Este método só resolve a CADÊNCIA, que é assunto do ciclo:
+   * ele é quem tem relógio.
+   *
+   * O carimbo de tempo sai ANTES da medição, e não depois. Depois, uma medição
+   * que demora (é justamente na máquina lenta que ela demora) faria o intervalo
+   * real virar "dez minutos mais o tempo da última", e duas medições poderiam se
+   * sobrepor num tique atrasado. Antes, a cadência é a cadência.
+   *
+   * NÃO PROPAGA ERRO: uma sonda que falhou não pode derrubar o metabolismo do
+   * operador. O `tique` já tem um `catch`, e chegar lá com uma falha de medição
+   * cancelaria a consolidação noturna que vem depois.
+   */
+  private async talvezVigiar(sinal: AbortSignal): Promise<void> {
+    if (!this.medir || !this.alertar) return;
+    const agora = Date.now();
+    if (agora - this.vigiadoEm < INTERVALO_VIGIA_MS) return;
+    this.vigiadoEm = agora;
+
+    try {
+      const medicao = await this.medir();
+      if (sinal.aborted || !medicao) return;
+      const aviso = this.vigia.avaliar(medicao);
+      if (aviso) this.alertar(aviso);
+    } catch (erro) {
+      console.warn(`[iara] vigia: ${(erro as Error).message}`);
     }
   }
 

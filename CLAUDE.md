@@ -89,6 +89,20 @@ executar um plano "por dentro" de uma habilidade: isso cria um segundo caminho
 de execução que nenhuma dessas portas vigia. Autorizar o plano também não
 substitui a confirmação de energia: são duas portas, e as duas ficam de pé.
 
+**Autonomia é teto, nunca concessão.** `Autonomia.ts` pode IMPEDIR uma ação que
+as travas permitiriam; nunca PERMITE uma que elas impedem. No nível máximo, um
+plano emitido pela LLM continua sem conseguir desligar a máquina — o
+`PorteiroAutorizacao` não conhece esse módulo, e não deve conhecer.
+
+**Detectar não é executar.** O `Vigia` fala e para. Ele avisa na *borda* (quando
+a situação vira anômala), não enquanto ela persiste, e respeita carência — um
+alerta por tique é o que ensina o operador a ignorar alertas.
+
+**Histórico desempata, não decide.** A `MemoriaDeSolucoes` entra em
+`recomendar` só para desfazer empate na pontuação. Um histórico que sobrepõe a
+fórmula produz escolhas que só se explicam por "foi assim antes" — que é como um
+sistema aprende a repetir o próprio erro com confiança crescente.
+
 **Quem raciocina não alcança o mundo.** `MotorAnalise` não importa
 `AgenteLocal` — nem para ler a allowlist. O que ele precisa saber sobre efeitos
 entra por injeção, vindo do catálogo, que é quem passa pelo portal. A fronteira
