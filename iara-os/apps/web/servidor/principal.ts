@@ -35,6 +35,7 @@ import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
 import { diagnosticoWhatsapp } from './canais/WhatsApp';
 import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
 import { estadoDaChave } from './nucleo/kernel/Prova';
+import { conferirAmbiente } from './nucleo/kernel/Configuracao';
 
 carregarEnv({ path: '.env.local' });
 carregarEnv();
@@ -231,6 +232,40 @@ async function montarAnexoNext(dev: boolean): Promise<{
 }
 
 async function subir(): Promise<void> {
+  /**
+   * FALHA-FECHADA Nº 0 — configuração contaminada. Vem ANTES das outras duas
+   * porque as outras duas LEEM configuração para decidir, e decidir a partir de
+   * um valor que carrega duas coisas dentro é decidir sobre nada.
+   *
+   * O incidente que a trouxe: `ANTHROPIC_API_KEY` valia `sk-ant-…\nCRON_SECRET=…`
+   * no host, porque alguém colou duas linhas num campo só. O processo subiu
+   * feliz, anunciou raciocínio profundo ligado, e falhou em TODA mensagem —
+   * cuspindo a credencial na tela da operadora a cada tentativa. Durou dias.
+   *
+   * Recusar subir é o comportamento certo e não é exagero: a alternativa é um
+   * deploy que parece vivo e não atende, que é o modo de falha mais caro que
+   * existe. E é falha-fechada de verdade — NENHUM efeito externo acontece antes
+   * desta checagem, porque ela roda antes do primeiro `listen`.
+   *
+   * Ausência continua sendo legítima: sem chave a IARA roda local e diz isso.
+   * O que morre aqui é a configuração PRESENTE e INUTILIZÁVEL.
+   */
+  const problemas = conferirAmbiente();
+  if (problemas.length > 0) {
+    console.error(
+      '[iara] RECUSANDO SUBIR: configuração contaminada ou malformada.\n' +
+        problemas.map((p) => `       · ${p.variavel} (${p.gravidade}) ${p.motivo}`).join('\n') +
+        '\n\n' +
+        '       Uma variável de ambiente carrega EXATAMENTE uma configuração. O erro mais\n' +
+        '       comum é colar um bloco de várias linhas no campo de valor de uma variável só\n' +
+        '       no painel do host — o painel aceita, e o valor passa a conter as duas.\n' +
+        '       Abra o painel, separe uma por campo, e suba de novo.\n\n' +
+        '       Nenhum valor foi impresso acima, de propósito: quem lê isto está olhando um\n' +
+        '       log, e log é onde credencial fica guardada mais tempo que em qualquer lugar.',
+    );
+    process.exit(1);
+  }
+
   /**
    * FALHA-FECHADA. Produção sem autenticação era um aviso no log — e aviso
    * não impede deploy incompleto: sem Supabase, a identidade vem de um campo

@@ -22,6 +22,7 @@ import type { Habilidade } from '../Habilidade';
 import { braco, motorTemMaos } from '../../Braco';
 import { ponteDispositivos } from '../../../barramento/PonteDispositivos';
 import { persistenciaEmUso } from '../../ClienteSupabase';
+import { configUtilizavel } from '../Configuracao';
 
 /** O vocabulário do §27: quatro estados, e `desconhecido` é um deles de propósito. */
 type Saude = 'ONLINE' | 'OFFLINE' | 'DEGRADADO' | 'DESCONHECIDO';
@@ -59,7 +60,15 @@ export const diagnosticarSistema: Habilidade = {
     const dispositivos = ponteDispositivos.listar(ctx.id_usuario);
     const maos = motorTemMaos();
     const persistencia = persistenciaEmUso();
-    const nuvem = Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+    /**
+     * TRÊS estados, não dois, e a diferença é o incidente inteiro: uma chave
+     * CONTAMINADA respondia `true` no booleano antigo, e este painel dizia
+     * "ONLINE" enquanto toda requisição à nuvem falhava. Um autodiagnóstico que
+     * confunde "configurada" com "utilizável" é pior que nenhum — ele manda
+     * quem investiga procurar no lugar errado.
+     */
+    const nuvem = configUtilizavel('ANTHROPIC_API_KEY');
+    const chaveContaminada = !nuvem && Boolean(process.env.ANTHROPIC_API_KEY?.trim());
 
     /**
      * Import tardio e deliberado. `habilidades/index.ts` importa ESTE arquivo
@@ -124,10 +133,18 @@ export const diagnosticarSistema: Habilidade = {
       ),
       linha(
         'Raciocínio',
-        nuvem ? 'ONLINE' : 'DEGRADADO',
+        // OFFLINE e não DEGRADADO quando contaminada, e a distinção é o ponto:
+        // DEGRADADO é o modo local DELIBERADO, que funciona como projetado.
+        // Chave contaminada é uma capacidade fora do ar por engano de deploy —
+        // duas situações com o mesmo sintoma e consertos opostos.
+        nuvem ? 'ONLINE' : chaveContaminada ? 'OFFLINE' : 'DEGRADADO',
         nuvem
-          ? 'chave da nuvem presente'
-          : 'sem ANTHROPIC_API_KEY: respondo pelo caminho local, sem raciocínio livre',
+          ? 'chave da nuvem válida'
+          : chaveContaminada
+            ? 'ANTHROPIC_API_KEY está no ambiente mas é inutilizável — mais de uma ' +
+              'configuração no mesmo campo, ou formato errado. Não é falta de chave: ' +
+              'é chave contaminada, e o conserto é no painel de variáveis do host.'
+            : 'sem ANTHROPIC_API_KEY: respondo pelo caminho local, sem raciocínio livre',
       ),
     ];
 

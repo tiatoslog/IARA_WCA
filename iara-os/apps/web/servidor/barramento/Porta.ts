@@ -30,6 +30,7 @@ import { conferirEsquemaSupabase } from '../nucleo/ClienteSupabase';
 import { lerPacoteCliente } from '../../lib/protocolo';
 import { outrosOperadores } from '../../lib/operadores';
 import { papelDe } from '../nucleo/kernel/Papeis';
+import { configUtilizavel } from '../nucleo/kernel/Configuracao';
 import { LimiteVazao } from '../nucleo/kernel/Seguranca';
 import { esquecerLocal, registrarLocal } from '../nucleo/LocalOperador';
 import {
@@ -630,8 +631,17 @@ export function conectarOperador(socket: WebSocket): void {
   });
 }
 
+/**
+ * PRESENÇA NÃO É VALIDADE, e esta função dizia que era.
+ *
+ * `Boolean(env.ANTHROPIC_API_KEY?.trim())` respondia `true` para a chave
+ * contaminada de 13/08. O efeito: o motor se declarava com raciocínio profundo
+ * ligado, a `FuncaoExecutiva` roteava para a nuvem, e a nuvem falhava — toda
+ * vez, com a credencial na mensagem de erro. Um sistema que se diz saudável e
+ * falha a cada requisição é pior que um que se diz quebrado.
+ */
 function nuvemLigada(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+  return configUtilizavel('ANTHROPIC_API_KEY');
 }
 
 export function encerrarResidentes(): void {

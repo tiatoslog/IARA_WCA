@@ -7,6 +7,9 @@
  *  2. FILA: entrega via ring buffer com descarte semântico, para que rede ruim
  *     não vire vazamento de memória nem enxurrada retroativa.
  *  3. BACKPRESSURE: respeita o buffer do socket do sistema operacional.
+ *  4. REDAÇÃO: nenhum segredo do processo atravessa esta fronteira. Ver
+ *     `enviar` — é transporte, não cognição, e é justamente por ser o único
+ *     ponto de saída que a garantia pode ser dada aqui.
  *
  * Ela não sabe o que é percepção, plano ou habilidade. Recebe snapshot pronto
  * da `PonteProjecao` e transmite.
@@ -16,6 +19,7 @@ import type { WebSocket } from 'ws';
 import type { MaquinaDoOperador } from '../../lib/execucao';
 import type { NivelLog, PacoteServidor } from '../../lib/protocolo';
 import type { SnapshotCognitivo } from '../../lib/snapshot';
+import { redigir } from '../nucleo/kernel/Configuracao';
 import { FilaTelemetria } from './FilaTelemetria';
 
 const JANELA_MS = 40;
@@ -111,9 +115,33 @@ export class SessaoOperador {
     for (const pacote of this.fila.drenar()) this.enviar(pacote);
   }
 
+  /**
+   * O ÚLTIMO PONTO ANTES DO OLHO HUMANO — e por isso o lugar da redação.
+   *
+   * Um incidente de 13/08 ensinou por que ela não pode morar no ponto de
+   * origem: `ANTHROPIC_API_KEY` chegou contaminada com um segundo segredo
+   * colado dentro, o SDK a pôs num cabeçalho, o `Headers` recusou, e a exceção
+   * subiu com a chave INTEIRA na mensagem. O `Kernel` a publicou como fala. A
+   * operadora leu a credencial no celular, e ela acabou numa captura de tela.
+   *
+   * Consertar aquele `catch` teria consertado aquele caminho. Existem trinta —
+   * toda `(erro as Error).message` que vira texto de pacote, e as que forem
+   * escritas depois desta linha. Redigir no ORIGEM é uma disciplina que se
+   * esquece; redigir na SAÍDA é uma propriedade do canal.
+   *
+   * Sobre o pacote SERIALIZADO, não campo a campo, de propósito: assim vale
+   * para todo campo de texto de todo tipo de pacote — inclusive os que ainda
+   * não existem — sem que ninguém precise lembrar de marcar quais são
+   * sensíveis. Custa uma varredura de string por pacote drenado, no caminho
+   * que já paga um `JSON.stringify`.
+   *
+   * Isto é a SEGUNDA porta. A primeira é `conferirAmbiente` recusando a subida
+   * com configuração contaminada; esta existe para o dia em que um segredo
+   * escapar por um caminho que ninguém mapeou.
+   */
   private enviar(pacote: PacoteServidor): void {
     if (this.socket.readyState !== 1) return;
-    this.socket.send(JSON.stringify(pacote));
+    this.socket.send(redigir(JSON.stringify(pacote)));
   }
 
   get descartados(): number {

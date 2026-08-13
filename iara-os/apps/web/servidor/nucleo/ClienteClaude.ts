@@ -16,6 +16,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { RegistroMemoria } from '../../lib/estado';
+import { lerConfig } from './kernel/Configuracao';
 
 export class NuvemIndisponivel extends Error {}
 
@@ -332,10 +333,21 @@ export class ClienteClaude {
   private readonly modelo: string;
   private readonly esforco: string;
 
+  /**
+   * `lerConfig` no lugar de `process.env.X?.trim()`, e a diferença não é
+   * estilo. `.trim()` limpa as PONTAS; o incidente de 13/08 tinha um `\n` e um
+   * segundo segredo no MEIO do valor. A chave passava por aqui inteira, ia
+   * para o cabeçalho `x-api-key` e o `Headers` derrubava a requisição — uma
+   * vez por mensagem, para sempre, com a credencial na exceção.
+   *
+   * Agora contaminação LEVANTA aqui. Quem sobe o motor nunca vê esta exceção,
+   * porque `conferirAmbiente()` recusa a subida antes; ela existe para o
+   * processo que instancia isto por outro caminho — teste, script, worker.
+   */
   constructor() {
-    const chave = process.env.ANTHROPIC_API_KEY?.trim();
-    this.modelo = process.env.IARA_MODELO?.trim() || 'claude-opus-5';
-    this.esforco = process.env.IARA_ESFORCO?.trim() || 'low';
+    const chave = lerConfig('ANTHROPIC_API_KEY');
+    this.modelo = lerConfig('IARA_MODELO') ?? 'claude-opus-5';
+    this.esforco = lerConfig('IARA_ESFORCO') ?? 'low';
     if (chave) this.cliente = new Anthropic({ apiKey: chave });
   }
 
