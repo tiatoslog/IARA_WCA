@@ -81,6 +81,20 @@ export const ROTULO_DO_LOCAL: Record<LocalAutorizado, string> = {
 };
 
 /**
+ * O mesmo lugar, dito dentro de uma frase.
+ *
+ * Existe porque o rótulo sozinho não tem preposição, e "na Documentos" é um
+ * tropeço que a voz denuncia na hora — no texto quase passa, falado não passa.
+ * Duas entradas do mesmo fato só se justificam quando servem a duas gramáticas,
+ * e é o caso: o rótulo nomeia o lugar, isto o situa.
+ */
+export const NO_LOCAL: Record<LocalAutorizado, string> = {
+  area_de_trabalho: 'na Área de Trabalho',
+  documentos: 'em Documentos',
+  downloads: 'em Downloads',
+};
+
+/**
  * Resolve o local nomeado para um caminho REAL desta máquina. Windows com
  * OneDrive move Desktop/Documentos para dentro do OneDrive (com nome
  * localizado) — por isso é uma lista de candidatos, não um caminho fixo.
@@ -658,12 +672,26 @@ export class AgenteLocal {
     const destino = path.join(raiz, nome);
     if (existsSync(destino)) {
       this.auditar(idUsuario, 'criar_pasta', true, 'já existia');
-      return `A pasta "${nome}" já existe em ${ROTULO_DO_LOCAL[local]} (${destino}). Não mexi em nada.`;
+      return `A pasta "${nome}" já existe ${NO_LOCAL[local]}. Não mexi em nada.`;
     }
 
     await mkdir(destino);
     this.auditar(idUsuario, 'criar_pasta', true, destino);
-    return `Pasta "${nome}" criada em ${ROTULO_DO_LOCAL[local]}: ${destino}`;
+    /**
+     * O CAMINHO SAIU DAQUI, e a razão é que este texto é FALADO.
+     *
+     * A frase antiga terminava em `: C:\Users\daian\Desktop\contratos aereos`, e
+     * a voz neural leu isso como se fosse endereço ditado ao telefone — "cê,
+     * dois pontos, barra invertida, usuários, barra invertida…". Na tela era
+     * ruído; no ouvido era a IARA soando como uma máquina lendo um log, que é
+     * exatamente a impressão que este produto existe para não dar.
+     *
+     * Nada se perde. O caminho absoluto continua indo para a auditoria (a linha
+     * acima) e é ele que `provaDaPasta` confere no disco — a prova nunca dependeu
+     * desta frase. O rótulo do local é o que a pessoa precisa para achar a pasta,
+     * porque é assim que ela pensa no lugar: "área de trabalho", não "C:\Users".
+     */
+    return `Pronto, criei a pasta "${nome}" ${NO_LOCAL[local]}.`;
   }
 
   /**
@@ -977,8 +1005,15 @@ export class AgenteLocal {
     const bytes = statSync(destino).size;
     this.capturas.set(idUsuario, destino);
     this.auditar(idUsuario, 'capturar_tela', true, `${destino} (${bytes} bytes)`);
+    /**
+     * Pelo mesmo motivo de `criarPasta`: esta frase é FALADA, e um caminho
+     * absoluto vira ditado de barras invertidas no ouvido de quem pediu. O nome
+     * do arquivo e a pasta bastam para achar; o caminho inteiro continua na
+     * auditoria e em `capturaRecenteDe`, que é quem o verificador consulta.
+     */
     return (
-      `Tela capturada: ${destino} (${Math.max(1, Math.round(bytes / 1024))} KB). ` +
+      `Tela capturada em "${PASTA_CAPTURAS}", ${NO_LOCAL[local]}: ${path.basename(destino)} ` +
+      `(${Math.max(1, Math.round(bytes / 1024))} KB). ` +
       'O arquivo ficou no seu computador — eu não abri a imagem nem enviei para lugar nenhum.'
     );
   }

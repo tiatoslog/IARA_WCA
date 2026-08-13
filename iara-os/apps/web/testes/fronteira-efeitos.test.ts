@@ -105,6 +105,12 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       'LEITURA — previsão do tempo, sem efeito no mundo',
     [path.join('servidor', 'nucleo', 'Voz.ts')]:
       'LEITURA — síntese de voz: texto entra, áudio sai, nada muda no mundo',
+    [path.join('servidor', 'braco', 'credencial.ts')]:
+      'ESTADO INTERNO — renovação da sessão DESTE computador no auth do ' +
+      'Supabase. Não é rota para provedor de terceiro: é a IARA se identificando, ' +
+      'do mesmo jeito que o navegador da operadora faz sozinho. Ver a entrada ' +
+      'dele em `Fronteira.ts`, que registra por que a classificação como efeito ' +
+      'externo foi tentada e recusada.',
   };
 
   const comFetch = fontes(path.join(RAIZ, 'servidor'))

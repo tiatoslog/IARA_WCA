@@ -284,6 +284,96 @@ test('1c. executor explode e NÃO há como apurar → desconhecido, nunca "nada 
 });
 
 // ===========================================================================
+// 1d. UM FATO, UMA VEZ
+// ===========================================================================
+
+/**
+ * O DEFEITO, tal como a operadora o viu em 13/08/2026.
+ *
+ * Ela pediu do celular "crie uma pasta de teste na área de trabalho". O
+ * computador dela não estava conectado ao motor, e a IARA respondeu isso três
+ * vezes seguidas:
+ *
+ *   Não consigo fazer isso agora: o seu computador não está conectado a mim.
+ *   Abra o aplicativo da IARA nele e eu executo na hora.
+ *
+ *   [não consegui executar: nenhum braço registrado para este operador e o
+ *   motor não tem as mãos da máquina dele]
+ *
+ *   O resto do pedido eu NÃO executei: Criar a pasta na raiz autorizada:
+ *   nenhum braço registrado para este operador e o motor não tem as mãos da
+ *   máquina dele.
+ *
+ * A primeira frase é perfeita. A segunda é a mesma coisa em linguagem de
+ * máquina. A terceira anuncia um "resto" que não existe — o plano tinha um
+ * passo só. Nenhuma das três camadas está errada sozinha, e cada uma nasceu
+ * consertando uma omissão real; o defeito era de composição.
+ *
+ * Este teste é a forma executável daquele print. Ele não mede tamanho de
+ * resposta — mede REPETIÇÃO, que é o que de fato incomodava.
+ */
+test('1d. passo único que falhou diz o motivo UMA vez, e não anuncia "resto"', async () => {
+  const FRASE = 'Não consigo fazer isso agora: o seu computador não está conectado a mim.';
+  const EVIDENCIA = 'nenhum braço registrado para este operador';
+
+  const h = laboratorio('lab_desktop_ausente', {
+    async executar() {
+      /**
+       * `resolveu: false` com texto humano é exatamente o que a habilidade
+       * `agenteLocal` devolve quando o Braço responde `dispositivo_ausente`: a
+       * frase JÁ é a verdade, e não precisa ser desmentida por ninguém.
+       */
+      return { texto: FRASE, detalhe: `criar_pasta [x] dispositivo_ausente`, resolveu: false };
+    },
+    async verificar() {
+      return { confirmado: false, evidencia: EVIDENCIA, motivo: 'nao_encontrado' as const };
+    },
+  });
+
+  const r = await turnoComHabilidade(h, 'u-final-1d');
+
+  assert.match(r.fala, /não está conectado/i, `a explicação sumiu: "${r.fala}"`);
+
+  const vezes = r.fala.split(EVIDENCIA).length - 1;
+  assert.ok(vezes <= 1, `a mesma evidência apareceu ${vezes} vezes: "${r.fala}"`);
+
+  assert.doesNotMatch(
+    r.fala,
+    /o resto do pedido/i,
+    `anunciou um "resto" num plano de passo único: "${r.fala}"`,
+  );
+});
+
+test('1e. mas a ressalva CONTINUA de pé quando a habilidade afirma ter feito', async () => {
+  /**
+   * A trava do conserto acima. `resolveu: false` é confissão contra o próprio
+   * interesse e por isso dispensa a ressalva; `resolveu: true` desmentido pelo
+   * mundo é a mentira operacional, e ali a ressalva é obrigatória. Sem este
+   * teste, "enxugar a resposta" poderia um dia enxugar justamente a frase que
+   * impede a IARA de afirmar o que não aconteceu.
+   */
+  const h = laboratorio('lab_afirma_sem_prova', {
+    async executar() {
+      return { texto: 'Pasta criada na área de trabalho.', detalhe: 'x', resolveu: true };
+    },
+    async verificar() {
+      return {
+        confirmado: false,
+        evidencia: 'o diretório não existe depois da execução',
+        motivo: 'sem_meio_de_verificar' as const,
+      };
+    },
+  });
+
+  const r = await turnoComHabilidade(h, 'u-final-1e');
+  assert.match(
+    r.fala,
+    /não consigo provar|não consegui confirmar|não consegui executar/i,
+    `afirmou o efeito sem a ressalva: "${r.fala}"`,
+  );
+});
+
+// ===========================================================================
 // 2. TIMEOUT E VERIFICADOR PENDURADO — PELO KERNEL REAL
 // ===========================================================================
 

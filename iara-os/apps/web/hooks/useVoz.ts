@@ -388,6 +388,27 @@ export function useVoz(fala: Fala | null, ativa: boolean, lider: boolean = true)
       elemento.current = audio;
 
       /**
+       * A PERNA QUE SÓ ESTE LADO ENXERGA: bytes prontos no motor → som saindo.
+       *
+       * O motor mede o que ele controla (pensar e sintetizar) e publica em
+       * `canal: "voz"`. O que ele não tem como medir é isto — o download do mp3
+       * até um celular, que com o motor hospedado fora do país é uma travessia
+       * de verdade, e que estava sendo contado como "voz atrasada" sem ninguém
+       * saber de quem era o segundo.
+       *
+       * Fica no console, não na tela: é instrumento de diagnóstico, e o operador
+       * não tem nada a fazer com este número.
+       */
+      const pedidoEm = performance.now();
+      const contar = (marco: string) =>
+        console.info(
+          `[voz] ${marco}: ${Math.round(performance.now() - pedidoEm)} ms desde o pedido do áudio`,
+        );
+      audio.addEventListener('loadedmetadata', () => contar('metadados'), { once: true });
+      audio.addEventListener('canplaythrough', () => contar('baixado'), { once: true });
+      audio.addEventListener('playing', () => contar('som saindo'), { once: true });
+
+      /**
        * Guarda de identidade: `src = ''` num elemento substituído dispara
        * `error` ASSÍNCRONO — sem a guarda, o handler do áudio velho derrubava
        * `tocando` do novo, e com `tocando` falso o barge-in deixava de ser

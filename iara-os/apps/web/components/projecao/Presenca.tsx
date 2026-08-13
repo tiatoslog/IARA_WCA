@@ -107,6 +107,8 @@ export function Presenca({
   falaCorrente,
   voz,
   controles,
+  recolhida = false,
+  aoAlternarRecolhida,
 }: {
   snapshot: SnapshotCognitivo;
   /** Última fala da IARA — o texto que a boca articula. */
@@ -115,6 +117,13 @@ export function Presenca({
   voz: EstadoVoz;
   /** Controles da página (troca de projeção, sair). Flutuam sobre o palco. */
   controles?: ReactNode;
+  /**
+   * A presença está recolhida ao canto? Vale SÓ no celular — quem decide isso é
+   * a folha de estilo, dentro da consulta de mídia. Aqui o componente só
+   * informa o estado e oferece o toque; ele não mede tela, e não deve.
+   */
+  recolhida?: boolean;
+  aoAlternarRecolhida?: () => void;
 }) {
   const [falha, setFalha] = useState<string | null>(null);
   /**
@@ -131,6 +140,36 @@ export function Presenca({
     <section className="presenca">
       <div className="presenca-palco">
         {controles && <div className="presenca-controles">{controles}</div>}
+
+        {/**
+         * O TOQUE que recolhe e devolve o palco. Invisível no computador —
+         * quem o esconde é o CSS, não uma medida de tela em JavaScript: largura
+         * medida no cliente chega DEPOIS da primeira pintura e produziria o
+         * botão piscando na tela do desktop.
+         *
+         * Recolhido, ele cobre o círculo inteiro: o alvo do toque é a própria
+         * gema, que é o que a mão espera tocar. Aberto, ele encolhe para uma
+         * cápsula no canto, ao lado do botão do painel técnico.
+         */}
+        {aoAlternarRecolhida && (
+          <button
+            className="presenca-alternar"
+            onClick={aoAlternarRecolhida}
+            aria-label={recolhida ? 'Abrir a IARA' : 'Recolher a IARA e ver a conversa'}
+            aria-expanded={!recolhida}
+            title={recolhida ? 'Abrir a IARA' : 'Recolher a IARA'}
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden>
+              <path
+                d="M4 6.2 L7.5 9.7 L11 6.2"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        )}
 
         <button
           className={tecnicoAberto ? 'botao-tecnico aberto' : 'botao-tecnico'}

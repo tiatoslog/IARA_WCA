@@ -430,6 +430,13 @@ export function conectarOperador(socket: WebSocket): void {
     if (pacote.tipo === 'mensagem') {
       // Comando humano tem prioridade absoluta sobre o ciclo autônomo.
       residente.ciclo?.parar();
+      /**
+       * A VOZ SEGUE QUEM FALOU. Este é o único lugar do sistema que sabe de
+       * qual tela veio a frase — depois daqui só existe texto. Sem esta linha,
+       * a resposta a um comando mandado do celular sai em voz alta no
+       * computador do escritório, para uma sala vazia.
+       */
+      if (minhaSessao) residente.ponte?.dirigirVozPara(minhaSessao);
       const kernel = residente.kernel;
       const r = residente;
       void kernel.processar(pacote.texto).finally(() => {

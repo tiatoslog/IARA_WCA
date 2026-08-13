@@ -79,11 +79,33 @@ const saidasDe = (e: ExecucaoPlano): string[] =>
   e.passos.filter((p) => p.texto).map((p) => p.texto);
 
 /**
+ * UM PASSO FALA UMA VEZ.
+ *
+ * As três listas abaixo alimentam parágrafos diferentes da mesma resposta, e o
+ * `!p.texto` é o que impede o passo de entrar em dois deles. Sem esse filtro, um
+ * plano de passo único que falhou dizia a MESMA coisa três vezes: o texto da
+ * habilidade ("o seu computador não está conectado a mim"), a ressalva colada
+ * nele mais abaixo, e um "O resto do pedido eu NÃO executei: <a mesma
+ * evidência>" — sendo que não havia resto nenhum.
+ *
+ * Cada uma das três camadas nasceu consertando uma omissão real, e nenhuma está
+ * errada sozinha. O defeito era de composição, e é aqui que ele se fecha: quem
+ * já emprestou texto à resposta não é recontado. Nada se perde — `evidencia`
+ * continua inteira no passo, na auditoria e no jornal, que é onde se responde
+ * "por que não funcionou?".
+ */
+const jaFalouNaResposta = (p: ExecucaoPlano['passos'][number]): boolean => Boolean(p.texto);
+
+/**
  * Passos que NÃO aconteceram. `aguardando_confirmacao` entra aqui porque, do
- * ponto de vista do operador, o efeito não existe — mudou só o motivo.
+ * ponto de vista do operador, o efeito não existe — mudou só o motivo. Passo
+ * barrado pela autorização sempre chega com `texto` vazio (ver o ramo do
+ * `porteiro`), então continua sendo contado aqui, que era o ponto do conserto
+ * original da falha parcial.
  */
 const falhasDe = (e: ExecucaoPlano): string[] =>
   e.passos
+    .filter((p) => !jaFalouNaResposta(p))
     .filter((p) => p.estado === 'falhou' || p.estado === 'aguardando_confirmacao')
     .map((p) => `${p.descricao}: ${p.evidencia}`);
 
@@ -93,6 +115,7 @@ const falhasDe = (e: ExecucaoPlano): string[] =>
  */
 const desconhecidosDe = (e: ExecucaoPlano): string[] =>
   e.passos
+    .filter((p) => !jaFalouNaResposta(p))
     .filter((p) => p.estado === 'desconhecido')
     .map((p) => `${p.descricao}: ${p.evidencia}`);
 
@@ -726,10 +749,31 @@ export class Kernel {
          * técnico; "[não consigo provar o que aconteceu: …]" é o que a IARA de
          * fato tem a dizer.
          */
-        const texto = confirmaAcontecimento(v.estado)
-          ? v.resultado.texto
-          : `${v.resultado.texto}\n\n[${VERBO_DO_ESTADO[v.estado]}: ` +
-            `${naoConfirmado?.evidencia ?? 'esta habilidade não sabe conferir o próprio efeito'}]`;
+        /**
+         * A RESSALVA EXISTE PARA CONTRADIZER, e um texto que já se desmente não
+         * precisa ser desmentido.
+         *
+         * O caso que ela foi feita para pegar é "Pasta criada em Downloads" com
+         * a verificação dizendo que a pasta não está lá: ali a frase da
+         * habilidade AFIRMA um efeito, e deixá-la sozinha é a mentira
+         * operacional. O caso que ela estragava é o oposto — "Não consigo fazer
+         * isso agora: o seu computador não está conectado a mim" seguido de
+         * "[não consegui executar: nenhum braço registrado para este operador]".
+         * Duas frases, um fato, e a segunda em linguagem de máquina.
+         *
+         * `resolveu: false` é confissão contra o próprio interesse, e por isso
+         * dá para confiar nela AQUI (o cabeçalho de `ResultadoHabilidade` avisa
+         * que o contrário — `resolveu: true` — nunca é prova de nada, e é
+         * justamente esse ramo que continua ganhando a ressalva). A evidência
+         * técnica não se perde: ela segue em `passos[].evidencia`, na auditoria
+         * e no jornal.
+         */
+        const jaSeDesmente = !v.resultado.resolveu && v.resultado.texto.trim().length > 0;
+        const texto =
+          confirmaAcontecimento(v.estado) || jaSeDesmente
+            ? v.resultado.texto
+            : `${v.resultado.texto}\n\n[${VERBO_DO_ESTADO[v.estado]}: ` +
+              `${naoConfirmado?.evidencia ?? 'esta habilidade não sabe conferir o próprio efeito'}]`;
 
         passos.push({
           descricao: passo.descricao,

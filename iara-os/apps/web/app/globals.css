@@ -1585,6 +1585,11 @@ ol.plano {
   font-weight: 600;
 }
 
+/* O alternador de palco não existe no computador: lá a presença nunca recolhe. */
+.presenca-alternar {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .presenca {
     flex: none;
@@ -1604,6 +1609,94 @@ ol.plano {
     flex: 1;
     border-left: none;
     border-top: 1px solid var(--c-linha);
+  }
+
+  /* ------------------------------------------------------------------------
+   * MODO CHAT — a única inversão de hierarquia da casa, e ela é do celular.
+   *
+   * A regra da casa é Ambiente → Objetos → HUD → Conteúdo → Painéis, com o
+   * ambiente dominando o campo visual. Num celular ela não sobrevive ao
+   * confronto com a barra do navegador: o palco em 58dvh deixava para a
+   * conversa uma janela de uma mensagem, e a operadora não conseguia ler a
+   * resposta sem rolar. Uma tela que não deixa ler o que a IARA respondeu não
+   * está preservando hierarquia nenhuma.
+   *
+   * A presença NÃO vira enfeite: ela vira OBJETO. Continua sendo o mesmo
+   * Canvas lendo o mesmo snapshot, reagindo a estágio e fala como sempre — só
+   * que num círculo de 56px, no canto, do jeito que um objeto da sala se
+   * comporta quando não é o assunto. Um toque devolve o palco.
+   * --------------------------------------------------------------------- */
+
+  .presenca-alternar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    z-index: 6;
+    top: 14px;
+    right: 56px; /* à esquerda do botão do painel técnico, sem encostar */
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    color: var(--iara-text-tertiary);
+    background: rgba(18, 18, 24, 0.55);
+    border: 1px solid var(--iara-border);
+    border-radius: var(--r-capsula);
+    backdrop-filter: blur(18px) saturate(1.4);
+    cursor: pointer;
+  }
+
+  .tela.chat-expandido .presenca {
+    position: fixed;
+    /* `env()` porque a notch existe: no iPhone o topo da viewport fica embaixo
+       do relógio, e a gema apareceria cortada pela metade. */
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    right: 14px;
+    z-index: 40;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid var(--c-linha-forte);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  }
+
+  .tela.chat-expandido .painel-conversa {
+    flex: 1;
+    height: 100dvh;
+    border-top: none;
+  }
+
+  /* Recolhida, a gema é o próprio botão: o alvo do toque é o objeto, não uma
+     cápsula pendurada nele. */
+  .tela.chat-expandido .presenca-alternar {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    backdrop-filter: none;
+  }
+
+  .tela.chat-expandido .presenca-alternar svg,
+  .tela.chat-expandido .presenca-controles,
+  .tela.chat-expandido .botao-tecnico,
+  .tela.chat-expandido .painel-presenca {
+    display: none;
+  }
+
+  /* A vinheta de estúdio é desenho de palco largo; num círculo de 56px ela só
+     escurece a gema. Ambiente continua ambiente — apenas não neste tamanho. */
+  .tela.chat-expandido .presenca-palco::after {
+    display: none;
+  }
+
+  /* O cabeçalho da conversa passa por baixo da gema flutuante. O recuo é do
+     tamanho dela mais a folga, para o ponto verde do enlace não sumir atrás. */
+  .tela.chat-expandido .conversa-cabecalho {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 18px);
+    padding-right: 82px;
   }
 }
 

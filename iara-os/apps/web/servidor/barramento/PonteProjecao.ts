@@ -56,6 +56,13 @@ export class PonteProjecao {
    */
   private readonly vozEmVoo = new Set<string>();
 
+  /** Instante em que este turno decidiu que ia responder. Âncora da medição de
+   *  latência da voz — ver `vocalizar`. Zero antes do primeiro turno. */
+  private decididoEm = 0;
+
+  /** A tela que falou por último com a IARA. Ver `dirigirVozPara`. */
+  private vozDirigidaA: SessaoOperador | null = null;
+
   constructor(
     private readonly barramento: BarramentoEventos,
     private readonly compilador: CompiladorSnapshot,
@@ -97,7 +104,10 @@ export class PonteProjecao {
      * Não é picotar a fala: o áudio continua sendo sintetizado uma vez, sobre o
      * texto final, com uma prosódia só. O que mudou foi QUANDO o socket abre.
      */
-    if (e.tipo === 'DECISAO_TOMADA') aquecerVoz();
+    if (e.tipo === 'DECISAO_TOMADA') {
+      aquecerVoz();
+      this.decididoEm = Date.now();
+    }
 
     const log = this.traduzir(e);
     if (log) for (const sessao of this.sessoes) sessao.emitirLog(log.nivel, log.texto);
@@ -144,9 +154,46 @@ export class PonteProjecao {
    * remendar do outro lado da fronteira.
    */
   private vocalizar(idMensagem: string, texto: string): void {
+    /**
+     * A MEDIÇÃO DO SILÊNCIO, e ela existe por causa de um erro caro.
+     *
+     * Em 12/08 a demora da voz foi "consertada" por dedução: um `setTimeout` de
+     * 6 s no cliente adivinhava que a síntese tinha falhado. O timer era cego, e
+     * metade dos ~7 s que a operadora contava eram ele mesmo. A lição não foi
+     * "não use timer" — foi "não conserte latência sem medir onde ela está".
+     *
+     * As três pernas ficam separadas de propósito, porque cada uma tem um dono
+     * diferente e um conserto diferente:
+     *
+     *   pensar_ms   decisão → texto pronto. É a LLM. Resposta mais curta encurta
+     *               esta perna, e nada mais encurta.
+     *   sintese_ms  texto pronto → bytes prontos no motor. É a Microsoft, e é a
+     *               perna que a conexão reusada já atacou.
+     *   caracteres  para responder de uma vez se comprimento importa. A medição
+     *               de 12/08 dizia que não (o custo era de conexão), mas ela foi
+     *               feita ANTES do reuso de socket — e o que era verdade sobre
+     *               um handshake por fala pode não ser sobre um socket aberto.
+     *
+     * A quarta perna — bytes prontos → som saindo do alto-falante — não pode ser
+     * medida aqui: ela acontece no celular, do outro lado do Atlântico. Ela é
+     * medida em `useVoz` e sai no console do navegador.
+     */
+    const comecou = Date.now();
+    const pensar = this.decididoEm > 0 ? comecou - this.decididoEm : null;
+
     void sintetizar(idMensagem, texto)
       .catch(() => false)
-      .then(() => {
+      .then((ok) => {
+        console.log(
+          JSON.stringify({
+            canal: 'voz',
+            id_mensagem: idMensagem,
+            ok,
+            pensar_ms: pensar,
+            sintese_ms: Date.now() - comecou,
+            caracteres: texto.length,
+          }),
+        );
         this.vozEmVoo.delete(idMensagem);
         // `encerrar()` pode ter rodado enquanto a rede respondia.
         if (!this.encerrada) this.emitir();
@@ -180,17 +227,49 @@ export class PonteProjecao {
     if (!forcar && assinatura === this.ultimaAssinatura) return;
     this.ultimaAssinatura = assinatura;
     /**
-     * Eleição de líder de voz: só UMA tela reproduz áudio, a mais antiga.
-     * `Set` preserva ordem de inserção, então o primeiro da iteração é o
-     * espelho mais velho. Quando ele fecha, a próxima emissão promove o
-     * seguinte — sem isso, app + abas espelhando o mesmo operador falam
-     * todos ao mesmo tempo e a IARA sai repetida e embolada.
+     * ELEIÇÃO DE LÍDER DE VOZ — só UMA tela reproduz áudio, e ela é A TELA DE
+     * QUEM PERGUNTOU.
+     *
+     * A regra anterior era "a mais antiga", e o `Set` preservando ordem de
+     * inserção resolvia isso de graça. Ela impedia o defeito que existia para
+     * impedir — app e abas falando por cima uma da outra —, mas escolhia a tela
+     * errada. Em 13/08/2026 a operadora mandou um comando pelo CELULAR, de fora
+     * do escritório, e a IARA respondeu em voz alta no computador que estava
+     * ligado em casa, para ninguém. Do lado dela foi silêncio.
+     *
+     * "Mais antiga" nunca foi um critério — era uma consequência da estrutura de
+     * dados, e a diferença só apareceu quando passou a haver duas telas em
+     * lugares FÍSICOS diferentes. O critério de verdade é: a voz sai onde está a
+     * pessoa, e a evidência de onde ela está é o que ela acabou de tocar.
+     *
+     * A ordem antiga continua sendo o desempate. É o que atende o caso legítimo
+     * de uma fala que ninguém pediu — o Vigia avisando de um disco cheio, um
+     * lembrete vencendo —, onde não existe "quem perguntou".
      */
-    let lider = true;
+    const conduz = this.vozDirigidaA && this.sessoes.has(this.vozDirigidaA)
+      ? this.vozDirigidaA
+      : this.sessoes.values().next().value ?? null;
+
     for (const sessao of this.sessoes) {
-      sessao.emitirSnapshot({ ...pronto, voz_lider: lider });
-      lider = false;
+      sessao.emitirSnapshot({ ...pronto, voz_lider: sessao === conduz });
     }
+  }
+
+  /**
+   * "Foi ESTA tela que falou comigo."
+   *
+   * A porta chama isto quando uma mensagem chega, antes de o turno começar. A
+   * ponte não conhece socket nem pacote — ela recebe a sessão pronta, que é o
+   * mínimo que precisa saber para responder no lugar certo.
+   *
+   * A marca não é limpa no fim do turno de propósito. O que vem logo depois de
+   * uma resposta é a continuação da mesma conversa, no mesmo lugar; zerar aqui
+   * faria a fala seguinte voltar a sair na tela mais antiga, e a operadora veria
+   * a voz pulando de aparelho no meio do assunto. A tela que fecha some do
+   * `Set`, e o `has` acima devolve a condução para o desempate sozinho.
+   */
+  dirigirVozPara(sessao: SessaoOperador): void {
+    this.vozDirigidaA = sessao;
   }
 
   /**

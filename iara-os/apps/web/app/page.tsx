@@ -60,12 +60,35 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
     interromper();
   }, [voz, interromper]);
 
+  /**
+   * MODO CHAT — o celular, e só ele.
+   *
+   * No computador a hierarquia é a de sempre: a presença domina o campo visual
+   * e a conversa é a camada mais externa. No celular essa composição não cabe.
+   * O palco ocupava 58% de uma tela que a barra do navegador já come, e sobrava
+   * para a conversa uma janela de uma mensagem — a operadora não conseguia ler
+   * o que a IARA respondeu sem rolar.
+   *
+   * A saída não é encolher a presença até ela virar enfeite: é RECOLHÊ-LA num
+   * objeto, no canto, que continua sendo a mesma entidade viva lendo o mesmo
+   * snapshot. Ela não vira imagem estática nem ícone desenhado — o Canvas
+   * continua montado e continua reagindo, só que num círculo de 56px. Um toque
+   * devolve o palco inteiro.
+   *
+   * Começa recolhido porque no celular a conversa É o trabalho. Este estado não
+   * tem efeito nenhum no computador: a classe só é lida dentro da consulta de
+   * mídia, e acima de 900px ela não existe.
+   */
+  const [palcoRecolhido, setPalcoRecolhido] = useState(true);
+
   return (
-    <main className="tela">
+    <main className={palcoRecolhido ? 'tela chat-expandido' : 'tela'}>
       <Presenca
         snapshot={estado}
         falaCorrente={falaCorrente}
         voz={voz}
+        recolhida={palcoRecolhido}
+        aoAlternarRecolhida={() => setPalcoRecolhido((v) => !v)}
         controles={
           aoSair ? (
             /* Só o botão. O nome de quem está na sessão vive no cabeçalho da

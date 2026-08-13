@@ -47,6 +47,30 @@ export const ESTADO_INTERNO: readonly string[] = [
   'servidor/nucleo/Agenda.ts',
   // Cliente do banco onde o estado interno mora.
   'servidor/nucleo/ClienteSupabase.ts',
+  /**
+   * A SESSÃO DO BRAÇO — a credencial deste computador, em disco.
+   *
+   * Classificar isto deu trabalho, e o caminho errado vale ficar escrito. A
+   * primeira tentativa foi `EFEITO_EXTERNO`, pelo argumento de que o refresh
+   * token ROTA no Supabase e escreve arquivo. A suíte recusou, e recusou com
+   * razão: `G3` exige que todo `EFEITO_EXTERNO` só seja alcançado pelo portal,
+   * e o braço não passa nem pode passar por ele — o braço não é uma habilidade,
+   * é um processo cliente que ainda nem conectou.
+   *
+   * A pergunta que decide esta lista é a do cabeçalho: **alguém fora da IARA
+   * percebe?** Renovar a própria sessão é a IARA se identificando, não a IARA
+   * agindo sobre o mundo de alguém. É exatamente a mesma natureza do
+   * `ClienteSupabase` logo acima, que também abre rede e também é estado
+   * interno. O efeito no disco do operador que esta camada existe para vigiar é
+   * o `criar_pasta` que ele PEDIU — não o arquivo de sessão que o programa
+   * precisa para funcionar.
+   *
+   * O que sustenta a classificação, e não é boa-fé: este módulo importa
+   * `node:fs`, `node:os` e `node:path`, e mais nada. Ele não alcança
+   * `AgenteLocal`, nem shell, nem provedor de terceiro — `G1` prova isso pelo
+   * grafo. O POST que ele faz está declarado em `POST_SEM_EFEITO`.
+   */
+  'servidor/braco/credencial.ts',
   // O jornal das operações. É a AUDITORIA, não um executor — ver `Fase 3`.
   'servidor/nucleo/kernel/RegistroOperacoes.ts',
   // Estado cognitivo em memória; nada atravessa o processo.
@@ -211,6 +235,12 @@ export const POST_SEM_EFEITO: Record<string, string> = {
   'servidor/nucleo/Voz.ts':
     'POST de síntese de voz: o texto entra, o áudio volta. Nada é criado, ' +
     'alterado ou entregue a ninguém no provedor — é uma função pura cara.',
+  'servidor/braco/credencial.ts':
+    'POST de renovação de sessão no endpoint de auth do Supabase. O que muda é ' +
+    'o token que ESTE processo carrega — nenhum dado de ninguém é criado, ' +
+    'alterado ou entregue, e nenhum terceiro é alcançado. É a mesma operação ' +
+    'que o navegador faz sozinho para manter a operadora logada; aqui o dono da ' +
+    'sessão é um processo em vez de uma aba.',
 };
 
 /**

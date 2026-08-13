@@ -12,16 +12,25 @@
  * chamada. Também não abre porta nenhuma nesta máquina — para efeito de rede,
  * o braço é um cliente, como uma aba de navegador.
  *
- * COMO RODAR, hoje:
+ * COMO RODAR. No computador da operadora, uma vez:
+ *
+ *   npm run braco:entrar     (login; guarda a sessão fora do repositório)
+ *   npm run braco            (fica rodando)
+ *
+ * No loop de desenvolvimento, sem login nenhum:
  *
  *   IARA_MOTOR_WS=ws://localhost:3000/dispositivo IARA_ID_USUARIO=daiane npm run braco
  *
- * Com o motor na nuvem, `wss://iara.atoslog.com.br/dispositivo` e o token do
- * Supabase em `IARA_TOKEN`. O destino final deste processo é ser hospedado pelo
- * shell Tauri (`apps/desktop`), que hoje só desenha janela — é exatamente a
- * "Fase 3" anunciada no cabeçalho do `main.rs`. Enquanto isso ele é um processo
- * Node à parte, que é o que permite provar a cadeia inteira hoje em vez de
- * depois do instalador.
+ * A IDENTIDADE tem três fontes, nesta ordem: `IARA_TOKEN` (colado à mão, que é
+ * como isto nasceu e continua servindo para depurar), a sessão renovável em
+ * disco (`credencial.ts`) e, por último, nada — o que só funciona com o motor
+ * em modo local, onde não há Supabase para verificar coisa alguma.
+ *
+ * O destino final deste processo é ser hospedado pelo shell Tauri
+ * (`apps/desktop`), que hoje só desenha janela — é exatamente a "Fase 3"
+ * anunciada no cabeçalho do `main.rs`. Enquanto isso ele é um processo Node à
+ * parte, que é o que permite provar a cadeia inteira hoje em vez de depois do
+ * instalador.
  */
 
 import { WebSocket } from 'ws';
@@ -34,16 +43,58 @@ import {
   type RelatoExecucao,
 } from '../../lib/execucao';
 import { executarOrdem } from '../nucleo/ExecutorDesktop';
+import {
+  caminhoCredencial,
+  lerCredencial,
+  renovarAcesso,
+  SessaoExpirada,
+  wsDoMotor,
+} from './credencial';
 
 carregarEnv({ path: '.env.local' });
 carregarEnv();
 
 const VERSAO = '1.0.0';
 
-const DESTINO = process.env.IARA_MOTOR_WS ?? 'ws://localhost:3000/dispositivo';
 const ID_USUARIO = process.env.IARA_ID_USUARIO ?? 'daiane';
 const NOME = process.env.IARA_NOME_DISPOSITIVO ?? hostname();
-const TOKEN = process.env.IARA_TOKEN;
+
+/**
+ * Para onde ligar. O ambiente ganha da credencial porque o ambiente é o que
+ * alguém acabou de digitar — e quem digita está depurando.
+ */
+function destino(): string {
+  if (process.env.IARA_MOTOR_WS) return process.env.IARA_MOTOR_WS;
+  const guardada = lerCredencial();
+  if (guardada?.motor) {
+    try {
+      return wsDoMotor(guardada.motor);
+    } catch {
+      /* endereço gravado inválido: cai no padrão de desenvolvimento e o
+         `close` seguinte explica */
+    }
+  }
+  return 'ws://localhost:3000/dispositivo';
+}
+
+/**
+ * O token desta conexão, resolvido A CADA tentativa — nunca uma vez na subida.
+ *
+ * O access token do Supabase vive cerca de uma hora, e um braço bom fica
+ * ligado o dia inteiro. Resolver no topo do módulo faria a primeira queda de
+ * rede depois do almoço reconectar com um token morto e o motor recusar para
+ * sempre, com a mensagem certa ("sessão inválida") e a causa errada.
+ *
+ * `undefined` não é falha: em modo local o motor não verifica token nenhum.
+ */
+async function tokenDaVez(): Promise<string | undefined> {
+  const colado = process.env.IARA_TOKEN;
+  if (colado) return colado;
+
+  const guardada = lerCredencial();
+  if (!guardada) return undefined;
+  return renovarAcesso(guardada);
+}
 
 /**
  * Recuo exponencial com teto. Sem o teto, um motor fora do ar por uma noite
@@ -160,8 +211,48 @@ async function atender(ordem: OrdemExecucao): Promise<void> {
   enviar({ tipo: 'concluida', relato });
 }
 
-function conectar(): void {
+/** Agenda a próxima tentativa e alarga o recuo. Um lugar só, para que nenhum
+ *  caminho de falha esqueça de reagendar — ou reagende duas vezes. */
+function tentarDeNovo(): void {
   if (encerrando) return;
+  setTimeout(() => void conectar(), recuo);
+  recuo = Math.min(recuo * 2, RECUO_MAXIMO_MS);
+}
+
+async function conectar(): Promise<void> {
+  if (encerrando) return;
+
+  const DESTINO = destino();
+
+  let token: string | undefined;
+  try {
+    token = await tokenDaVez();
+  } catch (erro) {
+    /**
+     * Sessão revogada é a única falha deste processo que a operadora RESOLVE, e
+     * por isso é a única que ganha instrução em vez de código de erro. Continua
+     * tentando — o refresh pode ter falhado por rede, e desistir de vez deixaria
+     * o computador mudo até alguém reparar.
+     */
+    const motivo = erro instanceof SessaoExpirada ? erro.message : (erro as Error).message;
+    console.error(
+      `[braço] não consegui renovar a sessão deste computador: ${motivo}\n` +
+        `        Rode  npm run braco:entrar  para entrar de novo ` +
+        `(sessão em ${caminhoCredencial()}).`,
+    );
+    tentarDeNovo();
+    return;
+  }
+
+  if (!token) {
+    // Um aviso por tentativa, e não um erro: contra um motor local isto é o
+    // funcionamento normal, e o motor é quem decide se aceita.
+    console.warn(
+      '[braço] sem sessão gravada e sem IARA_TOKEN — só o motor em modo local vai aceitar. ' +
+        'Para conectar na IARA da nuvem: npm run braco:entrar',
+    );
+  }
+
   console.log(`[braço] conectando em ${DESTINO}…`);
 
   const ws = new WebSocket(DESTINO, {
@@ -184,7 +275,7 @@ function conectar(): void {
       nome: NOME,
       plataforma: `${platform()} ${release()}`,
       versao: VERSAO,
-      ...(TOKEN ? { token: TOKEN } : {}),
+      ...(token ? { token } : {}),
     });
   });
 
@@ -236,8 +327,7 @@ function conectar(): void {
     if (encerrando) return;
     const explicacao = motivo.toString() || 'sem motivo declarado';
     console.warn(`[braço] conexão fechada (${codigo}: ${explicacao}); tentando de novo em ${recuo} ms`);
-    setTimeout(conectar, recuo);
-    recuo = Math.min(recuo * 2, RECUO_MAXIMO_MS);
+    tentarDeNovo();
   });
 
   ws.on('error', (erro: Error) => {
@@ -267,4 +357,4 @@ process.on('SIGINT', encerrar);
 process.on('SIGTERM', encerrar);
 
 console.log(`[braço] IARA — braço v${VERSAO} em ${NOME} (${platform()} ${release()})`);
-conectar();
+void conectar();
