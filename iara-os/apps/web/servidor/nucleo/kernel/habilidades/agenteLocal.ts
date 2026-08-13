@@ -720,6 +720,76 @@ export const resolverConfirmacao: Habilidade = {
   },
 };
 
+/**
+ * ATUALIZAR REPOSITÓRIO — `git pull --ff-only`.
+ *
+ * RISCO MÉDIO, e a escolha merece defesa porque a tentação era `alto`. O que
+ * separa os dois neste kernel não é "mexe em coisa importante" — é
+ * REVERSIBILIDADE e ALCANCE. Um `pull` não sai da máquina, não alcança
+ * terceiro, e o estado que ele substitui está inteiro no servidor: o pior caso
+ * é a pessoa voltar o HEAD. Comparar com `acionar_energia`, que é alto: aquela
+ * derruba a máquina de quem está usando.
+ *
+ * A trava que de fato protege este verbo não é o nível de risco — é a allowlist
+ * e a recusa de árvore suja, e as duas moram no `AgenteLocal`, longe da LLM.
+ *
+ * `escrita_idempotente` porque o segundo `pull` de uma árvore já em dia não
+ * produz efeito nenhum e diz isso. Convergente por construção, não por sorte.
+ */
+export const atualizarRepositorio: Habilidade = {
+  manifesto: {
+    id: 'atualizar_repositorio',
+    nome: 'Atualizar repositório',
+    descricao:
+      'Puxa as novidades de um repositório autorizado com git pull --ff-only. ' +
+      'O alvo é o APELIDO de um repositório declarado, nunca um caminho. ' +
+      'Recusa se houver trabalho não salvo e nunca resolve conflito. ' +
+      'Use para "atualize o repositório X" ou "puxa as novidades do X".',
+    dominio: 'automacao',
+    capacidade: 'automacao',
+    permissoes: ['escrita'],
+    timeout_ms: 80_000,
+    custo: 'zero',
+    risco: 'medio',
+    idempotencia: 'escrita_idempotente',
+    esquema: {
+      repositorio: { tipo: 'texto', obrigatorio: true },
+    },
+  },
+  async executar(ctx) {
+    const relato = await braco.executar({
+      acao: 'atualizar_repositorio',
+      parametros: { repositorio: String(ctx.parametros.repositorio) },
+      id_usuario: ctx.id_usuario,
+      sessao: ctx.sessao,
+      chave_idempotencia: ctx.operacao?.id_operacao,
+    });
+    return {
+      texto: relato.texto,
+      detalhe: `atualizar_repositorio [${relato.execucao_id}] ${relato.estado}`,
+      resolveu: relato.estado === 'sucesso',
+    };
+  },
+
+  /**
+   * A prova é o par de hashes que o executor mediu do outro lado da ponte — não
+   * há verificação local possível: o repositório está na máquina do operador, e
+   * quem consultou o `git` foi quem tem as mãos. É exatamente o caso para o
+   * qual `provaDaPonte` existe.
+   *
+   * O ramo local recusa em vez de inventar. Reconferir daqui exigiria rodar
+   * `git` no disco do motor — o disco errado, quando o motor está na nuvem —, e
+   * essa é a família de engano que a ponte inteira foi construída para acabar.
+   */
+  async verificar(_resultado, ctx) {
+    return provaDaPonte(ctx, 'atualizar_repositorio', () => ({
+      confirmado: false,
+      evidencia: 'a atualização acontece no repositório do operador; nada a conferir a partir do motor',
+      motivo: 'sem_meio_de_verificar',
+    }));
+  },
+};
+
 export const HABILIDADES_AGENTE_LOCAL: readonly Habilidade[] = [
   criarPasta,
   abrirAplicativo,
@@ -728,5 +798,6 @@ export const HABILIDADES_AGENTE_LOCAL: readonly Habilidade[] = [
   informacoesSistema,
   capturarTela,
   acionarEnergia,
+  atualizarRepositorio,
   resolverConfirmacao,
 ];

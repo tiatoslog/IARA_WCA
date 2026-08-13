@@ -26,6 +26,11 @@ export interface PedidoSintese {
   historico: RegistroMemoria[];
   overridePersona: string;
   camadaGlobal: string;
+  /**
+   * O catálogo redigido, vindo do Kernel. Ver `PedidoRaciocinio.capacidades`:
+   * atravessa em vez de ser importado porque esta camada não alcança o mundo.
+   */
+  capacidades?: string;
   /** Saídas dos passos já executados. Vazio numa resposta de passo único. */
   contexto: string;
   sinal: AbortSignal;
@@ -242,6 +247,7 @@ export class MotorRaciocinio {
       historico: pedido.historico,
       overridePersona: pedido.overridePersona,
       camadaGlobal: pedido.camadaGlobal,
+      capacidades: pedido.capacidades,
       sinal: pedido.sinal,
       aoReceberTexto: pedido.aoReceberTexto,
     });

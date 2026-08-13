@@ -20,7 +20,7 @@ import {
   PREFERENCIAS_PADRAO,
   type PreferenciasOperador,
 } from '../../lib/perfil';
-import { supabase } from './ClienteSupabase';
+import { bancoPara } from './ClienteSupabase';
 import { exigirIdCanonico } from './kernel/Identidade';
 
 const RAIZ = path.resolve(process.cwd(), 'dados');
@@ -109,7 +109,7 @@ export class MemoriaOperacional {
     destino?: RegistroMemoria['destino'],
   ): Promise<void> {
     const chave = idSeguro(idUsuario);
-    const bd = supabase();
+    const bd = bancoPara('memoria_registros');
 
     if (bd) {
       const { error } = await bd.from('memoria_registros').insert({
@@ -141,7 +141,7 @@ export class MemoriaOperacional {
   /** Histórico recente do shard privado. Nunca cruza operadores. */
   async historico(idUsuario: string, limite = LIMITE_HISTORICO): Promise<RegistroMemoria[]> {
     const chave = idSeguro(idUsuario);
-    const bd = supabase();
+    const bd = bancoPara('memoria_registros');
 
     if (bd) {
       const { data, error } = await bd
@@ -182,7 +182,7 @@ export class MemoriaOperacional {
   async trocasAcumuladas(idUsuario: string): Promise<number> {
     try {
       const chave = idSeguro(idUsuario);
-      const bd = supabase();
+      const bd = bancoPara('memoria_registros');
 
       if (bd) {
         // `head: true` traz só o total: contar convivência não é motivo para
@@ -215,7 +215,7 @@ export class MemoriaOperacional {
    */
   async lerPreferencias(idUsuario: string): Promise<PreferenciasOperador> {
     const chave = idSeguro(idUsuario);
-    const bd = supabase();
+    const bd = bancoPara('operador_preferencias');
 
     try {
       if (bd) {
@@ -245,7 +245,7 @@ export class MemoriaOperacional {
   ): Promise<PreferenciasOperador> {
     const chave = idSeguro(idUsuario);
     const limpo = normalizarPreferencias(preferencias);
-    const bd = supabase();
+    const bd = bancoPara('operador_preferencias');
 
     if (bd) {
       const { error } = await bd
@@ -266,7 +266,7 @@ export class MemoriaOperacional {
 
   async insightsPendentes(idUsuario: string): Promise<InsightRelacional[]> {
     const chave = idSeguro(idUsuario);
-    const bd = supabase();
+    const bd = bancoPara('insights_relacionais');
 
     if (bd) {
       const { data, error } = await bd
@@ -297,7 +297,7 @@ export class MemoriaOperacional {
       proativo: true,
     };
 
-    const bd = supabase();
+    const bd = bancoPara('insights_relacionais');
     if (bd) {
       const { error } = await bd.from('insights_relacionais').insert(insight);
       if (error) throw new Error(`Supabase: ${error.message}`);
@@ -312,7 +312,7 @@ export class MemoriaOperacional {
 
   async consumirInsight(idUsuario: string, id: string): Promise<void> {
     const chave = idSeguro(idUsuario);
-    const bd = supabase();
+    const bd = bancoPara('insights_relacionais');
 
     if (bd) {
       // O `eq('id_usuario')` é redundante com o id ser uuid, e é proposital:
@@ -342,7 +342,7 @@ export class MemoriaOperacional {
     const desde = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     let recentes: RegistroMemoria[];
-    const bd = supabase();
+    const bd = bancoPara('memoria_registros');
     if (bd) {
       const { data, error } = await bd
         .from('memoria_registros')

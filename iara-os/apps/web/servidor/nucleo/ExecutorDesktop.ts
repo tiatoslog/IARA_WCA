@@ -126,6 +126,23 @@ export async function executarOrdem(
         return relato(ordem, inicio, onde, dispositivo, await agenteLocal.informacoesSistema(usuario));
 
       /**
+       * O parâmetro é o APELIDO do repositório, nunca um caminho. A conversão
+       * apelido → diretório acontece dentro do `AgenteLocal`, contra a
+       * allowlist — se ela acontecesse aqui, este módulo passaria a ter uma
+       * opinião sobre o disco, e ele é burro de propósito.
+       */
+      case 'atualizar_repositorio': {
+        const apelido = String(ordem.parametros.repositorio ?? '');
+        return relato(
+          ordem,
+          inicio,
+          onde,
+          dispositivo,
+          await agenteLocal.atualizarRepositorio(usuario, apelido),
+        );
+      }
+
+      /**
        * A ÚNICA ação do executor que devolve `dados` estruturados, e a razão é
        * o que o motor faz com eles: as outras produzem um efeito e relatam; esta
        * produz OBSERVAÇÃO, que vai ser comparada com faixas, virar hipótese e

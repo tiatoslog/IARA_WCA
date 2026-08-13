@@ -14,6 +14,7 @@
 import type { BarramentoEventos } from './BarramentoEventos';
 import {
   agruparPorDominio,
+  DOMINIOS,
   type CapacidadeProjetada,
   type ManifestoProjetado,
 } from '../../../lib/capacidades';
@@ -152,6 +153,58 @@ export class GerenciadorHabilidades {
       };
     });
     return agruparPorDominio(capacidades);
+  }
+
+  /**
+   * O QUE A IARA SABE DE SI — gerado do catálogo, nunca escrito à mão.
+   *
+   * O prompt trazia uma frase fixa: "você tem uma camada determinística local
+   * que resolve clima, consultas ao banco de infraestrutura, hora e busca web".
+   * Quatro capacidades de vinte e oito. Perguntada "o que você sabe fazer?", a
+   * IARA respondia com a lista de quando o sistema tinha quatro habilidades —
+   * ou preenchia o resto por conta própria, que é pior: prometia o que não
+   * existe e escondia o que existe.
+   *
+   * Lista escrita à mão envelhece na primeira habilidade nova, e envelhece em
+   * silêncio. Esta nasce do registro: habilidade nova aparece aqui no mesmo
+   * commit em que entra no catálogo, sem ninguém lembrar de nada.
+   *
+   * O INDISPONÍVEL ENTRA, declarado como desligado. É a mesma regra do
+   * manifesto projetado: o operador precisa saber o que a IARA PODERIA fazer e
+   * o que falta ligar. Esconder o desligado faz um sistema desconfigurado
+   * parecer limitado.
+   *
+   * O QUE ESTA LISTA NÃO É: permissão. A LLM não chama habilidade — ela nomeia
+   * uma num plano, e o plano passa pelo porteiro, pelo esquema e pelo jornal.
+   * Saber que `acionar_energia` existe não aproxima ninguém de desligar
+   * máquina nenhuma; por isso o risco alto vem anotado, para a resposta poder
+   * dizer "posso, com a sua confirmação" em vez de prometer ou negar demais.
+   */
+  descricaoParaPrompt(): string {
+    const linhas: string[] = [];
+
+    for (const [id, dominio] of Object.entries(DOMINIOS)) {
+      const doDominio = [...this.registro.values()].filter((h) => h.manifesto.dominio === id);
+      if (doDominio.length === 0) continue;
+
+      linhas.push(`${dominio.nome} — ${dominio.resumo}`);
+      for (const h of doDominio) {
+        const m = h.manifesto;
+        // A descrição do manifesto é escrita para o planejador e às vezes tem
+        // parágrafos. Aqui basta a primeira oração: o resto é instrução de uso,
+        // não conhecimento sobre si.
+        const resumo = m.descricao.split(/(?<=\.)\s/)[0].trim();
+        const motivo = h.indisponivelPorque?.();
+        const selo = motivo
+          ? ` [DESLIGADA: ${motivo}]`
+          : m.risco === 'alto'
+            ? ' [exige confirmação explícita do operador]'
+            : '';
+        linhas.push(`  • ${m.nome} (${m.id}): ${resumo}${selo}`);
+      }
+    }
+
+    return linhas.join('\n');
   }
 
   /**

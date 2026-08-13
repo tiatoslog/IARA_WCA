@@ -169,6 +169,14 @@ interface AplicativoAutorizado {
    * apaga a barra de tarefas e a área de trabalho de quem estiver na frente.
    */
   fechavel: boolean;
+  /**
+   * Aplicativo da Store (UWP). Não é curiosidade de plataforma: ele fica
+   * SUSPENSO fora de foco e não atende o pedido educado de fechamento, então
+   * `fechar_aplicativo` vai falhar por um motivo que não é "trabalho não salvo".
+   * Declarado aqui para que a resposta ao operador diga o que é verdade em vez
+   * de escolher a explicação mais simpática. Ver o retorno de `fecharAplicativo`.
+   */
+  moderno?: boolean;
 }
 
 /**
@@ -183,7 +191,7 @@ const APLICATIVOS: Record<string, AplicativoAutorizado> = {
    * que termina em seguida, e quem permanece é `CalculatorApp.exe`. Conferir
    * `calc.exe` daria sempre "não apareceu" numa calculadora que está na tela.
    */
-  calculadora: { rotulo: 'Calculadora', comando: 'calc.exe', argumentos: [], processo: 'CalculatorApp.exe', fechavel: true },
+  calculadora: { rotulo: 'Calculadora', comando: 'calc.exe', argumentos: [], processo: 'CalculatorApp.exe', fechavel: true, moderno: true },
   paint: { rotulo: 'Paint', comando: 'mspaint.exe', argumentos: [], processo: 'mspaint.exe', fechavel: true },
   explorador: { rotulo: 'Explorador de Arquivos', comando: 'explorer.exe', argumentos: [], processo: 'explorer.exe', fechavel: false },
   explorer: { rotulo: 'Explorador de Arquivos', comando: 'explorer.exe', argumentos: [], processo: 'explorer.exe', fechavel: false },
@@ -609,6 +617,106 @@ const executorAguardadoReal: ExecutorAguardado = (comando, argumentos) =>
   });
 
 // ---------------------------------------------------------------------------
+// Repositórios autorizados
+// ---------------------------------------------------------------------------
+
+/**
+ * OS REPOSITÓRIOS QUE A IARA PODE TOCAR, por apelido.
+ *
+ * A allowlist é a trava inteira desta capacidade, e ela é uma lista de APELIDOS
+ * — nunca de caminhos vindos da frase. É a mesma disciplina de
+ * `ROTULO_DO_LOCAL`, e aqui ela importa mais: um `git pull` no diretório errado
+ * não é uma pasta no lugar errado, é código-fonte de alguém sendo alterado.
+ *
+ * `IARA_REPOSITORIOS` declara os pares `apelido=caminho`, separados por
+ * vírgula. Vazio (o padrão) significa que a capacidade não existe naquela
+ * máquina — e é o padrão certo: um verbo que altera código nasce desligado e é
+ * LIGADO de propósito, nunca o contrário.
+ *
+ * Decidido com a operadora em 13/08/2026: só o repositório do próprio produto,
+ * e só puxar. Publicar continua sendo pessoa. Abrir esta lista depois é fácil;
+ * fechá-la depois de um acidente é que não é.
+ */
+export function repositoriosAutorizados(): ReadonlyMap<string, string> {
+  const mapa = new Map<string, string>();
+  for (const par of (process.env.IARA_REPOSITORIOS ?? '').split(',')) {
+    const corte = par.indexOf('=');
+    if (corte <= 0) continue;
+    const apelido = apelidoCanonico(par.slice(0, corte));
+    const caminho = par.slice(corte + 1).trim();
+    if (apelido && caminho) mapa.set(apelido, caminho);
+  }
+  return mapa;
+}
+
+/** Sem acento, sem caixa, sem espaço nas pontas: "IARA_WCA", "iara wca" e
+ *  "Iara-WCA" nomeiam o mesmo repositório, porque quem fala não digita chave. */
+function apelidoCanonico(bruto: string): string {
+  return bruto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * O TERCEIRO executor, e o primeiro que precisa da SAÍDA do processo.
+ *
+ * Os outros dois bastavam para o que faziam: um solta o processo e esquece, o
+ * outro devolve o código de saída. Nenhum serve aqui, porque a prova desta ação
+ * é literalmente o texto que o `git` responde — o hash antes e depois, a lista
+ * de arquivos sujos. Um código de saída zero não distingue "atualizei" de "já
+ * estava atualizado", e essa é justamente a distinção que a resposta precisa
+ * fazer para não mentir.
+ *
+ * Injetável pela mesma razão dos outros: provar o comportamento em árvore suja,
+ * em conflito e em rede caída sem precisar de um repositório de verdade em cada
+ * um desses estados.
+ */
+export type ExecutorGit = (
+  argumentos: readonly string[],
+  diretorio: string,
+) => Promise<{ codigo: number; saida: string }>;
+
+const executorGitReal: ExecutorGit = (argumentos, diretorio) =>
+  new Promise((resolver) => {
+    execFile(
+      'git',
+      [...argumentos],
+      {
+        cwd: diretorio,
+        windowsHide: true,
+        encoding: 'utf8',
+        /**
+         * Um `pull` atravessa a rede, e uma rede ruim é lenta antes de ser
+         * quebrada. 60 s é folgado para um repositório do tamanho deste e curto
+         * o bastante para o operador não achar que a IARA travou.
+         */
+        timeout: 60_000,
+        maxBuffer: 4 * 1024 * 1024,
+        /**
+         * Sem prompt, nunca. `git` pedindo senha num processo sem terminal fica
+         * pendurado até o timeout, e o operador vê "demorou" onde a verdade é
+         * "faltou credencial". Com isto ele falha na hora, e a frase pode dizer
+         * o que de fato aconteceu.
+         */
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_ASKPASS: 'echo' },
+      },
+      (erro, saida, erroPadrao) => {
+        const texto = `${String(saida ?? '')}${String(erroPadrao ?? '')}`.trim();
+        if (!erro) {
+          resolver({ codigo: 0, saida: texto });
+          return;
+        }
+        const codigo = typeof (erro as { code?: unknown }).code === 'number'
+          ? (erro as { code: number }).code
+          : -1;
+        resolver({ codigo, saida: texto || erro.message });
+      },
+    );
+  });
+
+// ---------------------------------------------------------------------------
 
 export class AgenteLocal {
   /** Pendência R2 por operador — confirmação de A nunca libera ação de B. */
@@ -641,12 +749,25 @@ export class AgenteLocal {
      */
     private readonly sondaDetalhada: SondaDetalhada = sondaDetalhadaReal,
     private readonly sondaDisco: SondaDisco = sondaDiscoReal,
+    /**
+     * O executor de git. Injetável porque os estados que INTERESSAM neste verbo
+     * — árvore suja, branch divergente, rede caída — são exatamente os que dão
+     * trabalho para montar de verdade, e são os únicos em que a recusa precisa
+     * estar certa. Com um repositório real a suíte só provaria o caminho feliz.
+     */
+    private readonly executorGit: ExecutorGit = executorGitReal,
   ) {}
 
   private auditar(idUsuario: string, acao: string, permitido: boolean, detalhe: string): void {
     console.log(
       JSON.stringify({ canal: 'agente_local', usuario: idUsuario, acao, permitido, detalhe }),
     );
+  }
+
+  /** Um lugar só chama o git, para que nenhum caminho novo esqueça o `cwd`
+   *  — rodar git no diretório errado é o modo de falhar deste verbo. */
+  private git(argumentos: readonly string[], diretorio: string) {
+    return this.executorGit(argumentos, diretorio);
   }
 
   async criarPasta(
@@ -930,12 +1051,38 @@ export class AgenteLocal {
       };
     }
 
+    /**
+     * A FRASE DIZ O QUE FOI OBSERVADO, E SÓ.
+     *
+     * A versão anterior afirmava: "isso normalmente acontece quando há algo não
+     * salvo e o programa está esperando uma resposta na tela". Medido em
+     * 13/08/2026 com a Calculadora: `taskkill` sem `/F` devolve código 0 e a
+     * mensagem "sinal de encerramento enviado", o processo continua na tabela, e
+     * não havia nada não salvo em lugar nenhum — a Calculadora não tem o que
+     * salvar. A causa afirmada era falsa, e falsa da pior maneira: plausível,
+     * tranquilizadora e impossível de o operador conferir.
+     *
+     * Aplicativo da Store fica SUSPENSO quando não está em foco e não processa o
+     * pedido educado de fechamento — nem o `taskkill` sem `/F`, nem o
+     * `CloseMainWindow` (que devolve `true` e não fecha; também medido). Isso é
+     * um fato sobre a CLASSE do aplicativo, declarado na allowlist, não uma
+     * hipótese sobre o que a pessoa estava fazendo.
+     *
+     * A recusa de forçar continua igual, e continua certa. O que muda é a IARA
+     * parar de inventar o porquê.
+     */
     this.auditar(idUsuario, 'fechar_aplicativo', false, `${app.rotulo} resistiu`);
     return {
       ok: false,
       texto:
-        `Pedi para ${artigoDe(app.rotulo)} ${app.rotulo} fechar e continua aberto. Isso normalmente acontece quando há algo não salvo ` +
-        'e o programa está esperando uma resposta na tela. Eu não forço o fechamento — você perderia o trabalho.',
+        `Pedi para ${artigoDe(app.rotulo)} ${app.rotulo} fechar e o processo continua na máquina. ` +
+        (app.moderno
+          ? `${artigoDe(app.rotulo) === 'a' ? 'Ela' : 'Ele'} é um aplicativo da Store, e esses ficam ` +
+            'suspensos quando não estão em foco: ignoram o pedido educado de fechamento. ' +
+            'Feche pela janela, ou me diga que eu abro para você fechar na tela.'
+          : 'Não sei dizer o motivo daqui — pode ser trabalho não salvo esperando resposta na tela. ' +
+            'Dê uma olhada na janela.') +
+        ' Forçar eu não forço: se houvesse algo não salvo, você perderia.',
       prova: {
         confirmado: false,
         evidencia: `${app.processo} ainda presente (${depois.length} processo(s)) depois do pedido de fechamento`,
@@ -1198,6 +1345,155 @@ export class AgenteLocal {
       codigo_erro: null,
       // O objeto inteiro atravessa: quem valida na chegada é `interpretarMedicao`.
       dados: m as unknown as Readonly<Record<string, unknown>>,
+    };
+  }
+
+  /**
+   * `git pull --ff-only` num repositório da allowlist.
+   *
+   * AS DUAS TRAVAS QUE O `git` SOZINHO NÃO DÁ, e por que cada uma existe:
+   *
+   *  1. ÁRVORE SUJA É RECUSA, NÃO MERGE. `git status --porcelain` roda antes, e
+   *     qualquer coisa não commitada para a ação. É a única forma deste verbo
+   *     destruir algo — puxar por cima de trabalho que ninguém salvou — e ela
+   *     custa uma chamada para eliminar. A frase diz O QUE está sujo, porque
+   *     "não deu" sem o motivo obriga a pessoa a ir olhar de qualquer jeito.
+   *
+   *  2. `--ff-only`. Sem merge, sem rebase. Ou o remoto avança em linha reta ou
+   *     não avança. Um conflito resolvido por uma IA sem ninguém olhando é
+   *     exatamente o que este projeto não faz — e a diferença entre um merge
+   *     automático que deu certo e um que comeu código só aparece depois.
+   *
+   * A PROVA é o hash. `git rev-parse HEAD` antes e depois: se mudou, atualizou;
+   * se não mudou e o `pull` passou, já estava em dia. As duas coisas são
+   * verdadeiras e diferentes, e dizer "atualizei" no segundo caso seria a mesma
+   * família de mentira operacional que o resto deste arquivo combate.
+   *
+   * O QUE ESTE MÉTODO NÃO FAZ: commit, push, checkout, merge, rebase, e
+   * qualquer coisa com `--force`. Nenhuma delas é omissão de escopo — cada uma
+   * altera história ou alcança gente de fora, e essas passam por decisão de
+   * pessoa. Ver `LEITURA_DO_CLAUDE.md` na pasta de habilidades.
+   */
+  async atualizarRepositorio(idUsuario: string, apelidoPedido: string): Promise<RelatoAcao> {
+    const autorizados = repositoriosAutorizados();
+    const apelido = apelidoCanonico(apelidoPedido);
+    const diretorio = autorizados.get(apelido);
+
+    if (!diretorio) {
+      const conhecidos = [...autorizados.keys()];
+      this.auditar(idUsuario, 'atualizar_repositorio', false, `apelido "${apelido}" fora da lista`);
+      return {
+        ok: false,
+        texto: conhecidos.length
+          ? `Não tenho esse repositório na minha lista. Os que eu conheço são: ${conhecidos.join(', ')}.`
+          : 'Não tenho nenhum repositório autorizado neste computador, então não posso atualizar nada. ' +
+            'Quem instala declara isso em IARA_REPOSITORIOS.',
+        prova: {
+          confirmado: false,
+          evidencia: `apelido "${apelido}" ausente da allowlist (${conhecidos.length} declarados)`,
+          motivo: 'nao_encontrado',
+        },
+        codigo_erro: 'ARQUIVO_NAO_ENCONTRADO',
+      };
+    }
+
+    const sujo = await this.git(['status', '--porcelain'], diretorio);
+    if (sujo.codigo !== 0) {
+      this.auditar(idUsuario, 'atualizar_repositorio', false, `status falhou (${sujo.codigo})`);
+      return {
+        ok: false,
+        texto:
+          `Não consegui nem olhar o estado do repositório "${apelido}" — ` +
+          'ou ele não está onde eu esperava, ou o git não respondeu. Não mexi em nada.',
+        prova: {
+          confirmado: false,
+          evidencia: `git status saiu ${sujo.codigo}: ${sujo.saida.slice(0, 200)}`,
+          motivo: 'nao_encontrado',
+        },
+        codigo_erro: 'FALHA_NA_EXECUCAO',
+      };
+    }
+
+    if (sujo.saida.length > 0) {
+      const linhas = sujo.saida.split('\n').filter(Boolean);
+      const amostra = linhas.slice(0, 5).map((l) => l.trim().replace(/^\S+\s+/, '')).join(', ');
+      this.auditar(idUsuario, 'atualizar_repositorio', false, `árvore suja (${linhas.length})`);
+      return {
+        ok: false,
+        /**
+         * Recusa que ENSINA. A pessoa precisa saber o que está sujo para
+         * decidir, e a decisão (salvar? descartar?) é dela — a IARA não escolhe
+         * entre commitar e jogar fora o trabalho de alguém.
+         */
+        texto:
+          `Não atualizei "${apelido}": tem ${linhas.length} ` +
+          `${linhas.length === 1 ? 'arquivo alterado' : 'arquivos alterados'} que ninguém salvou ainda` +
+          `${amostra ? ` (${amostra}${linhas.length > 5 ? '…' : ''})` : ''}. ` +
+          'Puxar por cima disso pode comer esse trabalho. Salve ou descarte, e eu atualizo na hora.',
+        prova: {
+          confirmado: false,
+          evidencia: `${linhas.length} arquivo(s) não commitados; pull recusado antes de tocar na árvore`,
+          motivo: 'nao_encontrado',
+        },
+        codigo_erro: 'PERMISSAO_NEGADA',
+      };
+    }
+
+    const antes = await this.git(['rev-parse', 'HEAD'], diretorio);
+    const puxada = await this.git(['pull', '--ff-only'], diretorio);
+    const depois = await this.git(['rev-parse', 'HEAD'], diretorio);
+
+    if (puxada.codigo !== 0) {
+      this.auditar(idUsuario, 'atualizar_repositorio', false, `pull saiu ${puxada.codigo}`);
+      /**
+       * A causa mais comum de `--ff-only` falhar não é rede: é a branch local
+       * ter commits que o remoto não tem. Dizer isso poupa a pessoa de abrir o
+       * terminal para descobrir — e é um fato que a saída do git já contém.
+       */
+      const divergiu = /diverg|não é possível avançar|not possible to fast-forward|Not possible/i.test(
+        puxada.saida,
+      );
+      return {
+        ok: false,
+        texto: divergiu
+          ? `Não atualizei "${apelido}": a sua cópia tem commits que o servidor não tem, ` +
+            'então não dá para avançar em linha reta. Isso precisa de alguém decidindo o que fazer — ' +
+            'eu não resolvo conflito sozinha.'
+          : `Não consegui atualizar "${apelido}". O git recusou e eu não mexi na árvore.`,
+        prova: {
+          confirmado: antes.saida === depois.saida,
+          evidencia: `git pull --ff-only saiu ${puxada.codigo}: ${puxada.saida.slice(0, 200)}`,
+          motivo: 'divergente',
+        },
+        codigo_erro: divergiu ? 'PERMISSAO_NEGADA' : 'ERRO_DE_REDE',
+      };
+    }
+
+    const mudou = antes.saida !== depois.saida && depois.saida.length > 0;
+    this.auditar(
+      idUsuario,
+      'atualizar_repositorio',
+      true,
+      `${apelido}: ${antes.saida.slice(0, 8)} → ${depois.saida.slice(0, 8)}`,
+    );
+    return {
+      ok: true,
+      /**
+       * Duas frases diferentes para dois fatos diferentes. "Já estava
+       * atualizado" não é uma versão modesta de "atualizei" — é outra coisa, e
+       * o hash é quem sabe qual das duas aconteceu.
+       */
+      texto: mudou
+        ? `Pronto, atualizei o "${apelido}" — ele estava para trás e agora está em dia com o servidor.`
+        : `O "${apelido}" já estava atualizado. Não havia nada novo para puxar.`,
+      prova: {
+        confirmado: true,
+        evidencia: mudou
+          ? `HEAD ${antes.saida.slice(0, 8)} → ${depois.saida.slice(0, 8)}`
+          : `HEAD inalterado em ${depois.saida.slice(0, 8)}; pull sem novidade`,
+      },
+      codigo_erro: null,
+      dados: { repositorio: apelido, avancou: mudou },
     };
   }
 

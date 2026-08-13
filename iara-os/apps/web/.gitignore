@@ -16,6 +16,15 @@ dados/memoria/
 # Jornal das operações de escrita: dado de runtime por operador, mesma classe
 # dos shards. Versionar isto publicaria o que cada pessoa mandou a IARA fazer.
 dados/operacoes/
+# Lembretes, um arquivo por operador. `Agenda.ts` diz por que eles são tão
+# privados quanto o histórico: "um lembrete diz o que a pessoa tem medo de
+# esquecer". A pasta só passou a nascer com frequência quando a persistência
+# aprendeu a cair para arquivo por tabela ausente — antes disso o descuido era
+# latente. Um `git add -A` numa máquina de operador publicaria a agenda dela.
+dados/agenda/
+# PDFs que a extração de texto lê. Documento de cliente não entra na história do
+# repositório; a bancada de auditoria gera o dela e apaga.
+dados/documentos/
 # gerados pelo beforeDevCommand do apps/desktop (ver copiar-bolha.mjs).
 # A fonte é public/marca/iara-esfera.png, essa sim versionada.
 public/bolha.html

@@ -465,8 +465,32 @@ test('F7. fechar NUNCA força: aplicativo que resiste é relatado como resistent
   const r = await agente.fecharAplicativo('daiane', 'feche o bloco de notas');
   assert.equal(r.ok, false);
   assert.equal(r.prova.motivo, 'divergente');
-  assert.match(r.texto, /continua aberto/i);
-  assert.match(r.texto, /não salvo/i, 'a frase precisa explicar a causa provável');
+
+  /**
+   * A ASSERÇÃO MUDOU DE ALVO em 13/08/2026, e a mudança é o ponto.
+   *
+   * Ela exigia a frase "continua aberto" e a explicação "não salvo" como CAUSA.
+   * Duas coisas erradas, descobertas medindo a máquina em vez de ler o código:
+   *
+   *  1. o que o agente observa é a TABELA DE PROCESSOS, não a janela. Um app da
+   *     Store fecha a janela e deixa o processo suspenso — "continua aberto"
+   *     seria falso justamente no caso mais comum.
+   *  2. "há algo não salvo" era AFIRMADO. Com a Calculadora — que não tem o que
+   *     salvar — a IARA dizia isso mesmo assim. Causa plausível, não medida, e
+   *     impossível de o operador conferir.
+   *
+   * O que se cobra agora é o que o sistema de fato sabe: o processo continua na
+   * máquina (fato), e a explicação vem marcada como hipótese. Ver
+   * `fechar-aplicativo-honesto.test.ts`.
+   */
+  assert.match(r.texto, /processo continua/i, 'a frase precisa dizer o fato observado');
+  assert.match(r.texto, /pode ser/i, 'a causa provável precisa estar marcada como hipótese');
+  assert.match(r.texto, /não salvo/i, 'a hipótese razoável continua sendo oferecida');
+  assert.doesNotMatch(
+    r.texto,
+    /normalmente acontece quando há algo não salvo/i,
+    'voltou a afirmar como causa o que é hipótese',
+  );
 });
 
 test('F8. o Explorador de Arquivos não é fechável — derrubá-lo apaga a área de trabalho', async () => {

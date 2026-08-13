@@ -132,6 +132,20 @@ const ANCORAS: ReadonlyArray<Ancora> = [
   },
   {
     /**
+     * O verbo exige o SUBSTANTIVO junto ("repositório", "repo", "código", ou um
+     * `git` explícito). "Atualize o sistema" e "atualiza aí" não são pedidos de
+     * `git pull` — são frases vagas que, reconhecidas aqui, virariam uma ação
+     * sobre código-fonte a partir de uma suposição. A âncora que erra para o
+     * lado de não reconhecer devolve a frase ao raciocínio, que pergunta; a que
+     * erra para o outro lado altera o repositório de alguém.
+     */
+    re: /\b(atualiz\w*|puxa|puxar|sincroniz\w*|baixa|baixar)\s+(o\s+|a\s+|as\s+|os\s+|do\s+|as novidades do\s+|as novidades da\s+)?(repositorio|repositorios|repo|codigo|projeto)\b|\bgit pull\b/,
+    nome: 'atualizar_repositorio',
+    acionavel: true,
+    negavel: true,
+  },
+  {
+    /**
      * A LISTA DE SUBSTANTIVOS ESTAVA INCOMPLETA, e a falta era justamente a do
      * aplicativo mais pedido: `chrome` não estava aqui. "Abra o Chrome no
      * computador" — a frase que abre o caderno de testes — não casava âncora

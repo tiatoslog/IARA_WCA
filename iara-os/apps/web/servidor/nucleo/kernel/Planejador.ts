@@ -127,6 +127,22 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
     ],
   }),
 
+  /**
+   * O apelido vai CRU para a habilidade, e é de propósito. Ela conhece a
+   * allowlist; o planejador não — e não deve, porque a lista muda por máquina.
+   * Aqui só se reconhece a intenção; quem decide se aquele nome existe é quem
+   * tem o disco.
+   */
+  atualizar_repositorio: (p) => ({
+    objetivo: 'Atualizar um repositório autorizado',
+    origem: 'deterministico',
+    passos: [
+      passo(0, 'Puxar as novidades do repositório', 'atualizar_repositorio', {
+        repositorio: extrairApelidoRepositorio(p.bruto),
+      }),
+    ],
+  }),
+
   abrir_app: (p) => ({
     objetivo: 'Abrir aplicativo autorizado',
     origem: 'deterministico',
@@ -409,6 +425,30 @@ export function extrairNomePasta(bruto: string): string {
   nome = nome.replace(/^["“']|["”']$/g, '').trim();
   // "crie uma pasta" sem nome, ou sobrou só ruído: nome honesto de fallback.
   if (!nome || SEM_NOME.test(nome)) return 'Nova pasta';
+  return nome;
+}
+
+/**
+ * O APELIDO do repositório na frase.
+ *
+ * Escrito depois do conserto de `extrairNomePasta`, e com a lição dele: a
+ * limpeza é em etapas nomeadas, não numa expressão só. O nome vem do texto
+ * ORIGINAL — um repositório pode se chamar `IARA_WCA`, e devolver `iara_wca`
+ * obrigaria a allowlist a adivinhar a caixa (ela normaliza, mas quem lê o log
+ * não).
+ *
+ * Vazio é resposta legítima: "atualize o repositório", sem nome, com UM
+ * repositório declarado, é um pedido claro. Quem resolve essa ambiguidade é a
+ * habilidade, que conhece a lista — inventar um nome aqui seria escolher por
+ * ela.
+ */
+export function extrairApelidoRepositorio(bruto: string): string {
+  const m = bruto.match(
+    /(?:reposit[óo]rio|repo|c[óo]digo|projeto)\s+(?:chamado\s+|do\s+|da\s+|de\s+)?["“']?([\w.-]+)["”']?/i,
+  );
+  const nome = (m?.[1] ?? '').trim();
+  // "o", "meu", "esse" casam o grupo e não nomeiam nada.
+  if (/^(o|a|os|as|meu|minha|esse|essa|este|esta|aqui|ai)$/i.test(nome)) return '';
   return nome;
 }
 

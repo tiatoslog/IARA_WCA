@@ -51,7 +51,21 @@ export type AcaoDesktop =
    * (CPU e processos são taxas, não valores) e custa segundos por isso. Fundir
    * as duas faria toda pergunta sobre memória pagar a sonda de processos.
    */
-  | 'medir_desempenho';
+  | 'medir_desempenho'
+  /**
+   * `git pull --ff-only` num repositório da allowlist.
+   *
+   * A primeira ação do catálogo cujo alvo NÃO é um "local nomeado" (área de
+   * trabalho, documentos, downloads) — é um repositório declarado, por apelido.
+   * Está aqui, no mesmo contrato fechado das outras, exatamente porque a
+   * tentação era outra: aceitar um caminho e deixar o `git` decidir. Um verbo
+   * que altera código-fonte é o último lugar do sistema onde o alvo pode vir da
+   * frase que a pessoa digitou.
+   *
+   * O que ela deliberadamente NÃO faz: merge, rebase, commit e push. Ver
+   * `AgenteLocal.atualizarRepositorio` para o porquê de cada recusa.
+   */
+  | 'atualizar_repositorio';
 
 export const ACOES_DESKTOP: readonly AcaoDesktop[] = [
   'abrir_aplicativo',
@@ -61,6 +75,7 @@ export const ACOES_DESKTOP: readonly AcaoDesktop[] = [
   'capturar_tela',
   'informacoes_sistema',
   'medir_desempenho',
+  'atualizar_repositorio',
 ];
 
 export function ehAcaoDesktop(v: unknown): v is AcaoDesktop {

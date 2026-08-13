@@ -24,7 +24,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { supabase } from './ClienteSupabase';
+import { bancoPara } from './ClienteSupabase';
 
 const PASTA_AGENDA = path.resolve(process.cwd(), 'dados', 'agenda');
 
@@ -126,7 +126,7 @@ export class Agenda {
       entregue_em: null,
     };
 
-    const bd = supabase();
+    const bd = bancoPara('agenda_lembretes');
     if (bd) {
       const { error } = await bd.from('agenda_lembretes').insert(lembrete);
       if (error) throw new Error(`Supabase: ${error.message}`);
@@ -149,7 +149,7 @@ export class Agenda {
   /** Os que ainda não foram ditos, do mais próximo ao mais distante. */
   async pendentes(idUsuario: string): Promise<Lembrete[]> {
     const chave = idSeguro(idUsuario);
-    const bd = supabase();
+    const bd = bancoPara('agenda_lembretes');
 
     if (bd) {
       const { data, error } = await bd
@@ -189,7 +189,7 @@ export class Agenda {
   async marcarEntregue(idUsuario: string, id: string): Promise<void> {
     const chave = idSeguro(idUsuario);
     const instante = new Date().toISOString();
-    const bd = supabase();
+    const bd = bancoPara('agenda_lembretes');
 
     if (bd) {
       // O `eq('id_usuario')` é redundante com o id ser uuid, e é proposital:
@@ -226,7 +226,7 @@ export class Agenda {
     const alvo = this.escolher(pendentes, termo);
     if (!alvo) return null;
 
-    const bd = supabase();
+    const bd = bancoPara('agenda_lembretes');
     if (bd) {
       const { error } = await bd
         .from('agenda_lembretes')

@@ -1206,6 +1206,14 @@ export class Kernel {
       overridePersona,
       camadaGlobal,
       /**
+       * O QUE ELA SABE FAZER, redigido do catálogo desta subida.
+       *
+       * Sai daqui porque é o Kernel quem tem o gerenciador — e porque a camada
+       * que fala com a nuvem não pode importar habilidade nenhuma sem alcançar
+       * o `AgenteLocal` por transitividade. Ver `PedidoRaciocinio.capacidades`.
+       */
+      capacidades: this.habilidades.descricaoParaPrompt(),
+      /**
        * As falhas entram no contexto como FATO, não como silêncio. Sem esta
        * linha a LLM recebe um plano pela metade sem saber que metade faltou —
        * e preenche a lacuna com prosa plausível.

@@ -120,6 +120,14 @@ const PRAZO_MS: Record<AcaoDesktop, number> = {
    * máquina lenta que a medição existe para investigar.
    */
   medir_desempenho: 30_000,
+  /**
+   * O maior prazo do quadro, e o único que atravessa a INTERNET: um `pull`
+   * depende do servidor do outro lado. O executor de git já corta em 60 s; a
+   * folga aqui existe para que o prazo do braço não expire ANTES dele — se
+   * expirasse, o operador ouviria "não sei o que aconteceu" onde o git tinha uma
+   * resposta clara para dar.
+   */
+  atualizar_repositorio: 75_000,
 };
 
 /** Janela em que um pedido idêntico é considerado repetição de pacote, e não

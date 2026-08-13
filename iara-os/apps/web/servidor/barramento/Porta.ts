@@ -26,6 +26,7 @@ import { CicloAutonomo } from '../nucleo/CicloAutonomo';
 import { braco } from '../nucleo/Braco';
 import { interpretarMedicao } from '../nucleo/SondasDesempenho';
 import { prepararOperacionais } from '../nucleo/kernel/habilidades/operacionais';
+import { conferirEsquemaSupabase } from '../nucleo/ClienteSupabase';
 import { lerPacoteCliente } from '../../lib/protocolo';
 import { outrosOperadores } from '../../lib/operadores';
 import { papelDe } from '../nucleo/kernel/Papeis';
@@ -124,6 +125,16 @@ function residenteDe(idUsuario: string): Residente {
 }
 
 export async function prepararMotor(): Promise<void> {
+  /**
+   * A ORDEM É DELIBERADA: o esquema é conferido ANTES de qualquer sessão abrir.
+   *
+   * Um operador que entra enquanto a conferência ainda corre pegaria o
+   * `supabase()` memoizado como ligado e escreveria a primeira fala num banco
+   * sem tabela — perdendo o turno com uma exceção de PostgREST na cara dele.
+   * `prepararMotor` já é o ponto em que o processo se recusa a atender antes de
+   * estar pronto; a persistência entra na mesma promessa.
+   */
+  await conferirEsquemaSupabase();
   await prepararOperacionais();
 }
 
