@@ -22,7 +22,7 @@ import type { CompiladorSnapshot } from '../nucleo/kernel/CompiladorSnapshot';
 import type { EstadoAtomico } from '../nucleo/EstadoAtomico';
 import type { EventoKernel } from '../nucleo/kernel/Evento';
 import type { SnapshotCognitivo } from '../../lib/snapshot';
-import { caminhoDaVoz, sintetizar, vozDisponivel } from '../nucleo/Voz';
+import { aquecerVoz, caminhoDaVoz, sintetizar, vozDisponivel } from '../nucleo/Voz';
 import type { SessaoOperador } from './SessaoOperador';
 
 const JANELA_MS = 50;
@@ -84,6 +84,20 @@ export class PonteProjecao {
   }
 
   private aoEvento(e: EventoKernel): void {
+    /**
+     * A conexão de voz abre AQUI, no começo do turno — não quando o texto fica
+     * pronto.
+     *
+     * `DECISAO_TOMADA` é o primeiro instante em que se sabe que vai haver
+     * resposta, e faltam ainda os segundos de geração. O aperto de mão com o
+     * serviço de síntese (~1 s) cabe inteiro nessa janela, e deixa de somar ao
+     * silêncio que o operador escuta depois de a frase aparecer na tela.
+     *
+     * Não é picotar a fala: o áudio continua sendo sintetizado uma vez, sobre o
+     * texto final, com uma prosódia só. O que mudou foi QUANDO o socket abre.
+     */
+    if (e.tipo === 'DECISAO_TOMADA') aquecerVoz();
+
     const log = this.traduzir(e);
     if (log) for (const sessao of this.sessoes) sessao.emitirLog(log.nivel, log.texto);
 

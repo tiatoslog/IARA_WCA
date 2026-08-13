@@ -230,6 +230,32 @@ function descartarConexao(): void {
   }
 }
 
+/**
+ * Abre a conexão de síntese ANTES de haver texto para sintetizar.
+ *
+ * O ganho é de sobreposição, não de velocidade: o aperto de mão com o serviço
+ * da Microsoft custa ~1 s (medido em `npm run medir:voz`), e até aqui ele era
+ * pago DEPOIS de a resposta ficar pronta — somando ao tempo que o operador
+ * espera em silêncio. Aquecendo no início do turno, esse segundo acontece
+ * enquanto a IARA ainda está pensando, e quando o texto chega o socket já está
+ * aberto. Nada muda na fala: mesma voz, mesma prosódia, mesmo áudio.
+ *
+ * Ficou mais valioso com o motor na nuvem: da máquina do operador o handshake
+ * era local-ish; de um host nos EUA, cada ida e volta pesa mais.
+ *
+ * SILENCIOSA POR CONTRATO. É otimização, não funcionalidade — se falhar, a
+ * síntese de verdade reconstrói a conexão como sempre fez, e ninguém percebe.
+ * Por isso o erro não é logado: um aviso aqui apareceria em toda queda de rede
+ * sem nada ter quebrado.
+ */
+export function aquecerVoz(): void {
+  // Só o Edge mantém socket. A Convai é HTTP por requisição — não há o que aquecer.
+  if (provedor() !== 'edge') return;
+  void conexaoViva().catch(() => {
+    descartarConexao();
+  });
+}
+
 /** Só para o teste de encerramento — o processo não deve segurar socket. */
 export function encerrarVoz(): void {
   descartarConexao();
