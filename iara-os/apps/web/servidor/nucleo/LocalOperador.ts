@@ -34,6 +34,16 @@ export interface LocalConhecido {
   readonly latitude: number;
   readonly longitude: number;
   readonly recebido_em: number;
+  /**
+   * O nome do lugar, quando já foi resolvido.
+   *
+   * Não vem no pacote do cliente — vem da geocodificação reversa feita pelo
+   * SERVIDOR, e fica memorizado aqui para a consulta acontecer uma vez por
+   * posição, e não a cada pergunta sobre o tempo. `undefined` significa "ainda
+   * não perguntei"; string vazia significa "perguntei e não deu", que é
+   * diferente e não deve disparar uma segunda tentativa em seguida.
+   */
+  cidade?: string;
 }
 
 const porOperador = new Map<string, LocalConhecido>();
@@ -57,6 +67,19 @@ export function localDe(idUsuario: string): LocalConhecido | null {
     return null;
   }
   return achado;
+}
+
+/**
+ * Memoriza o nome do lugar resolvido para a posição corrente.
+ *
+ * Se a posição mudou entre a consulta e a resposta, o nome é descartado: um
+ * nome antigo sobre uma coordenada nova é exatamente a mentira que este módulo
+ * inteiro existe para evitar.
+ */
+export function registrarCidade(idUsuario: string, latitude: number, cidade: string): void {
+  const atual = porOperador.get(idUsuario);
+  if (!atual || atual.latitude !== latitude) return;
+  porOperador.set(idUsuario, { ...atual, cidade });
 }
 
 /**

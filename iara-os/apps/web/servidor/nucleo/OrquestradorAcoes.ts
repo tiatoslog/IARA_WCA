@@ -12,7 +12,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { buscarNaWeb } from './BuscaWeb';
 import { supabase } from './ClienteSupabase';
-import { localDe } from './LocalOperador';
+import { localDe, registrarCidade } from './LocalOperador';
 
 export interface ResultadoAcao {
   texto: string;
@@ -190,9 +190,17 @@ export class OrquestradorAcoes {
     const doAparelho = idUsuario ? localDe(idUsuario) : null;
     const lat = doAparelho ? String(doAparelho.latitude) : process.env.IARA_LATITUDE?.trim();
     const lon = doAparelho ? String(doAparelho.longitude) : process.env.IARA_LONGITUDE?.trim();
-    const cidade = doAparelho
-      ? 'onde você está'
-      : process.env.IARA_CIDADE?.trim() || 'perímetro operacional';
+
+    let cidade = process.env.IARA_CIDADE?.trim() || 'perímetro operacional';
+    if (doAparelho) {
+      /* O nome sai da coordenada por geocodificação reversa, memorizada por
+         posição: uma consulta por lugar, não uma por pergunta. Falhou, fica
+         `'onde você está'` — que é verdade, só menos útil. */
+      const resolvida =
+        doAparelho.cidade ??
+        (await this.nomearLugar(doAparelho.latitude, doAparelho.longitude, idUsuario));
+      cidade = resolvida || 'onde você está';
+    }
 
     if (!lat || !lon) {
       return {
@@ -226,6 +234,55 @@ export class OrquestradorAcoes {
           `(${(erro as Error).message}). Prefiro não estimar um número que não medi.`,
         ok: false,
       };
+    }
+  }
+
+  /**
+   * Coordenada → nome do lugar.
+   *
+   * FEITO AQUI, NO SERVIDOR, e a escolha é de privacidade: se o navegador
+   * consultasse, o serviço externo aprenderia a coordenada E o IP de casa da
+   * pessoa. Daqui ele vê o IP do host e mais nada. Não é privacidade perfeita —
+   * é um destinatário a menos sabendo de quem é a posição.
+   *
+   * BigDataCloud: gratuito, sem chave, e o único campo que interessa é o nome.
+   * A resposta inteira é descartada; nada além do nome entra no sistema.
+   *
+   * FALHA É SILENCIOSA E BARATA. Sem nome, a IARA diz "onde você está" — o
+   * clima continua certo, porque a previsão vem da COORDENADA, não do rótulo.
+   * Um timeout curto existe por isso: a pergunta é sobre o tempo, e ninguém
+   * espera três segundos a mais para ganhar um substantivo.
+   */
+  private async nomearLugar(lat: number, lon: number, idUsuario: string): Promise<string> {
+    const url =
+      'https://api.bigdatacloud.net/data/reverse-geocode-client' +
+      `?latitude=${lat}&longitude=${lon}&localityLanguage=pt`;
+    try {
+      const resposta = await fetch(url, { signal: AbortSignal.timeout(2500) });
+      if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+      const dados = (await resposta.json()) as {
+        city?: string;
+        locality?: string;
+        principalSubdivisionCode?: string;
+      };
+      /* `city` é o municipio; `locality` costuma ser o bairro e só serve quando
+         o municipio vem vazio — o que acontece em area rural. */
+      const nome = (dados.city || dados.locality || '').trim();
+      if (!nome) throw new Error('resposta sem nome de lugar');
+
+      /* "Valinhos, SP" e não só "Valinhos": existe Santana em quase todo
+         estado, e a sigla custa tres caracteres. `principalSubdivisionCode`
+         vem como "BR-SP". */
+      const uf = (dados.principalSubdivisionCode ?? '').split('-')[1] ?? '';
+      const completo = uf ? `${nome}, ${uf}` : nome;
+
+      registrarCidade(idUsuario, lat, completo);
+      return completo;
+    } catch {
+      // Memoriza o vazio: sem isto, cada pergunta sobre o tempo pagaria uma
+      // tentativa nova contra um serviço que já se mostrou fora.
+      registrarCidade(idUsuario, lat, '');
+      return '';
     }
   }
 

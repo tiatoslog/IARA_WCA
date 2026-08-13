@@ -115,6 +115,98 @@ test('horizonte inválido vindo de um plano da LLM cai no padrão seguro', () =>
 process.env.IARA_LATITUDE = '-22.9707';
 process.env.IARA_LONGITUDE = '-46.9958';
 
+test('a IARA NOMEIA a cidade resolvida da coordenada do aparelho', async () => {
+  registrarLocal('op-nomeado', -22.9707, -46.9958);
+  const fetchOriginal = globalThis.fetch;
+  const urls: string[] = [];
+  globalThis.fetch = (async (u: string) => {
+    urls.push(String(u));
+    if (String(u).includes('bigdatacloud')) {
+      return new Response(
+        JSON.stringify({ city: 'Valinhos', principalSubdivisionCode: 'BR-SP' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    return new Response(
+      JSON.stringify({
+        current: { temperature_2m: 24, relative_humidity_2m: 60, precipitation: 0, weather_code: 0 },
+        daily: {
+          weather_code: [0, 0],
+          temperature_2m_max: [30, 31],
+          temperature_2m_min: [18, 19],
+          precipitation_sum: [0, 0],
+          precipitation_probability_max: [2, 3],
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }) as unknown as typeof fetch;
+  const ctx = {
+    parametros: { horizonte: 'hoje' },
+    enunciado: 'vai chover?',
+    id_usuario: 'op-nomeado',
+    sessao: 'teste',
+    sinal: new AbortController().signal,
+    concedidas: ['rede'],
+  } as unknown as Parameters<typeof consultarClima.executar>[0];
+  try {
+    const r = await consultarClima.executar(ctx);
+    assert.ok(/Valinhos, SP/.test(r.texto), `esperava o nome da cidade; veio "${r.texto}"`);
+
+    // O nome fica MEMORIZADO por posição: a segunda pergunta não paga outra
+    // geocodificação. Sem isso, cada "vai chover?" seria uma consulta a mais
+    // sobre onde a pessoa está.
+    const antes = urls.filter((u) => u.includes('bigdatacloud')).length;
+    await consultarClima.executar(ctx);
+    const depois = urls.filter((u) => u.includes('bigdatacloud')).length;
+    assert.equal(antes, 1, 'geocodificou mais de uma vez na primeira pergunta');
+    assert.equal(depois, 1, 'geocodificou de novo numa posição já resolvida');
+  } finally {
+    globalThis.fetch = fetchOriginal;
+    esquecerLocal('op-nomeado');
+  }
+});
+
+test('geocodificação fora NÃO impede a previsão nem inventa nome', async () => {
+  registrarLocal('op-sem-nome', -22.9707, -46.9958);
+  const fetchOriginal = globalThis.fetch;
+  globalThis.fetch = (async (u: string) => {
+    if (String(u).includes('bigdatacloud')) throw new Error('serviço de nomes fora');
+    return new Response(
+      JSON.stringify({
+        current: { temperature_2m: 24, relative_humidity_2m: 60, precipitation: 0, weather_code: 0 },
+        daily: {
+          weather_code: [0, 0],
+          temperature_2m_max: [30, 31],
+          temperature_2m_min: [18, 19],
+          precipitation_sum: [0, 0],
+          precipitation_probability_max: [2, 3],
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }) as unknown as typeof fetch;
+  try {
+    const r = await consultarClima.executar({
+      parametros: { horizonte: 'hoje' },
+      enunciado: 'vai chover?',
+      id_usuario: 'op-sem-nome',
+      sessao: 'teste',
+      sinal: new AbortController().signal,
+      concedidas: ['rede'],
+    } as unknown as Parameters<typeof consultarClima.executar>[0]);
+
+    // A previsão vem da COORDENADA; o nome é rótulo. Perder o rótulo não pode
+    // custar a resposta — nem virar um nome chutado.
+    assert.equal(r.resolveu, true, 'perdeu a previsão por causa do nome do lugar');
+    assert.ok(/onde voc[êe] est[áa]/i.test(r.texto), `inventou um nome: "${r.texto}"`);
+    assert.ok(!/Valinhos|Cuiab/i.test(r.texto), `carimbou uma cidade: "${r.texto}"`);
+  } finally {
+    globalThis.fetch = fetchOriginal;
+    esquecerLocal('op-sem-nome');
+  }
+});
+
 test('a posição do aparelho VENCE a coordenada configurada', async () => {
   // O escritório está declarado em Valinhos; a pessoa está longe dali. A
   // previsão tem de sair de onde ela está — é o caso de uso inteiro da
