@@ -311,7 +311,9 @@ Sem eufemismo, porque a §40 exige:
    turno real.
 3. **O QR não existe** — o pareamento é por código digitado.
 4. **Concorrência, fuzzing e fault injection** não foram executados nesta rodada.
-5. **CI:** não verificado. `gh` não está autenticado nesta máquina.
+5. **CI: não existe.** Não há `.github/workflows/` neste repositório, e o `gh`
+   não está instalado nesta máquina. Não há resultado remoto a aguardar — o
+   único portão é o local (`npm run verificar`).
 6. **`enviar_whatsapp`, `ler_emails`, `buscar_documento_sharepoint`**: sem
    credencial, só o contrato foi auditado. O executor é um `throw` declarado.
 7. **O turno completo pela LLM** (`ANTHROPIC_API_KEY` presente) não foi
@@ -346,7 +348,7 @@ esquema exige acesso ao console do Supabase — decisão e credencial da operado
 | `origin/main` | `6bb4522` (confirmado por `git ls-remote`) |
 | Push | **REALIZADO** |
 | Force push | nunca usado |
-| CI | não verificado |
+| CI | não existe (sem `.github/workflows`) |
 
 **Aviso de topologia, que continua valendo:** o diretório pai empurra para
 `repositorio-pai`, nunca para `main`. Um `push --force` de `main` a partir do pai
