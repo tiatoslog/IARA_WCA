@@ -33,6 +33,7 @@ import {
 import type { EstadoExecucao } from './Verdade';
 import type { Operacao } from './Operacao';
 import { RegistroOperacoes } from './RegistroOperacoes';
+import type { RegistroErros } from './RegistroErros';
 
 /**
  * O que o executor relatou E o que a verificação apurou, lado a lado.
@@ -68,6 +69,8 @@ export interface PedidoHabilidade {
    */
   registro?: RegistroOperacoes;
   operacao?: Operacao | null;
+  /** Os defeitos cognitivos da sessão. Só a auditoria usa — ver `ContextoHabilidade`. */
+  erros?: RegistroErros;
 }
 
 export class GerenciadorHabilidades {
@@ -182,6 +185,7 @@ export class GerenciadorHabilidades {
       sinal: pedido.sinal,
       enunciado: pedido.enunciado,
       registro: pedido.registro ?? this.jornalPadrao,
+      erros: pedido.erros,
       operacao: pedido.operacao ?? null,
     };
 
@@ -237,6 +241,7 @@ export class GerenciadorHabilidades {
         sinal: pedido.sinal,
         enunciado: pedido.enunciado,
         registro: pedido.registro ?? this.jornalPadrao,
+      erros: pedido.erros,
         operacao: pedido.operacao ?? null,
       },
       id,
@@ -317,6 +322,7 @@ export class GerenciadorHabilidades {
       sinal: pedido.sinal,
       enunciado: pedido.enunciado,
       registro: pedido.registro ?? this.jornalPadrao,
+      erros: pedido.erros,
       operacao: pedido.operacao ?? null,
     };
 

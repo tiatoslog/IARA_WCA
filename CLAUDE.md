@@ -73,6 +73,42 @@ externa e recuada. Nunca inverter.
 `EstadoAtomico` valida e aplica sob trava. Intenção inválida é descartada com
 log, nunca aplicada pela metade.
 
+**Fato, hipótese e recomendação são três coisas.** `Verdade.ts` define de onde
+vem cada afirmação; `Investigacao.ts` define evidência, hipótese e plano em cima
+disso. A confiança de uma hipótese é **calculada** por `criarHipotese` a partir
+das evidências — não existe lugar onde alguém digite `confianca: 'alta'`.
+Hipótese só nasce de anomalia medida, e o que não pôde ser medido vira `lacuna`
+que sai na resposta. Ao investigar qualquer domínio novo (rede, arquivos,
+agenda), reaproveite esse vocabulário: uma segunda escala de confiança ao lado
+da existente é a doença que já custou caro aqui duas vezes.
+
+**Plano autorizado não é atalho.** Quando o operador autoriza um plano
+proposto, a receita `executar_plano` o traduz em passos do Kernel — que rodam
+pelo porteiro, pelo jornal, pelo esquema e pelo verificador, um a um. Nunca
+executar um plano "por dentro" de uma habilidade: isso cria um segundo caminho
+de execução que nenhuma dessas portas vigia. Autorizar o plano também não
+substitui a confirmação de energia: são duas portas, e as duas ficam de pé.
+
+**Autonomia é teto, nunca concessão.** `Autonomia.ts` pode IMPEDIR uma ação que
+as travas permitiriam; nunca PERMITE uma que elas impedem. No nível máximo, um
+plano emitido pela LLM continua sem conseguir desligar a máquina — o
+`PorteiroAutorizacao` não conhece esse módulo, e não deve conhecer.
+
+**Detectar não é executar.** O `Vigia` fala e para. Ele avisa na *borda* (quando
+a situação vira anômala), não enquanto ela persiste, e respeita carência — um
+alerta por tique é o que ensina o operador a ignorar alertas.
+
+**Histórico desempata, não decide.** A `MemoriaDeSolucoes` entra em
+`recomendar` só para desfazer empate na pontuação. Um histórico que sobrepõe a
+fórmula produz escolhas que só se explicam por "foi assim antes" — que é como um
+sistema aprende a repetir o próprio erro com confiança crescente.
+
+**Quem raciocina não alcança o mundo.** `MotorAnalise` não importa
+`AgenteLocal` — nem para ler a allowlist. O que ele precisa saber sobre efeitos
+entra por injeção, vindo do catálogo, que é quem passa pelo portal. A fronteira
+é verificada por grafo em `testes/fronteira-interna.test.ts`; `execFile` e
+`spawn` são confinados ao `AgenteLocal` por `fronteira-efeitos.test.ts`.
+
 **O RAG nunca injeta log bruto.** Só hash, assinatura sintática de uma linha e
 a resolução adotada. É o contrato que protege contexto e custo.
 

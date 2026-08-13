@@ -457,7 +457,16 @@ export class Kernel {
       return this.planejador.planoDeRecusa('Recusar acesso a registro de terceiro');
     }
     if (rota === 'plano_local') {
-      return this.planejador.planejar(p);
+      /**
+       * O CONTEXTO entra aqui, e só aqui. A `Percepcao` continua sendo o que a
+       * frase diz; a identidade de quem a disse vem do Kernel, que é quem a tem.
+       * Sem isto, a receita de autorizar um plano proposto não teria como saber
+       * QUAL proposta está aberta — e adivinhar seria autorizar no escuro.
+       */
+      return this.planejador.planejar(p, {
+        id_usuario: this.dep.idUsuario,
+        sessao: this.dep.sessao,
+      });
     }
     if (rota === 'plano_cognitivo') {
       // A LLM DECOMPÕE. Ela não executa nada do que propôs — o kernel é quem
@@ -681,6 +690,9 @@ export class Kernel {
           sinal: controle.signal,
           concedidas: this.politica.permissoesDe(this.papel),
           registro: this.registro,
+          // Os defeitos cognitivos desta sessão. Só a auditoria lê — ver
+          // `ContextoHabilidade.erros`.
+          erros: this.erros,
           operacao,
         });
 
@@ -994,6 +1006,9 @@ export class Kernel {
           sinal: controle.signal,
           concedidas: this.politica.permissoesDe(this.papel),
           registro: this.registro,
+          // Os defeitos cognitivos desta sessão. Só a auditoria lê — ver
+          // `ContextoHabilidade.erros`.
+          erros: this.erros,
           operacao,
         },
         { texto: '', detalhe: mensagem, resolveu: false },

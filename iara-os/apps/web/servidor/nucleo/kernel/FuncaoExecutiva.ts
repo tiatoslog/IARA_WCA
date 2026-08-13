@@ -47,6 +47,16 @@ export type AcaoCognitiva =
   | 'pesquisar'
   | 'recuperar_memoria'
   | 'criar_plano'
+  /**
+   * APURAR uma situação: medir, comparar com o esperado e levantar hipóteses.
+   *
+   * Não é `responder` (não há resposta antes da medição), não é `executar` (não
+   * produz efeito nenhum no mundo) e não é `criar_plano` (o plano é a SAÍDA da
+   * apuração, não o meio dela). Existe como valor próprio pelo mesmo motivo que
+   * `perguntar` existe: medir "quantas vezes a IARA investigou em vez de
+   * palpitar" não pode depender de inferir intenção a partir de nome de rota.
+   */
+  | 'investigar'
   | 'recusar';
 
 export interface Decisao {
@@ -64,6 +74,8 @@ export interface Decisao {
 const ACAO_DA_ANCORA: Record<string, AcaoCognitiva> = {
   busca: 'pesquisar',
   incidente: 'recuperar_memoria',
+  lentidao: 'investigar',
+  executar_plano: 'executar',
   pasta: 'executar',
   abrir_app: 'executar',
   energia: 'executar',

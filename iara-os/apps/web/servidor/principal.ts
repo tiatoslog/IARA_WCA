@@ -26,6 +26,8 @@ import { WebSocketServer } from 'ws';
 import { config as carregarEnv } from 'dotenv';
 import { origemNaLista, temCuringa } from '../lib/origens';
 import { conectarOperador, encerrarResidentes, prepararMotor } from './barramento/Porta';
+import { ponteDispositivos } from './barramento/PonteDispositivos';
+import { motorTemMaos } from './nucleo/Braco';
 import { persistenciaEmUso } from './nucleo/ClienteSupabase';
 import { autenticacaoAtiva } from './nucleo/Autenticacao';
 import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
@@ -49,6 +51,15 @@ const DEV = process.argv.includes('--dev') || process.env.NODE_ENV === 'developm
 // Hosts de PaaS injetam PORT. IARA_PORTA é o override local.
 const PORTA = Number(process.env.PORT ?? process.env.IARA_PORTA ?? 3000);
 const CAMINHO_WS = '/barramento';
+/**
+ * A porta dos BRAÇOS. Separada de `/barramento` de propósito: são dois
+ * protocolos diferentes, com dois formatos de pacote e duas consequências
+ * distintas — de um lado entra fala e sai snapshot; do outro entra ordem e sai
+ * efeito no computador de alguém. Um caminho só, com um campo dizendo "sou
+ * braço", faria a checagem de qual é qual virar responsabilidade de quem lê o
+ * pacote, e é assim que um cliente comum acaba conseguindo mandar executar.
+ */
+const CAMINHO_DISPOSITIVO = '/dispositivo';
 
 /** Ver o cabeçalho do arquivo. Qualquer valor que não seja `headless` é unificado. */
 type ModoMotor = 'unificado' | 'headless';
@@ -192,6 +203,14 @@ async function subir(): Promise<void> {
           // quem for diagnosticar um deploy precisam da resposta sem adivinhar.
           projecao: MODO === 'unificado' ? 'anexa' : 'externa',
           autenticacao: autenticacaoAtiva() ? 'supabase' : 'local',
+          /**
+           * Onde estão as MÃOS. Sem estes dois campos, um deploy em que ninguém
+           * conectou o braço é indistinguível de um deploy saudável — até
+           * alguém pedir para abrir o Chrome e ouvir que o computador não está
+           * conectado. É a pergunta que o monitor de uptime precisa fazer.
+           */
+          dispositivos: ponteDispositivos.total(),
+          maos_no_motor: motorTemMaos(),
         }),
       );
       return;
@@ -294,6 +313,31 @@ async function subir(): Promise<void> {
   servidorHttp.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const caminho = (req.url ?? '').split('?')[0];
 
+    /**
+     * A porta dos braços passa pela MESMA trava de origem do barramento, e não
+     * por uma mais frouxa. A tentação de afrouxar aqui é real — um cliente
+     * nativo não manda `Origin` sozinho —, e cedê-la seria abrir para a
+     * internet inteira justamente a porta que executa coisas no computador de
+     * alguém. Quem escreve o braço manda o cabeçalho; ver `braco/principal.ts`.
+     */
+    if (caminho === CAMINHO_DISPOSITIVO) {
+      if (!origemPermitida(req)) {
+        console.warn(
+          `[iara] braço recusado, origem "${req.headers.origin ?? '(vazia)'}" — ` +
+            `autorizadas: ${ORIGENS.length ? ORIGENS.join(', ') : '(nenhuma; só mesma origem)'}`,
+        );
+        socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        vivos.add(ws);
+        ws.on('pong', () => vivos.add(ws));
+        ponteDispositivos.conectar(ws);
+      });
+      return;
+    }
+
     if (caminho !== CAMINHO_WS) {
       // Só o HMR do Next tem outro motivo legítimo para pedir upgrade aqui.
       // Sem anexo não há HMR, e um upgrade para caminho desconhecido é ruído
@@ -336,6 +380,12 @@ async function subir(): Promise<void> {
         : `[iara] barramento em ${CAMINHO_WS} (o cliente chega por NEXT_PUBLIC_IARA_WS)`,
     );
     console.log(`[iara] persistência: ${persistenciaEmUso()}`);
+    console.log(
+      motorTemMaos()
+        ? `[iara] mãos: NESTE processo (${process.platform}) — e em qualquer braço que conectar em ${CAMINHO_DISPOSITIVO}`
+        : `[iara] mãos: SÓ por braço conectado em ${CAMINHO_DISPOSITIVO}. ` +
+            'Sem braço, ação no computador é recusada em voz alta — nunca simulada.',
+    );
     console.log(`[iara] ${diagnosticoWhatsapp()}`);
     console.log(`[iara] voz: ${diagnosticoVoz()}`);
     /**
@@ -398,6 +448,7 @@ async function subir(): Promise<void> {
     console.log('\n[iara] encerrando...');
     clearInterval(heartbeat);
     encerrarResidentes();
+    ponteDispositivos.encerrar();
     wss.close();
     servidorHttp.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 2000).unref();

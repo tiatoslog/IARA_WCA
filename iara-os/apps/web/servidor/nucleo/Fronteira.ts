@@ -131,6 +131,52 @@ export const LEITURA_INTERNA: readonly string[] = [
  */
 export const CATALOGO: readonly string[] = [
   'servidor/nucleo/kernel/habilidades/agenteLocal.ts',
+  /**
+   * A investigação de lentidão. Ela NÃO produz efeito nenhum — mede, compara com
+   * faixas e devolve planos que ela mesma não executa —, e mesmo assim está aqui,
+   * porque alcança o `AgenteLocal` por um caminho que o grafo enxerga: importa
+   * `aplicativoFechavelDoProcesso` para saber quais programas a IARA sabe
+   * encerrar, e sem essa resposta ela proporia um plano impossível.
+   *
+   * Poderia ter sido resolvido importando a allowlist de dentro do `MotorAnalise`,
+   * e não foi de propósito: a camada que RACIOCINA não importa a que AGE, nem
+   * para ler. A função entra por injeção, no catálogo, que é onde o portal já
+   * passa. Ver `PodeFechar` em `MotorAnalise.ts`.
+   */
+  'servidor/nucleo/kernel/habilidades/investigacao.ts',
+];
+
+/**
+ * PONTE DE EXECUÇÃO — o caminho entre a intenção e as mãos, quando as mãos
+ * estão em outra máquina.
+ *
+ * Categoria nova, e ela existe porque a fronteira tinha uma suposição embutida
+ * que deixou de ser verdade. `EFEITO_EXTERNO` sempre significou "daqui alguém
+ * de fora percebe", e `AgenteLocal` entrou nessa lista por rodar `spawn` e
+ * `mkdir` — o que é correto. O que estava calado é ONDE: até 12/08/2026, o
+ * motor rodava no computador do operador, então "o disco daqui" e "o disco
+ * dele" eram a mesma frase. Com o motor na nuvem, deixaram de ser.
+ *
+ * Estes três módulos são o trajeto que reconhece a distância:
+ *
+ *   habilidade → Braço (decide ONDE) → ponte → braço remoto → ExecutorDesktop
+ *
+ * Eles não são efeito externo: nenhum deles abre disco, shell ou provedor. Não
+ * são estado interno: eles existem exatamente para alcançar o mundo. E não são
+ * catálogo: não têm manifesto e a LLM não os enxerga. São transporte com
+ * política, e merecem um nome próprio — sem ele, ou virariam mais uma linha
+ * numa lista que já não os descreve, ou ficariam sem classificação nenhuma,
+ * que é a coisa que esta declaração existe para tornar impossível.
+ */
+export const PONTE_DE_EXECUCAO: readonly string[] = [
+  // Decide onde a ordem corre, dá identidade, mede prazo e enfileira.
+  'servidor/nucleo/Braco.ts',
+  // Traduz ordem em efeito. É o único que alcança o `AgenteLocal`.
+  'servidor/nucleo/ExecutorDesktop.ts',
+  // O socket dos braços. Transporte puro: não interpreta ordem nem executa nada.
+  'servidor/barramento/PonteDispositivos.ts',
+  // O processo que roda na máquina do operador e tem as mãos de verdade.
+  'servidor/braco/principal.ts',
 ];
 
 /**
@@ -184,6 +230,7 @@ export const DECLARADOS: readonly string[] = [
   ...LEITURA_EXTERNA,
   ...LEITURA_INTERNA,
   ...CATALOGO,
+  ...PONTE_DE_EXECUCAO,
   ...ENTRADA,
   PORTAL,
 ];
