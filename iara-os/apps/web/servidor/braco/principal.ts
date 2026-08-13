@@ -70,7 +70,27 @@ let socket: WebSocket | null = null;
 const emCurso = new Map<string, Promise<RelatoExecucao>>();
 /** Relatos já entregues, por um instante: cobre a reentrega que chega DEPOIS
  *  de a primeira ter terminado. */
-const concluidas = new Map<string, { relato: RelatoExecucao; em: number }>();
+const concluidas = new Map<string, { relato: RelatoExecucao; assinatura: string; em: number }>();
+
+/**
+ * O QUE ESTA ORDEM PEDE, em uma linha.
+ *
+ * Guardada junto do relato para que o cache só responda por uma ordem
+ * IDÊNTICA. A raiz do defeito que motivou isto foi consertada do outro lado —
+ * `execucao_id` agora carrega a marca do processo e não se repete entre vidas
+ * do motor (ver `lib/execucao.ts`). Esta é a segunda tranca, e ela existe
+ * porque a primeira depende de um contrato que este processo não controla: o
+ * braço roda no computador de alguém e conversa com o motor que estiver lá,
+ * inclusive uma versão mais velha. Uma cache que devolve o relato de OUTRA ação
+ * é uma mentira com selo de sucesso, e vale ter duas defesas contra isso.
+ */
+function assinaturaDa(ordem: OrdemExecucao): string {
+  const parametros = Object.keys(ordem.parametros)
+    .sort()
+    .map((k) => `${k}=${String(ordem.parametros[k])}`)
+    .join('&');
+  return `${ordem.acao}|${parametros}`;
+}
 
 function enviar(pacote: PacoteBraco): void {
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
@@ -82,11 +102,24 @@ function enviar(pacote: PacoteBraco): void {
 }
 
 async function atender(ordem: OrdemExecucao): Promise<void> {
+  const assinatura = assinaturaDa(ordem);
   const guardado = concluidas.get(ordem.execucao_id);
   if (guardado) {
-    console.log(`[braço] ${ordem.execucao_id} já executada; reenviando o relato original`);
-    enviar({ tipo: 'concluida', relato: guardado.relato });
-    return;
+    if (guardado.assinatura === assinatura) {
+      console.log(`[braço] ${ordem.execucao_id} já executada; reenviando o relato original`);
+      enviar({ tipo: 'concluida', relato: guardado.relato });
+      return;
+    }
+    /**
+     * Mesmo id, ordem DIFERENTE. Isso não é reentrega — é colisão de
+     * identidade, e responder com o relato guardado seria relatar o sucesso de
+     * uma ação que ninguém pediu. Descarta o cache e executa o que chegou.
+     */
+    console.warn(
+      `[braço] ${ordem.execucao_id} reaproveitado para outra ordem ` +
+        `("${guardado.assinatura}" → "${assinatura}"); descartando o relato antigo e executando a nova`,
+    );
+    concluidas.delete(ordem.execucao_id);
   }
   const jaCorrendo = emCurso.get(ordem.execucao_id);
   if (jaCorrendo) {
@@ -109,7 +142,7 @@ async function atender(ordem: OrdemExecucao): Promise<void> {
   emCurso.delete(ordem.execucao_id);
 
   const agora = Date.now();
-  concluidas.set(ordem.execucao_id, { relato, em: agora });
+  concluidas.set(ordem.execucao_id, { relato, assinatura, em: agora });
   for (const [k, v] of concluidas) if (agora - v.em > 5 * 60_000) concluidas.delete(k);
 
   console.log(

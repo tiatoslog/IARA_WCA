@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "tsx servidor/principal.ts",
     "braco": "tsx servidor/braco/principal.ts",
+    "celular": "node scripts/celular.mjs",
     "marca": "tsx scripts/gerar-marca.ts",
     "icones": "tsx scripts/gerar-icones.ts",
     "vozes": "node scripts/vozes.mjs",
