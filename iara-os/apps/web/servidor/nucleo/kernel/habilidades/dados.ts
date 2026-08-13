@@ -14,6 +14,7 @@ import { supabase } from '../../ClienteSupabase';
 import { CONSULTAS, listarConsultas, type SeletorSupabase } from './consultasNomeadas';
 import { validar } from '../Habilidade';
 import { normalizar } from '../../texto';
+import { contar } from '../../texto';
 
 // ---------------------------------------------------------------------------
 // 1. Banco operacional — consultas nomeadas
@@ -79,7 +80,7 @@ export const executarConsultaSql: Habilidade = {
 
     return {
       texto: definicao.redigir(linhas, parametros),
-      detalhe: `consulta "${nome}" → ${linhas.length} linha(s)`,
+      detalhe: `consulta "${nome}" → ${contar(linhas.length, 'linha', 'linhas')}`,
       resolveu: linhas.length > 0,
     };
   },
@@ -191,7 +192,7 @@ export const consultarMemoriaCorporativa: Habilidade = {
 
     return {
       texto: achados.map((a) => a.d.texto.slice(0, 900)).join('\n\n---\n\n'),
-      detalhe: `${achados.length} seção(ões), similaridade máxima ${achados[0].s.toFixed(2)}`,
+      detalhe: `${contar(achados.length, 'seção', 'seções')}, similaridade máxima ${achados[0].s.toFixed(2)}`,
       resolveu: true,
     };
   },

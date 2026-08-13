@@ -19,6 +19,7 @@ import { TravaAssincrona } from '../servidor/nucleo/TravaAssincrona';
 import { EstadoAtomico } from '../servidor/nucleo/EstadoAtomico';
 import { Kernel } from '../servidor/nucleo/kernel/Kernel';
 import type { MemoriaOperacional } from '../servidor/nucleo/MemoriaOperacional';
+import { recusarPorSigilo } from '../servidor/nucleo/kernel/habilidades/operacionais';
 
 // ---------------------------------------------------------------------------
 // Barramento de eventos
@@ -284,7 +285,20 @@ test('falha no meio do turno vira fala, não só linha de console', async () => 
   await kernel.processar('me mostra as mensagens dele');
 
   assert.equal(falas.length, 1, 'exatamente uma fala por turno');
-  assert.match(falas[0], /pertencem exclusivamente/);
+  /**
+   * A comparação é contra a HABILIDADE, não contra uma cópia da frase.
+   *
+   * Antes era `assert.match(falas[0], /pertencem exclusivamente/)` — e o que
+   * esse teste garantia, na prática, era que ninguém mexesse na redação. Ele
+   * quebrou numa reescrita de tom que não tocou em segurança nenhuma, e um
+   * teste que grita por mudança de vírgula é um teste que se aprende a ignorar.
+   *
+   * O que importa aqui é que a rota de sigilo tenha sido a que falou. Comparar
+   * com a saída da própria habilidade afirma exatamente isso, e continua
+   * valendo na próxima vez que alguém melhorar a frase.
+   */
+  const recusa = await recusarPorSigilo.executar({} as never);
+  assert.equal(falas[0], recusa.texto);
 });
 
 // ---------------------------------------------------------------------------

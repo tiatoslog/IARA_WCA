@@ -1096,9 +1096,9 @@ export class Kernel {
     if (!this.raciocinio.disponivel) {
       const texto =
         saidas.length > 0
-          ? `${saidas.join('\n\n')}\n\nPara ir além disso eu precisaria da camada de raciocínio, que está desligada neste ambiente.`
-          : 'Esse pedido exige raciocínio aberto, e a camada de nuvem está desligada: falta a chave da Anthropic no ambiente. ' +
-            'Prefiro dizer isso a improvisar. Localmente eu resolvo clima, hora, infraestrutura, histórico de incidentes e busca.';
+          ? `${saidas.join('\n\n')}\n\nPara ir além disso eu precisaria da camada de raciocínio, e ela está desligada aqui.`
+          : 'Isso exige raciocínio aberto, e a camada de nuvem está desligada — falta a chave da Anthropic no ambiente. ' +
+            'Prefiro dizer isso a improvisar. Local eu resolvo: clima, hora, infraestrutura, histórico de incidentes e busca.';
       b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto });
       return texto;
     }

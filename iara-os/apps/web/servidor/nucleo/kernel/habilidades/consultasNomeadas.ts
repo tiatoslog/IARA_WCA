@@ -19,6 +19,7 @@
  */
 
 import type { Esquema } from '../Habilidade';
+import { contar } from '../../texto';
 
 export interface ConsultaNomeada {
   readonly nome: string;
@@ -69,10 +70,14 @@ export const CONSULTAS: Readonly<Record<string, ConsultaNomeada>> = {
       const veiculos = ativas.reduce((s, l) => s + Number(l.veiculos ?? 0), 0);
       const escopo = p.uf === 'GERAL' ? 'em toda a operação' : `no território de ${p.uf}`;
       const inativas = linhas.length - ativas.length;
-      const nota = inativas > 0 ? ` ${inativas} está(ão) fora de operação.` : '';
+      const nota =
+        inativas > 0 ? ` ${contar(inativas, 'está', 'estão')} fora de operação.` : '';
+      // A mesma frase que `OrquestradorAcoes.consultarCentrais` produz sem
+      // banco. Duas redações para o mesmo fato fariam a IARA falar diferente
+      // conforme o ambiente, que é o tipo de coisa que ninguém percebe até ver.
       return (
-        `${ativas.length} central(is) ativa(s) ${escopo}, somando ${veiculos} veículos ` +
-        `vinculados.${nota}`
+        `${contar(ativas.length, 'central ativa', 'centrais ativas')} ${escopo}, ` +
+        `somando ${contar(veiculos, 'veículo vinculado', 'veículos vinculados')}.${nota}`
       );
     },
   },

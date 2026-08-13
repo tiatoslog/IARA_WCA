@@ -24,6 +24,7 @@ import type { EventoKernel } from '../nucleo/kernel/Evento';
 import type { SnapshotCognitivo } from '../../lib/snapshot';
 import { aquecerVoz, caminhoDaVoz, sintetizar, vozDisponivel } from '../nucleo/Voz';
 import type { SessaoOperador } from './SessaoOperador';
+import { contar } from '../nucleo/texto';
 
 const JANELA_MS = 50;
 
@@ -244,7 +245,7 @@ export class PonteProjecao {
         return {
           nivel: 'info',
           texto:
-            `Plano ${e.plano.origem} "${e.plano.objetivo}" com ${e.plano.passos.length} passo(s): ` +
+            `Plano ${e.plano.origem} "${e.plano.objetivo}" com ${contar(e.plano.passos.length, 'passo', 'passos')}: ` +
             e.plano.passos.map((p) => `${p.indice + 1}. ${p.descricao}`).join(' | '),
         };
       case 'PASSO_INICIADO':

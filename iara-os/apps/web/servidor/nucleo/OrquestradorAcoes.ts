@@ -13,6 +13,7 @@ import path from 'node:path';
 import { buscarNaWeb } from './BuscaWeb';
 import { supabase } from './ClienteSupabase';
 import { localDe, registrarCidade } from './LocalOperador';
+import { contar } from './texto';
 
 export interface ResultadoAcao {
   texto: string;
@@ -292,13 +293,15 @@ export class OrquestradorAcoes {
       throw new Error('payload sem leitura corrente');
     }
     const condicao = CODIGOS_TEMPO[atual.weather_code ?? -1] ?? 'condição não catalogada';
+    // "Sem precipitação registrada na última hora" é leitura de estação
+    // meteorológica. A informação é a mesma; a frase é de gente.
     const chuva =
       (atual.precipitation ?? 0) > 0
-        ? ` Há ${atual.precipitation} mm de precipitação registrada na última hora.`
-        : ' Sem precipitação registrada na última hora.';
+        ? ` Choveu ${atual.precipitation} mm na última hora.`
+        : ' Não choveu na última hora.';
     return (
       `Agora em ${cidade}: ${atual.temperature_2m} °C, ${condicao}, ` +
-      `umidade relativa em ${atual.relative_humidity_2m ?? '—'}%.${chuva}`
+      `umidade em ${atual.relative_humidity_2m ?? '—'}%.${chuva}`
     );
   }
 
@@ -400,7 +403,8 @@ export class OrquestradorAcoes {
 
       const escopo = uf === 'GERAL' ? 'em toda a operação' : `no território de ${uf}`;
       const inativas = filtradas.length - ativas.length;
-      const nota = inativas > 0 ? ` ${inativas} está(ão) fora de operação.` : '';
+      const nota =
+        inativas > 0 ? ` ${contar(inativas, 'está', 'estão')} fora de operação.` : '';
 
       /**
        * HONESTIDADE SOBRE A FONTE. O dataset semente responde com a mesma
@@ -412,10 +416,19 @@ export class OrquestradorAcoes {
         ? ' (Atenção: estes são dados de demonstração do dataset semente — o banco real ainda não foi conectado.)'
         : '';
 
+      /**
+       * A RESPOSTA COMEÇA PELO NÚMERO.
+       *
+       * "Verifiquei os registros de infraestrutura:" abria esta frase, e é
+       * preâmbulo puro — anuncia o método antes de entregar o dado, numa
+       * pergunta cuja resposta inteira cabe em quatro palavras. Quem pergunta
+       * quantas centrais existem quer o número, não o relato da consulta.
+       */
       return {
         texto:
-          `Verifiquei os registros de infraestrutura: ${ativas.length} central(is) ativa(s) ` +
-          `${escopo}, somando ${veiculos} veículos vinculados.${nota}${origem}`,
+          `${contar(ativas.length, 'central ativa', 'centrais ativas')} ${escopo}, ` +
+          `somando ${contar(veiculos, 'veículo vinculado', 'veículos vinculados')}.` +
+          `${nota}${origem}`,
         ok: true,
       };
     } catch (erro) {
@@ -432,12 +445,14 @@ export class OrquestradorAcoes {
     try {
       const achados = await buscarNaWeb(consulta, 3);
       if (achados.length === 0) {
-        return { texto: 'A busca não retornou resultado utilizável.', ok: false };
+        return { texto: 'Não achei nada utilizável sobre isso na web.', ok: false };
       }
       const linhas = achados.map((r, i) => `${i + 1}. ${r.titulo} — ${r.resumo}`);
-      return { texto: `Levantei o seguinte na web:\n${linhas.join('\n')}`, ok: true };
+      // "Da web" e não "Levantei o seguinte na web": a procedência precisa ficar
+      // clara, o relato do esforço não.
+      return { texto: `Da web:\n${linhas.join('\n')}`, ok: true };
     } catch (erro) {
-      return { texto: `A busca externa falhou (${(erro as Error).message}).`, ok: false };
+      return { texto: `A busca na web falhou (${(erro as Error).message}).`, ok: false };
     }
   }
 

@@ -17,6 +17,7 @@
 
 import { createHash } from 'node:crypto';
 import { normalizar } from '../texto';
+import { contar } from '../texto';
 
 /**
  * As classes de erro cognitivo que este sistema sabe distinguir.
@@ -150,7 +151,7 @@ export class RegistroErros {
     const titulo = `${e.classe}: ${e.entrada.slice(0, 60)}`.replace(/'/g, '');
     return [
       `/**`,
-      ` * Regressão ${e.assinatura} — ${e.ocorrencias} ocorrência(s).`,
+      ` * Regressão ${e.assinatura} — ${contar(e.ocorrencias, 'ocorrência', 'ocorrências')}.`,
       ` * Observado: ${e.observado}`,
       ` * Esperado:  ${e.esperado}`,
       ` */`,

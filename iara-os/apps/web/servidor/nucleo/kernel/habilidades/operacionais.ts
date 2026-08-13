@@ -12,6 +12,7 @@
 import type { Habilidade } from '../Habilidade';
 import { OrquestradorAcoes } from '../../OrquestradorAcoes';
 import { RagHistorico } from '../../RagHistorico';
+import { contar } from '../../texto';
 
 const acoes = new OrquestradorAcoes();
 const rag = new RagHistorico();
@@ -148,7 +149,7 @@ export const buscarHistorico: Habilidade = {
       texto: rag.formatar(achados),
       // O detalhe é o que sobe para o console. Nunca o log bruto — que, aliás,
       // nem existe na base: é essa ausência que protege o contexto do modelo.
-      detalhe: `${achados.length} assinatura(s), nenhum log bruto carregado`,
+      detalhe: `${contar(achados.length, 'assinatura', 'assinaturas')}, nenhum log bruto carregado`,
       resolveu: achados.length > 0,
     };
   },
@@ -174,11 +175,23 @@ export const recusarPorSigilo: Habilidade = {
     esquema: {},
   },
   async executar() {
+    /**
+     * RECUSA CURTA, e a brevidade aqui é substantiva.
+     *
+     * A versão anterior abria com "Os registros individuais pertencem
+     * exclusivamente a cada operador" — três orações antes do "não". Recusa
+     * comprida soa a desculpa, e desculpa convida à insistência. Diga não,
+     * diga por quê em uma linha, ofereça a saída legítima, pare.
+     *
+     * O que NÃO pode encurtar: a garantia recíproca ("os seus também"). É ela
+     * que transforma a recusa de obstáculo em proteção, e é por isso que a
+     * frase existe.
+     */
     return {
       texto:
-        'Os registros individuais pertencem exclusivamente a cada operador — inclusive os seus, ' +
-        'que ninguém mais acessa. Não tenho como comentar o conteúdo de outra pessoa. Se precisar ' +
-        'de algo consolidado da operação, posso levantar sem expor ninguém.',
+        'Isso eu não faço: o histórico de cada operador é só dele — o seu inclusive, ' +
+        'que ninguém mais lê. Se precisar de algo consolidado da operação, levanto sem ' +
+        'expor ninguém.',
       detalhe: 'sondagem cruzada barrada antes do raciocínio',
       resolveu: true,
     };

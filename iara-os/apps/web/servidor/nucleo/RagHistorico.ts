@@ -15,7 +15,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AssinaturaErro } from '../../lib/estado';
-import { normalizar } from './texto';
+import { contar, normalizar } from './texto';
 import { supabase } from './ClienteSupabase';
 
 export interface AchadoRag {
@@ -104,12 +104,17 @@ export class RagHistorico {
   /** Redação para o operador. Curta por construção — é o contrato. */
   formatar(achados: AchadoRag[]): string {
     if (achados.length === 0) {
-      return 'Vasculhei a base histórica e não encontrei ocorrência com assinatura equivalente. Se descrever a mensagem exata do erro, indexo para a próxima vez.';
+      // "Vasculhei a base histórica e não encontrei" narra o esforço antes de
+      // dar a resposta. A resposta é "não".
+      return (
+        'Nada com assinatura equivalente no histórico. Se você me passar a ' +
+        'mensagem exata do erro, indexo para a próxima vez.'
+      );
     }
     const linhas = achados.map((a) => {
       const r = a.registro;
       return (
-        `• ${r.assinatura} (${r.sistema}) — ${r.ocorrencias} ocorrência(s), ` +
+        `• ${r.assinatura} (${r.sistema}) — ${contar(r.ocorrencias, 'ocorrência', 'ocorrências')}, ` +
         `a última em ${r.ultima_ocorrencia}. Resolução adotada: ${r.resolucao}`
       );
     });

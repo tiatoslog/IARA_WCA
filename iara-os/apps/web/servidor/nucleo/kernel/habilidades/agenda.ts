@@ -22,6 +22,7 @@
 import type { Habilidade } from '../Habilidade';
 import { agenda } from '../../Agenda';
 import { interpretarQuando } from '../Quando';
+import { contar } from '../../texto';
 
 /** Formato falado, no fuso da máquina. `toISOString` diria a verdade em UTC —
  *  o que, para quem lê, é uma hora errada com aparência de precisão. */
@@ -162,8 +163,8 @@ export const listarLembretes: Habilidade = {
     }
     const linhas = pendentes.map((l) => `• ${porExtenso(l.vence_em)} — ${l.assunto}`);
     return {
-      texto: `Você tem ${pendentes.length} lembrete(s):\n${linhas.join('\n')}`,
-      detalhe: `${pendentes.length} pendente(s)`,
+      texto: `Você tem ${contar(pendentes.length, 'lembrete', 'lembretes')}:\n${linhas.join('\n')}`,
+      detalhe: `${contar(pendentes.length, 'pendente', 'pendentes')}`,
       resolveu: true,
     };
   },
@@ -221,7 +222,7 @@ export const cancelarLembrete: Habilidade = {
             ? `"${termo}" combina com mais de um lembrete (ou com nenhum), e eu não escolho por você. `
             : 'Você tem mais de um lembrete marcado, e eu não escolho qual apagar. ') +
           `Diga qual:\n${candidatos.join('\n')}`,
-        detalhe: `cancelamento ambíguo entre ${pendentes.length} pendente(s)`,
+        detalhe: `cancelamento ambíguo entre ${contar(pendentes.length, 'pendente', 'pendentes')}`,
         resolveu: false,
       };
     }
