@@ -281,6 +281,44 @@ export interface DescricaoDispositivo {
   readonly versao: string;
   readonly conectado_em: number;
   readonly visto_em: number;
+  /**
+   * A credencial durável com que este braço se apresentou, quando há uma.
+   *
+   * `null` para quem entrou por `IARA_TOKEN` colado ou em modo local — que é o
+   * caso do desenvolvimento e não deveria existir numa máquina de operadora.
+   * O campo é o que costura o socket vivo à linha da tabela: sem ele, a mesma
+   * máquina apareceria duas vezes na aba Dispositivos, uma como "conectada" e
+   * outra como "pareada", e desconectar uma não faria nada com a outra.
+   */
+  readonly id_credencial?: string | null;
+}
+
+/**
+ * UMA MÁQUINA, do ponto de vista de quem olha a aba Dispositivos.
+ *
+ * Funde duas fontes que o resto do sistema mantém separadas de propósito: o
+ * socket vivo (`PonteDispositivos`, memória do processo) e a credencial gravada
+ * (`Pareamento`, banco). A fusão acontece no servidor, e não na tela, porque
+ * decidir se dois registros são "a mesma máquina" é conhecimento de domínio —
+ * deixá-lo no cliente produziria uma resposta diferente por projeção.
+ *
+ * `conectada: false` com `pareada_em` preenchido é o estado normal de um
+ * computador desligado, e não uma falha. É exatamente o que a operadora precisa
+ * ver para entender por que um comando não chegou.
+ */
+export interface MaquinaDoOperador {
+  /** `id_credencial` quando pareada; o id de sessão quando não há credencial. */
+  readonly id: string;
+  readonly nome: string;
+  readonly plataforma: string;
+  /** `null` para uma máquina pareada que não está conectada agora. */
+  readonly versao: string | null;
+  readonly conectada: boolean;
+  /** Pode ser desconectada/esquecida? Só o que tem credencial durável. */
+  readonly pareada: boolean;
+  readonly pareada_em: number | null;
+  /** Última vez que esta máquina deu sinal — a "última sessão" da tela. */
+  readonly vista_em: number | null;
 }
 
 // ---------------------------------------------------------------------------

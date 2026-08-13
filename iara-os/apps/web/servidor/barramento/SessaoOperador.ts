@@ -13,6 +13,7 @@
  */
 
 import type { WebSocket } from 'ws';
+import type { MaquinaDoOperador } from '../../lib/execucao';
 import type { NivelLog, PacoteServidor } from '../../lib/protocolo';
 import type { SnapshotCognitivo } from '../../lib/snapshot';
 import { FilaTelemetria } from './FilaTelemetria';
@@ -63,6 +64,33 @@ export class SessaoOperador {
     this.seq += 1;
     this.fila.enfileirar({ tipo: 'log', seq: this.seq, instante: Date.now(), nivel, texto });
     this.agendarDrenagem();
+  }
+
+  /**
+   * O inventário de mãos, para ESTA tela.
+   *
+   * Não vai para os espelhos, e a diferença com a ficha do operador é
+   * proposital: a ficha muda o que a IARA sabe sobre a pessoa e precisa
+   * concordar em todas as telas; a lista de máquinas é uma consulta, aberta na
+   * gaveta de quem perguntou. Reidratar todos os espelhos por causa dela faria
+   * uma gaveta fechada no computador receber tráfego por um clique no celular.
+   */
+  emitirDispositivos(
+    maquinas: MaquinaDoOperador[],
+    pareamentoDisponivel: boolean,
+    ultimaAcao?: { ok: boolean; texto: string },
+  ): void {
+    if (this.fechada) return;
+    this.seq += 1;
+    this.fila.enfileirar({
+      tipo: 'dispositivos',
+      seq: this.seq,
+      instante: Date.now(),
+      maquinas,
+      pareamento_disponivel: pareamentoDisponivel,
+      ...(ultimaAcao ? { ultima_acao: ultimaAcao } : {}),
+    });
+    this.drenar();
   }
 
   emitirErro(texto: string): void {

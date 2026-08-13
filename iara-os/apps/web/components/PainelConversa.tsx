@@ -17,14 +17,17 @@ import {
   IconeEncerrar,
   IconeEnviar,
   IconeInterromper,
+  IconeMaos,
   IconeMicrofone,
   IconeMudo,
   IconeVigilia,
   IconeVoz,
 } from './Icones';
 import type { EstagioCognitivo } from '../lib/estado';
+import type { MaquinaDoOperador } from '../lib/execucao';
 import type { PreferenciasOperador } from '../lib/perfil';
 import type { SnapshotCognitivo } from '../lib/snapshot';
+import { Dispositivos } from './Dispositivos';
 import { FichaOperador, fichaDoSnapshot } from './FichaOperador';
 
 const ROTULO_ESTAGIO: Record<EstagioCognitivo, string> = {
@@ -69,7 +72,18 @@ interface Props {
   textoAvulso?: string | null;
   /** Grava a ficha do operador. `false` = o barramento estava fechado. */
   onSalvarPreferencias?: (p: PreferenciasOperador) => boolean;
+  /** As mãos deste operador. `null` = ainda não perguntamos. */
+  maquinas?: MaquinaDoOperador[] | null;
+  pareamentoDisponivel?: boolean;
+  acaoDispositivo?: { ok: boolean; texto: string } | null;
+  onPedirDispositivos?: () => boolean;
+  onAutorizarComputador?: (codigo: string) => boolean;
+  onEsquecerComputador?: (id: string) => boolean;
 }
+
+/** Qual gaveta está aberta sobre o fluxo da conversa. Uma de cada vez: as duas
+ *  ocupam o mesmo espaço, e "aberta" é um estado do painel, não de cada uma. */
+type Gaveta = 'nenhuma' | 'ficha' | 'dispositivos';
 
 export function PainelConversa({
   estado,
@@ -87,9 +101,15 @@ export function PainelConversa({
   onFalar,
   textoAvulso = null,
   onSalvarPreferencias,
+  maquinas = null,
+  pareamentoDisponivel = true,
+  acaoDispositivo = null,
+  onPedirDispositivos,
+  onAutorizarComputador,
+  onEsquecerComputador,
 }: Props) {
   const [rascunho, setRascunho] = useState('');
-  const [fichaAberta, setFichaAberta] = useState(false);
+  const [gaveta, setGaveta] = useState<Gaveta>('nenhuma');
   const fim = useRef<HTMLDivElement | null>(null);
 
   /**
@@ -152,6 +172,11 @@ export function PainelConversa({
    */
   const saudando = conexao === 'conectado' && estado.estagio === 'ocioso' && Boolean(nomeExibido);
 
+  /** Mãos ATENDENDO agora. Máquina pareada e desligada não conta: o número no
+   *  cabeçalho responde "posso pedir algo no computador?", não "quantas máquinas
+   *  já autorizei". */
+  const maosLigadas = (maquinas ?? []).filter((m) => m.conectada).length;
+
   /**
    * Modo ligação. A IARA "está falando" quando há fala em curso não concluída
    * — é esse sinal que transforma voz do operador em interrupção em vez de
@@ -211,10 +236,10 @@ export function PainelConversa({
           */}
           {saudando && onSalvarPreferencias ? (
             <button
-              className={fichaAberta ? 'conversa-saudacao aberto' : 'conversa-saudacao'}
-              onClick={() => setFichaAberta((v) => !v)}
+              className={gaveta === 'ficha' ? 'conversa-saudacao aberto' : 'conversa-saudacao'}
+              onClick={() => setGaveta((g) => (g === 'ficha' ? 'nenhuma' : 'ficha'))}
               title="Como a IARA deve chamar e atender você"
-              aria-expanded={fichaAberta}
+              aria-expanded={gaveta === 'ficha'}
             >
               <span className="saudacao-cortesia">Boas-vindas,</span>{' '}
               <span className="saudacao-nome">{nomeExibido}</span>
@@ -229,6 +254,28 @@ export function PainelConversa({
                     ? 'abrindo…'
                     : 'reconectando…'}
             </span>
+          )}
+          {/*
+            A porta do quadro de chaves. Fica ANTES do ponto de enlace e depois
+            do estado, na ordem em que as três coisas importam: o que a IARA
+            está fazendo, o que ela alcança, se o fio está de pé.
+
+            O número ao lado do ícone é fato observado — quantos braços estão
+            conectados agora —, e por isso ele some quando não há nenhum em vez
+            de virar um zero. Um "0" permanente no cabeçalho é ruído que a pessoa
+            aprende a ignorar; a ausência é a mesma informação sem o custo.
+          */}
+          {onPedirDispositivos && (
+            <button
+              className={gaveta === 'dispositivos' ? 'conversa-maos aberto' : 'conversa-maos'}
+              onClick={() => setGaveta((g) => (g === 'dispositivos' ? 'nenhuma' : 'dispositivos'))}
+              title="Onde a IARA tem mãos — computadores ligados a você"
+              aria-label="Computadores conectados"
+              aria-expanded={gaveta === 'dispositivos'}
+            >
+              <IconeMaos tamanho={14} />
+              {maosLigadas > 0 && <span className="conversa-maos-conta">{maosLigadas}</span>}
+            </button>
           )}
           <span
             className={conectado ? 'conversa-enlace ligado' : 'conversa-enlace'}
@@ -260,14 +307,27 @@ export function PainelConversa({
         continua vivo: quem abriu para trocar o próprio nome não deveria perder
         a conversa por isso.
       */}
-      {fichaAberta && onSalvarPreferencias ? (
+      {gaveta === 'ficha' && onSalvarPreferencias ? (
         <div className="conversa-fluxo rolagem">
           <FichaOperador
             nomeCredencial={estado.operador?.nome ?? ''}
             preferencias={preferencias}
             conectado={conectado}
             aoSalvar={onSalvarPreferencias}
-            aoFechar={() => setFichaAberta(false)}
+            aoFechar={() => setGaveta('nenhuma')}
+          />
+        </div>
+      ) : gaveta === 'dispositivos' && onPedirDispositivos ? (
+        <div className="conversa-fluxo rolagem">
+          <Dispositivos
+            maquinas={maquinas}
+            conectado={conectado}
+            pareamentoDisponivel={pareamentoDisponivel}
+            ultimaAcao={acaoDispositivo}
+            aoPedirLista={onPedirDispositivos}
+            aoAutorizar={onAutorizarComputador ?? (() => false)}
+            aoEsquecer={(id) => onEsquecerComputador?.(id)}
+            aoFechar={() => setGaveta('nenhuma')}
           />
         </div>
       ) : (

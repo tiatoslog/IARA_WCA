@@ -71,6 +71,51 @@ export const ESTADO_INTERNO: readonly string[] = [
    * grafo. O POST que ele faz está declarado em `POST_SEM_EFEITO`.
    */
   'servidor/braco/credencial.ts',
+  /**
+   * O PAREAMENTO DO LADO DO COMPUTADOR — o cliente das rotas `/parear/*`.
+   *
+   * A classificação foi refeita do zero em vez de herdada de `credencial.ts`
+   * logo acima, e vale registrar por quê: os dois módulos são vizinhos e fazem
+   * coisas diferentes. Aquele grava um arquivo; este faz dois POST. Copiar o
+   * rótulo do vizinho é exatamente o hábito que fez `habilidades/agenteLocal.ts`
+   * ser classificado como LEITURA INTERNA — verdade sobre o `node:fs`, mentira
+   * sobre o arquivo.
+   *
+   * A pergunta do cabeçalho, respondida para ESTE módulo: alguém fora da IARA
+   * percebe? Não. Os dois POST são contra o MOTOR DA PRÓPRIA IARA — o primeiro
+   * cria uma linha efêmera na memória daquele processo, o segundo lê uma
+   * resposta. Nenhum terceiro é alcançado, nada de ninguém é criado ou
+   * entregue, e o que muda é a identidade que ESTE processo passa a carregar.
+   *
+   * `EFEITO_EXTERNO` foi descartado pelo mesmo argumento estrutural que barrou
+   * `credencial.ts`: `G3` exige que todo efeito externo só seja alcançado pelo
+   * portal, e o braço não passa nem pode passar por ele — ele nem conectou
+   * ainda. O que sustenta a classificação, e não é boa-fé: este módulo importa
+   * `./credencial` e mais nada. Não abre `node:fs`, não abre shell, não alcança
+   * o `AgenteLocal` — `G1` prova isso pelo grafo. Os POST estão declarados em
+   * `POST_SEM_EFEITO`.
+   */
+  'servidor/braco/pareamento.ts',
+  /**
+   * O PAREAMENTO DO LADO DO MOTOR — códigos efêmeros e credenciais de
+   * dispositivo.
+   *
+   * Escreve numa tabela do Supabase, e é isso que o traz para esta declaração.
+   * Pela pergunta que separa as duas listas, é estado interno pelo mesmo motivo
+   * que `MemoriaOperacional`: ninguém além da própria IARA lê essa tabela,
+   * nenhum terceiro é alcançado, e o que ela guarda é o registro da IARA sobre
+   * si mesma — quais mãos ela reconhece.
+   *
+   * A tentação de chamar isto de EFEITO EXTERNO existe e tem um argumento
+   * respeitável: emitir uma credencial é conceder poder de execução no
+   * computador de alguém. Mas o poder não é concedido AQUI — ele é exercido na
+   * `PonteDispositivos`, que é PONTE DE EXECUÇÃO, e o efeito no mundo continua
+   * nascendo no `AgenteLocal`, que é EFEITO EXTERNO. Este módulo grava um hash
+   * e o compara depois. Classificá-lo como efeito externo o obrigaria a passar
+   * pelo portal — e o portal existe para operações que a LLM propõe e o
+   * operador autoriza, o que não descreve nada do que acontece aqui.
+   */
+  'servidor/nucleo/Pareamento.ts',
   // O jornal das operações. É a AUDITORIA, não um executor — ver `Fase 3`.
   'servidor/nucleo/kernel/RegistroOperacoes.ts',
   // Estado cognitivo em memória; nada atravessa o processo.
@@ -235,6 +280,14 @@ export const POST_SEM_EFEITO: Record<string, string> = {
   'servidor/nucleo/Voz.ts':
     'POST de síntese de voz: o texto entra, o áudio volta. Nada é criado, ' +
     'alterado ou entregue a ninguém no provedor — é uma função pura cara.',
+  'servidor/braco/pareamento.ts':
+    'Dois POST contra o motor da PRÓPRIA IARA, na primeira execução deste ' +
+    'computador: um abre um pedido de pareamento (uma linha efêmera na memória ' +
+    'daquele processo, que expira em cinco minutos) e o outro pergunta se já ' +
+    'aprovaram. Nenhum terceiro é alcançado, nenhum dado de ninguém é criado, ' +
+    'alterado ou entregue. O que muda é a identidade que este processo passa a ' +
+    'carregar — e ela só passa a valer quando alguém, de uma tela já ' +
+    'autenticada, autoriza o código do outro lado.',
   'servidor/braco/credencial.ts':
     'POST de renovação de sessão no endpoint de auth do Supabase. O que muda é ' +
     'o token que ESTE processo carrega — nenhum dado de ninguém é criado, ' +

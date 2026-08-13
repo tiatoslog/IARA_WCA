@@ -10,26 +10,43 @@
  * Num computador de operadora, "funcionou de manhã e às onze parou" é um
  * defeito, não uma configuração.
  *
- * A ESCOLHA: guardar o REFRESH token, não o access token. O refresh é a única
- * coisa que sobrevive ao dia; o access é derivado dele a cada conexão. É a
- * mesma mecânica que o navegador já usa quando a operadora fica logada — só que
- * aqui o dono da sessão é um processo, e não uma aba.
+ * A ESCOLHA ORIGINAL: guardar o REFRESH token, não o access token. O refresh é
+ * a única coisa que sobrevive ao dia; o access é derivado dele a cada conexão.
+ * É a mesma mecânica que o navegador já usa quando a operadora fica logada — só
+ * que aqui o dono da sessão é um processo, e não uma aba.
  *
- * ROTAÇÃO. O Supabase devolve um refresh NOVO a cada renovação e invalida o
- * anterior. Perder o novo é perder a sessão — por isso a gravação acontece
- * ANTES de qualquer uso do access token, e por isso ela é atômica (arquivo
- * temporário + rename). Um `write` interrompido no meio deixaria este
- * computador deslogado sem ninguém ter feito nada.
+ * O QUE MUDOU (pareamento). A forma preferida hoje é o `token_dispositivo`,
+ * emitido pelo motor quando alguém aprova o código deste computador numa tela
+ * já logada. Ele não expira, não rotaciona e vale para UMA coisa — a porta dos
+ * braços. As duas formas convivem neste arquivo de propósito: uma máquina que
+ * entrou por `braco:entrar` antes do pareamento continua funcionando sem que
+ * ninguém precise mexer nela, e o dia em que a última delas sumir, o bloco
+ * legado sai daqui sem tocar em mais nada.
+ *
+ * Por que o token de dispositivo é MELHOR e não só mais novo: o refresh token
+ * é a sessão inteira da pessoa, gravada em disco de máquina de escritório, para
+ * exercer um poder que o braço nunca usa (ler shard, abrir barramento). O token
+ * de dispositivo é escopo estreito por construção — e revogável numa linha de
+ * tabela, que é o que dá sentido ao botão "desconectar" da aba Dispositivos.
+ *
+ * ROTAÇÃO (só no caminho legado). O Supabase devolve um refresh NOVO a cada
+ * renovação e invalida o anterior. Perder o novo é perder a sessão — por isso a
+ * gravação acontece ANTES de qualquer uso do access token, e por isso ela é
+ * atômica (arquivo temporário + rename). Um `write` interrompido no meio
+ * deixaria este computador deslogado sem ninguém ter feito nada. Esta é
+ * exatamente a fragilidade que o token de dispositivo não tem.
  *
  * ONDE FICA. Fora do repositório, no perfil do usuário do sistema
  * operacional — `%APPDATA%\iara\braco.json` no Windows. Não é `.env.local`
  * porque isto não é configuração do projeto: é a sessão de UMA pessoa em UM
  * computador, e ela não deve nem poder ser commitada por acidente.
  *
- * O QUE ISTO NÃO É: pareamento. O fluxo de QR (o desktop mostra o código, o
- * celular já logado aprova) troca só a forma de PREENCHER este arquivo — o
- * resto do braço continua igual, lendo daqui. É de propósito que a fronteira
- * esteja neste ponto.
+ * O QUE ISTO NÃO É: pareamento. O fluxo de código curto (o computador mostra o
+ * código, o celular já logado aprova) troca só a forma de PREENCHER este
+ * arquivo — o resto do braço continua igual, lendo daqui. É de propósito que a
+ * fronteira esteja neste ponto, e a previsão se confirmou: quando o pareamento
+ * entrou, este módulo ganhou um campo e nenhuma linha do laço de conexão mudou.
+ * Quem fala com o motor para conseguir o token é `braco/pareamento.ts`.
  *
  * O QUE ISTO TAMBÉM NÃO É: efeito no mundo. Está declarado como ESTADO INTERNO
  * em `Fronteira.ts`, e a entrada de lá registra por que a classificação como
@@ -50,16 +67,34 @@ export interface CredencialBraco {
    * produziria a máquina logada numa instalação e apontada para outra.
    */
   readonly motor: string;
-  /** Projeto Supabase que emitiu a sessão. Guardado junto para o braço não
-   *  depender de `.env.local` — ele roda no computador da operadora, onde o
+  /**
+   * A credencial de PAREAMENTO — `iad_…`. Vale só na porta dos braços, não
+   * expira e é revogável pela operadora. É a forma preferida; as três abaixo
+   * são o caminho legado, mantido para quem já instalou por `braco:entrar`.
+   */
+  readonly token_dispositivo?: string;
+  /** LEGADO. Projeto Supabase que emitiu a sessão. Guardado junto para o braço
+   *  não depender de `.env.local` — ele roda no computador da operadora, onde o
    *  repositório pode simplesmente não existir. */
-  readonly url_supabase: string;
-  /** Chave `anon`. É pública por desenho (vai no bundle do navegador); está
-   *  aqui por conveniência, não por sigilo. */
-  readonly chave_anon: string;
-  readonly refresh_token: string;
+  readonly url_supabase?: string;
+  /** LEGADO. Chave `anon`. É pública por desenho (vai no bundle do navegador);
+   *  está aqui por conveniência, não por sigilo. */
+  readonly chave_anon?: string;
+  /** LEGADO. Ver o cabeçalho: rotaciona, e por isso a gravação é atômica. */
+  readonly refresh_token?: string;
   readonly email: string;
   readonly atualizado_em: string;
+}
+
+/** A forma legada está completa? Meia sessão não serve para nada e vale como
+ *  ausência — é o que faz o braço cair no pareamento em vez de tentar renovar
+ *  um refresh que não tem para onde ir. */
+function sessaoLegadaCompleta(c: Partial<CredencialBraco>): boolean {
+  return (
+    typeof c.url_supabase === 'string' &&
+    typeof c.chave_anon === 'string' &&
+    typeof c.refresh_token === 'string'
+  );
 }
 
 /**
@@ -79,18 +114,18 @@ export function caminhoCredencial(): string {
 export function lerCredencial(): CredencialBraco | null {
   try {
     const bruto = JSON.parse(readFileSync(caminhoCredencial(), 'utf8')) as Partial<CredencialBraco>;
-    if (
-      typeof bruto.url_supabase !== 'string' ||
-      typeof bruto.chave_anon !== 'string' ||
-      typeof bruto.refresh_token !== 'string'
-    ) {
-      return null;
-    }
+    const temDispositivo = typeof bruto.token_dispositivo === 'string' && bruto.token_dispositivo !== '';
+    if (!temDispositivo && !sessaoLegadaCompleta(bruto)) return null;
     return {
       motor: typeof bruto.motor === 'string' ? bruto.motor : '',
-      url_supabase: bruto.url_supabase,
-      chave_anon: bruto.chave_anon,
-      refresh_token: bruto.refresh_token,
+      ...(temDispositivo ? { token_dispositivo: bruto.token_dispositivo } : {}),
+      ...(sessaoLegadaCompleta(bruto)
+        ? {
+            url_supabase: bruto.url_supabase,
+            chave_anon: bruto.chave_anon,
+            refresh_token: bruto.refresh_token,
+          }
+        : {}),
       email: typeof bruto.email === 'string' ? bruto.email : '',
       atualizado_em: typeof bruto.atualizado_em === 'string' ? bruto.atualizado_em : '',
     };
@@ -136,6 +171,12 @@ export class SessaoExpirada extends Error {}
  * na próxima queda de rede, sem ninguém ter tocado em nada.
  */
 export async function renovarAcesso(c: CredencialBraco): Promise<string> {
+  if (!c.url_supabase || !c.chave_anon || !c.refresh_token) {
+    /* Só o caminho legado passa por aqui. Uma credencial de pareamento chegando
+       nesta função é erro de quem chamou, não estado inválido do arquivo — e
+       dizer isso é melhor que devolver um `undefined` que morre na rede. */
+    throw new SessaoExpirada('esta credencial não tem sessão renovável do Supabase');
+  }
   const resposta = await fetch(`${c.url_supabase.replace(/\/+$/, '')}/auth/v1/token?grant_type=refresh_token`, {
     method: 'POST',
     headers: { apikey: c.chave_anon, 'Content-Type': 'application/json' },

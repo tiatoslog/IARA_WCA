@@ -1413,6 +1413,205 @@ ol.plano {
   color: var(--c-tinta-2);
 }
 
+/* ===========================================================================
+   ONDE A IARA TEM MÃOS — o quadro de chaves
+
+   Herda a linguagem da ficha (vidro escuro, hairline de 1px, cápsulas) porque
+   as duas são a mesma gaveta, aberta no mesmo lugar. O que muda é só o que há
+   dentro: lá um formulário, aqui uma lista de etiquetas.
+   =========================================================================== */
+
+/* A porta do quadro, no cabeçalho. Mesma mecânica da cápsula do operador ao
+   lado — são dois fatos do mesmo nível, e dois botões diferentes na mesma
+   linha fariam o cabeçalho parecer barra de ferramentas. */
+.conversa-maos {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  font-size: var(--t-rotulo);
+  color: var(--c-tinta-3);
+  padding: 4px 8px;
+  border-radius: var(--r-capsula);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.conversa-maos:hover,
+.conversa-maos.aberto {
+  color: var(--c-tinta);
+  background: var(--c-superficie);
+  border-color: var(--c-linha);
+}
+
+.conversa-maos-conta {
+  font-size: var(--t-micro);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--c-tinta-2);
+}
+
+.maquinas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: var(--r-m);
+  border: 1px solid var(--c-linha);
+  overflow: hidden;
+  background: var(--c-linha);
+}
+
+.maquina {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  background: var(--c-fundo-alto);
+}
+
+/* O ponto é REATIVO: verde só quando existe um socket vivo agora. Ele não
+   respira, não pulsa e não tem animação de ambiente — dizer "atendendo" sobre
+   uma máquina desligada é exatamente a mistura que faz a tela mentir. */
+.maquina-sinal {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--c-tinta-3);
+  opacity: 0.45;
+}
+
+.maquina-sinal.ligado {
+  background: var(--c-verde);
+  opacity: 1;
+  box-shadow: 0 0 8px rgba(159, 214, 168, 0.5);
+}
+
+.maquina-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.maquina-nome {
+  font-size: var(--t-ui);
+  font-weight: 600;
+  color: var(--c-tinta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maquina-detalhe {
+  font-size: var(--t-micro);
+  color: var(--c-tinta-3);
+}
+
+.maquina-soltar {
+  font-family: inherit;
+  font-size: var(--t-micro);
+  color: var(--c-tinta-2);
+  background: none;
+  border: 1px solid var(--c-linha);
+  border-radius: var(--r-capsula);
+  padding: 5px 11px;
+  flex: none;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.maquina-soltar:hover:not(:disabled) {
+  color: var(--c-tinta);
+  border-color: var(--c-linha-forte);
+}
+
+/* Coral quente na confirmação — nunca vermelho saturado. */
+.maquina-soltar.confirmando {
+  color: var(--c-fundo);
+  background: var(--c-alerta);
+  border-color: transparent;
+}
+
+.maquina-soltar:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.maquina-nota {
+  font-size: var(--t-micro);
+  color: var(--c-tinta-3);
+  flex: none;
+}
+
+.maquina-vazio {
+  margin: 0;
+  font-size: var(--t-rotulo);
+  line-height: 1.6;
+  color: var(--c-tinta-2);
+}
+
+.parear-linha {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+/* Monoespaçada e espaçada: o código é lido de uma tela e digitado noutra, e a
+   diferença entre "rr" e "rn" numa proporcional é onde nasce a tentativa
+   perdida. */
+.parear-codigo {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: var(--t-corpo);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-tinta);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+  border-radius: var(--r-m);
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.parear-codigo::placeholder {
+  color: var(--c-tinta-3);
+  letter-spacing: 0.14em;
+}
+
+.parear-codigo:focus {
+  background: var(--c-vidro-alto);
+  border-color: var(--c-linha-forte);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+
+.parear-linha .ficha-salvar {
+  flex: none;
+}
+
+.parear-recado.ok {
+  color: var(--c-verde);
+}
+
+.parear-recado.erro {
+  color: var(--c-alerta);
+}
+
+/* O botão de baixar é um link, e um link não herda o alinhamento de um botão. */
+.ficha-salvar.instalar {
+  align-self: flex-start;
+  text-decoration: none;
+  display: inline-block;
+}
+
 /* Faixa do modo ligação. */
 .escuta-faixa {
   margin: 0 0 10px;

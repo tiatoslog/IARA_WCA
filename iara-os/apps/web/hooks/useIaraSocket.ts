@@ -17,7 +17,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { NivelLog, PacoteServidor } from '../lib/protocolo';
+import type { MaquinaDoOperador } from '../lib/execucao';
+import type { NivelLog, PacoteCliente, PacoteServidor } from '../lib/protocolo';
 import { ESPACO_VAZIO, EXPRESSAO_NEUTRA, TELEMETRIA_ZERO, type SnapshotCognitivo } from '../lib/snapshot';
 import { LEITURA_INICIAL, LUZES_APAGADAS, METRICAS_INICIAIS } from '../lib/estado';
 import type { PreferenciasOperador } from '../lib/perfil';
@@ -104,6 +105,16 @@ export function useIaraSocket(credencial: Credencial) {
   const [conexao, setConexao] = useState<EstadoConexao>('conectando');
   /** Por que o servidor mandou parar — mostrado no aviso de desconexão. */
   const [motivoDesconexao, setMotivoDesconexao] = useState<string | null>(null);
+  /**
+   * As máquinas deste operador. `null` — e não `[]` — enquanto ninguém
+   * perguntou: a gaveta precisa distinguir "ainda não sei" de "você não tem
+   * nenhum computador conectado". As duas telas são diferentes, e mostrar a
+   * segunda no lugar da primeira faria a operadora achar que perdeu o
+   * pareamento toda vez que abrisse a aba.
+   */
+  const [maquinas, setMaquinas] = useState<MaquinaDoOperador[] | null>(null);
+  const [pareamentoDisponivel, setPareamentoDisponivel] = useState(true);
+  const [acaoDispositivo, setAcaoDispositivo] = useState<{ ok: boolean; texto: string } | null>(null);
   const conectado = conexao === 'conectado';
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -187,6 +198,19 @@ export function useIaraSocket(credencial: Credencial) {
       // Guarda de sequência: o passado nunca sobrescreve o presente.
       if (pacote.seq <= ultimoSeq.current) return;
       ultimoSeq.current = pacote.seq;
+
+      if (pacote.tipo === 'dispositivos') {
+        setMaquinas(pacote.maquinas);
+        setPareamentoDisponivel(pacote.pareamento_disponivel);
+        /**
+         * `null` quando o pacote não traz ação: uma simples atualização de
+         * lista APAGA o recado anterior. Sem isso, "código não confere" ficaria
+         * na tela por cima de uma lista que já mudou — o recado sobreviveria ao
+         * fato que o produziu.
+         */
+        setAcaoDispositivo(pacote.ultima_acao ?? null);
+        return;
+      }
 
       if (pacote.tipo === 'snapshot') {
         // Snapshot estruturalmente idêntico (só `seq`/`instante` mudaram) não
@@ -410,6 +434,40 @@ export function useIaraSocket(credencial: Credencial) {
     );
   }, [conectado]);
 
+  /**
+   * Os três gestos da aba Dispositivos. Um caminho só para os três porque os
+   * três têm a mesma resposta — a lista atualizada, num pacote `dispositivos` —
+   * e porque o que fazer quando o barramento está fechado não muda entre eles.
+   */
+  const pedirAoBarramento = useCallback(
+    (pacote: PacoteCliente): boolean => {
+      const socket = socketRef.current;
+      if (socket?.readyState !== WebSocket.OPEN) {
+        setAcaoDispositivo({
+          ok: false,
+          texto: 'Sem enlace com a IARA agora. Tente de novo quando reconectar.',
+        });
+        return false;
+      }
+      socket.send(JSON.stringify(pacote));
+      return true;
+    },
+    [],
+  );
+
+  const pedirDispositivos = useCallback(
+    () => pedirAoBarramento({ tipo: 'dispositivos' }),
+    [pedirAoBarramento],
+  );
+  const autorizarComputador = useCallback(
+    (codigo: string) => pedirAoBarramento({ tipo: 'parear', codigo }),
+    [pedirAoBarramento],
+  );
+  const esquecerComputador = useCallback(
+    (id: string) => pedirAoBarramento({ tipo: 'esquecer_dispositivo', id }),
+    [pedirAoBarramento],
+  );
+
   /** Religa após uma recusa terminal — o gesto humano que zera a decisão. */
   const religar = useCallback(() => {
     tentativas.current = 0;
@@ -428,5 +486,11 @@ export function useIaraSocket(credencial: Credencial) {
     interromper,
     religar,
     salvarPreferencias,
+    maquinas,
+    pareamentoDisponivel,
+    acaoDispositivo,
+    pedirDispositivos,
+    autorizarComputador,
+    esquecerComputador,
   };
 }

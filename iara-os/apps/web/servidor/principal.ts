@@ -30,6 +30,7 @@ import { ponteDispositivos } from './barramento/PonteDispositivos';
 import { motorTemMaos } from './nucleo/Braco';
 import { persistenciaEmUso } from './nucleo/ClienteSupabase';
 import { autenticacaoAtiva } from './nucleo/Autenticacao';
+import { formatarCodigo, pareamento } from './nucleo/Pareamento';
 import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
 import { diagnosticoWhatsapp } from './canais/WhatsApp';
 import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
@@ -91,6 +92,125 @@ function origemPermitida(req: IncomingMessage): boolean {
   const host = req.headers.host;
   if (host && (origem === `https://${host}` || origem === `http://${host}`)) return true;
   return false;
+}
+
+function responderJson(res: import('node:http').ServerResponse, codigo: number, corpo: unknown): void {
+  const bytes = Buffer.from(JSON.stringify(corpo), 'utf8');
+  res.writeHead(codigo, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': bytes.length,
+    /* Resposta de pareamento nunca entra em cache: ela é um segredo de uso
+       único, e um proxy que a guardasse entregaria a credencial ao próximo. */
+    'Cache-Control': 'no-store',
+  });
+  res.end(bytes);
+}
+
+/**
+ * Corpo JSON pequeno, com teto de bytes CONTADO enquanto chega — não depois.
+ *
+ * Ler tudo e conferir o tamanho no fim é o que transforma um `Content-Length`
+ * mentiroso em memória do motor: quem envia não é obrigado a declarar a verdade,
+ * e o único número confiável é o que já entrou.
+ */
+async function lerCorpoJson(req: IncomingMessage, maxBytes = 4096): Promise<Record<string, unknown> | null> {
+  const pedacos: Buffer[] = [];
+  let total = 0;
+  for await (const pedaco of req) {
+    const b = pedaco as Buffer;
+    total += b.length;
+    if (total > maxBytes) return null;
+    pedacos.push(b);
+  }
+  try {
+    const v: unknown = JSON.parse(Buffer.concat(pedacos).toString('utf8'));
+    return typeof v === 'object' && v !== null && !Array.isArray(v)
+      ? (v as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+const textoDe = (v: unknown, padrao: string): string =>
+  typeof v === 'string' && v.trim() ? v.trim() : padrao;
+
+async function tratarPareamento(
+  caminho: string,
+  req: IncomingMessage,
+  res: import('node:http').ServerResponse,
+): Promise<void> {
+  if (req.method !== 'POST') {
+    responderJson(res, 405, { erro: 'use POST' });
+    return;
+  }
+  /**
+   * A MESMA trava de origem do barramento e da porta dos braços, e a tentação
+   * de afrouxar aqui é maior que nas outras duas porque quem chama é um
+   * programa, não uma página. Cedê-la abriria à internet inteira a rota que
+   * emite credenciais de execução. O braço manda `Origin` de propósito — ver
+   * `braco/principal.ts`, onde a mesma disciplina já custou um 403 mudo.
+   */
+  if (!origemPermitida(req)) {
+    responderJson(res, 403, { erro: 'origem não autorizada' });
+    return;
+  }
+
+  const corpo = await lerCorpoJson(req);
+  if (!corpo) {
+    responderJson(res, 400, { erro: 'corpo inválido' });
+    return;
+  }
+
+  if (caminho === '/parear/pedir') {
+    if (!pareamento.disponivel()) {
+      /**
+       * 503 e não 400: não é o pedido que está errado, é a instalação que não
+       * tem onde guardar a credencial. A frase vai inteira porque quem a lê é
+       * quem instalou — e "sem banco" não tem relação aparente com "meu
+       * computador não conecta".
+       */
+      responderJson(res, 503, {
+        erro:
+          'Esta IARA está sem banco configurado; o pareamento não tem onde ser guardado. ' +
+          'Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no motor.',
+      });
+      return;
+    }
+    const pedido = pareamento.abrir({
+      nome: textoDe(corpo.nome, 'computador'),
+      plataforma: textoDe(corpo.plataforma, 'desconhecida'),
+      versao: textoDe(corpo.versao, '?'),
+    });
+    if (!pedido) {
+      responderJson(res, 429, { erro: 'muitos pedidos agora; tente de novo em um minuto' });
+      return;
+    }
+    responderJson(res, 200, {
+      codigo: formatarCodigo(pedido.codigo),
+      chave: pedido.chave,
+      expira_em: pedido.expira_em,
+      intervalo_s: pedido.intervalo_s,
+    });
+    return;
+  }
+
+  const chave = typeof corpo.chave === 'string' ? corpo.chave : '';
+  if (!chave) {
+    responderJson(res, 400, { erro: 'sem chave' });
+    return;
+  }
+  const r = pareamento.resgatar(chave);
+  if (r.estado !== 'aprovado' || !r.credencial) {
+    responderJson(res, 200, { estado: r.estado });
+    return;
+  }
+  responderJson(res, 200, {
+    estado: 'aprovado',
+    token_dispositivo: r.credencial.token,
+    email: r.credencial.email,
+    nome_operador: r.credencial.nome,
+  });
 }
 
 /**
@@ -213,6 +333,32 @@ async function subir(): Promise<void> {
           maos_no_motor: motorTemMaos(),
         }),
       );
+      return;
+    }
+
+    /**
+     * PAREAMENTO — as duas únicas rotas do motor sem autenticação, e é assim
+     * por construção: quem bate aqui é um computador que AINDA NÃO TEM
+     * identidade. Exigir credencial seria exigir o que a rota existe para
+     * conceder.
+     *
+     * O que segura o lugar de uma credencial, então:
+     *
+     *   · a trava de ORIGEM, a mesma do barramento e da porta dos braços;
+     *   · a janela de vazão do `RegistroPareamento` (abrir pedido é de graça);
+     *   · o fato de que abrir um pedido não concede NADA. Ele só vira credencial
+     *     quando alguém logado aprova o código do outro lado — e a credencial
+     *     sai pela chave, que só o computador que abriu o pedido conhece.
+     *
+     * Ficam fora do Next pela mesma razão do áudio da voz: o estado vive na
+     * memória deste processo, e uma rota de API do Next não o alcançaria sem
+     * duplicar o estado. Em modo headless o Next nem existe aqui.
+     */
+    if (caminho === '/parear/pedir' || caminho === '/parear/resgatar') {
+      void tratarPareamento(caminho, req, res).catch((e: Error) => {
+        console.warn(`[iara] pareamento: ${e.message}`);
+        if (!res.headersSent) responderJson(res, 500, { erro: 'falha interna' });
+      });
       return;
     }
 

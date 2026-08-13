@@ -12,29 +12,37 @@
  * chamada. Também não abre porta nenhuma nesta máquina — para efeito de rede,
  * o braço é um cliente, como uma aba de navegador.
  *
- * COMO RODAR. No computador da operadora, uma vez:
+ * COMO RODAR. No computador da operadora: abrir o programa. Só isso.
  *
- *   npm run braco:entrar     (login; guarda a sessão fora do repositório)
- *   npm run braco            (fica rodando)
+ * Na primeira vez ele não tem identidade nenhuma, e é ELE quem resolve isso:
+ * pede um código de pareamento ao motor, mostra na tela, e fica esperando
+ * alguém aprovar de uma tela já logada (aba Dispositivos). Ninguém digita senha
+ * nesta máquina — ver `braco/pareamento.ts` para o porquê.
  *
- * No loop de desenvolvimento, sem login nenhum:
+ * No loop de desenvolvimento, sem login e sem pareamento:
  *
  *   IARA_MOTOR_WS=ws://localhost:3000/dispositivo IARA_ID_USUARIO=daiane npm run braco
  *
- * A IDENTIDADE tem três fontes, nesta ordem: `IARA_TOKEN` (colado à mão, que é
- * como isto nasceu e continua servindo para depurar), a sessão renovável em
- * disco (`credencial.ts`) e, por último, nada — o que só funciona com o motor
- * em modo local, onde não há Supabase para verificar coisa alguma.
+ * `IARA_MOTOR_WS` é o que separa os dois mundos: quem o declara está apontando
+ * o braço para um motor à mão e sabe o que está fazendo, então o pareamento sai
+ * do caminho. Sem ele, a falta de credencial é tratada como o que é numa máquina
+ * de operadora — a primeira execução.
+ *
+ * A IDENTIDADE tem quatro fontes, nesta ordem: `IARA_TOKEN` (colado à mão, que é
+ * como isto nasceu e continua servindo para depurar), o token de dispositivo
+ * gravado pelo pareamento, a sessão renovável do Supabase (o caminho legado do
+ * `braco:entrar`) e, por último, nada — o que só funciona com o motor em modo
+ * local, onde não há Supabase para verificar coisa alguma.
  *
  * O destino final deste processo é ser hospedado pelo shell Tauri
- * (`apps/desktop`), que hoje só desenha janela — é exatamente a "Fase 3"
- * anunciada no cabeçalho do `main.rs`. Enquanto isso ele é um processo Node à
- * parte, que é o que permite provar a cadeia inteira hoje em vez de depois do
- * instalador.
+ * (`apps/desktop`), que hoje só desenha janela. Enquanto isso ele é um processo
+ * Node à parte — e, empacotado por `npm run empacotar:braco`, um executável
+ * único que não exige Node instalado na máquina de ninguém.
  */
 
 import { WebSocket } from 'ws';
 import { config as carregarEnv } from 'dotenv';
+import { createInterface } from 'node:readline';
 import { hostname, platform, release } from 'node:os';
 import {
   lerPacoteMotor,
@@ -47,14 +55,32 @@ import {
   caminhoCredencial,
   lerCredencial,
   renovarAcesso,
+  salvarCredencial,
   SessaoExpirada,
   wsDoMotor,
 } from './credencial';
+import { aguardarAprovacao, PareamentoRecusado, pedirCodigo } from './pareamento';
 
 carregarEnv({ path: '.env.local' });
 carregarEnv();
 
-const VERSAO = '1.0.0';
+const VERSAO = '1.1.0';
+
+/**
+ * O ENDEREÇO DA IARA, assado no executável em tempo de empacotamento.
+ *
+ * `scripts/empacotar-braco.ts` substitui este identificador pelo domínio da
+ * instalação. É o que faz a diferença entre "abra o programa" e "abra o programa
+ * e digite o endereço do servidor" — e a segunda frase é exatamente a barreira
+ * que este trabalho inteiro existe para derrubar.
+ *
+ * `typeof` e não leitura direta: rodando por `npm run braco` a substituição não
+ * aconteceu, o identificador não existe, e ler um identificador inexistente é
+ * `ReferenceError`. `typeof` sobre um nome não declarado é legal em JavaScript —
+ * é a única forma de o mesmo código servir aos dois modos.
+ */
+declare const __IARA_MOTOR__: string;
+const MOTOR_EMBUTIDO = typeof __IARA_MOTOR__ === 'string' ? __IARA_MOTOR__ : '';
 
 const ID_USUARIO = process.env.IARA_ID_USUARIO ?? 'daiane';
 const NOME = process.env.IARA_NOME_DISPOSITIVO ?? hostname();
@@ -65,10 +91,13 @@ const NOME = process.env.IARA_NOME_DISPOSITIVO ?? hostname();
  */
 function destino(): string {
   if (process.env.IARA_MOTOR_WS) return process.env.IARA_MOTOR_WS;
-  const guardada = lerCredencial();
-  if (guardada?.motor) {
+  /* A credencial vem ANTES do endereço assado: um executável entregue com um
+     domínio e depois pareado contra outro (migração de host, homologação) deve
+     falar com aquele em que ele de fato tem identidade. */
+  const declarado = lerCredencial()?.motor || process.env.IARA_MOTOR?.trim() || MOTOR_EMBUTIDO;
+  if (declarado) {
     try {
-      return wsDoMotor(guardada.motor);
+      return wsDoMotor(declarado);
     } catch {
       /* endereço gravado inválido: cai no padrão de desenvolvimento e o
          `close` seguinte explica */
@@ -85,6 +114,14 @@ function destino(): string {
  * rede depois do almoço reconectar com um token morto e o motor recusar para
  * sempre, com a mensagem certa ("sessão inválida") e a causa errada.
  *
+ * O token de PAREAMENTO não tem esse problema — ele não expira —, e mesmo assim
+ * é lido aqui a cada tentativa, e não guardado numa variável. A razão é a
+ * revogação: a operadora aperta "desconectar" no celular, o motor derruba o
+ * socket, e o braço tenta de novo. Relendo o arquivo, ele apresenta a mesma
+ * credencial e ouve a recusa — que é a verdade. Guardado em memória, o
+ * comportamento seria idêntico; o que a releitura garante é o caso oposto, o de
+ * uma credencial NOVA gravada por um pareamento refeito com o processo vivo.
+ *
  * `undefined` não é falha: em modo local o motor não verifica token nenhum.
  */
 async function tokenDaVez(): Promise<string | undefined> {
@@ -93,7 +130,105 @@ async function tokenDaVez(): Promise<string | undefined> {
 
   const guardada = lerCredencial();
   if (!guardada) return undefined;
+  if (guardada.token_dispositivo) return guardada.token_dispositivo;
   return renovarAcesso(guardada);
+}
+
+// ---------------------------------------------------------------------------
+// A PRIMEIRA EXECUÇÃO
+// ---------------------------------------------------------------------------
+
+/** Onde a IARA mora, em HTTP. `null` quando nem o ambiente, nem a credencial,
+ *  nem o empacotamento souberam dizer. */
+function motorHttp(): string | null {
+  return process.env.IARA_MOTOR?.trim() || lerCredencial()?.motor || MOTOR_EMBUTIDO || null;
+}
+
+function perguntar(rotulo: string): Promise<string> {
+  const leitor = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolver) =>
+    leitor.question(rotulo, (r) => {
+      leitor.close();
+      resolver(r.trim());
+    }),
+  );
+}
+
+/**
+ * O PAREAMENTO, na tela de quem instalou.
+ *
+ * Escrito com espaço em volta e o código em linha própria de propósito: esta é
+ * a única coisa que a operadora precisa ler no programa inteiro, e ela vai lê-la
+ * de relance, com o celular na outra mão.
+ */
+async function parearEsteComputador(): Promise<boolean> {
+  let motor = motorHttp();
+  if (!motor) {
+    /**
+     * Só acontece num executável empacotado sem endereço assado — que é um
+     * defeito de empacotamento, não de uso. Perguntar é melhor que travar: a
+     * pessoa tem o endereço na barra do navegador, na aba que ela acabou de
+     * usar para baixar este programa.
+     */
+    motor = await perguntar('  Endereço da IARA (ex.: https://iara.suaempresa.com): ');
+    if (!motor) return false;
+  }
+
+  console.log(`\n  Conectando este computador à IARA em ${motor}…\n`);
+
+  let pedido;
+  try {
+    pedido = await pedirCodigo(motor, {
+      nome: NOME,
+      plataforma: `${platform()} ${release()}`,
+      versao: VERSAO,
+    });
+  } catch (erro) {
+    const motivo = erro instanceof PareamentoRecusado ? erro.message : (erro as Error).message;
+    console.error(`\n  Não consegui pedir o código de conexão: ${motivo}\n`);
+    return false;
+  }
+
+  console.log('  ┌────────────────────────────────────────────────┐');
+  console.log('  │  Abra a IARA no celular, vá em Dispositivos e   │');
+  console.log('  │  digite este código:                           │');
+  console.log('  │                                                │');
+  console.log(`  │              ${pedido.codigo.padEnd(34)}│`);
+  console.log('  └────────────────────────────────────────────────┘');
+  console.log('\n  Esperando a autorização… (o código vale por 5 minutos)\n');
+
+  const credencial = await aguardarAprovacao(motor, pedido);
+  if (!credencial) {
+    console.log('  O código expirou sem ser autorizado. Feche e abra o programa para tentar de novo.\n');
+    return false;
+  }
+
+  salvarCredencial({
+    motor,
+    token_dispositivo: credencial.token_dispositivo,
+    email: credencial.email,
+    atualizado_em: new Date().toISOString(),
+  });
+
+  console.log(`  Pronto. Este computador agora atende a IARA${credencial.email ? ` de ${credencial.email}` : ''}.`);
+  console.log(`  Credencial guardada em ${caminhoCredencial()}`);
+  console.log('  Pode deixar esta janela aberta e minimizada.\n');
+  return true;
+}
+
+/**
+ * Garante que existe COM O QUE se apresentar antes de a primeira conexão sair.
+ *
+ * Devolve sempre — inclusive quando o pareamento falhou. Falhar aqui não pode
+ * impedir o laço de conexão de começar: contra um motor em modo local não há
+ * pareamento nenhum a fazer, e recusar-se a conectar transformaria o loop de
+ * desenvolvimento em algo que só funciona com banco configurado.
+ */
+async function garantirIdentidade(): Promise<void> {
+  if (process.env.IARA_TOKEN) return;
+  if (process.env.IARA_MOTOR_WS) return; // motor apontado à mão: quem digitou sabe
+  if (lerCredencial()) return;
+  await parearEsteComputador();
 }
 
 /**
@@ -237,8 +372,8 @@ async function conectar(): Promise<void> {
     const motivo = erro instanceof SessaoExpirada ? erro.message : (erro as Error).message;
     console.error(
       `[braço] não consegui renovar a sessão deste computador: ${motivo}\n` +
-        `        Rode  npm run braco:entrar  para entrar de novo ` +
-        `(sessão em ${caminhoCredencial()}).`,
+        '        Apague o arquivo abaixo e abra o programa de novo para parear ' +
+        `este computador outra vez\n        (${caminhoCredencial()}).`,
     );
     tentarDeNovo();
     return;
@@ -248,8 +383,8 @@ async function conectar(): Promise<void> {
     // Um aviso por tentativa, e não um erro: contra um motor local isto é o
     // funcionamento normal, e o motor é quem decide se aceita.
     console.warn(
-      '[braço] sem sessão gravada e sem IARA_TOKEN — só o motor em modo local vai aceitar. ' +
-        'Para conectar na IARA da nuvem: npm run braco:entrar',
+      '[braço] sem credencial gravada e sem IARA_TOKEN — só o motor em modo local vai aceitar. ' +
+        'Para conectar na IARA da nuvem, feche e abra o programa: ele pede um código de pareamento.',
     );
   }
 
@@ -357,4 +492,12 @@ process.on('SIGINT', encerrar);
 process.on('SIGTERM', encerrar);
 
 console.log(`[braço] IARA — braço v${VERSAO} em ${NOME} (${platform()} ${release()})`);
-void conectar();
+/**
+ * O pareamento acontece ANTES da primeira conexão, e não em paralelo com ela.
+ *
+ * Conectar primeiro produziria, na primeira execução de toda máquina nova, uma
+ * recusa do motor no console — "este computador não está autorizado" — em cima
+ * do código que a pessoa deveria estar lendo. Ela veria um erro e um código, e
+ * não teria como saber que o erro era esperado.
+ */
+void garantirIdentidade().then(() => conectar());

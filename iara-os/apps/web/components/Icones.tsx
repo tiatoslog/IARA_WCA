@@ -100,6 +100,24 @@ export function IconeEnviar(p: Props) {
   );
 }
 
+/**
+ * As mãos da IARA — o rack de computadores ligados a ela.
+ *
+ * Duas placas empilhadas com um LED cada, e não um monitor: a pergunta que o
+ * ícone responde é "quantas máquinas atendem?", não "onde está minha tela". Um
+ * monitor sugeriria a tela em que a pessoa já está olhando.
+ */
+export function IconeMaos(p: Props) {
+  return (
+    <Base {...p}>
+      <rect x="3" y="4" width="18" height="7" rx="2" />
+      <rect x="3" y="13" width="18" height="7" rx="2" />
+      <path d="M7 7.5v0" />
+      <path d="M7 16.5v0" />
+    </Base>
+  );
+}
+
 /** Interromper o turno — mão aberta estilizada em barra. */
 export function IconeInterromper(p: Props) {
   return (

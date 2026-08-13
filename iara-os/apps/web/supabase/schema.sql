@@ -102,6 +102,38 @@ create index if not exists agenda_pendentes_idx
   where entregue_em is null;
 
 -- -----------------------------------------------------------------------------
+-- 3b. Computadores pareados — as mãos que cada operador autorizou
+--
+-- Uma linha por credencial de braço. O que fica guardado é o HASH do token, e
+-- não o token: quem obtiver esta tabela inteira não consegue se passar por um
+-- computador de ninguém. É a mesma postura do RAG, que guarda assinatura e não
+-- log bruto — o que não está armazenado não pode vazar.
+--
+-- `revogado_em` em vez de DELETE, e isso é decisão de auditoria: "esta máquina
+-- foi desconectada em tal dia" é uma pergunta que alguém vai fazer depois de um
+-- incidente, e uma linha apagada não responde nada. O índice único parcial
+-- garante o que importa de verdade — um hash vivo por vez.
+-- -----------------------------------------------------------------------------
+create table if not exists public.dispositivos_pareados (
+  id_credencial text primary key,
+  id_usuario    text not null,
+  nome          text not null,
+  plataforma    text not null,
+  hash_token    text not null,
+  pareado_em    timestamptz not null default now(),
+  ultimo_uso_em timestamptz,
+  revogado_em   timestamptz
+);
+
+create unique index if not exists dispositivos_hash_vivo_idx
+  on public.dispositivos_pareados (hash_token)
+  where revogado_em is null;
+
+create index if not exists dispositivos_do_operador_idx
+  on public.dispositivos_pareados (id_usuario, pareado_em desc)
+  where revogado_em is null;
+
+-- -----------------------------------------------------------------------------
 -- 4. RLS: ligado, sem política. Ninguém além da service_role entra.
 -- -----------------------------------------------------------------------------
 alter table public.centrais             enable row level security;
@@ -110,6 +142,7 @@ alter table public.memoria_registros    enable row level security;
 alter table public.insights_relacionais enable row level security;
 alter table public.operador_preferencias enable row level security;
 alter table public.agenda_lembretes     enable row level security;
+alter table public.dispositivos_pareados enable row level security;
 
 -- Nenhuma policy é criada de propósito. Sem policy + RLS ligado = acesso
 -- negado para anon e authenticated. Se um dia o navegador precisar ler
@@ -117,6 +150,11 @@ alter table public.agenda_lembretes     enable row level security;
 -- jamais para memoria_registros, insights_relacionais ou
 -- operador_preferencias. A ficha é tão privada quanto o histórico: ela diz
 -- como a pessoa quer ser chamada, e isso é dela.
+--
+-- `dispositivos_pareados` é o caso mais grave da lista e merece o nome escrito:
+-- uma policy de SELECT ali entrega a quem tiver a anon key a relação de quais
+-- máquinas cada pessoa autorizou — e, com ela, o alvo exato de quem quisesse
+-- executar algo no computador de alguém.
 
 -- -----------------------------------------------------------------------------
 -- 5. Carga inicial (os mesmos dados dos JSON semente)

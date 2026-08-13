@@ -17,6 +17,8 @@ import { MemoriaOperacional } from '../nucleo/MemoriaOperacional';
 import { TeoriaDaMente } from '../nucleo/TeoriaDaMente';
 import { SessaoOperador } from './SessaoOperador';
 import { PonteProjecao } from './PonteProjecao';
+import { inventarioDeMaquinas, ponteDispositivos } from './PonteDispositivos';
+import { pareamento } from '../nucleo/Pareamento';
 import { BarramentoEventos } from '../nucleo/kernel/BarramentoEventos';
 import { CompiladorSnapshot } from '../nucleo/kernel/CompiladorSnapshot';
 import { Kernel } from '../nucleo/kernel/Kernel';
@@ -59,6 +61,30 @@ interface Residente {
 }
 
 const residentes = new Map<string, Residente>();
+
+/**
+ * O INVENTÁRIO DE MÃOS, empurrado quando muda.
+ *
+ * UM ouvinte por PROCESSO, e não um por sessão. A alternativa — cada
+ * `conectarOperador` se inscrevendo e cancelando no `close` — pareceu mais
+ * simétrica e é pior: `PonteDispositivos` passaria a guardar uma referência por
+ * tela aberta, e um `close` que não rodasse (o caso que o teto de espelhos e o
+ * heartbeat existem para tratar) deixaria um ouvinte preso ao residente já
+ * descartado. Aqui a inscrição é do módulo e a busca é por id, então uma sessão
+ * que já saiu simplesmente não é encontrada.
+ *
+ * Empurra para TODOS os espelhos daquele operador: quem ligou o computador quer
+ * ver a mão aparecer tanto no celular quanto na tela do escritório.
+ */
+ponteDispositivos.aoMudarInventario((idUsuario) => {
+  const r = residentes.get(idUsuario);
+  if (!r || r.sessoes.size === 0) return;
+  void inventarioDeMaquinas(idUsuario)
+    .then((maquinas) => {
+      for (const sessao of r.sessoes) sessao.emitirDispositivos(maquinas, pareamento.disponivel());
+    })
+    .catch(() => undefined);
+});
 
 /**
  * ESTRANGULAMENTO PRÉ-AUTENTICAÇÃO — a janela que não tinha dono.
@@ -339,6 +365,22 @@ export function conectarOperador(socket: WebSocket): void {
           );
 
           /**
+           * O inventário de mãos vai JUNTO com a abertura, sem ninguém pedir.
+           *
+           * É o que permite ao cabeçalho da conversa dizer, desde o primeiro
+           * quadro, quantos computadores atendem. Esperar a gaveta abrir faria
+           * o contador nascer em branco e só virar verdade depois de um clique
+           * — e um contador que às vezes está certo é pior que nenhum.
+           *
+           * Fora do try da autenticação, e o `catch` é mudo pela mesma razão do
+           * insight logo abaixo: a tabela de dispositivos indisponível não pode
+           * impedir alguém de entrar no escritório.
+           */
+          void inventarioDeMaquinas(operador.id_usuario)
+            .then((maquinas) => sessao.emitirDispositivos(maquinas, pareamento.disponivel()))
+            .catch(() => undefined);
+
+          /**
            * Insight noturno é um MIMO, não um requisito de sessão.
            *
            * Estava dentro do try que chama `recusar()`: uma tabela ausente no
@@ -389,6 +431,69 @@ export function conectarOperador(socket: WebSocket): void {
        * não tem caminho para persistência (ver o cabeçalho de lá).
        */
       registrarLocal(operador.id_usuario, pacote.latitude, pacote.longitude);
+      return;
+    }
+
+    /**
+     * AS MÃOS DESTE OPERADOR — consultar, autorizar, esquecer.
+     *
+     * Os três passam pelo mesmo lugar que a ficha e pela mesma razão: o dono é
+     * `operador.id_usuario`, a identidade RESOLVIDA na apresentação. Nenhum dos
+     * pacotes carrega id de usuário, e por isso não existe aqui a pergunta "de
+     * quem é este computador".
+     *
+     * Uma segunda porta HTTP autenticada para isto foi considerada e recusada:
+     * duas maneiras de provar identidade no mesmo processo é como uma delas fica
+     * para trás — é o mesmo argumento com que a `PonteDispositivos` espelha esta
+     * porta em vez de inventar a própria.
+     */
+    if (
+      pacote.tipo === 'dispositivos' ||
+      pacote.tipo === 'parear' ||
+      pacote.tipo === 'esquecer_dispositivo'
+    ) {
+      const dono = operador;
+      const sessao = minhaSessao;
+      if (!sessao) return;
+      const pedido = pacote;
+      void (async () => {
+        let acao: { ok: boolean; texto: string } | undefined;
+        try {
+          if (pedido.tipo === 'parear') {
+            const r = await pareamento.aprovar(pedido.codigo, dono);
+            acao = r.ok
+              ? { ok: true, texto: `"${r.nome}" foi autorizado. Ele conecta sozinho em segundos.` }
+              : { ok: false, texto: r.motivo };
+          } else if (pedido.tipo === 'esquecer_dispositivo') {
+            const removida = await pareamento.revogar(dono.id_usuario, pedido.id);
+            /**
+             * A ORDEM importa e não é intercambiável: revoga no banco, DEPOIS
+             * derruba o socket. Ao contrário, uma escrita que falhasse deixaria
+             * a máquina reconectando em segundos com a credencial ainda válida —
+             * e a operadora veria o botão "desconectar" simplesmente não fazer
+             * efeito, que é a pior forma de uma trava de segurança falhar.
+             */
+            const derrubados = removida
+              ? ponteDispositivos.derrubarPorCredencial(dono.id_usuario, pedido.id)
+              : 0;
+            acao = removida
+              ? {
+                  ok: true,
+                  texto: derrubados
+                    ? 'Computador desconectado. Ele não volta sem ser autorizado de novo.'
+                    : 'Computador esquecido. Se estiver desligado, não volta ao ser ligado.',
+                }
+              : { ok: false, texto: 'Esse computador já não estava na sua lista.' };
+          }
+        } catch (erro) {
+          acao = { ok: false, texto: `Não consegui: ${(erro as Error).message}` };
+        }
+        /* A lista é recalculada DEPOIS da ação, sempre — inclusive quando ela
+           falhou. Quem acabou de tentar algo precisa ver o estado real, não o
+           que estava na tela antes. */
+        const maquinas = await inventarioDeMaquinas(dono.id_usuario).catch(() => []);
+        sessao.emitirDispositivos(maquinas, pareamento.disponivel(), acao);
+      })();
       return;
     }
 

@@ -28,6 +28,12 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
     interromper,
     religar,
     salvarPreferencias,
+    maquinas,
+    pareamentoDisponivel,
+    acaoDispositivo,
+    pedirDispositivos,
+    autorizarComputador,
+    esquecerComputador,
   } = useIaraSocket(credencial);
 
   /**
@@ -120,6 +126,12 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         onFalar={voz.falar}
         textoAvulso={voz.textoAvulso}
         onSalvarPreferencias={salvarPreferencias}
+        maquinas={maquinas}
+        pareamentoDisponivel={pareamentoDisponivel}
+        acaoDispositivo={acaoDispositivo}
+        onPedirDispositivos={pedirDispositivos}
+        onAutorizarComputador={autorizarComputador}
+        onEsquecerComputador={esquecerComputador}
       />
 
       {/* Política de mídia do navegador exige um gesto antes de tocar som.

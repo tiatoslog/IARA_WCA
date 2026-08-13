@@ -3,6 +3,11 @@ node_modules/
 # uma instância por porta — ver distDir em next.config.mjs
 .next-*/
 out/
+# O executável do braço (npm run empacotar:braco). São ~82 MB, dos quais 99% é
+# o runtime do Node — versionar isto encheria a história do repositório com um
+# binário que se regenera em vinte segundos. Ele é publicado como Release, e o
+# endereço vai em NEXT_PUBLIC_IARA_INSTALADOR.
+dist/
 .env
 .env.local
 *.tsbuildinfo
