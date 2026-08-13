@@ -131,6 +131,19 @@ export const LEITURA_INTERNA: readonly string[] = [
  */
 export const CATALOGO: readonly string[] = [
   'servidor/nucleo/kernel/habilidades/agenteLocal.ts',
+  /**
+   * A investigação de lentidão. Ela NÃO produz efeito nenhum — mede, compara com
+   * faixas e devolve planos que ela mesma não executa —, e mesmo assim está aqui,
+   * porque alcança o `AgenteLocal` por um caminho que o grafo enxerga: importa
+   * `aplicativoFechavelDoProcesso` para saber quais programas a IARA sabe
+   * encerrar, e sem essa resposta ela proporia um plano impossível.
+   *
+   * Poderia ter sido resolvido importando a allowlist de dentro do `MotorAnalise`,
+   * e não foi de propósito: a camada que RACIOCINA não importa a que AGE, nem
+   * para ler. A função entra por injeção, no catálogo, que é onde o portal já
+   * passa. Ver `PodeFechar` em `MotorAnalise.ts`.
+   */
+  'servidor/nucleo/kernel/habilidades/investigacao.ts',
 ];
 
 /**

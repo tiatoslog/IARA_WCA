@@ -19,6 +19,7 @@ import { HABILIDADES_INTEGRACAO } from './integracoes';
 import { HABILIDADES_AGENTE_LOCAL } from './agenteLocal';
 import { HABILIDADES_AGENDA } from './agenda';
 import { HABILIDADES_DIAGNOSTICO } from './diagnostico';
+import { HABILIDADES_INVESTIGACAO } from './investigacao';
 
 export const CATALOGO: readonly Habilidade[] = [
   ...HABILIDADES_OPERACIONAIS,
@@ -27,6 +28,7 @@ export const CATALOGO: readonly Habilidade[] = [
   ...HABILIDADES_AGENTE_LOCAL,
   ...HABILIDADES_AGENDA,
   ...HABILIDADES_DIAGNOSTICO,
+  ...HABILIDADES_INVESTIGACAO,
 ];
 
 export { prepararOperacionais };

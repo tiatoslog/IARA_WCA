@@ -17,6 +17,8 @@
 
 import type { Percepcao, Passo, Plano } from './Evento';
 import { extrairAssuntoLembrete } from './Quando';
+import { planosPropostos } from './PlanosPropostos';
+import { passosExecutaveis } from './Investigacao';
 
 function passo(
   indice: number,
@@ -41,7 +43,25 @@ function passo(
  * `resolver_confirmacao`) citavam habilidades ausentes do catálogo. Se mover o
  * teste, mova esta referência junto.
  */
-const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
+/**
+ * QUEM está falando, para as receitas que precisam consultar estado do diálogo.
+ *
+ * A `Percepcao` não carrega identidade — e não deve carregar: ela é o que a
+ * FRASE diz, e a frase não sabe de quem é. Mas uma receita como a de autorizar
+ * um plano proposto precisa saber qual proposta está aberta, e proposta é por
+ * operador e por conversa.
+ *
+ * OPCIONAL de propósito. Sem contexto, as receitas que dependem dele produzem o
+ * plano honesto de "não há nada aberto" em vez de adivinhar — que é o que um
+ * chamador de teste, ou um caminho novo que esqueceu de passar o contexto, deve
+ * receber.
+ */
+export interface ContextoPlanejamento {
+  readonly id_usuario: string;
+  readonly sessao: string;
+}
+
+const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) => Plano> = {
   clima: (p) => {
     const horizonte = extrairHorizonteClima(p.bruto);
     return {
@@ -137,6 +157,33 @@ const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
     passos: [passo(0, 'Ler memória, processador e rede do computador', 'informacoes_sistema', {})],
   }),
 
+  /**
+   * UM PASSO SÓ, e é uma decisão, não uma simplificação.
+   *
+   * A tentação é decompor aqui — medir, analisar, propor — porque é assim que a
+   * investigação de fato acontece. Mas o plano do kernel executa passo a passo e
+   * compõe as SAÍDAS, e as duas primeiras etapas não têm saída para o operador:
+   * uma medição sem análise é uma parede de números, e uma análise sem plano é
+   * um diagnóstico sem saída. Espalhá-las em três passos faria a resposta juntar
+   * três textos que só fazem sentido como um.
+   *
+   * O laço de verdade — medir, agir, medir de novo, comparar — não cabe num
+   * plano: ele atravessa TURNOS, porque no meio dele mora uma autorização do
+   * operador. Quem o mantém é a referência guardada em `habilidades/investigacao.ts`.
+   */
+  lentidao: () => ({
+    objetivo: 'Investigar a lentidão relatada no computador do operador',
+    origem: 'deterministico',
+    passos: [
+      passo(
+        0,
+        'Medir processador, memória, disco e processos; comparar com as faixas e propor planos',
+        'investigar_lentidao',
+        {},
+      ),
+    ],
+  }),
+
   diagnostico: () => ({
     objetivo: 'Relatar o estado real de cada elo da cadeia',
     origem: 'deterministico',
@@ -202,6 +249,54 @@ const RECEITAS: Record<string, (p: Percepcao) => Plano> = {
       }),
     ],
   }),
+
+  /**
+   * O PLANO AUTORIZADO VIRA UM PLANO DO KERNEL — e é aqui que a Fase 2 se paga.
+   *
+   * A receita não executa nada. Ela TRADUZ os passos que o `MotorAnalise`
+   * propôs em passos que o Kernel roda, e o Kernel os roda pelas portas de
+   * sempre: porteiro de autorização, jornal, esquema, timeout, verificador. Um
+   * plano autorizado não ganha atalho nenhum por ter sido autorizado.
+   *
+   * `origem: 'deterministico'` é verdade e importa: o `PorteiroAutorizacao` só
+   * deixa passar risco alto vindo de plano determinístico, e este veio de uma
+   * receita fixa acionada por uma frase do operador — nunca de decomposição da
+   * LLM. É por isso que o passo de reiniciar pode chegar ao `acionar_energia`,
+   * que então arma a SUA própria confirmação. Autorizar o plano não é confirmar
+   * o desligamento; são duas portas, e as duas continuam de pé.
+   *
+   * O passo 0 é sempre `assumir_plano`: ele registra a autorização e anuncia o
+   * que vem. Sem proposta viva, ele é o único passo — e diz isso.
+   */
+  executar_plano: (p, ctx) => {
+    const letra = extrairLetraDoPlano(p.bruto);
+    const escolhido = ctx ? planosPropostos.escolher(ctx.id_usuario, ctx.sessao, letra) : null;
+
+    const passos: Passo[] = [
+      passo(0, 'Assumir o plano autorizado pelo operador', 'assumir_plano', {
+        plano: letra ?? '',
+      }),
+    ];
+
+    if (escolhido) {
+      /**
+       * Só os passos de AGORA, na ordem, parando no primeiro que depende do
+       * operador. Ver `passosExecutaveis`: um plano é uma sequência, e rodar o
+       * fim antes do meio não é executar o plano — é executar outro.
+       */
+      for (const s of passosExecutaveis(escolhido)) {
+        passos.push(passo(passos.length, s.descricao, s.habilidade, s.parametros));
+      }
+    }
+
+    return {
+      objetivo: escolhido
+        ? `Executar o plano ${escolhido.id}: ${escolhido.rotulo}`
+        : 'Responder sobre um plano que não está aberto',
+      origem: 'deterministico',
+      passos,
+    };
+  },
 
   confirmacao: (p) => ({
     objetivo: 'Resolver confirmação pendente',
@@ -314,6 +409,22 @@ export function extrairTermoLembrete(bruto: string): string {
   return (m?.[1] ?? '').trim().slice(0, 120);
 }
 
+/**
+ * "executar o plano B" → `B`. Sem letra → `undefined`, e quem resolve usa o
+ * RECOMENDADO — que é o que a pergunta "posso executar o plano A?" torna natural
+ * responder com um "pode executar".
+ *
+ * A letra é limitada a A–E porque é o alcance real de `planosParaLentidao`
+ * (quatro alternativas no pior caso). Aceitar qualquer letra faria "execute o
+ * plano X" virar um pedido válido para um plano que nunca existiu, e a resposta
+ * honesta a isso já existe — só que ela é melhor quando diz "não tenho um plano
+ * X", e não quando o extrator inventou um alvo.
+ */
+export function extrairLetraDoPlano(bruto: string): string | undefined {
+  const m = normalizarLocal(bruto).match(/\bplano\s+([a-e])\b/);
+  return m ? m[1].toUpperCase() : undefined;
+}
+
 export function extrairAcaoEnergia(bruto: string): string {
   const t = normalizarLocal(bruto);
   if (/\b(reinicie|reinicia|reiniciar)\b/.test(t)) return 'reiniciar';
@@ -378,10 +489,10 @@ export class Planejador {
    * aconteceu?" casa `incidente` e `infraestrutura`; a intenção real é o
    * histórico, e `incidente` vem antes na lista de âncoras da percepção.
    */
-  planejar(p: Percepcao): Plano {
+  planejar(p: Percepcao, ctx: ContextoPlanejamento | null = null): Plano {
     for (const ancora of p.ancoras) {
       const receita = RECEITAS[ancora];
-      if (receita) return receita(p);
+      if (receita) return receita(p, ctx);
     }
     return this.planoDeRaciocinio(p);
   }

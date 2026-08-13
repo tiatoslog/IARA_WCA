@@ -173,6 +173,32 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     nome: 'listar_arquivos',
     acionavel: true,
   },
+  /**
+   * LENTIDÃO VEM ANTES DE `diagnostico` E DE `sistema`, e a ordem é a regra.
+   *
+   * As três âncoras se sobrepõem em frases reais e respondem coisas diferentes:
+   * `diagnostico` é o autoteste da IARA ("você está funcionando?"), `sistema` é
+   * uma leitura instantânea ("quanto de memória?"), e esta é uma INVESTIGAÇÃO
+   * ("por que está lento?"). "Diagnostique a lentidão do meu computador" casa as
+   * três, e a resposta certa é a investigação — quem pergunta por que quer causa,
+   * não uma lista de bolinhas verdes nem um número solto.
+   *
+   * `lento` NUNCA SOZINHO, pela lição de `frota` e de `tempo`: "o cliente está
+   * lento para responder" e "esse processo de aprovação é lento" são frases
+   * sobre outra coisa, e medir o computador ali seria responder uma pergunta que
+   * ninguém fez. O que qualifica é a MÁQUINA aparecer perto — em qualquer das
+   * duas ordens, porque "meu computador está lento" e "está lento o computador"
+   * são a mesma frase.
+   *
+   * A segunda alternativa é o pedido de nova medição, que fecha o laço do §14
+   * ("meça de novo"). Ela dispensa a palavra da máquina porque nenhuma outra
+   * habilidade do catálogo MEDE — não há o que confundir.
+   */
+  {
+    re: /\b(computador|pc|maquina|notebook|windows|micro)\b[^.?!]{0,40}\b(lent[oa]|lentidao|devagar|travando|travad[oa]|arrastando|engasgando|pesad[oa]|nao responde)\b|\b(lent[oa]|lentidao|devagar|travando|travad[oa]|arrastando|engasgando)\b[^.?!]{0,40}\b(computador|pc|maquina|notebook|windows|micro)\b|\b(med[ei]|meca|medir|mede)\s+(o\s+|a\s+)?(desempenho|computador|maquina|pc\s+)?(de\s+novo|novamente)\b/,
+    nome: 'lentidao',
+    acionavel: true,
+  },
   {
     /**
      * `memoria` e `processador` NUNCA sozinhos, pela lição de `frota` e de
@@ -225,6 +251,39 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     nome: 'energia',
     acionavel: true,
     negavel: true,
+  },
+  /**
+   * AUTORIZAR UM PLANO PROPOSTO — vem ANTES de `confirmacao`, e a ordem resolve
+   * um conflito real: "pode executar" casa as duas, e a pendência de energia do
+   * `AgenteLocal` não é a mesma coisa que um plano de investigação.
+   *
+   * A âncora EXIGE a palavra `plano`, e é a trava que torna a ordem segura. Sem
+   * ela, "confirmo" e "prossiga" — que hoje resolvem uma confirmação de
+   * desligamento — passariam a disputar com um plano aberto, e o desempate
+   * silencioso decidiria qual ação de risco alto o operador acabou de autorizar.
+   * Uma palavra a mais de exigência aqui vale mais que a conveniência de
+   * responder "sim": a investigação termina dizendo, com todas as letras, como
+   * responder.
+   *
+   * `negavel` porque "não execute o plano B" é o oposto exato do pedido, e agir
+   * ali seria fazer justamente o que foi proibido.
+   *
+   * A EXCEÇÃO É PRÓPRIA, e não `interrogavel`, por um motivo que quase passou:
+   * `ehPerguntaSobreResolver` só conhece a família de CONFIRMAR
+   * (`confirm|prossegu|prossig`), então ela não veria "como eu executo o
+   * plano?". Estendê-la para cobrir `execut` teria sido pior que não cobrir —
+   * o regex de lá exige um interrogativo antes do verbo, e `pode` está na
+   * lista: "pode executar o plano A", que é EXATAMENTE como o operador
+   * autoriza, passaria a ser suprimida como pergunta. A exceção aqui é estreita
+   * de propósito e não contém `pode`.
+   */
+  {
+    re: /\bplano\s+[a-e]\b|\b(execut\w+|aplic\w+|roda\w*|segu[ei]\w*|assum\w+|vamos com|manda ver)\s+(o\s+|com\s+o\s+|esse\s+|este\s+|aquele\s+)?plano\b|\bpode\s+(executar|aplicar|seguir|rodar)\b/,
+    nome: 'executar_plano',
+    acionavel: true,
+    negavel: true,
+    exceto:
+      /\b(como|de que jeito|de que forma|o que acontece|o que muda|quanto tempo|por que|porque|em que consiste)\b[^?]{0,60}\b(plano|execut)/,
   },
   {
     re: /\b(confirmo|confirmado|confirmar|prossiga|cancela|cancelar|cancelado|abortar)\b/,
@@ -346,6 +405,8 @@ export class MotorPercepcao {
     if (ancoras.includes('abrir_app')) return 'abertura de aplicativo';
     if (ancoras.includes('fechar_app')) return 'encerramento de aplicativo';
     if (ancoras.includes('listar_arquivos')) return 'inventário de pasta';
+    if (ancoras.includes('executar_plano')) return 'autorização de um plano proposto';
+    if (ancoras.includes('lentidao')) return 'investigação de lentidão no computador do operador';
     if (ancoras.includes('sistema')) return 'estado da máquina do operador';
     if (ancoras.includes('diagnostico')) return 'autodiagnóstico do sistema';
     if (ancoras.includes('captura')) return 'registro visual da tela';

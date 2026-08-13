@@ -27,12 +27,21 @@
  */
 
 import { mkdir, readdir } from 'node:fs/promises';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, statSync, statfs } from 'node:fs';
 import { execFile, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { cpus, freemem, homedir, hostname, networkInterfaces, totalmem, uptime } from 'node:os';
 import path from 'node:path';
 import type { CodigoErro, ProvaExecucao } from '../../lib/execucao';
+import {
+  JANELA_PROCESSOS_MS,
+  SCRIPT_PROCESSOS,
+  interpretarProcessos,
+  medirCpu,
+  montarMedicao,
+  type Disco,
+  type ProcessoMedido,
+} from './SondasDesempenho';
 
 /**
  * O que uma ação das mãos devolve.
@@ -51,6 +60,12 @@ export interface RelatoAcao {
   readonly texto: string;
   readonly prova: ProvaExecucao;
   readonly codigo_erro: CodigoErro | null;
+  /**
+   * A OBSERVAÇÃO em estrutura, para as ações que medem em vez de agir. Ver o
+   * campo homônimo em `RelatoExecucao`: quem consome trata a ausência como
+   * lacuna, nunca como zero.
+   */
+  readonly dados?: Readonly<Record<string, unknown>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,6 +166,22 @@ const APLICATIVOS: Record<string, AplicativoAutorizado> = {
   navegador: { rotulo: 'Microsoft Edge', comando: 'cmd.exe', argumentos: ['/c', 'start', '', 'msedge'], processo: 'msedge.exe', fechavel: true },
 };
 
+/**
+ * "o Bloco de Notas", "a Calculadora".
+ *
+ * Detalhe pequeno e não decorativo: a primeira bateria real produziu "Pronto.
+ * Abri o Calculadora no computador." A IARA fala português o tempo todo, e um
+ * erro de concordância na frase que confirma uma AÇÃO é onde ele mais aparece —
+ * é a frase que a pessoa lê com atenção, porque quer saber se deu certo.
+ *
+ * Derivado do rótulo em vez de declarado por entrada: o mapa tem três aliases
+ * para o mesmo Explorador, e três campos `artigo` para concordar entre si é
+ * exatamente o tipo de repetição que fica errada na quarta linha.
+ */
+export function artigoDe(rotulo: string): 'o' | 'a' {
+  return /^(calculadora|área|agenda|planilha)/i.test(rotulo) ? 'a' : 'o';
+}
+
 export function resolverAplicativo(pedido: string): AplicativoAutorizado | null {
   const t = pedido
     .normalize('NFD')
@@ -160,6 +191,35 @@ export function resolverAplicativo(pedido: string): AplicativoAutorizado | null 
   const chaves = Object.keys(APLICATIVOS).sort((a, b) => b.length - a.length);
   for (const chave of chaves) {
     if (t.includes(chave)) return APLICATIVOS[chave];
+  }
+  return null;
+}
+
+/**
+ * O caminho INVERSO de `resolverAplicativo`: dado um nome de imagem que a sonda
+ * de desempenho observou rodando, este é um aplicativo que a IARA sabe fechar?
+ *
+ * Existe separado, e casando pelo campo `processo` em vez de por substring na
+ * frase, porque as duas perguntas não são a mesma. `resolverAplicativo` procura
+ * o que o operador ESCREVEU dentro de um vocabulário generoso — ali "abre os
+ * arquivos" achar o Explorador é acerto. Aqui a entrada é um nome de processo
+ * vindo do sistema operacional, e a mesma generosidade seria defeito: um
+ * processo chamado `arquivos_backup` contém "arquivos" e viraria uma oferta de
+ * derrubar o shell do Windows.
+ *
+ * Devolve `null` para processo desconhecido E para processo conhecido não
+ * fechável — quem chama só precisa saber se pode OFERECER o fechamento, e as
+ * duas respostas são "não pode".
+ */
+export function aplicativoFechavelDoProcesso(imagem: string): { rotulo: string } | null {
+  const alvo = imagem
+    .trim()
+    .toLowerCase()
+    .replace(/\.exe$/, '');
+  if (!alvo) return null;
+  for (const app of Object.values(APLICATIVOS)) {
+    if (!app.fechavel) continue;
+    if (app.processo.toLowerCase().replace(/\.exe$/, '') === alvo) return { rotulo: app.rotulo };
   }
   return null;
 }
@@ -418,6 +478,88 @@ const sondaReal: SondaProcessos = (imagem) =>
   });
 
 /**
+ * A SONDA DETALHADA — quem consome o processador, agora.
+ *
+ * Mora aqui, e não em `SondasDesempenho.ts`, por causa da regra `A4` da
+ * fronteira: `execFile` e `spawn` são confinados a este arquivo. A primeira
+ * versão desta função vivia lá e derrubou a suíte — corretamente. Um segundo
+ * lugar do sistema capaz de rodar um comando é uma segunda fronteira para
+ * manter, e a auditoria que este arquivo carrega não a alcançaria.
+ *
+ * O script é constante e não interpola NADA vindo de fora. Ver `SCRIPT_PROCESSOS`.
+ *
+ * `null` = não sei sondar (outra plataforma, ou a chamada falhou). Mesma
+ * distinção de `sondaReal`, e pelo mesmo motivo: "sondei e não achei" e "não
+ * consigo olhar" pedem frases diferentes ao operador.
+ */
+const sondaDetalhadaReal: SondaDetalhada = () =>
+  new Promise((resolver) => {
+    if (process.platform !== 'win32') {
+      resolver(null);
+      return;
+    }
+    execFile(
+      'powershell',
+      ['-NoProfile', '-NonInteractive', '-Command', SCRIPT_PROCESSOS],
+      {
+        windowsHide: true,
+        encoding: 'utf8',
+        // Folga sobre a janela do script: ele dorme 1 s por construção, e o
+        // interpretador leva o seu para subir numa máquina fria — que é
+        // exatamente a máquina que se está investigando.
+        timeout: JANELA_PROCESSOS_MS + 11_000,
+        maxBuffer: 4 * 1024 * 1024,
+      },
+      (erro, saida) => {
+        resolver(erro ? null : interpretarProcessos(String(saida), cpus().length));
+      },
+    );
+  });
+
+export type SondaDetalhada = () => Promise<readonly ProcessoMedido[] | null>;
+
+/**
+ * `fs.statfs` cobre Windows, Linux e macOS a partir do Node 18.15 — e quando não
+ * cobrir, a chamada devolve erro e o campo vira `null`, que é o comportamento
+ * pretendido. Nenhum `catch` esconde ausência de dado aqui: ela vira lacuna
+ * declarada lá em cima.
+ *
+ * O volume é o do SISTEMA, não o do diretório do processo: é o disco cheio do
+ * Windows que deixa a máquina lenta, não o disco de dados.
+ */
+export type SondaDisco = () => Promise<Disco | null>;
+
+function raizDoSistema(): string {
+  if (process.platform === 'win32') {
+    return process.env.SystemDrive ? `${process.env.SystemDrive}\\` : 'C:\\';
+  }
+  return '/';
+}
+
+const sondaDiscoReal: SondaDisco = () =>
+  new Promise((resolver) => {
+    statfs(raizDoSistema(), (erro, s) => {
+      if (erro || !s || !Number.isFinite(s.blocks) || s.blocks <= 0) {
+        resolver(null);
+        return;
+      }
+      /**
+       * `bavail` (disponível sem privilégio), não `bfree`: em sistemas de
+       * arquivos com reserva, `bfree` inclui blocos que ninguém consegue usar, e
+       * relatar espaço que não dá para ocupar é o mesmo tipo de número enganoso
+       * que este trabalho evita em toda parte.
+       */
+      const livre = Number(s.bavail) * Number(s.bsize);
+      const total = Number(s.blocks) * Number(s.bsize);
+      const arredondar = (n: number) => Math.round(n * 10) / 10;
+      resolver({
+        livre_pct: arredondar((livre / total) * 100),
+        livre_gb: arredondar(livre / 1024 ** 3),
+      });
+    });
+  });
+
+/**
  * O SEGUNDO executor, e a razão de existirem dois.
  *
  * `Executor` solta o processo e não olha para trás — é o certo para abrir o
@@ -464,6 +606,13 @@ export class AgenteLocal {
      *  máquina roda a suíte. */
     private readonly lancador: Lancador = lancadorReal,
     private readonly sonda: SondaProcessos = sondaReal,
+    /**
+     * As duas sondas de desempenho, injetáveis pela mesma razão das outras: um
+     * teste precisa provar a análise de uma máquina saturada sem saturar a
+     * máquina que roda a suíte, e provar o disco cheio sem encher o disco.
+     */
+    private readonly sondaDetalhada: SondaDetalhada = sondaDetalhadaReal,
+    private readonly sondaDisco: SondaDisco = sondaDiscoReal,
   ) {}
 
   private auditar(idUsuario: string, acao: string, permitido: boolean, detalhe: string): void {
@@ -570,7 +719,7 @@ export class AgenteLocal {
       this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} (sem sonda)`);
       return {
         ok: true,
-        texto: `Mandei o ${app.rotulo} abrir. Não consigo conferir a tabela de processos desta máquina, então não tenho como te garantir que a janela apareceu.`,
+        texto: `Mandei ${artigoDe(app.rotulo)} ${app.rotulo} abrir. Não consigo conferir a tabela de processos desta máquina, então não tenho como te garantir que a janela apareceu.`,
         prova: {
           confirmado: false,
           evidencia: 'lançamento aceito; a tabela de processos não é consultável nesta plataforma',
@@ -582,12 +731,29 @@ export class AgenteLocal {
 
     if (depois.length > antes.length) {
       this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} pid=${depois.at(-1)}`);
+      /**
+       * A EVIDÊNCIA PRECISA DIZER OS DOIS NÚMEROS, e a primeira versão dizia
+       * "ausente antes do pedido" neste ramo — o que é verdade quando `antes`
+       * está vazio e MENTIRA quando não está. Pego na primeira bateria real:
+       * abrir o Chrome com quinze processos dele já rodando produziu um novo
+       * processo (prova legítima) acompanhado da frase "ausente antes do
+       * pedido", que era falsa sobre o estado anterior da máquina.
+       *
+       * Uma prova que exagera o que apurou é uma prova estragada, mesmo quando
+       * a conclusão está certa — porque a próxima pessoa a lê-la vai confiar na
+       * frase, não refazer a medição.
+       */
+      const novos = depois.length - antes.length;
       return {
         ok: true,
-        texto: `Pronto. Abri o ${app.rotulo} no computador.`,
+        texto: `Pronto. Abri ${artigoDe(app.rotulo)} ${app.rotulo} no computador.`,
         prova: {
           confirmado: true,
-          evidencia: `${app.processo} presente na tabela de processos (PID ${depois.at(-1)}), ausente antes do pedido`,
+          evidencia:
+            antes.length === 0
+              ? `${app.processo} presente na tabela de processos (PID ${depois.at(-1)}), ausente antes do pedido`
+              : `${app.processo} passou de ${antes.length} para ${depois.length} processo(s) — ` +
+                `${novos} novo(s) depois do pedido, último PID ${depois.at(-1)}`,
         },
         codigo_erro: null,
       };
@@ -607,7 +773,7 @@ export class AgenteLocal {
       return {
         ok: true,
         texto:
-          `O ${app.rotulo} já estava aberto no computador e eu mandei abrir de novo. ` +
+          `${artigoDe(app.rotulo)==="a"?"A":"O"} ${app.rotulo} já estava aberto no computador e eu mandei abrir de novo. ` +
           'Ele traz a janela existente para a frente em vez de criar um processo novo, ' +
           'então não tenho como te provar que uma janela nova apareceu.',
         prova: {
@@ -681,7 +847,7 @@ export class AgenteLocal {
       return {
         ok: false,
         texto:
-          `Não fecho o ${app.rotulo}: ele é o próprio shell do Windows. Derrubá-lo apaga a barra de tarefas ` +
+          `Não fecho ${artigoDe(app.rotulo)} ${app.rotulo}: ele é o próprio shell do Windows. Derrubá-lo apaga a barra de tarefas ` +
           'e a área de trabalho de quem estiver na frente do computador.',
         prova: { confirmado: false, evidencia: 'aplicativo marcado como não fechável na allowlist', motivo: 'nao_encontrado' },
         codigo_erro: 'PERMISSAO_NEGADA',
@@ -693,7 +859,7 @@ export class AgenteLocal {
       this.auditar(idUsuario, 'fechar_aplicativo', true, `${app.rotulo} já estava fechado`);
       return {
         ok: true,
-        texto: `O ${app.rotulo} já não estava aberto. Não mexi em nada.`,
+        texto: `${artigoDe(app.rotulo)==="a"?"A":"O"} ${app.rotulo} já não estava aberto. Não mexi em nada.`,
         prova: { confirmado: true, evidencia: `${app.processo} ausente da tabela de processos antes e depois` },
         codigo_erro: null,
       };
@@ -706,7 +872,7 @@ export class AgenteLocal {
       this.auditar(idUsuario, 'fechar_aplicativo', true, `${app.rotulo} (sem sonda)`);
       return {
         ok: codigo === 0,
-        texto: `Pedi para o ${app.rotulo} fechar. Não consigo conferir a tabela de processos daqui.`,
+        texto: `Pedi para ${artigoDe(app.rotulo)} ${app.rotulo} fechar. Não consigo conferir a tabela de processos daqui.`,
         prova: { confirmado: false, evidencia: `taskkill saiu com código ${codigo}; sem sonda para conferir`, motivo: 'sem_meio_de_verificar' },
         codigo_erro: null,
       };
@@ -716,7 +882,7 @@ export class AgenteLocal {
       this.auditar(idUsuario, 'fechar_aplicativo', true, app.rotulo);
       return {
         ok: true,
-        texto: `Pronto. Fechei o ${app.rotulo}.`,
+        texto: `Pronto. Fechei ${artigoDe(app.rotulo)} ${app.rotulo}.`,
         prova: { confirmado: true, evidencia: `${app.processo} sumiu da tabela de processos depois do pedido` },
         codigo_erro: null,
       };
@@ -726,7 +892,7 @@ export class AgenteLocal {
     return {
       ok: false,
       texto:
-        `Pedi para o ${app.rotulo} fechar e ele continua aberto. Isso normalmente acontece quando há algo não salvo ` +
+        `Pedi para ${artigoDe(app.rotulo)} ${app.rotulo} fechar e continua aberto. Isso normalmente acontece quando há algo não salvo ` +
         'e o programa está esperando uma resposta na tela. Eu não forço o fechamento — você perderia o trabalho.',
       prova: {
         confirmado: false,
@@ -941,6 +1107,51 @@ export class AgenteLocal {
    * do Windows 11) ou PowerShell, e o custo de manter esse caminho vivo não se
    * paga contra o que ele acrescenta. Quando entrar, entra declarado.
    */
+  /**
+   * A medição amostrada — CPU, memória, disco e processos — desta máquina.
+   *
+   * Note o que ela NÃO faz: não compara com faixa nenhuma, não conclui e não
+   * escreve relatório. O `texto` aqui é o mínimo para o caso em que alguém olhe
+   * o relato cru no console; a resposta ao operador é composta pelo
+   * `MotorAnalise`, do lado do motor, a partir de `dados`.
+   *
+   * A separação importa porque este código roda no BRAÇO, e o braço não sabe o
+   * que a IARA está investigando. Ele mede; quem interpreta é quem perguntou.
+   */
+  async medirDesempenho(idUsuario: string): Promise<RelatoAcao> {
+    /**
+     * As três sondas em paralelo: são independentes, e a de processos custa um
+     * segundo que não há por que somar ao meio segundo da de CPU.
+     */
+    const [cpu_pct, disco, processos] = await Promise.all([
+      medirCpu(),
+      this.sondaDisco().catch(() => null),
+      this.sondaDetalhada().catch(() => null),
+    ]);
+    const m = montarMedicao({ cpu_pct, disco, processos });
+    this.auditar(
+      idUsuario,
+      'medir_desempenho',
+      true,
+      `cpu ${m.cpu_pct}%, mem ${m.memoria_pct}%, ${m.processos?.length ?? 'sem'} processo(s)`,
+    );
+    return {
+      ok: true,
+      texto:
+        `Medição: processador ${m.cpu_pct}%, memória ${m.memoria_pct}%, ` +
+        `disco ${m.disco_livre_pct === null ? 'não medido' : `${m.disco_livre_pct}% livres`}.`,
+      prova: {
+        confirmado: true,
+        evidencia:
+          `amostrado em ${hostname()}: janela de CPU sobre ${m.nucleos} núcleos, ` +
+          `${m.processos === null ? 'sonda de processos indisponível' : `${m.processos.length} processos lidos`}`,
+      },
+      codigo_erro: null,
+      // O objeto inteiro atravessa: quem valida na chegada é `interpretarMedicao`.
+      dados: m as unknown as Readonly<Record<string, unknown>>,
+    };
+  }
+
   async informacoesSistema(idUsuario: string): Promise<RelatoAcao> {
     const gb = (b: number) => (b / 1024 ** 3).toFixed(1);
     const total = totalmem();

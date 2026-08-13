@@ -35,7 +35,13 @@ function relato(
   inicio: number,
   onde: 'motor' | 'dispositivo',
   dispositivo: string | null,
-  r: { ok: boolean; texto: string; prova: ProvaExecucao; codigo_erro: RelatoExecucao['codigo_erro'] },
+  r: {
+    ok: boolean;
+    texto: string;
+    prova: ProvaExecucao;
+    codigo_erro: RelatoExecucao['codigo_erro'];
+    dados?: Readonly<Record<string, unknown>>;
+  },
 ): RelatoExecucao {
   return {
     execucao_id: ordem.execucao_id,
@@ -46,6 +52,7 @@ function relato(
     duracao_ms: Date.now() - inicio,
     dispositivo,
     onde,
+    ...(r.dados ? { dados: r.dados } : {}),
   };
 }
 
@@ -117,6 +124,17 @@ export async function executarOrdem(
 
       case 'informacoes_sistema':
         return relato(ordem, inicio, onde, dispositivo, await agenteLocal.informacoesSistema(usuario));
+
+      /**
+       * A ÚNICA ação do executor que devolve `dados` estruturados, e a razão é
+       * o que o motor faz com eles: as outras produzem um efeito e relatam; esta
+       * produz OBSERVAÇÃO, que vai ser comparada com faixas, virar hipótese e
+       * sustentar um plano do outro lado da rede. Mandar só a prosa obrigaria o
+       * `MotorAnalise` a fazer regex no relatório do executor — que é o mesmo
+       * vício de conferir o relato pelo próprio relato, com outra roupa.
+       */
+      case 'medir_desempenho':
+        return relato(ordem, inicio, onde, dispositivo, await agenteLocal.medirDesempenho(usuario));
 
       default: {
         /**

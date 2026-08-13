@@ -209,6 +209,21 @@ test('G3. o EFEITO EXTERNO só é alcançado a partir do portal ou do catálogo'
     'servidor/nucleo/kernel/integracoes/whatsapp.ts',
     'servidor/nucleo/kernel/integracoes/index.ts',
     'servidor/nucleo/kernel/habilidades/agenteLocal.ts',
+    /**
+     * A investigação de lentidão. Decisão de arquitetura, não ajuste de teste.
+     *
+     * Ela alcança o `AgenteLocal` para UMA pergunta, e a pergunta não produz
+     * efeito: "quais programas a IARA sabe encerrar?". A resposta decide se o
+     * plano proposto é executável ou vira instrução ao operador — sem ela, a
+     * IARA prometeria fechar um processo que não consegue alcançar, que é a
+     * mentira operacional que este kernel inteiro combate.
+     *
+     * A alternativa considerada e recusada foi importar a allowlist de dentro
+     * do `MotorAnalise`: a camada que raciocina não importa a que age, nem para
+     * ler. Aqui a função entra por injeção, e o caminho passa pelo catálogo —
+     * que é o portal. Ver `PodeFechar` em `MotorAnalise.ts`.
+     */
+    'servidor/nucleo/kernel/habilidades/investigacao.ts',
     'servidor/nucleo/kernel/habilidades/index.ts',
     'servidor/nucleo/kernel/Kernel.ts',
     /**

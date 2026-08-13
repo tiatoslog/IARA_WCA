@@ -49,8 +49,23 @@ import {
   type OrdemExecucao,
   type RelatoExecucao,
 } from '../../lib/execucao';
-import { ponteDispositivos, type DispositivoConectado, type PonteDispositivos } from '../barramento/PonteDispositivos';
+import { ponteDispositivos, type DispositivoConectado } from '../barramento/PonteDispositivos';
 import { executarOrdem } from './ExecutorDesktop';
+import type { PacoteBraco } from '../../lib/execucao';
+
+/**
+ * O QUE O BRAÇO PRECISA DE UMA PONTE — e nada além disso.
+ *
+ * Tipar o construtor pela classe concreta obrigaria qualquer teste a levantar
+ * um `WebSocketServer` para exercitar um timeout. Duas coisas ruins vêm daí: o
+ * teste passa a medir a rede em vez da lógica, e o desenho fica sem a resposta
+ * para "o que o gerente de execução realmente depende do transporte?". São dois
+ * métodos. Declarar isso é o que mantém a ponte substituível.
+ */
+export interface PonteDeOrdens {
+  destinoDe(idUsuario: string): DispositivoConectado | null;
+  aoPacote(ouvinte: (d: DispositivoConectado, p: PacoteBraco) => void): () => void;
+}
 
 // ---------------------------------------------------------------------------
 // Onde estão as mãos
@@ -97,6 +112,14 @@ const PRAZO_MS: Record<AcaoDesktop, number> = {
   listar_arquivos: 10_000,
   capturar_tela: 45_000,
   informacoes_sistema: 10_000,
+  /**
+   * O maior prazo do quadro depois da captura, e cada segundo tem dono: a sonda
+   * de processos gasta 1 s SÓ na janela de amostragem (CPU de processo é taxa,
+   * não valor), mais a partida do PowerShell, que numa máquina fria não é
+   * barata. Um teto apertado aqui produziria "não consegui medir" justamente na
+   * máquina lenta que a medição existe para investigar.
+   */
+  medir_desempenho: 30_000,
 };
 
 /** Janela em que um pedido idêntico é considerado repetição de pacote, e não
@@ -152,7 +175,7 @@ export class Braco {
   private trilha: LinhaTrilha[] = [];
 
   constructor(
-    private readonly ponte: PonteDispositivos = ponteDispositivos,
+    private readonly ponte: PonteDeOrdens = ponteDispositivos,
     private readonly executarNoMotor = executarOrdem,
     private readonly temMaos = motorTemMaos,
   ) {
@@ -435,10 +458,7 @@ export class Braco {
   // Retorno do braço
   // -------------------------------------------------------------------------
 
-  private receber(
-    dispositivo: DispositivoConectado,
-    pacote: Parameters<Parameters<PonteDispositivos['aoPacote']>[0]>[1],
-  ): void {
+  private receber(dispositivo: DispositivoConectado, pacote: PacoteBraco): void {
     if (pacote.tipo === 'apresentacao') return;
 
     const id = pacote.tipo === 'concluida' ? pacote.relato.execucao_id : pacote.execucao_id;

@@ -43,7 +43,15 @@ export type AcaoDesktop =
   | 'criar_pasta'
   | 'listar_arquivos'
   | 'capturar_tela'
-  | 'informacoes_sistema';
+  | 'informacoes_sistema'
+  /**
+   * Separada de `informacoes_sistema`, e a separação é de contrato, não de
+   * conveniência: aquela responde "como está o computador" com uma leitura
+   * instantânea de `node:os`; esta AMOSTRA a máquina ao longo de uma janela
+   * (CPU e processos são taxas, não valores) e custa segundos por isso. Fundir
+   * as duas faria toda pergunta sobre memória pagar a sonda de processos.
+   */
+  | 'medir_desempenho';
 
 export const ACOES_DESKTOP: readonly AcaoDesktop[] = [
   'abrir_aplicativo',
@@ -52,6 +60,7 @@ export const ACOES_DESKTOP: readonly AcaoDesktop[] = [
   'listar_arquivos',
   'capturar_tela',
   'informacoes_sistema',
+  'medir_desempenho',
 ];
 
 export function ehAcaoDesktop(v: unknown): v is AcaoDesktop {
@@ -217,6 +226,20 @@ export interface RelatoExecucao {
   readonly dispositivo: string | null;
   /** Onde a ação de fato correu. `nenhum` quando ela não chegou a correr. */
   readonly onde: 'motor' | 'dispositivo' | 'nenhum';
+  /**
+   * O que a execução MEDIU, em estrutura — para quando o motor precisa raciocinar
+   * sobre o resultado e não apenas repeti-lo ao operador.
+   *
+   * OPCIONAL, e a opcionalidade é o desenho. Um braço de versão anterior não
+   * conhece este campo e continua respondendo só `texto`; quem depende dos dados
+   * precisa tratar a ausência como LACUNA declarada, nunca como zero. É a mesma
+   * regra de `null` em `SondasDesempenho`, atravessando a rede.
+   *
+   * NÃO é um canal de propósito geral para payload cru. Quem o preenche declara
+   * o formato do lado do motor e o valida na chegada — o braço é outro processo,
+   * possivelmente de outra versão, e nada que vem dele entra tipado por confiança.
+   */
+  readonly dados?: Readonly<Record<string, unknown>>;
 }
 
 export interface DescricaoDispositivo {
@@ -235,21 +258,50 @@ export interface DescricaoDispositivo {
 let contador = 0;
 
 /**
- * `IARA-20260813-000123`.
+ * A MARCA DESTE PROCESSO, e ela existe por causa de um defeito real.
  *
- * Data local no nome porque quem lê um log procura por dia; contador do
- * processo porque dentro de um dia o que se quer é ordem. Não é chave global —
- * dois motores geram a mesma sequência —, e não precisa ser: a identidade
- * global de um EFEITO é do jornal (`RegistroOperacoes`), que já resolve isso
- * com impressão digital e nonce. Este id é de TRANSPORTE: ele existe para
- * responder "onde esta execução parou", e essa pergunta é sempre feita dentro
- * de um processo.
+ * A primeira versão deste id era `IARA-<dia>-<contador>` e vinha acompanhada de
+ * um comentário confiante: "não é chave global — dois motores geram a mesma
+ * sequência —, e não precisa ser". Precisava.
+ *
+ * O QUE ACONTECEU, na primeira bateria de testes com braço real: o motor
+ * reiniciou (recarga do `tsx watch`), o contador voltou para 1, e o braço — que
+ * guarda os relatos por cinco minutos para poder responder a uma reentrega sem
+ * executar duas vezes — encontrou `IARA-20260813-000002` no próprio cache. Só
+ * que o `000002` DELE era um "abra o bloco de notas" de minutos antes, e a
+ * ordem nova era "quanto de memória está sendo usada". Ele reenviou o relato
+ * antigo. A IARA respondeu, com todas as letras, "Pronto. Abri o Bloco de Notas
+ * no computador." para uma pergunta sobre memória — nada foi executado, e o
+ * relato de sucesso era de outra ação.
+ *
+ * É a falha mais grave possível neste sistema, e ela não veio de um efeito
+ * errado: veio de uma IDENTIDADE que se repetia. A proteção contra duplicidade,
+ * construída para impedir mentira, passou a produzi-la.
+ *
+ * A marca é gerada uma vez por processo. Dois motores, ou o mesmo motor depois
+ * de reiniciar, nunca mais compartilham prefixo — e um cache do outro lado da
+ * rede não tem como confundir execuções de vidas diferentes.
+ */
+const MARCA_DO_PROCESSO = Math.floor(Math.random() * 0xffff)
+  .toString(16)
+  .padStart(4, '0');
+
+/**
+ * `IARA-20260813-a3f9-000123`.
+ *
+ * Data local porque quem lê um log procura por dia; marca do processo porque a
+ * unicidade precisa sobreviver a um restart; contador porque dentro de um
+ * processo o que se quer é ordem.
+ *
+ * Continua sendo um id de TRANSPORTE — ele responde "onde esta execução parou".
+ * A identidade global de um EFEITO é do jornal (`RegistroOperacoes`), que a
+ * resolve com impressão digital e nonce, e essa divisão não mudou.
  */
 export function novaExecucaoId(agora = new Date()): string {
   const d = (n: number) => String(n).padStart(2, '0');
   const dia = `${agora.getFullYear()}${d(agora.getMonth() + 1)}${d(agora.getDate())}`;
   contador = (contador + 1) % 1_000_000;
-  return `IARA-${dia}-${String(contador).padStart(6, '0')}`;
+  return `IARA-${dia}-${MARCA_DO_PROCESSO}-${String(contador).padStart(6, '0')}`;
 }
 
 // ---------------------------------------------------------------------------
