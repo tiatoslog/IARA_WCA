@@ -160,6 +160,49 @@ export class MemoriaOperacional {
     return shard.registros.slice(-limite);
   }
 
+  /**
+   * QUANTAS VEZES essa pessoa já falou com a IARA — o lastro da familiaridade.
+   *
+   * O PROBLEMA QUE ISTO RESOLVE: a `afinidade` de `MetricasVitais` nasce em 0,5
+   * e sobe 0,015 por tarefa concluída, mas vive no estado da sessão. Toda manhã
+   * ela zerava. Quem conversa com a IARA há seis meses era tratado, às nove da
+   * manhã, exatamente como quem chegou ontem — e é a afinidade que abre a
+   * provocação amigável em `TeoriaDaMente.overrideDeFamiliaridade`. Sem lastro,
+   * "eu sabia que você ia tentar isso" nunca podia ser dito por quem de fato
+   * sabia, e a personalidade ficava presa na primeira semana para sempre.
+   *
+   * A contagem é do que o OPERADOR escreveu, não do total: as falas da IARA
+   * dobrariam o número sem dobrar a convivência.
+   *
+   * NUNCA LANÇA. Familiaridade é enfeite de tom; tabela ausente ou shard
+   * ilegível devolve 0, que é a leitura conservadora — a IARA recomeça formal.
+   * Mesma regra de `lerPreferencias` e do insight noturno na `Porta`: ler
+   * memória não pode impedir ninguém de entrar no escritório.
+   */
+  async trocasAcumuladas(idUsuario: string): Promise<number> {
+    try {
+      const chave = idSeguro(idUsuario);
+      const bd = supabase();
+
+      if (bd) {
+        // `head: true` traz só o total: contar convivência não é motivo para
+        // arrastar o histórico inteiro pela rede na abertura da sessão.
+        const { count, error } = await bd
+          .from('memoria_registros')
+          .select('id', { count: 'exact', head: true })
+          .eq('id_usuario', chave) // ← o filtro que define o shard
+          .eq('papel', 'operador');
+        if (error) throw new Error(`Supabase: ${error.message}`);
+        return count ?? 0;
+      }
+
+      const shard = await this.abrir(chave);
+      return shard.registros.filter((r) => r.papel === 'operador').length;
+    } catch {
+      return 0;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Ficha do operador
   // ---------------------------------------------------------------------------

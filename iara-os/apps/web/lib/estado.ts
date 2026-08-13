@@ -226,10 +226,11 @@ export const METRICAS_INICIAIS: MetricasVitais = {
 export const OCEAN_IARA: MatrizOcean = {
   // Curiosa, mas sem divagar.
   abertura: 0.72,
-  // Mordomo: rigor é a identidade.
+  // Rigor é a identidade: personalidade não afrouxa fato.
   conscienciosidade: 0.94,
   // Presente, nunca tagarela.
   extroversao: 0.38,
+  // Alta, mas não complacente — amabilidade aqui é cuidado, não concordância.
   amabilidade: 0.81,
   // Estável sob pressão — é o ponto todo dela.
   neuroticismo: 0.16,

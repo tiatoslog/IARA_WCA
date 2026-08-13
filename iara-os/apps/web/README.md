@@ -1,7 +1,7 @@
 # IARA OS
 
-Escritório digital vivo da Atos Log. Um mordomo corporativo que atende até 5
-operadores, com isolamento de memória entre eles, e que projeta o próprio
+Escritório digital vivo da Atos Log. Uma inteligência corporativa que atende até
+5 operadores, com isolamento de memória entre eles, e que projeta o próprio
 trabalho numa sala em pixel art — de forma computacionalmente honesta.
 
 ## Subindo

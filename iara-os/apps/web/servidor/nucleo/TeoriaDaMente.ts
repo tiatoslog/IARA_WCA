@@ -6,7 +6,7 @@
  * console técnico. Se a IARA "acha" algo, dá para auditar por quê.
  *
  * O efeito prático: quando o operador está frustrado ou estressado, a persona
- * recebe injeção de controle que silencia a ironia e a prolixidade do mordomo.
+ * recebe injeção de controle que fecha o registro irônico e corta a prolixidade.
  */
 
 import { OCEAN_IARA, type LeituraOperador, type MatrizOcean } from '../../lib/estado';
@@ -167,26 +167,124 @@ export class TeoriaDaMente {
   /**
    * Override de persona. Devolve o bloco que é ANEXADO ao prompt de sistema —
    * o prompt base nunca é reescrito, para não invalidar o cache de prefixo.
+   *
+   * A DIVISÃO DE TRABALHO COM A PERSONA, que é o ponto deste método:
+   *
+   *   A persona (`ClienteClaude.PERSONA`) declara os quatro registros —
+   *   analítica, proativa, irônica, humana — e manda a situação escolher.
+   *   Escolher pela situação é justamente o que só o modelo consegue fazer:
+   *   "a conversa virou pessoal" e "há aqui algo que ele não viu" não são
+   *   fatos que se leem em regex.
+   *
+   *   O que se lê em regex é TENSÃO. E tensão não escolhe registro: ela FECHA
+   *   registro. Por isso este método nunca manda "seja irônica" — mandar humor
+   *   por inferência é a receita da piada na hora errada. Ele só faz o
+   *   movimento seguro, o de tirar da mesa: sob pressão, a ironia sai, e o que
+   *   sobra é a IARA direta.
+   *
+   *   O silêncio é deliberado em `neutro`. Estado neutro tem confiança 0,3 —
+   *   é a leitura que a classe devolve quando não viu sinal nenhum, e mandar
+   *   instrução de tom em cima de nada é o caminho mais curto para uma
+   *   personalidade que oscila sem motivo observável. Sem bloco, vale a
+   *   persona; a persona já sabe se comportar.
    */
   static overrideDePersona(leitura: LeituraOperador, ocean: MatrizOcean = OCEAN_IARA): string {
     switch (leitura.estado) {
       case 'frustrado':
         return (
-          'ESTADO DO OPERADOR: frustrado. Responda em no máximo três frases. ' +
-          'Sem ironia, sem preâmbulo, sem pedido de desculpas prolongado. ' +
+          'ESTADO DO OPERADOR: frustrado. Registro irônico FECHADO — nenhuma ' +
+          'piada, nenhuma provocação, nem leve. Responda em no máximo três ' +
+          'frases, sem preâmbulo e sem pedido de desculpas prolongado. ' +
           'Primeira frase = a resposta ou o próximo passo concreto.'
         );
       case 'estressado':
         return (
-          'ESTADO DO OPERADOR: sob pressão. Seja direto e calmo. Corte cortesia ' +
-          'ornamental. Entregue o essencial primeiro e ofereça detalhe só se pedirem.'
+          'ESTADO DO OPERADOR: sob pressão. Registro irônico FECHADO. Seja ' +
+          'direto e calmo, corte cortesia ornamental. Entregue o essencial ' +
+          'primeiro e ofereça detalhe só se pedirem.'
         );
       case 'focado':
-        return 'ESTADO DO OPERADOR: focado. Acompanhe o raciocínio dele sem redirecionar o assunto.';
+        return (
+          'ESTADO DO OPERADOR: focado. Acompanhe o raciocínio dele sem ' +
+          'redirecionar o assunto. Se for levantar algo que ele não pediu, que ' +
+          'seja uma coisa só e no fim.'
+        );
       case 'produtivo':
-        return `ESTADO DO OPERADOR: produtivo. Mantenha o ritmo; extroversão calibrada em ${ocean.extroversao}.`;
+        return (
+          'ESTADO DO OPERADOR: produtivo, a conversa está fluindo. Mantenha o ' +
+          'ritmo e a resposta curta; aqui há espaço para uma provocação leve, se ' +
+          `ela vier natural. Extroversão calibrada em ${ocean.extroversao}.`
+        );
       default:
         return '';
     }
+  }
+
+  /**
+   * FAMILIARIDADE — o portão da provocação amigável.
+   *
+   * A persona autoriza a IARA a provocar de leve ("você realmente gosta de
+   * escolher o caminho mais difícil, né?"). A frase só funciona vinda de quem já
+   * conhece o jeito da pessoa; vinda de quem acabou de ser apresentado, a mesma
+   * frase é atrevimento. O spec de personalidade diz "quando houver intimidade
+   * suficiente na conversa" — e intimidade, aqui, precisa virar número, porque a
+   * alternativa é o modelo estimar sozinho a que altura do relacionamento está,
+   * e ele estima para cima.
+   *
+   * O número já existia: `metricas.afinidade` sobe 0,015 a cada tarefa concluída
+   * (`Kernel`) e não é palpite — é contagem de trocas que deram certo. Do piso
+   * de 0,5 ao limiar são dez trocas sem atrito, que é aproximadamente o ponto em
+   * que uma conversa deixa de ser protocolar.
+   *
+   * O LASTRO VEM DO SHARD, não da sessão. A afinidade em si é estado volátil e
+   * zeraria toda manhã — e uma IARA que esquece a convivência a cada login está
+   * condenada a ser formal para sempre com quem fala com ela há meses. Por isso
+   * a `Porta` semeia a métrica na abertura, a partir de `trocasAcumuladas`, e o
+   * `Kernel` continua somando de turno em turno com o MESMO ganho. Passado e
+   * presente entram pela mesma régua; senão são duas escalas com um nome só.
+   *
+   * O bloco de baixo nunca some. Só o de cima seria pior que nada: sem
+   * instrução, a provocação fica ao critério do modelo, que é exatamente o que
+   * este portão existe para não deixar acontecer.
+   */
+  static readonly LIMIAR_PROVOCACAO = 0.65;
+
+  /**
+   * Quanto cada troca sem atrito vale de afinidade.
+   *
+   * Mora aqui, e não solto no `Kernel`, porque agora existem DOIS somadores — o
+   * do turno e o do lastro histórico — e duas constantes iguais escritas em
+   * lugares diferentes é a forma como elas deixam de ser iguais. Ver o que
+   * `Identidade.ts` conta sobre as três canonicalizações que divergiram.
+   */
+  static readonly GANHO_POR_TROCA = 0.015;
+
+  /**
+   * O crédito de afinidade que a convivência anterior deixou.
+   *
+   * Teto de 0,5 — somado ao piso de `METRICAS_INICIAIS`, chega no máximo em 1.
+   * Sem o teto, um histórico longo saturaria a métrica e ela pararia de
+   * significar alguma coisa; com ele, cerca de dez trocas já bastam para cruzar
+   * o limiar, que é aproximadamente quando uma conversa deixa de ser protocolar.
+   */
+  static lastroDeFamiliaridade(trocas: number): number {
+    if (!Number.isFinite(trocas) || trocas <= 0) return 0;
+    return Math.min(0.5, trocas * TeoriaDaMente.GANHO_POR_TROCA);
+  }
+
+  static overrideDeFamiliaridade(afinidade: number): string {
+    if (afinidade >= TeoriaDaMente.LIMIAR_PROVOCACAO) {
+      return (
+        'FAMILIARIDADE: a conversa já rendeu. Você pode provocar de leve, do ' +
+        'jeito de quem conhece o jeito da pessoa — "eu sabia que você ia tentar ' +
+        'isso", "eu poderia dizer que avisei; e vou". Sem exagero e sem alvo ' +
+        'nas competências dela.'
+      );
+    }
+    return (
+      'FAMILIARIDADE: vocês mal começaram a conversar. Humor sobre a SITUAÇÃO, ' +
+      'sim; provocação dirigida À PESSOA, ainda não — de quem acabou de chegar, ' +
+      'isso soa atrevido, não íntimo.'
+    );
   }
 }

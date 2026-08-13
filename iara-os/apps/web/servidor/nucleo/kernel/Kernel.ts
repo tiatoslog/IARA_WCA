@@ -411,7 +411,12 @@ export class Kernel {
       });
 
       await this.registrarSemQuebrar('iara', texto_final, this.destinoDe(decisao.rota));
-      await this.dep.estado.aplicarIntencao({ campo: 'afinidade', delta: 0.015 });
+      // O mesmo ganho que a `Porta` usa para semear o lastro histórico. Duas
+      // constantes iguais em arquivos diferentes é como elas deixam de ser iguais.
+      await this.dep.estado.aplicarIntencao({
+        campo: 'afinidade',
+        delta: TeoriaDaMente.GANHO_POR_TROCA,
+      });
     } catch (erro) {
       if (controle.signal.aborted) return;
       const mensagem = (erro as Error).message;
@@ -1116,15 +1121,18 @@ export class Kernel {
      *
      * Ordem importa: a ficha (declarada, estável) vem antes da leitura de
      * humor (inferida, volátil). Quem lê o prompt encontra primeiro quem é a
-     * pessoa, depois como ela está agora.
+     * pessoa, depois como ela está agora, e por último o quanto vocês já
+     * conversaram — que é o que abre ou fecha a provocação amigável.
      */
-    const perfil = this.dep.estado.instantaneo().operador;
+    const instantaneo = this.dep.estado.instantaneo();
+    const perfil = instantaneo.operador;
     const overridePersona = [
       TeoriaDaMente.overrideDePreferencias(
         normalizarPreferencias(perfil?.preferencias),
         perfil?.nome ?? '',
       ),
       TeoriaDaMente.overrideDePersona(percepcao.leitura),
+      TeoriaDaMente.overrideDeFamiliaridade(instantaneo.metricas.afinidade),
     ]
       .filter(Boolean)
       .join('\n\n');

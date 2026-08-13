@@ -14,6 +14,7 @@
 import type { WebSocket } from 'ws';
 import { EstadoAtomico } from '../nucleo/EstadoAtomico';
 import { MemoriaOperacional } from '../nucleo/MemoriaOperacional';
+import { TeoriaDaMente } from '../nucleo/TeoriaDaMente';
 import { SessaoOperador } from './SessaoOperador';
 import { PonteProjecao } from './PonteProjecao';
 import { BarramentoEventos } from '../nucleo/kernel/BarramentoEventos';
@@ -200,6 +201,27 @@ export function conectarOperador(socket: WebSocket): void {
             nome: operador.nome,
             visto_em: new Date().toISOString(),
             preferencias: await memoria.lerPreferencias(operador.id_usuario),
+          });
+
+          /**
+           * O LASTRO DE CONVIVÊNCIA, semeado uma vez por sessão.
+           *
+           * `afinidade` é métrica volátil e nasce no piso a cada login. Sozinha,
+           * ela conta apenas a conversa de hoje — e é ela que abre a provocação
+           * amigável em `TeoriaDaMente.overrideDeFamiliaridade`. Sem esta linha,
+           * quem fala com a IARA há meses é recebido às nove da manhã com a
+           * mesma formalidade de quem chegou ontem, todos os dias, para sempre.
+           *
+           * Uma consulta por sessão, não por turno: convivência não muda entre
+           * duas mensagens. `trocasAcumuladas` nunca lança, então isto não entra
+           * no try de `recusar()` — pela mesma razão que o insight noturno saiu
+           * de lá. Enfeite de tom não derruba socket.
+           */
+          await r.estado.aplicarIntencao({
+            campo: 'afinidade',
+            delta: TeoriaDaMente.lastroDeFamiliaridade(
+              await memoria.trocasAcumuladas(operador.id_usuario),
+            ),
           });
 
           r.kernel ??= new Kernel({
