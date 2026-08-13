@@ -1,7 +1,9 @@
 # IARA — AUDITORIA FINAL
 
 **Data:** 13/08/2026 · **Modo:** autônomo, zero-trust
-**Árvore:** `IARA_WCA`, branch `main`, HEAD `6bb4522`
+**Árvore:** `IARA_WCA`, branch `main` · **Código auditado:** `6bb4522`
+(este relatório e as correções de redação entram nos commits seguintes —
+um documento não consegue citar o próprio hash)
 
 > **Nota de procedência.** Duas sessões autônomas trabalharam esta árvore ao
 > mesmo tempo, com a mesma missão. A primeira cuidou de pareamento, ícone mobile
@@ -35,8 +37,9 @@ depende de alguém com acesso ao Supabase. Nenhuma delas é P0 ou P1 conhecida.
 |---|---|
 | Commit no início da sessão | `24f5d4c` (branch `pareamento-e-instalador`) |
 | `origin/main` no início | `9ce3106` |
-| Commit final | `6bb4522` |
-| `origin/main` final | `6bb4522` (confirmado por `git ls-remote`) |
+| Commit com todo o código auditado | `6bb4522` |
+| Commits seguintes | só este relatório e a remoção de um rascunho |
+| `origin/main` | avançado e confirmado por `git ls-remote` a cada push |
 
 Medido **antes** de qualquer edição desta rodada:
 
@@ -344,15 +347,19 @@ esquema exige acesso ao console do Supabase — decisão e credencial da operado
 |---|---|
 | Branch | `main` |
 | Commit inicial | `24f5d4c` |
-| Commit final | `6bb4522` + este relatório |
-| `origin/main` | `6bb4522` (confirmado por `git ls-remote`) |
-| Push | **REALIZADO** |
+| Código auditado | `6bb4522` |
+| Depois dele | `71e91b2` (este relatório), `ff530eb` (correção sobre CI) e o commit que traz estas linhas |
+| `origin/main` | conferido por `git ls-remote` depois de cada push |
+| Repositório-pai | `20e9de4` em `repositorio-pai`, apontando para a `main` auditada |
+| Push | **REALIZADO** — código e ponteiro |
 | Force push | nunca usado |
 | CI | não existe (sem `.github/workflows`) |
 
-**Aviso de topologia, que continua valendo:** o diretório pai empurra para
-`repositorio-pai`, nunca para `main`. Um `push --force` de `main` a partir do pai
-apaga o produto no GitHub.
+**Aviso de topologia, e ele foi acionado nesta rodada:** o `git push origin main`
+a partir do diretório pai mira a branch do CÓDIGO, não a do pai — o remoto o
+recusou por não ser fast-forward. O destino correto é explícito:
+`git push origin main:repositorio-pai`. Um `--force` no lugar disso teria
+apagado o produto no GitHub, exatamente como o `CLAUDE.md` avisa.
 
 **Sobre a mistura de autoria:** o commit `6bb4522` juntou o trabalho das duas
 sessões porque a segunda ainda estava editando quando a primeira commitou. A
