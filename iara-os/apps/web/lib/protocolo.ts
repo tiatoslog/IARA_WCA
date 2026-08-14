@@ -37,7 +37,15 @@ export type PacoteServidor =
   | { tipo: 'snapshot'; seq: number; instante: number; snapshot: SnapshotCognitivo }
   /** Console técnico. Nunca vira animação na sala. */
   | { tipo: 'log'; seq: number; instante: number; nivel: NivelLog; texto: string }
-  | { tipo: 'erro'; seq: number; instante: number; texto: string }
+  | {
+      tipo: 'erro';
+      seq: number;
+      instante: number;
+      texto: string;
+      /** De qual gaveta veio, quando dá para saber — permite a tela reagir
+       *  sem casar string. `undefined` = erro geral, vai só para o log. */
+      contexto?: 'preferencias';
+    }
   /**
    * O inventário de mãos deste operador. Sai sob demanda — nunca por relógio e
    * nunca junto do snapshot.

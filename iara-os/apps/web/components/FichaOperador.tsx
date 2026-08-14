@@ -19,7 +19,7 @@
  * — ver `lib/perfil.ts` para o motivo.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   LIMITES_PREFERENCIAS,
   normalizarPreferencias,
@@ -36,6 +36,7 @@ export function FichaOperador({
   preferencias,
   conectado,
   aoSalvar,
+  erroSalvar = null,
   aoFechar,
 }: {
   /** Nome que veio da credencial. É o padrão de "como chamar", nunca um palpite. */
@@ -45,10 +46,14 @@ export function FichaOperador({
   conectado: boolean;
   /** `false` quando o barramento estava fechado e o pacote não saiu. */
   aoSalvar: (p: PreferenciasOperador) => boolean;
+  /** Falha vinda do servidor DEPOIS do clique — ver `Porta.ts`. `null` fora
+   *  desse caminho. */
+  erroSalvar?: { instante: number; texto: string } | null;
   aoFechar: () => void;
 }) {
   const [rascunho, setRascunho] = useState<PreferenciasOperador>(preferencias);
   const [estado, setEstado] = useState<'limpo' | 'sujo' | 'salvo' | 'falhou'>('limpo');
+  const [mensagemFalha, setMensagemFalha] = useState<string | null>(null);
 
   /**
    * Rehidrata quando o servidor confirma. A dependência é o CONTEÚDO
@@ -63,6 +68,28 @@ export function FichaOperador({
     setEstado((e) => (e === 'sujo' ? 'salvo' : e));
   }, [gravadas]);
 
+  /**
+   * O clique dizia "saiu" (o pacote foi para o socket), nunca "gravou" — a
+   * confirmação real é o `useEffect` acima, quando `preferencias` muda. Uma
+   * gravação que falha DEPOIS do clique (Supabase fora do ar, por exemplo)
+   * nunca disparava aquele efeito, então a ficha ficava com `estado==='sujo'`
+   * para sempre: nem "Guardado", nem aviso nenhum — silêncio indistinguível
+   * de "nunca gravou". `erroSalvar` fecha esse buraco.
+   *
+   * Só reage se AINDA estivermos esperando a confirmação desta tentativa
+   * (`estado==='sujo'`) e se o erro é recente — sem a janela de 10s, reabrir a
+   * ficha bem depois de uma falha antiga reexibiria um erro que já não é
+   * desta sessão de edição.
+   */
+  const ultimoErroTratado = useRef(0);
+  useEffect(() => {
+    if (!erroSalvar || erroSalvar.instante <= ultimoErroTratado.current) return;
+    ultimoErroTratado.current = erroSalvar.instante;
+    if (estado !== 'sujo' || Date.now() - erroSalvar.instante > 10_000) return;
+    setEstado('falhou');
+    setMensagemFalha(erroSalvar.texto);
+  }, [erroSalvar, estado]);
+
   const alterar = <C extends keyof PreferenciasOperador>(
     campo: C,
     valor: PreferenciasOperador[C],
@@ -76,6 +103,10 @@ export function FichaOperador({
     // salvo é o que o outro lado vai gravar, sem divergência silenciosa.
     const limpo = normalizarPreferencias(rascunho);
     setRascunho(limpo);
+    // Toda NOVA tentativa apaga o eco da falha anterior — senão um clique
+    // que falha na hora (socket fechado) mostraria a mensagem de um erro de
+    // servidor de uma tentativa anterior, que não é o que está acontecendo agora.
+    setMensagemFalha(null);
     setEstado(aoSalvar(limpo) ? 'sujo' : 'falhou');
   };
 
@@ -158,15 +189,18 @@ export function FichaOperador({
 
       <div className="ficha-acoes">
         <button
-          className="ficha-salvar"
+          className={estado === 'salvo' ? 'ficha-salvar salvo' : 'ficha-salvar'}
           onClick={salvar}
           disabled={!conectado || estado === 'limpo' || estado === 'salvo'}
         >
           Salvar
         </button>
-        <span className="ficha-estado" role="status">
+        <span
+          className={estado === 'falhou' ? 'ficha-estado falhou' : 'ficha-estado'}
+          role="status"
+        >
           {estado === 'salvo' && 'Guardado. Ela já sabe.'}
-          {estado === 'falhou' && 'Não saiu — o barramento está fechado.'}
+          {estado === 'falhou' && (mensagemFalha || 'Não saiu — o barramento está fechado.')}
           {estado === 'limpo' && !conectado && 'Sem enlace com o motor.'}
         </span>
       </div>

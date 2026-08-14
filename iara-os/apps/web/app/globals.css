@@ -1408,9 +1408,22 @@ ol.plano {
   cursor: not-allowed;
 }
 
+/* Sucesso tem cor própria mesmo desabilitado — sem isto, "acabei de salvar"
+   e "não há nada para salvar" eram visualmente o mesmo botão cinza-fraco, e
+   a certeza de que a gravação funcionou dependia só do texto ao lado. */
+.ficha-salvar.salvo:disabled {
+  background: var(--c-verde);
+  color: var(--c-fundo);
+  opacity: 1;
+}
+
 .ficha-estado {
   font-size: var(--t-rotulo);
   color: var(--c-tinta-2);
+}
+
+.ficha-estado.falhou {
+  color: var(--c-alerta);
 }
 
 /* ===========================================================================

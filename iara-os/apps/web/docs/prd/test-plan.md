@@ -72,3 +72,27 @@ O pedido original (duas partes, ~60 fases) cobre auditoria comportamental exaust
 Parte 1 (comportamento) executa antes de qualquer leitura de código além do inventário necessário para montar este plano. Parte 2 (código) só mapeia causa raiz dos findings reais da Parte 1, mais uma varredura focada das fronteiras críticas (`PorteiroAutorizacao`, `Fronteira.ts`, isolamento de shard, `RagHistorico`) independente de terem sido quebradas ou não em teste manual.
 
 Nenhum item vira `[x]` sem evidência em `test-evidence/AUDITORIA-2026-08-14/<ID>/`.
+
+## E. Rodada 3 — queixa do usuário: cadastro/salvar, QR ausente, instalador (14/08, sessão concorrente)
+
+### BASELINE
+- `BASELINE_ID`: `CADASTRO-QR-INSTALADOR-2026-08-14`
+- Submódulo `IARA_WCA`: branch `main`, `HEAD` em `ce55343`. Working tree com mudanças alheias de sessão concorrente em `components/projecao/EntidadePresenca.tsx`, `tsconfig.json`, `servidor/nucleo/ClientePlanilhaOcis.ts`, `testes/benchmark-planilha-luft.test.ts`, `package.json`/`package-lock.json` (dependência `xlsx`) — **não tocados** por esta rodada.
+- Achado de ambiente: múltiplos processos `node` duplicados/zumbis do motor (subidos 10:02 e 15:07, um escutando porta 3001 em vez de 8787) — encerrados e `npm run dev` reiniciado limpo antes da verificação desta rodada.
+
+### Causa raiz confirmada por leitura de código (não hipótese)
+1. **Ficha/Salvar** — persistência real via `MemoriaOperacional.gravarPreferencias` (Supabase ou shard local). O texto "Guardado" só aparece após confirmação do servidor (sem falso positivo). MAS: (a) botão não muda de cor no sucesso (`ficha-salvar:disabled` é visualmente idêntico a "nada para salvar"); (b) falha assíncrona do servidor (`Porta.ts:571` `emitirErro`) vira `registrarLog('alerta', ...)` que nunca é renderizado em lugar nenhum da árvore — falha real e "nunca gravou" ficam indistinguíveis para o operador.
+2. **QR** — por desenho, o QR só é gerado no terminal/PNG do programa braço (`servidor/braco/principal.ts:203-236`), rodando na máquina sendo pareada — não na PWA. O PNG é gravado em pasta temp mas nunca aberto automaticamente; a auditoria de 14/08 já registrou que o ASCII garante em consoles Windows sem UTF-8.
+3. **Instalador** — `NEXT_PUBLIC_IARA_INSTALADOR` (+ `_SHA256`, `_NOTAS`) só existe em `.env.local` local, nunca em `.env.example`, sem evidência de estar configurada na Vercel de produção.
+
+| Check | ID | Categoria | Pré-condição | Ação | Resultado esperado | Evidência | Risco |
+|---|---|---|---|---|---|---|---|
+| [ ] | CAD-001 | Salvar com sucesso | Ficha aberta, campo alterado, socket conectado | clicar "Salvar" | botão muda de cor (verde/sucesso) enquanto `estado==='salvo'`, some ao editar de novo | screenshot antes/depois | MEDIUM |
+| [ ] | CAD-002 | Falha assíncrona de gravação | Ficha aberta, campo alterado | servidor emite `erro` com `contexto:'preferencias'` após o clique | mensagem real do erro aparece no lugar de "Guardado", nunca silêncio | screenshot + network (packet `erro`) | HIGH |
+| [ ] | CAD-003 | Eco de erro antigo | reabrir a ficha bem depois de um erro anterior | montar o componente | não reexibe erro velho (>10s) como se fosse desta tentativa | leitura de código + screenshot | LOW |
+| [ ] | CAD-004 | Duplo clique | campo alterado | clicar "Salvar" duas vezes rápido | botão desabilita após o primeiro clique (`estado` sai de `sujo`), não duplica pacote | network (contagem de `preferencias`) | MEDIUM |
+| [ ] | QR-001 | Braço imprime QR | `npm run braco` contra motor real | rodar o comando | ASCII no terminal + PNG gravado e **aberto automaticamente** (não só o caminho impresso) | captura de tela do terminal + confirmação visual do visualizador de imagem abrindo | MEDIUM |
+| [ ] | INST-001 | `.env.example` documenta as 3 variáveis | ler arquivo | `NEXT_PUBLIC_IARA_INSTALADOR`, `_SHA256`, `_NOTAS` presentes com comentário | leitura de arquivo | LOW |
+| [ ] | INST-002 | Botão instalar com env var setada | `.env.local` com `NEXT_PUBLIC_IARA_INSTALADOR` preenchida, rebuild dev | abrir gaveta Dispositivos | link "Baixar o programa" aparece em vez do texto de fallback | screenshot | MEDIUM |
+| [ ] | REG-001 | Regressão | após as mudanças | `npm test` | suíte inteira continua verde | saída do comando | HIGH |
+| [ ] | REG-002 | Regressão de tipos | após as mudanças | `tsc --noEmit` | zero erro novo introduzido pelas mudanças desta rodada | saída do comando | HIGH |

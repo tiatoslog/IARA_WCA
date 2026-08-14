@@ -97,10 +97,16 @@ export class SessaoOperador {
     this.drenar();
   }
 
-  emitirErro(texto: string): void {
+  emitirErro(texto: string, contexto?: 'preferencias'): void {
     if (this.fechada) return;
     this.seq += 1;
-    this.fila.enfileirar({ tipo: 'erro', seq: this.seq, instante: Date.now(), texto });
+    this.fila.enfileirar({
+      tipo: 'erro',
+      seq: this.seq,
+      instante: Date.now(),
+      texto,
+      ...(contexto ? { contexto } : {}),
+    });
     this.drenar();
   }
 

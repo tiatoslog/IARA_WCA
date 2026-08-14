@@ -10,6 +10,21 @@ import { OPERADORES } from '../lib/operadores';
 import { autenticacaoDisponivel, supabaseNavegador } from '../lib/supabaseNavegador';
 
 /**
+ * ROTA DINÂMICA, NUNCA CACHEADA. Achado em auditoria (14/08/2026): sem esta
+ * linha, o Next trata `/` como estático — sem `cookies()`/`headers()` nem
+ * `fetch` não-cacheado no caminho de render, nada aqui "parece" dinâmico pra
+ * ele — e serve o MESMO HTML prerenderado (`x-nextjs-cache: HIT`,
+ * `Cache-Control: s-maxage=31536000`, quase 1 ano) pra todo mundo, indefinidamente,
+ * até a próxima vez que o cache for invalidado. Esse HTML referencia os
+ * arquivos JS com hash da build em que foi gerado — então um deploy novo sobe
+ * código novo no servidor, mas quem abre a IARA continua recebendo o índice
+ * antigo, que carrega o JS antigo. É a causa raiz de "o celular tá sempre na
+ * versão velha" mesmo com deploy confirmado em dia na Railway: a sala inteira
+ * é ao vivo (WebSocket, voz, presença) e não pode ser servida do cache.
+ */
+export const dynamic = 'force-dynamic';
+
+/**
  * A projeção é UMA: a presença — a IARA enquadrada como numa chamada de vídeo
  * (decisão do produto em 08/08/2026). A sala em pixel art continua no repo
  * (`components/Escritorio.tsx`) como projeção alternativa do mesmo
@@ -28,6 +43,7 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
     interromper,
     religar,
     salvarPreferencias,
+    erroPreferencias,
     maquinas,
     pareamentoDisponivel,
     acaoDispositivo,
@@ -145,6 +161,7 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         onFalar={voz.falar}
         textoAvulso={voz.textoAvulso}
         onSalvarPreferencias={salvarPreferencias}
+        erroPreferencias={erroPreferencias}
         maquinas={maquinas}
         pareamentoDisponivel={pareamentoDisponivel}
         acaoDispositivo={acaoDispositivo}

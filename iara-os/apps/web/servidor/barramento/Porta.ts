@@ -570,6 +570,7 @@ export function conectarOperador(socket: WebSocket): void {
           // seguinte, sem entender por quê.
           minhaSessao?.emitirErro(
             `Não foi possível salvar a ficha: ${(erro as Error).message}`,
+            'preferencias',
           );
         }
       })();

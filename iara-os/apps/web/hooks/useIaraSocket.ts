@@ -115,6 +115,13 @@ export function useIaraSocket(credencial: Credencial) {
   const [maquinas, setMaquinas] = useState<MaquinaDoOperador[] | null>(null);
   const [pareamentoDisponivel, setPareamentoDisponivel] = useState(true);
   const [acaoDispositivo, setAcaoDispositivo] = useState<{ ok: boolean; texto: string } | null>(null);
+  /** Última falha de gravação da ficha vinda do servidor — ver `Porta.ts`
+   *  (`emitirErro(texto, 'preferencias')`). A ficha usa isto para não ficar
+   *  muda quando a gravação falha depois do clique, não só quando o socket
+   *  já estava fechado na hora. */
+  const [erroPreferencias, setErroPreferencias] = useState<{ instante: number; texto: string } | null>(
+    null,
+  );
   const conectado = conexao === 'conectado';
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -203,6 +210,9 @@ export function useIaraSocket(credencial: Credencial) {
        */
       if (pacote.tipo === 'erro') {
         registrarLog('alerta', pacote.texto);
+        if (pacote.contexto === 'preferencias') {
+          setErroPreferencias({ instante: pacote.instante, texto: pacote.texto });
+        }
         return;
       }
 
@@ -524,6 +534,7 @@ export function useIaraSocket(credencial: Credencial) {
     interromper,
     religar,
     salvarPreferencias,
+    erroPreferencias,
     maquinas,
     pareamentoDisponivel,
     acaoDispositivo,

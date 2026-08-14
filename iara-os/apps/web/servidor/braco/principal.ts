@@ -160,6 +160,32 @@ function perguntar(rotulo: string): Promise<string> {
 }
 
 /**
+ * Abre um arquivo no visualizador padrão do sistema — hoje só o PNG do QR de
+ * pareamento. Best-effort e silencioso de propósito: se o SO não tiver um
+ * visualizador associado (servidor sem GUI, por exemplo), o operador ainda
+ * tem o ASCII no terminal e o caminho impresso logo acima da chamada.
+ */
+function abrirImagem(caminho: string): void {
+  try {
+    const p = platform();
+    const [comando, args] =
+      p === 'win32'
+        ? ['cmd.exe', ['/c', 'start', '""', caminho]]
+        : p === 'darwin'
+          ? ['open', [caminho]]
+          : ['xdg-open', [caminho]];
+    const processo = spawn(comando, args, { detached: true, stdio: 'ignore', windowsHide: false });
+    processo.unref();
+    processo.on('error', () => {
+      /* Sem visualizador associado ou comando ausente — o caminho impresso
+         antes desta chamada continua sendo o reforço. */
+    });
+  } catch {
+    /* Mesma postura: reforço, nunca via principal. */
+  }
+}
+
+/**
  * O PAREAMENTO, na tela de quem instalou.
  *
  * Escrito com espaço em volta e o código em linha própria de propósito: esta é
@@ -214,12 +240,17 @@ async function parearEsteComputador(): Promise<boolean> {
      * transforma os blocos Unicode em ruído ilegível sem avisar ninguém, e o
      * operador via "QR não aparece" mesmo com o código impresso do lado certo.
      * Uma imagem PNG não depende de fonte de terminal nenhuma — é sempre
-     * nítida, sempre escaneável. `QRCode.toFile` é uma chamada de biblioteca
-     * (o `writeFile` de verdade mora dentro do pacote `qrcode`, não aqui), e
-     * este arquivo não abre o resultado sozinho: `spawn`/`execFile` continuam
-     * confinados ao `AgenteLocal` por desenho (`testes/fronteira-efeitos.test.ts`,
-     * `A4`), e o braço não tem — nem deveria ter — uma segunda porta para o
-     * shell só para abrir uma imagem.
+     * nítida, sempre escaneável.
+     *
+     * CORRIGIDO (14/08/2026, rodada 2): a versão anterior gravava o PNG e só
+     * imprimia o caminho, esperando que a operadora abrisse o Explorer/Finder
+     * sozinha — na prática, ninguém navega até uma pasta temp por um aviso de
+     * texto, e o sintoma era idêntico a "não existe QR". `spawn` já é
+     * permitido neste arquivo (`testes/fronteira-efeitos.test.ts`, `A4` — o
+     * braço se auto-atualiza com `spawn` mais abaixo); abrir a própria imagem
+     * gerada é o mesmo nível de confiança, então agora ela abre sozinha no
+     * visualizador padrão do sistema. Best-effort: se o SO não tiver um
+     * visualizador associado, o caminho impresso continua sendo o reforço.
      */
     try {
       const caminhoQr = path.join(
@@ -229,6 +260,7 @@ async function parearEsteComputador(): Promise<boolean> {
       await QRCode.toFile(caminhoQr, linkPareamento, { width: 512, margin: 2 });
       console.log(`  Se o desenho acima saiu ilegível no seu terminal, abra este arquivo:`);
       console.log(`  ${caminhoQr}\n`);
+      abrirImagem(caminhoQr);
     } catch {
       /* PNG é reforço, não a via principal — o ASCII acima e o código abaixo
          já bastam sozinhos. Falha ao gravar (disco cheio, sem permissão) não

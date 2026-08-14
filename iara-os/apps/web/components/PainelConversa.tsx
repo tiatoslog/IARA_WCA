@@ -73,6 +73,9 @@ interface Props {
   textoAvulso?: string | null;
   /** Grava a ficha do operador. `false` = o barramento estava fechado. */
   onSalvarPreferencias?: (p: PreferenciasOperador) => boolean;
+  /** Falha de gravação vinda do servidor DEPOIS do clique (socket estava
+   *  aberto, mas a escrita em si não foi). `null` fora desse caminho. */
+  erroPreferencias?: { instante: number; texto: string } | null;
   /** As mãos deste operador. `null` = ainda não perguntamos. */
   maquinas?: MaquinaDoOperador[] | null;
   pareamentoDisponivel?: boolean;
@@ -106,6 +109,7 @@ export function PainelConversa({
   onFalar,
   textoAvulso = null,
   onSalvarPreferencias,
+  erroPreferencias = null,
   maquinas = null,
   pareamentoDisponivel = true,
   acaoDispositivo = null,
@@ -336,6 +340,7 @@ export function PainelConversa({
             preferencias={preferencias}
             conectado={conectado}
             aoSalvar={onSalvarPreferencias}
+            erroSalvar={erroPreferencias}
             aoFechar={() => setGaveta('nenhuma')}
           />
         </div>
