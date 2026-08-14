@@ -301,3 +301,31 @@ test('comandos do agente local são reconhecidos como âncoras acionáveis', () 
   assert.ok(p.perceber('confirmo').ancoras.includes('confirmacao'));
   assert.ok(p.perceber('cancela').ancoras.includes('confirmacao'));
 });
+
+/**
+ * Achado ao vivo em auditoria (14/08/2026, parte 2): "mostre os documentos do
+ * SharePoint sobre frete" casava a âncora `listar_arquivos` (o par verbo+
+ * substantivo "mostre ... documentos" é o bastante para ela) e virava plano
+ * determinístico de listar a pasta Documentos LOCAL — a IARA respondeu o
+ * conteúdo do computador do operador para um pedido sobre o SharePoint,
+ * ignorando o resto da frase. Mesma família do bug de `frota`/`tempo`/`print`:
+ * uma âncora reconhece a PALAVRA e não o CONTEXTO. A correção não ensina a
+ * âncora a apontar para `buscar_documento_sharepoint` — só a faz desistir
+ * quando "sharepoint" aparece, devolvendo a frase para o raciocínio emergente,
+ * que é quem de fato sabe escolher entre as duas habilidades.
+ */
+test('"documentos" com SharePoint na frase não vira listagem da pasta local', () => {
+  const p = new MotorPercepcao();
+  assert.ok(
+    p.perceber('mostre os documentos').ancoras.includes('listar_arquivos'),
+    'sem menção a fonte externa, continua sendo a pasta local',
+  );
+  assert.ok(
+    !p.perceber('mostre os documentos do SharePoint sobre frete').ancoras.includes('listar_arquivos'),
+    'com "SharePoint" na frase, a âncora local não pode vencer sozinha',
+  );
+  assert.ok(
+    !p.perceber('quais documentos tem no sharepoint sobre o contrato?').ancoras.includes('listar_arquivos'),
+    'caixa e acento não escondem a exceção',
+  );
+});

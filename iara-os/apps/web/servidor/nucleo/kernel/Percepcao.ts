@@ -182,10 +182,23 @@ const ANCORAS: ReadonlyArray<Ancora> = [
      * A primeira exige o substantivo (arquivos/pastas/documentos) junto do
      * verbo: "mostre o relatório" fala de um documento específico, não de uma
      * listagem, e responder com o conteúdo da pasta seria responder outra coisa.
+     *
+     * `exceto` SHAREPOINT — achado ao vivo em auditoria (14/08/2026, parte 2):
+     * "mostre os documentos do SharePoint sobre frete" casa "mostre ... os
+     * documentos" e virava, sem exceção, um plano determinístico de
+     * `listar_arquivos` na pasta LOCAL — a IARA respondia o conteúdo de
+     * "Documentos" no computador do operador, ignorando "do SharePoint sobre
+     * frete" por inteiro. É a mesma família do bug de `centrais_inativas`: uma
+     * âncora determinística engole uma frase que pedia outra habilidade
+     * (`buscar_documento_sharepoint`, que só o raciocínio emergente alcança) e
+     * a origem determinística nunca dá à LLM a chance de escolher a certa. A
+     * exceção não tenta reconhecer a intenção certa aqui — só desiste da
+     * intenção errada, e devolve a frase para quem sabe interpretar "SharePoint".
      */
     re: /\b(list[ae]|listar|mostr[ae]|mostrar|ver|vej[ae]|quais|quantos)\s+(os\s+|as\s+|meus\s+|minhas\s+|todos\s+os\s+)?(arquivos|pastas|documentos)\b|\bo que (tem|ha|existe)\s+(na|no|em)\s+(minha\s+|meu\s+)?(area de trabalho|desktop|documentos|downloads|pasta)\b|\bconteudo (da|do)\s+(minha\s+|meu\s+)?(area de trabalho|desktop|pasta|documentos|downloads)\b/,
     nome: 'listar_arquivos',
     acionavel: true,
+    exceto: /\bsharepoint\b/,
   },
   /**
    * LENTIDÃO VEM ANTES DE `diagnostico` E DE `sistema`, e a ordem é a regra.
