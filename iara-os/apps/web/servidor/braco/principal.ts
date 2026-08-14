@@ -45,6 +45,9 @@ import { config as carregarEnv } from 'dotenv';
 import { createInterface } from 'node:readline';
 import { hostname, platform, release, tmpdir } from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
+import { createWriteStream, existsSync, unlinkSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import QRCode from 'qrcode';
 import {
   lerPacoteMotor,
@@ -342,6 +345,208 @@ function enviar(pacote: PacoteBraco): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// ATUALIZAÇÃO AUTOMÁTICA — Etapa 2 (14/08/2026)
+//
+// A regra que governa este bloco inteiro: NUNCA tocar no executável atual
+// antes de o download inteiro ter chegado E o SHA256 ter batido. Uma falha
+// em qualquer ponto anterior a isso deixa a versão instalada exatamente como
+// estava — `atualizacao_falhou` é o único desfecho possível de um problema,
+// nunca um executável pela metade.
+// ---------------------------------------------------------------------------
+
+/** Uma atualização de cada vez. Clique duplo na gaveta não pode disparar
+ *  dois downloads pisando no mesmo arquivo temporário. */
+let atualizando = false;
+
+/**
+ * Só o binário empacotado (Node SEA) pode ser substituído. Rodando por
+ * `npx tsx` (desenvolvimento), `process.execPath` aponta para o `node.exe`
+ * do sistema — tentar "atualizar" ali seria substituir o Node de quem está
+ * codando, não o programa da IARA. `node:sea` é a forma oficial de saber a
+ * diferença; a ausência do módulo (Node mais velho) é tratada como "não é
+ * SEA", nunca como exceção que derruba o braço.
+ */
+async function rodandoComoExecutavelEmpacotado(): Promise<boolean> {
+  try {
+    // Import DINÂMICO, não estático: `node:sea` é recente, e um `import`
+    // no topo do arquivo quebraria a subida inteira num Node sem o módulo.
+    // Este arquivo é ESM (`"type": "module"`) — `require` não existe aqui
+    // fora do bundle CJS que `empacotar-braco.ts` produz.
+    const sea = (await import('node:sea')) as { isSea: () => boolean };
+    return sea.isSea();
+  } catch {
+    return false;
+  }
+}
+
+/** Percentual só sobe quando muda de verdade — não vale a pena mandar
+ *  socket a cada byte quando o número exibido não mudaria. */
+function percentualMudou(anterior: number, novo: number): boolean {
+  return novo === 100 || novo - anterior >= 2;
+}
+
+async function atualizar(pedido: { url: string; sha256: string; versao: string }): Promise<void> {
+  if (atualizando) {
+    console.warn('[braço] pedido de atualização ignorado: já existe uma em andamento');
+    return;
+  }
+  atualizando = true;
+
+  const empacotado = await rodandoComoExecutavelEmpacotado();
+  if (!empacotado) {
+    atualizando = false;
+    const motivo =
+      'este processo está rodando em modo de desenvolvimento (tsx), não como o programa instalado — ' +
+      'atualização automática só se aplica ao executável empacotado.';
+    console.warn(`[braço] atualização recusada: ${motivo}`);
+    enviar({ tipo: 'atualizacao_falhou', motivo });
+    return;
+  }
+
+  const caminhoNovo = path.join(tmpdir(), 'iara-braco-novo.exe');
+  const hash = createHash('sha256');
+  let ultimoPercentualEnviado = -1;
+
+  try {
+    console.log(`[braço] baixando atualização (${pedido.versao}) de ${pedido.url}`);
+    const resposta = await fetch(pedido.url);
+    if (!resposta.ok || !resposta.body) {
+      throw new Error(`servidor respondeu ${resposta.status}`);
+    }
+    const tamanhoTotal = Number(resposta.headers.get('content-length') ?? 0);
+
+    let recebidos = 0;
+    const destino = createWriteStream(caminhoNovo);
+    try {
+      // @ts-expect-error — `Response.body` (WHATWG ReadableStream) é
+      // async-iterável em tempo de execução no Node 18+; o tipo do DOM lib
+      // não declara isso, mas o comportamento é garantido pela runtime.
+      for await (const pedaco of resposta.body) {
+        const buf = Buffer.from(pedaco as Uint8Array);
+        hash.update(buf);
+        await new Promise<void>((resolve, reject) => {
+          destino.write(buf, (erro) => (erro ? reject(erro) : resolve()));
+        });
+        recebidos += buf.length;
+        if (tamanhoTotal > 0) {
+          const percentual = Math.min(99, Math.floor((recebidos / tamanhoTotal) * 100));
+          if (percentualMudou(ultimoPercentualEnviado, percentual)) {
+            ultimoPercentualEnviado = percentual;
+            enviar({ tipo: 'progresso_atualizacao', percentual });
+          }
+        }
+      }
+    } finally {
+      await new Promise<void>((resolve) => destino.end(resolve));
+    }
+
+    const hashCalculado = hash.digest('hex');
+    if (hashCalculado !== pedido.sha256) {
+      unlinkSync(caminhoNovo);
+      throw new Error(
+        `verificação de integridade falhou (esperado ${pedido.sha256.slice(0, 12)}…, ` +
+          `recebido ${hashCalculado.slice(0, 12)}…) — o download pode ter sido corrompido ou adulterado`,
+      );
+    }
+
+    enviar({ tipo: 'progresso_atualizacao', percentual: 100 });
+    console.log('[braço] download íntegro; preparando a troca do executável');
+    religarComVersaoNova(caminhoNovo);
+    /**
+     * `return`, NÃO um `throw`. BUG REAL, achado testando de verdade
+     * (14/08/2026): `religarComVersaoNova` só AGENDA a saída — o
+     * `process.exit` dentro dela é adiado por `setTimeout`, então o código
+     * daqui volta a rodar ANTES de o processo morrer. Um `throw` aqui caía
+     * no `catch` abaixo, que apaga `caminhoNovo` por engano de "a
+     * atualização falhou" — apagando o arquivo baixado bem na frente do
+     * script de religamento, que corria atrás de um arquivo que acabara de
+     * sumir. O sintoma era exatamente esse: `atualizacao_falhou` reportado
+     * mesmo com o download e a validação tendo dado certo, e o executável
+     * nunca era trocado. Ver `testes/pareamento.test.ts`, que não pega este
+     * bug — só o E2E com o `.exe` de verdade pegou.
+     */
+    return;
+  } catch (erro) {
+    if (existsSync(caminhoNovo)) {
+      try {
+        unlinkSync(caminhoNovo);
+      } catch {
+        /* limpeza de melhor esforço — não é o motivo real da falha */
+      }
+    }
+    const motivo = (erro as Error).message;
+    console.error(`[braço] atualização falhou: ${motivo}`);
+    enviar({ tipo: 'atualizacao_falhou', motivo });
+    atualizando = false;
+  }
+}
+
+/**
+ * O RELIGAMENTO — a metade que precisa de um processo SEPARADO.
+ *
+ * O Windows não deixa um executável apagar ou sobrescrever a si mesmo
+ * enquanto está rodando: o arquivo fica com lock enquanto o processo existe.
+ * Por isso este script pequeno, escrito num arquivo à parte e lançado
+ * DESTACADO — ele sobrevive ao `process.exit` de quem o criou, espera o
+ * lock soltar (o `copy` falha e tenta de novo, em vez de um `sleep` fixo
+ * que seria um chute sobre quanto tempo o SO leva para soltar o arquivo),
+ * troca o executável, e só então reabre o programa.
+ *
+ * Não devolve nada em caso de sucesso — a última coisa que este processo
+ * faz é `process.exit`. Só retorna (e o chamador trata como falha) quando
+ * nem consegue ESCREVER o script.
+ */
+function religarComVersaoNova(caminhoNovo: string): void {
+  const atual = process.execPath;
+  const scriptPath = path.join(tmpdir(), `iara-braco-religar-${Date.now()}.bat`);
+  /**
+   * `copy /y` em loop, não `move`: `move` falha de vez quando o destino
+   * ainda está com lock, e um `goto retry` depois disso repetiria sobre um
+   * estado que já falhou de um jeito diferente. `copy` sobrescreve no
+   * lugar, e falhar por lock é exatamente o caso que o loop existe para
+   * absorver — até 30 tentativas (~15s) antes de desistir e avisar.
+   */
+  const script = [
+    '@echo off',
+    'setlocal',
+    'set /a tentativas=0',
+    ':tentar',
+    'set /a tentativas+=1',
+    'timeout /t 1 /nobreak >nul',
+    `copy /y "${caminhoNovo}" "${atual}" >nul 2>&1`,
+    'if not errorlevel 1 goto trocou',
+    'if %tentativas% lss 30 goto tentar',
+    // Desistiu: limpa os dois arquivos temporários (script E download) antes
+    // de sair, em vez de deixar lixo — a versão instalada continua a antiga.
+    `del "${caminhoNovo}" >nul 2>&1`,
+    'del "%~f0" >nul 2>&1',
+    'exit /b 1',
+    ':trocou',
+    `del "${caminhoNovo}" >nul 2>&1`,
+    `start "" "${atual}"`,
+    'del "%~f0" >nul 2>&1',
+    '',
+  ].join('\r\n');
+
+  writeFileSync(scriptPath, script, 'utf8');
+
+  const processo = spawn('cmd.exe', ['/c', scriptPath], {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+  });
+  processo.unref();
+
+  console.log('[braço] religamento agendado; encerrando esta versão agora');
+  socket?.close(1000, 'atualizando');
+  encerrando = true;
+  // Uma folga curta para o `spawn` acima terminar de registrar o processo
+  // filho no SO antes deste morrer — sem ela, em máquinas lentas o filho
+  // detached corre risco de não sobreviver ao pai em alguns ambientes.
+  setTimeout(() => process.exit(0), 200);
+}
+
 async function atender(ordem: OrdemExecucao): Promise<void> {
   const assinatura = assinaturaDa(ordem);
   const guardado = concluidas.get(ordem.execucao_id);
@@ -475,6 +680,11 @@ async function conectar(): Promise<void> {
 
     if (pacote.tipo === 'recusado') {
       console.error(`[braço] o motor recusou este computador: ${pacote.motivo}`);
+      return;
+    }
+
+    if (pacote.tipo === 'atualizar') {
+      void atualizar(pacote);
       return;
     }
 

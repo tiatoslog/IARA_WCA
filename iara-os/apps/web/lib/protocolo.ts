@@ -103,7 +103,15 @@ export type PacoteCliente =
    */
   | { tipo: 'parear'; codigo: string }
   /** Revoga uma credencial de computador. `id` é o `id_credencial`. */
-  | { tipo: 'esquecer_dispositivo'; id: string };
+  | { tipo: 'esquecer_dispositivo'; id: string }
+  /**
+   * "Atualize AGORA esta máquina" — Etapa 2 (14/08/2026). `id` é o mesmo
+   * `MaquinaDoOperador.id` que a gaveta já mostra; o servidor resolve o
+   * socket vivo (`PonteDispositivos.porId`) e manda a ordem `atualizar` por
+   * ele. Nunca carrega URL nem hash — o cliente não escolhe DE ONDE baixar
+   * nem O QUE validar, isso é o manifesto do motor.
+   */
+  | { tipo: 'atualizar_dispositivo'; id: string };
 
 /**
  * Prioridade de descarte da fila de telemetria. Quanto menor, mais descartável.
@@ -193,6 +201,11 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
     const id = typeof obj.id === 'string' ? obj.id.trim() : '';
     if (!id) return null;
     return { tipo: 'esquecer_dispositivo', id: id.slice(0, 80) };
+  }
+  if (obj.tipo === 'atualizar_dispositivo') {
+    const id = typeof obj.id === 'string' ? obj.id.trim() : '';
+    if (!id) return null;
+    return { tipo: 'atualizar_dispositivo', id: id.slice(0, 80) };
   }
   if (obj.tipo === 'preferencias') {
     // `normalizarPreferencias` já é total: qualquer entrada vira uma ficha

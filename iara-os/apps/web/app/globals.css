@@ -1560,6 +1560,58 @@ ol.plano {
   text-decoration: underline;
 }
 
+.maquina-notas-versao {
+  color: var(--c-tinta-2);
+}
+
+/* Etapa 2 (14/08/2026) — barra de progresso real, não decorativa: a largura
+   vem direto do percentual que o braço reportou, nunca de uma animação. */
+.maquina-atualizando {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--c-tinta-2);
+}
+
+.maquina-barra {
+  display: block;
+  height: 3px;
+  width: 100%;
+  max-width: 180px;
+  border-radius: var(--r-capsula);
+  background: var(--c-linha);
+  overflow: hidden;
+}
+
+.maquina-barra-preenchida {
+  display: block;
+  height: 100%;
+  background: var(--c-verde);
+  transition: width 260ms ease;
+}
+
+.maquina-atualizar {
+  font-family: inherit;
+  font-size: var(--t-micro);
+  color: var(--c-verde);
+  background: none;
+  border: 1px solid var(--c-verde);
+  border-radius: var(--r-capsula);
+  padding: 5px 11px;
+  flex: none;
+  cursor: pointer;
+  transition: opacity 160ms ease;
+}
+
+.maquina-atualizar:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.maquina-atualizar:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .maquina-vazio {
   margin: 0;
   font-size: var(--t-rotulo);
@@ -2087,7 +2139,18 @@ ol.plano {
   font-weight: 600;
   letter-spacing: var(--tr-ui);
   color: #14171a;
-  background: linear-gradient(180deg, #ffffff 0%, #d5dade 46%, #a9b0b6 54%, #e6eaed 100%);
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f5f7f8 16%,
+    #e6eaec 32%,
+    #d6dcdf 45%,
+    #ccd2d6 50%,
+    #d6dcdf 55%,
+    #e6eaec 68%,
+    #f5f7f8 84%,
+    #ffffff 100%
+  );
   border: none;
   border-radius: var(--r-capsula);
   padding: 12px 18px;

@@ -38,6 +38,16 @@ import type { MaquinaDoOperador } from '../lib/execucao';
 const INSTALADOR = process.env.NEXT_PUBLIC_IARA_INSTALADOR ?? '';
 
 /**
+ * O resumo "para leigos" do que mudou na versão atual — Etapa 3 (14/08/2026).
+ *
+ * Texto livre, decidido por quem publica a versão (a mesma variável que
+ * `NEXT_PUBLIC_IARA_INSTALADOR`, preenchida junto). Vazio é um estado
+ * normal — ninguém é obrigado a escrever notas — e nesse caso a gaveta só
+ * não mostra a linha, em vez de mostrar um espaço em branco.
+ */
+const NOTAS_VERSAO = process.env.NEXT_PUBLIC_IARA_INSTALADOR_NOTAS ?? '';
+
+/**
  * "há 3 minutos", e não "13/08/2026 14:32:07".
  *
  * A pergunta que esta coluna responde é "faz muito tempo?", e um carimbo
@@ -69,10 +79,12 @@ function Maquina({
   maquina,
   podeAgir,
   aoEsquecer,
+  aoAtualizar,
 }: {
   maquina: MaquinaDoOperador;
   podeAgir: boolean;
   aoEsquecer: (id: string) => void;
+  aoAtualizar: (id: string) => void;
 }) {
   /**
    * Confirmação em dois toques, no próprio botão. Um `window.confirm` seria uma
@@ -99,27 +111,61 @@ function Maquina({
           {sistemaLegivel(maquina.plataforma)}
           {' · '}
           {maquina.conectada ? 'atendendo agora' : `desligado — ${quandoFoi(maquina.vista_em)}`}
+          {maquina.versao && ` · v${maquina.versao}`}
         </span>
         {/*
           Achado em auditoria (14/08/2026): o braço, uma vez instalado, ficava
-          congelado na versão baixada para sempre — nada detectava nem avisava
-          quando ficava para trás. Stage 1 do sistema de atualização: só
-          detecção e aviso aqui, nada de baixar/substituir sozinho ainda.
+          congelado na versão baixada para sempre — nada detectava, nada
+          avisava, nada atualizava sozinho. Etapa 1 (aviso) + Etapa 2
+          (atualização automática, com barra de progresso de verdade) +
+          Etapa 3 (notas de versão) fecham isso em camadas, nesta ordem:
+          atualizando > erro > desatualizada — uma máquina só está em UM
+          desses estados por vez.
         */}
-        {maquina.desatualizada && (
-          <span className="maquina-detalhe maquina-desatualizada">
-            versão do programa desatualizada
-            {INSTALADOR && (
-              <>
-                {' — '}
-                <a href={INSTALADOR} download>
-                  baixe a versão nova
-                </a>
-              </>
-            )}
+        {maquina.atualizando !== null ? (
+          <span className="maquina-detalhe maquina-atualizando" role="status">
+            atualizando… {Math.round(maquina.atualizando)}%
+            <span className="maquina-barra" aria-hidden>
+              <span
+                className="maquina-barra-preenchida"
+                style={{ width: `${Math.round(maquina.atualizando)}%` }}
+              />
+            </span>
           </span>
+        ) : (
+          <>
+            {maquina.erroAtualizacao && (
+              <span className="maquina-detalhe maquina-desatualizada" role="alert">
+                não consegui atualizar: {maquina.erroAtualizacao}
+              </span>
+            )}
+            {maquina.desatualizada && (
+              <span className="maquina-detalhe maquina-desatualizada">
+                versão do programa desatualizada
+                {NOTAS_VERSAO && <span className="maquina-notas-versao"> — {NOTAS_VERSAO}</span>}
+                {!maquina.conectada && INSTALADOR && (
+                  <>
+                    {' — '}
+                    <a href={INSTALADOR} download>
+                      baixe a versão nova
+                    </a>
+                  </>
+                )}
+              </span>
+            )}
+          </>
         )}
       </div>
+      {maquina.desatualizada && maquina.conectada && maquina.atualizando === null && (
+        <button
+          className="maquina-atualizar"
+          disabled={!podeAgir}
+          title="Baixa, confere e substitui sozinha — o computador reabre a IARA na versão nova"
+          onClick={() => aoAtualizar(maquina.id)}
+        >
+          Atualizar agora
+        </button>
+      )}
       {maquina.pareada ? (
         <button
           className={confirmando ? 'maquina-soltar confirmando' : 'maquina-soltar'}
@@ -154,6 +200,7 @@ export function Dispositivos({
   codigoInicial = null,
   aoAutorizar,
   aoEsquecer,
+  aoAtualizar,
   aoFechar,
 }: {
   /** `null` = a lista ainda não chegou. Ver o cabeçalho. */
@@ -167,6 +214,8 @@ export function Dispositivos({
   aoPedirLista: () => boolean;
   aoAutorizar: (codigo: string) => boolean;
   aoEsquecer: (id: string) => void;
+  /** Etapa 2 (14/08/2026) — "Atualizar agora". */
+  aoAtualizar: (id: string) => void;
   aoFechar: () => void;
 }) {
   const [codigo, setCodigo] = useState(codigoInicial ?? '');
@@ -223,7 +272,13 @@ export function Dispositivos({
       ) : (
         <ul className="maquinas">
           {maquinas.map((m) => (
-            <Maquina key={m.id} maquina={m} podeAgir={conectado} aoEsquecer={aoEsquecer} />
+            <Maquina
+              key={m.id}
+              maquina={m}
+              podeAgir={conectado}
+              aoEsquecer={aoEsquecer}
+              aoAtualizar={aoAtualizar}
+            />
           ))}
         </ul>
       )}

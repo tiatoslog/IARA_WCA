@@ -46,7 +46,8 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { platform } from 'node:os';
 import path from 'node:path';
 import { config as carregarEnv } from 'dotenv';
@@ -192,12 +193,31 @@ async function principal(): Promise<void> {
 
   const mb = (statSync(binario).size / 1024 / 1024).toFixed(0);
   console.log(`\n  Pronto: ${binario} (${mb} MB)`);
+
+  /**
+   * O SHA256, impresso — Etapa 2 (14/08/2026).
+   *
+   * Não é conveniência: é o valor que `NEXT_PUBLIC_IARA_INSTALADOR_SHA256`
+   * precisa carregar para a atualização automática existir. Sem ele,
+   * `manifestoAtualizacaoDisponivel` (`lib/execucao.ts`) considera a
+   * atualização indisponível de propósito — nunca se oferece baixar e
+   * substituir um executável sem prova de integridade para conferir depois.
+   */
+  const sha256 = createHash('sha256').update(readFileSync(binario)).digest('hex');
+  console.log(`\n  SHA256: ${sha256}`);
+
   console.log(
     '\n  O tamanho é o runtime do Node inteiro, e é o preço de não exigir Node\n' +
       '  instalado na máquina de ninguém.\n' +
-      '\n  Publique este arquivo num endereço estável (uma Release do GitHub serve)\n' +
-      '  e aponte NEXT_PUBLIC_IARA_INSTALADOR para ele — é esse endereço que o\n' +
-      '  botão "Baixar o programa" da aba Dispositivos usa.\n',
+      '\n  Publique este arquivo num endereço estável (uma Release do GitHub serve, um\n' +
+      '  bucket público de storage também) e declare as três variáveis que a gaveta\n' +
+      '  Dispositivos lê:\n' +
+      `\n    NEXT_PUBLIC_IARA_INSTALADOR=<endereço público do .exe>` +
+      `\n    NEXT_PUBLIC_IARA_INSTALADOR_SHA256=${sha256}` +
+      '\n    NEXT_PUBLIC_IARA_INSTALADOR_NOTAS=<resumo curto do que mudou, opcional>\n' +
+      '\n  Sem o SHA256 certo, a atualização automática fica desligada — só o\n' +
+      '  download manual continua disponível, e é assim que este script já\n' +
+      '  funcionava antes da Etapa 2.\n',
   );
 }
 

@@ -500,6 +500,11 @@ export function useIaraSocket(credencial: Credencial) {
     (id: string) => pedirAoBarramento({ tipo: 'esquecer_dispositivo', id }),
     [pedirAoBarramento],
   );
+  /** Etapa 2 (14/08/2026) — "Atualizar agora" na gaveta Dispositivos. */
+  const atualizarComputador = useCallback(
+    (id: string) => pedirAoBarramento({ tipo: 'atualizar_dispositivo', id }),
+    [pedirAoBarramento],
+  );
 
   /** Religa após uma recusa terminal — o gesto humano que zera a decisão. */
   const religar = useCallback(() => {
@@ -525,5 +530,6 @@ export function useIaraSocket(credencial: Credencial) {
     pedirDispositivos,
     autorizarComputador,
     esquecerComputador,
+    atualizarComputador,
   };
 }

@@ -126,6 +126,14 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       '"confirmo", só então chama a Meta). Só `AgenteLocal.ts` o importa, que ' +
       'já é EFEITO EXTERNO e só é alcançado pelo catálogo — ver a entrada dele ' +
       'em `Fronteira.ts` e o porteiro correspondente em `G3`.',
+    [path.join('servidor', 'braco', 'principal.ts')]:
+      'LEITURA — Etapa 2 do sistema de atualização (14/08/2026). Baixa o ' +
+      '`.exe` novo de um endereço que o MOTOR mandou (nunca escolhido pelo ' +
+      'braço), e o download em si não tem efeito sobre ninguém: são bytes ' +
+      'lidos, verificados por SHA256 antes de qualquer coisa acontecer. O ' +
+      'efeito real — trocar o executável — está isolado no `spawn` do ' +
+      'script de religamento, já justificado na entrada deste mesmo arquivo ' +
+      'em `A4`.',
   };
 
   const comFetch = fontes(path.join(RAIZ, 'servidor'))
@@ -166,6 +174,20 @@ test('A4. shell e filesystem mutável continuam confinados ao AgenteLocal', () =
      * e não tem aresta no grafo.
      */
     path.join('servidor', 'nucleo', 'Fronteira.ts'),
+    /**
+     * O BRAÇO SE ATUALIZANDO — Etapa 2 do sistema de atualização (14/08/2026).
+     * `spawn` aqui NÃO é o motor alcançando o mundo em nome de alguém, que é
+     * exatamente o que este teste existe para impedir: é um processo que já
+     * roda na máquina da própria operadora, com as mãos que ela mesma
+     * autorizou ao instalar e parear o programa, trocando a própria versão.
+     * A distinção que importa — "quem autorizou isto?" — já foi respondida
+     * no pareamento; não há uma segunda porta de efeito se abrindo aqui, há
+     * o braço se automantendo. `writeFileSync` (não capturado pelo regex
+     * deste teste, que mira `writeFile(` assíncrono) grava só o script de
+     * religamento, num arquivo temporário do sistema — nunca no disco do
+     * operador que as habilidades tocam.
+     */
+    path.join('servidor', 'braco', 'principal.ts'),
   ];
   const infratores = fontes(path.join(RAIZ, 'servidor'))
     .filter((f) => /\bspawn\(|\bexecFile\(|\bwriteFile\(|\bappendFile\(|\bmkdir\(/.test(readFileSync(f, 'utf8')))

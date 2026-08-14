@@ -41,7 +41,13 @@ import {
 } from '../servidor/nucleo/Pareamento';
 import { inventarioDeMaquinas, PonteDispositivos } from '../servidor/barramento/PonteDispositivos';
 import { lerPacoteCliente } from '../lib/protocolo';
-import { VERSAO_MINIMA_BRACO, versaoBracoDesatualizada } from '../lib/execucao';
+import {
+  VERSAO_MINIMA_BRACO,
+  versaoBracoDesatualizada,
+  manifestoAtualizacaoDisponivel,
+  lerPacoteMotor,
+  lerPacoteBraco,
+} from '../lib/execucao';
 
 // ===========================================================================
 // O BANCO CONTROLÁVEL
@@ -770,4 +776,188 @@ test('VM-007. máquina pareada OFFLINE (sem sinal ao vivo) nunca é acusada de d
   assert.equal(maquinas[0].conectada, false);
   assert.equal(maquinas[0].versao, null);
   assert.equal(maquinas[0].desatualizada, false);
+});
+
+// ===========================================================================
+// 8. ATUALIZAÇÃO AUTOMÁTICA — Etapa 2/3 (14/08/2026)
+//
+// "PRECISAMOS AUTOMATIZAR ISSO" — pedido do operador depois de eu descrever
+// o risco de um braço substituir a si mesmo rodando. Esta seção prova o
+// PROTOCOLO (manifesto, pacotes novos) e a INTEGRAÇÃO real com
+// `PonteDispositivos`. O item que decide se um `.exe` de verdade sobrevive
+// a se substituir no Windows é `AT-003`, fora da suíte — ver
+// `docs/prd/test-plan-atualizador-braco.md`.
+// ===========================================================================
+
+test('AT — manifestoAtualizacaoDisponivel exige URL e SHA256 de 64 hex; nunca oferece update sem prova de integridade', () => {
+  assert.equal(
+    manifestoAtualizacaoDisponivel({ versao: '1.2.0', url: '', sha256: '', notas: '' }),
+    false,
+    'sem URL nem hash, nada a oferecer',
+  );
+  assert.equal(
+    manifestoAtualizacaoDisponivel({
+      versao: '1.2.0',
+      url: 'https://x/braco.exe',
+      sha256: '',
+      notas: '',
+    }),
+    false,
+    'URL sozinha não basta — sem hash não há como provar integridade depois',
+  );
+  assert.equal(
+    manifestoAtualizacaoDisponivel({
+      versao: '1.2.0',
+      url: 'https://x/braco.exe',
+      sha256: 'nao-e-hex',
+      notas: '',
+    }),
+    false,
+    'hash malformado não pode passar como se fosse válido',
+  );
+  assert.equal(
+    manifestoAtualizacaoDisponivel({
+      versao: '1.2.0',
+      url: 'https://x/braco.exe',
+      sha256: 'a'.repeat(64),
+      notas: '',
+    }),
+    true,
+  );
+});
+
+test('AT — lerPacoteMotor aceita "atualizar" só com SHA256 de 64 hex minúsculo', () => {
+  const valido = JSON.stringify({
+    tipo: 'atualizar',
+    url: 'https://x/braco.exe',
+    sha256: 'a'.repeat(64),
+    versao: '1.2.0',
+  });
+  const lido = lerPacoteMotor(valido);
+  assert.ok(lido && lido.tipo === 'atualizar');
+
+  const hashMaiuscula = JSON.stringify({
+    tipo: 'atualizar',
+    url: 'https://x/braco.exe',
+    sha256: 'A'.repeat(64),
+    versao: '1.2.0',
+  });
+  assert.equal(
+    lerPacoteMotor(hashMaiuscula),
+    null,
+    'maiúscula não é o mesmo alfabeto que o braço vai comparar — recusa em vez de normalizar seletivamente',
+  );
+
+  const hashCurto = JSON.stringify({
+    tipo: 'atualizar',
+    url: 'https://x/braco.exe',
+    sha256: 'a'.repeat(10),
+    versao: '1.2.0',
+  });
+  assert.equal(lerPacoteMotor(hashCurto), null);
+});
+
+test('AT — lerPacoteBraco aceita progresso_atualizacao (grampeado 0–100) e atualizacao_falhou', () => {
+  const progresso = lerPacoteBraco(JSON.stringify({ tipo: 'progresso_atualizacao', percentual: 55 }));
+  assert.deepEqual(progresso, { tipo: 'progresso_atualizacao', percentual: 55 });
+
+  const estourado = lerPacoteBraco(JSON.stringify({ tipo: 'progresso_atualizacao', percentual: 140 }));
+  assert.deepEqual(estourado, { tipo: 'progresso_atualizacao', percentual: 100 }, 'grampeia no teto');
+
+  const negativo = lerPacoteBraco(JSON.stringify({ tipo: 'progresso_atualizacao', percentual: -5 }));
+  assert.deepEqual(negativo, { tipo: 'progresso_atualizacao', percentual: 0 }, 'grampeia no piso');
+
+  const falha = lerPacoteBraco(JSON.stringify({ tipo: 'atualizacao_falhou', motivo: 'hash não bateu' }));
+  assert.deepEqual(falha, { tipo: 'atualizacao_falhou', motivo: 'hash não bateu' });
+});
+
+test('AT-002. progresso chega ao inventário em tempo real, sem esperar poll', async () => {
+  const { p } = registro();
+  const token = await parear(p, ANA, 'PC-BAIXANDO');
+
+  const ponte = new PonteDispositivos(p);
+  const socket = new SocketDeBraco();
+  ponte.conectar(socket as unknown as WebSocket);
+  socket.apresentar(token, 'PC-BAIXANDO');
+  await espera(40);
+
+  socket.emit('message', Buffer.from(JSON.stringify({ tipo: 'progresso_atualizacao', percentual: 42 })));
+  await espera(20);
+
+  const maquinas = await inventarioDeMaquinas(ANA.id_usuario, ponte, p);
+  assert.equal(maquinas[0].atualizando, 42);
+  assert.equal(maquinas[0].erroAtualizacao, null, 'progresso limpa um erro anterior');
+});
+
+test('AT-004/005. atualizacao_falhou some com a barra e vira recado por máquina — a versão instalada não é mexida daqui', async () => {
+  const { p } = registro();
+  const token = await parear(p, ANA, 'PC-FALHOU');
+
+  const ponte = new PonteDispositivos(p);
+  const socket = new SocketDeBraco();
+  ponte.conectar(socket as unknown as WebSocket);
+  socket.apresentar(token, 'PC-FALHOU');
+  await espera(40);
+
+  socket.emit('message', Buffer.from(JSON.stringify({ tipo: 'progresso_atualizacao', percentual: 30 })));
+  await espera(20);
+  socket.emit(
+    'message',
+    Buffer.from(
+      JSON.stringify({ tipo: 'atualizacao_falhou', motivo: 'verificação de integridade falhou' }),
+    ),
+  );
+  await espera(20);
+
+  const maquinas = await inventarioDeMaquinas(ANA.id_usuario, ponte, p);
+  assert.equal(maquinas[0].atualizando, null, 'a barra não pode ficar travada em 30%');
+  assert.equal(maquinas[0].erroAtualizacao, 'verificação de integridade falhou');
+});
+
+test('AT — Braco.ts ignora pacotes de atualização (não são relato de execução)', async () => {
+  /**
+   * Regressão do guarda em `servidor/nucleo/Braco.ts`: sem ele, a ternária
+   * que resolve `execucao_id` a partir do pacote lançaria sobre um
+   * `progresso_atualizacao`/`atualizacao_falhou`, que não têm esse campo.
+   * `PonteDispositivos` já trata os dois tipos antes de repassar a
+   * `Braco.ts` — mas se algum dia a ordem mudar, este teste denuncia.
+   */
+  const { p } = registro();
+  const token = await parear(p, ANA, 'PC-GUARDA');
+
+  const ponteBraco = new PonteDispositivos(p);
+  const { Braco } = await import('../servidor/nucleo/Braco');
+  // Nunca deveria lançar — se lançar, o `unhandledRejection` derruba o teste.
+  new Braco(ponteBraco, undefined, () => false);
+
+  const socket = new SocketDeBraco();
+  ponteBraco.conectar(socket as unknown as WebSocket);
+  socket.apresentar(token, 'PC-GUARDA');
+  await espera(40);
+
+  assert.doesNotThrow(() => {
+    socket.emit('message', Buffer.from(JSON.stringify({ tipo: 'progresso_atualizacao', percentual: 10 })));
+    socket.emit(
+      'message',
+      Buffer.from(JSON.stringify({ tipo: 'atualizacao_falhou', motivo: 'teste' })),
+    );
+  });
+});
+
+test('AT — porId encontra a máquina certa por credencial, e ignora a que não bate', async () => {
+  const { p } = registro();
+  const tokenA = await parear(p, ANA, 'PC-A');
+  const ponte = new PonteDispositivos(p);
+  const socketA = new SocketDeBraco();
+  ponte.conectar(socketA as unknown as WebSocket);
+  socketA.apresentar(tokenA, 'PC-A');
+  await espera(40);
+
+  const [maquina] = await inventarioDeMaquinas(ANA.id_usuario, ponte, p);
+  const achado = ponte.porId(ANA.id_usuario, maquina.id);
+  assert.ok(achado);
+  assert.equal(achado?.nome, 'PC-A');
+
+  assert.equal(ponte.porId(ANA.id_usuario, 'id-que-nao-existe'), null);
+  assert.equal(ponte.porId('outro-operador', maquina.id), null, 'não vaza entre operadores');
 });

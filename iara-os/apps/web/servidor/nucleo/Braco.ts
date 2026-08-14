@@ -551,6 +551,14 @@ export class Braco {
 
   private receber(dispositivo: DispositivoConectado, pacote: PacoteBraco): void {
     if (pacote.tipo === 'apresentacao') return;
+    /**
+     * Pacotes da Etapa 2 (14/08/2026) — o braço se automantendo, não uma
+     * execução do catálogo. `PonteDispositivos` já os trata e nunca deveria
+     * repassá-los até aqui; o guarda continua porque este método declara
+     * aceitar qualquer `PacoteBraco`, e a ternária abaixo lançaria sobre um
+     * pacote sem `execucao_id`.
+     */
+    if (pacote.tipo === 'progresso_atualizacao' || pacote.tipo === 'atualizacao_falhou') return;
 
     const id = pacote.tipo === 'concluida' ? pacote.relato.execucao_id : pacote.execucao_id;
     const c = this.emCurso.get(id);

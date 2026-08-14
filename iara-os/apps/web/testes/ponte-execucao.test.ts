@@ -57,6 +57,8 @@ function dispositivoFalso(opcoes: {
     versao: '0',
     conectado_em: 0,
     visto_em: 0,
+    atualizando: null,
+    ultimoErroAtualizacao: null,
     enviar: (pacote) => {
       if (opcoes.escritaFalha) return false;
       if (pacote.tipo !== 'executar') return true;

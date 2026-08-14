@@ -29,6 +29,7 @@ import { prepararOperacionais } from '../nucleo/kernel/habilidades/operacionais'
 import { conferirEsquemaSupabase } from '../nucleo/ClienteSupabase';
 import { lerPacoteCliente } from '../../lib/protocolo';
 import { outrosOperadores } from '../../lib/operadores';
+import { lerManifestoBraco, manifestoAtualizacaoDisponivel } from '../../lib/execucao';
 import { papelDe } from '../nucleo/kernel/Papeis';
 import { configUtilizavel } from '../nucleo/kernel/Configuracao';
 import { LimiteVazao } from '../nucleo/kernel/Seguranca';
@@ -462,7 +463,8 @@ export function conectarOperador(socket: WebSocket): void {
     if (
       pacote.tipo === 'dispositivos' ||
       pacote.tipo === 'parear' ||
-      pacote.tipo === 'esquecer_dispositivo'
+      pacote.tipo === 'esquecer_dispositivo' ||
+      pacote.tipo === 'atualizar_dispositivo'
     ) {
       const dono = operador;
       const sessao = minhaSessao;
@@ -471,7 +473,37 @@ export function conectarOperador(socket: WebSocket): void {
       void (async () => {
         let acao: { ok: boolean; texto: string } | undefined;
         try {
-          if (pedido.tipo === 'parear') {
+          if (pedido.tipo === 'atualizar_dispositivo') {
+            /**
+             * ETAPA 2 (14/08/2026) — a ordem só sai daqui, nunca do braço
+             * sozinho. `porId` (não `destinoDe`): a operadora pode ter mais
+             * de uma máquina, e "atualizar agora" é sobre a que ela está
+             * olhando na gaveta, não "a que conectou por último".
+             */
+            const alvo = ponteDispositivos.porId(dono.id_usuario, pedido.id);
+            const manifesto = lerManifestoBraco();
+            if (!alvo) {
+              acao = { ok: false, texto: 'Esse computador não está conectado agora.' };
+            } else if (!manifestoAtualizacaoDisponivel(manifesto)) {
+              acao = {
+                ok: false,
+                texto: 'Não há uma versão nova publicada para baixar automaticamente ainda.',
+              };
+            } else if (alvo.atualizando !== null) {
+              // Clique duplo: a atualização já está em curso, não duplica o pedido.
+              acao = { ok: true, texto: 'A atualização já está em andamento.' };
+            } else {
+              const enviou = alvo.enviar({
+                tipo: 'atualizar',
+                url: manifesto.url,
+                sha256: manifesto.sha256,
+                versao: manifesto.versao,
+              });
+              acao = enviou
+                ? { ok: true, texto: 'Atualização iniciada — acompanhe o progresso aqui.' }
+                : { ok: false, texto: 'Perdi a conexão com o computador bem na hora de mandar a atualização.' };
+            }
+          } else if (pedido.tipo === 'parear') {
             const r = await pareamento.aprovar(pedido.codigo, dono);
             acao = r.ok
               ? { ok: true, texto: `"${r.nome}" foi autorizado. Ele conecta sozinho em segundos.` }

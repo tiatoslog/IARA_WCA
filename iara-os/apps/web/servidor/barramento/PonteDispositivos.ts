@@ -221,6 +221,8 @@ export class PonteDispositivos {
       conectado_em: d.conectado_em,
       visto_em: d.visto_em,
       id_credencial: d.id_credencial ?? null,
+      atualizando: d.atualizando,
+      ultimoErroAtualizacao: d.ultimoErroAtualizacao,
     }));
   }
 
@@ -239,6 +241,20 @@ export class PonteDispositivos {
     const alvos = lista.filter((d) => d.id_credencial === idCredencial);
     for (const d of alvos) d.fechar('credencial revogada pelo operador');
     return alvos.length;
+  }
+
+  /**
+   * O braço conectado AGORA que responde por `id` — Etapa 2 (14/08/2026).
+   *
+   * `id`, aqui, é o mesmo valor que `MaquinaDoOperador.id` mostra à tela: a
+   * credencial quando pareada, o `id_dispositivo` de sessão quando não há
+   * uma (braço de desenvolvimento). "Atualizar agora" precisa da MÁQUINA
+   * que a operadora está olhando, não "a mais recente" — `destinoDe` resolve
+   * a pergunta errada para este caso.
+   */
+  porId(idUsuario: string, id: string): DispositivoConectado | null {
+    const lista = this.porOperador.get(idUsuario) ?? [];
+    return lista.find((d) => (d.id_credencial ?? d.id_dispositivo) === id) ?? null;
   }
 
   /** Quantos braços há no processo inteiro. Usado pelo `/saude`. */
@@ -322,6 +338,8 @@ export class PonteDispositivos {
               conectado_em: agora,
               visto_em: agora,
               id_credencial: identidade.id_credencial,
+              atualizando: null,
+              ultimoErroAtualizacao: null,
               enviar: (p) => {
                 if (socket.readyState !== socket.OPEN) return false;
                 try {
@@ -362,6 +380,32 @@ export class PonteDispositivos {
        * e exigir a batida separada faria um dispositivo ocupado parecer morto.
        */
       (dispositivo as { visto_em: number }).visto_em = Date.now();
+
+      /**
+       * ETAPA 2 (14/08/2026) — progresso e falha de atualização são tratados
+       * AQUI, antes de `ouvintes`. Não são relato de execução (`Braco.ts` só
+       * entende isso), e a gaveta Dispositivos precisa ver a mudança NA HORA
+       * — é o que faz `anunciarMudanca` valer como barra de progresso de
+       * verdade, em vez de um número que só muda a cada 15 s de poll.
+       */
+      if (pacote.tipo === 'progresso_atualizacao') {
+        (dispositivo as { atualizando: number | null }).atualizando = pacote.percentual;
+        (dispositivo as { ultimoErroAtualizacao: string | null }).ultimoErroAtualizacao = null;
+        this.anunciarMudanca(dispositivo.id_usuario);
+        return;
+      }
+      if (pacote.tipo === 'atualizacao_falhou') {
+        // `null`, não um número travado — a barra some, e o recado por
+        // máquina (ver `MaquinaDoOperador.erroAtualizacao`) explica por quê.
+        (dispositivo as { atualizando: number | null }).atualizando = null;
+        (dispositivo as { ultimoErroAtualizacao: string | null }).ultimoErroAtualizacao = pacote.motivo;
+        console.warn(
+          `[iara] atualização falhou em ${dispositivo.id_dispositivo} (${dispositivo.nome}): ${pacote.motivo}`,
+        );
+        this.anunciarMudanca(dispositivo.id_usuario);
+        return;
+      }
+
       for (const ouvinte of this.ouvintes) ouvinte(dispositivo, pacote);
     });
 
@@ -452,6 +496,10 @@ export async function inventarioDeMaquinas(
       // nenhuma, e afirmar desatualização sobre uma máquina desligada agora
       // seria opinar sobre um dado que ninguém mediu.
       desatualizada: versaoBracoDesatualizada(vivo?.versao ?? null),
+      // Progresso e erro também só existem enquanto o socket existe — uma
+      // máquina desligada não está "atualizando" nem "com erro", só ausente.
+      atualizando: vivo?.atualizando ?? null,
+      erroAtualizacao: vivo?.ultimoErroAtualizacao ?? null,
     };
   });
 
@@ -474,6 +522,8 @@ export async function inventarioDeMaquinas(
       pareada_em: null,
       vista_em: c.visto_em,
       desatualizada: versaoBracoDesatualizada(c.versao),
+      atualizando: c.atualizando,
+      erroAtualizacao: c.ultimoErroAtualizacao,
     });
   }
 

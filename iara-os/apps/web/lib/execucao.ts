@@ -306,6 +306,15 @@ export interface DescricaoDispositivo {
    * outra como "pareada", e desconectar uma não faria nada com a outra.
    */
   readonly id_credencial?: string | null;
+  /**
+   * `null` sem atualização em curso; `0`–`100` durante o download — Etapa 2
+   * (14/08/2026). `readonly` na declaração, mutado por cast pontual como
+   * `visto_em` já era — é estado de socket, não identidade da máquina.
+   */
+  readonly atualizando: number | null;
+  /** Motivo da última falha de atualização, ou `null`. Some sozinho na
+   *  próxima tentativa — é o recado do agora, não um histórico. */
+  readonly ultimoErroAtualizacao: string | null;
 }
 
 /**
@@ -343,6 +352,56 @@ export interface MaquinaDoOperador {
    * `sem_meio_de_verificar`: silêncio é honesto, acusação sem prova não é.
    */
   readonly desatualizada: boolean;
+  /**
+   * `null` quando não há atualização em curso. `0`–`100` durante o download
+   * — Etapa 2 do sistema de atualização (14/08/2026). Vem do próprio braço,
+   * em tempo real, pelo mesmo socket que já carregava a versão; a gaveta
+   * Dispositivos publica a mudança na hora (`aoMudarInventario`), não numa
+   * varredura de 15 s — uma barra de progresso que atualiza a cada quinze
+   * segundos não é barra de progresso.
+   */
+  readonly atualizando: number | null;
+  /** Motivo da última falha de atualização, ou `null`. Some sozinho na
+   *  próxima tentativa — é o recado do agora, não um histórico. */
+  readonly erroAtualizacao: string | null;
+}
+
+/**
+ * O MANIFESTO da versão atual do braço — Etapa 2/3 (14/08/2026).
+ *
+ * Fonte única do que o motor oferece para quem está atrasado: onde baixar,
+ * a integridade esperada (SHA256, conferido pelo PRÓPRIO braço antes de
+ * substituir qualquer coisa) e um resumo em português do que mudou. As três
+ * variáveis de ambiente espelham o padrão já estabelecido por
+ * `NEXT_PUBLIC_IARA_INSTALADOR` — a mesma variável de build, o mesmo
+ * cuidado de deploy por Docker (`ARG` na imagem).
+ *
+ * `sha256` vazio é um estado válido, não um erro: numa instalação que ainda
+ * não publicou o hash (ex.: alguém rodou `empacotar:braco` e esqueceu de
+ * colar o valor impresso), a atualização automática simplesmente não é
+ * oferecida — nunca se baixa e substitui um executável sem prova de
+ * integridade. Ver `manifestoAtualizacaoDisponivel`.
+ */
+export interface ManifestoBraco {
+  readonly versao: string;
+  readonly url: string;
+  readonly sha256: string;
+  readonly notas: string;
+}
+
+export function lerManifestoBraco(): ManifestoBraco {
+  return {
+    versao: VERSAO_MINIMA_BRACO,
+    url: process.env.NEXT_PUBLIC_IARA_INSTALADOR ?? '',
+    sha256: (process.env.NEXT_PUBLIC_IARA_INSTALADOR_SHA256 ?? '').trim().toLowerCase(),
+    notas: process.env.NEXT_PUBLIC_IARA_INSTALADOR_NOTAS ?? '',
+  };
+}
+
+/** Há o que oferecer? URL e SHA256 são os dois que importam — sem os dois,
+ *  não existe atualização automática segura para propor. */
+export function manifestoAtualizacaoDisponivel(m: ManifestoBraco): boolean {
+  return m.url.length > 0 && /^[0-9a-f]{64}$/.test(m.sha256);
 }
 
 /**
@@ -458,12 +517,27 @@ export type PacoteBraco =
     }
   | { tipo: 'recebida'; execucao_id: string }
   | { tipo: 'executando'; execucao_id: string }
-  | { tipo: 'concluida'; relato: RelatoExecucao };
+  | { tipo: 'concluida'; relato: RelatoExecucao }
+  /**
+   * ETAPA 2 (14/08/2026) — durante o download da versão nova, sem
+   * `execucao_id` de propósito: isto NÃO é uma execução do catálogo, é o
+   * braço se automantendo. `PonteDispositivos` trata os dois tipos abaixo
+   * ANTES de repassar a `Braco.ts`, que só entende relato de execução.
+   */
+  | { tipo: 'progresso_atualizacao'; percentual: number }
+  | { tipo: 'atualizacao_falhou'; motivo: string };
 
 /** Motor → braço. */
 export type PacoteMotor =
   | { tipo: 'bem_vindo'; id_dispositivo: string }
   | { tipo: 'recusado'; motivo: string }
+  /**
+   * A ORDEM DE ATUALIZAÇÃO carrega o SHA256 esperado, e não é decoração: o
+   * braço confere o hash do que baixou ANTES de tocar no próprio executável.
+   * Um valor que não bate nunca vira substituição — vira `atualizacao_falhou`
+   * e a versão antiga continua rodando. Ver `manifestoAtualizacaoDisponivel`.
+   */
+  | { tipo: 'atualizar'; url: string; sha256: string; versao: string }
   | { tipo: 'executar'; ordem: OrdemExecucao };
 
 const objeto = (v: unknown): v is Record<string, unknown> =>
@@ -579,6 +653,12 @@ export function lerPacoteBraco(bruto: string): PacoteBraco | null {
       const relato = lerRelato(v.relato);
       return relato ? { tipo: 'concluida', relato } : null;
     }
+    case 'progresso_atualizacao':
+      return typeof v.percentual === 'number' && Number.isFinite(v.percentual)
+        ? { tipo: 'progresso_atualizacao', percentual: Math.max(0, Math.min(100, v.percentual)) }
+        : null;
+    case 'atualizacao_falhou':
+      return texto(v.motivo, 500) ? { tipo: 'atualizacao_falhou', motivo: v.motivo } : null;
     default:
       return null;
   }
@@ -598,6 +678,10 @@ export function lerPacoteMotor(bruto: string): PacoteMotor | null {
       return texto(v.id_dispositivo, 80) ? { tipo: 'bem_vindo', id_dispositivo: v.id_dispositivo } : null;
     case 'recusado':
       return typeof v.motivo === 'string' ? { tipo: 'recusado', motivo: v.motivo } : null;
+    case 'atualizar':
+      if (!texto(v.url, 500) || !texto(v.versao, 60)) return null;
+      if (typeof v.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(v.sha256)) return null;
+      return { tipo: 'atualizar', url: v.url, sha256: v.sha256, versao: v.versao };
     case 'executar': {
       const o = v.ordem;
       if (!objeto(o) || !texto(o.execucao_id, 80) || !ehAcaoDesktop(o.acao)) return null;
