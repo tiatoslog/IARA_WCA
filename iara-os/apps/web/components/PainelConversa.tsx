@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EstadoConexao, Fala } from '../hooks/useIaraSocket';
 import { useEscuta } from '../hooks/useEscuta';
+import { useDeteccaoVocal } from '../hooks/useDeteccaoVocal';
 import {
   IconeEncerrar,
   IconeEnviar,
@@ -215,6 +216,18 @@ export function PainelConversa({
       ? () =>
           onFalar(nomeOperador ? `Oi ${nomeOperador}, pode falar.` : 'Oi, pode falar.')
       : undefined,
+  });
+
+  /**
+   * Mesmo gatilho de barge-in de sempre (`onInterromper`), só que acionado
+   * pelo VAD acústico em vez de esperar o `SpeechRecognition` devolver texto.
+   * Só captura microfone quando a escuta já está aberta (vigília ou ligação) —
+   * nunca antes de a operadora ter pedido para ouvir.
+   */
+  useDeteccaoVocal({
+    ativar: escuta.ativa || escuta.vigilia,
+    iaraFalando,
+    aoIniciarFala: onInterromper,
   });
 
   return (
