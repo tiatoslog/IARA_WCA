@@ -33,3 +33,14 @@ Existe uma credencial REAL de produção já gravada nesta máquina (`%APPDATA%\
 ## Regra de execução
 
 QR-003 e QR-004 são os que decidem se o atalho funciona fim-a-fim; ambos dependem de coisas que este ambiente não tem (sessão logada, câmera física). `UNVERIFIED`, não `[x]`.
+
+## B. Instalador empacotado — validado contra produção real
+
+| Check | ID | Ação | Resultado esperado | Evidência | Risco |
+|---|---|---|---|---|---|
+| [x] | INST-001 | `npm run empacotar:braco` com `IARA_MOTOR=https://iara.up.railway.app` | Gera `dist/braco/iara-braco.exe` sem erro, endereço assado sem prompt | Build real: `iara-braco.exe`, 82 MB, log mostra "Endereço assado: https://iara.up.railway.app" | HIGH — VERIFIED |
+| [x] | INST-002 | Rodar o `.exe` gerado (não `tsx`, o binário de verdade) numa credencial isolada | Conecta em produção de verdade, pede código, mostra QR + caixa | Saída real do processo: `[braço] Conectando... em https://iara.up.railway.app`, QR válido, código `DFMC-F3B9` | CRITICAL — VERIFIED, é a prova mais forte deste bloco: o binário que uma operadora abriria numa máquina nova funciona ponta a ponta contra o motor real, sem depender de Node instalado |
+| [ ] | INST-003 | Publicar o `.exe` num endereço estável (GitHub Release) e configurar `NEXT_PUBLIC_IARA_INSTALADOR` | Botão "Baixar o programa" na aba Dispositivos funciona para qualquer operadora, sem depender de mim | — | HIGH — **NÃO FEITO**: `gh` não está autenticado neste ambiente; publicar é ação externa que exige confirmação explícita do operador antes de executar (ver conversa) |
+| [ ] | INST-004 | Instalar de verdade numa SEGUNDA máquina (não a que já tem credencial de produção) | SmartScreen aparece (esperado, binário não assinado), operadora consegue seguir "Mais informações → Executar assim mesmo", pareia, aparece na lista de Dispositivos | screenshot da 2ª máquina | CRITICAL — **UNVERIFIED**, exige uma segunda máquina física, fora do alcance deste ambiente |
+
+Cuidado tomado: INST-002 rodou com `IARA_CREDENCIAL_BRACO` isolado (apagado ao final), então não gravou nem leu a credencial real de produção desta máquina — o pedido de pareamento em si é uma linha efêmera em memória no motor (expira em 5 min sem uso), sem efeito colateral em disco além do arquivo de teste já removido.
