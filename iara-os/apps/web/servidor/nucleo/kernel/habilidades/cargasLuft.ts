@@ -13,9 +13,42 @@
  */
 
 import type { Habilidade } from '../Habilidade';
-import { cargasNoPeriodo } from '../../ClientePlanilhaOcis';
-import { planilhaOcisDisponivel } from '../../ClientePlanilhaOcis';
+import {
+  agregarCargas,
+  cargasNoPeriodo,
+  planilhaOcisDisponivel,
+  todasAsCargas,
+  type AgruparPor,
+} from '../../ClientePlanilhaOcis';
 import { interpretarPeriodo } from '../PeriodoOperacional';
+
+const formatarReal = (v: number): string =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+const AGRUPAMENTOS: readonly AgruparPor[] = [
+  'motorista',
+  'rota',
+  'origem',
+  'destino',
+  'status',
+  'status_normalizado',
+  'nenhum',
+];
+
+/**
+ * Uma linha, densa, para o console técnico — `ResultadoHabilidade.detalhe`
+ * é contratualmente "uma linha, nunca payload cru" (ver `Habilidade.ts`).
+ * A proveniência cabe aqui como pares `chave=valor`, não como objeto
+ * aninhado: quem quiser mais que isso audita o jornal de operações, que é
+ * onde payload de verdade mora.
+ */
+function proveniencia(campos: Readonly<Record<string, string | number | boolean>>): string {
+  return Object.entries(campos)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(' ');
+}
+const METRICAS = ['contagem', 'valor_total', 'valor_medio'] as const;
+type Metrica = (typeof METRICAS)[number];
 
 export const consultarCargasLuft: Habilidade = {
   manifesto: {
@@ -70,4 +103,144 @@ export const consultarCargasLuft: Habilidade = {
   },
 };
 
-export const HABILIDADES_PLANILHA_OCIS: readonly Habilidade[] = [consultarCargasLuft];
+/**
+ * Habilidade "consultar_estatisticas_cargas_luft" — fase 2. Generaliza a
+ * fase 1 além de "contar por data": conta, soma valor e agrupa por
+ * motorista/rota/origem/destino/status — uma única habilidade composável em
+ * vez de uma por pergunta, no mesmo espírito do "Analytics Engine"
+ * discutido em 14/08/2026. Cobre a maior parte das perguntas de contagem,
+ * ranking e faturamento das "100 perguntas" sem precisar do Claude.
+ *
+ * O QUE FICA DE FORA DE PROPÓSITO: atraso (precisa de uma regra — quantos
+ * dias sem coleta é "atrasada"?), anomalia (precisa de um limiar), e
+ * qualquer pergunta que exija interpretação em vez de conta. Essas ficam
+ * para quando a regra de negócio for definida, ou para o Claude, quando a
+ * pergunta pedir raciocínio de verdade — nunca para esta habilidade decidir
+ * um limiar sozinha.
+ */
+export const consultarEstatisticasCargasLuft: Habilidade = {
+  manifesto: {
+    id: 'consultar_estatisticas_cargas_luft',
+    nome: 'Estatísticas da operação LUFT',
+    descricao:
+      'Conta, soma valor ou agrupa as cargas da operação LUFT — motorista com mais cargas, faturamento ' +
+      'por rota, cargas por status, valor total ou médio. "periodo" é opcional (vazio = todas as cargas ' +
+      'cadastradas) e recebe a EXPRESSÃO como foi dita ("essa semana", "17/08"), nunca uma data já ' +
+      'calculada. "agrupar_por" é um de: motorista, rota, origem, destino, status (texto exato da célula), ' +
+      'status_normalizado (agrupa FINALIZADO/finalizado/FINALIZADA juntos), nenhum. "metrica" é um de: ' +
+      'contagem, valor_total, valor_medio. Use para "qual motorista fez mais cargas", "faturamento por ' +
+      'rota", "quantas cargas por status", "valor total das cargas desta semana".',
+    dominio: 'operacoes',
+    capacidade: 'automacao',
+    permissoes: ['rede', 'banco'],
+    timeout_ms: 15000,
+    custo: 'zero',
+    risco: 'baixo',
+    idempotencia: 'leitura',
+    esquema: {
+      periodo: { tipo: 'texto', padrao: '' },
+      agrupar_por: { tipo: 'texto', padrao: 'nenhum', dentre: AGRUPAMENTOS },
+      metrica: { tipo: 'texto', padrao: 'contagem', dentre: METRICAS },
+    },
+  },
+  indisponivelPorque() {
+    return planilhaOcisDisponivel() ? null : 'falta MS_GRAPH_TOKEN ou MS_GRAPH_OCI_URL no ambiente';
+  },
+  async executar(ctx) {
+    const frasePeriodo = String(ctx.parametros.periodo ?? '').trim();
+    const agruparPor = String(ctx.parametros.agrupar_por ?? 'nenhum') as AgruparPor;
+    const metrica = String(ctx.parametros.metrica ?? 'contagem') as Metrica;
+
+    const periodo = frasePeriodo ? interpretarPeriodo(frasePeriodo) : null;
+    if (frasePeriodo && !periodo) {
+      return {
+        texto:
+          `Não entendi "${frasePeriodo}" como período, então não calculei nada. ` +
+          'Entendo "hoje", "amanhã", "essa semana", "semana que vem" ou uma data como "17/08" — ou deixe ' +
+          'vazio para considerar todas as cargas cadastradas.',
+        detalhe: `expressão de período não interpretada: "${frasePeriodo.slice(0, 60)}"`,
+        resolveu: false,
+      };
+    }
+
+    const r = await todasAsCargas();
+    if (!r.ok) {
+      return {
+        texto: r.texto,
+        detalhe: proveniencia({ fonte: 'planilha LUFT', resultado: 'indisponivel', cache_usado: String(r.fonte?.cache ?? false) }),
+        resolveu: false,
+      };
+    }
+
+    const cargas = periodo
+      ? r.cargas.filter((c) => c.data_coleta !== null && c.data_coleta >= periodo.inicio && c.data_coleta <= periodo.fim)
+      : r.cargas;
+    const rotuloPeriodo = periodo ? periodo.rotulo : 'todas as cargas cadastradas';
+
+    /** Comum às duas saídas (agregada e detalhada) — a mesma proveniência, os mesmos campos. */
+    const baseProveniencia = {
+      fonte: '2026',
+      universo: 'todasAsCargas',
+      registros_lidos: r.cargas.length,
+      registros_usados: cargas.length,
+      cache: r.fonte?.cache ?? false,
+      idade_s: r.fonte?.idade_s ?? 0,
+      deterministico: true,
+    };
+
+    if (agruparPor === 'nenhum') {
+      const contagem = cargas.length;
+      const valorTotal = cargas.reduce((soma, c) => soma + (c.valor ?? 0), 0);
+      const texto =
+        metrica === 'valor_total'
+          ? `${rotuloPeriodo}: ${formatarReal(valorTotal)} (${contagem} carga${contagem === 1 ? '' : 's'}).`
+          : metrica === 'valor_medio'
+            ? `${rotuloPeriodo}: ${formatarReal(contagem > 0 ? valorTotal / contagem : 0)} por carga (${contagem} carga${contagem === 1 ? '' : 's'}).`
+            : `${rotuloPeriodo}: ${contagem} carga${contagem === 1 ? '' : 's'}.`;
+      return {
+        texto,
+        detalhe: proveniencia({ ...baseProveniencia, operacao: metrica.toUpperCase(), agrupamento: 'nenhum' }),
+        resolveu: true,
+      };
+    }
+
+    const TOPO = 15;
+    const grupos = [...agregarCargas(cargas, agruparPor)].sort((a, b) =>
+      metrica === 'contagem' ? b.contagem - a.contagem : b.valor_total - a.valor_total,
+    );
+    if (grupos.length === 0) {
+      return {
+        texto: `${rotuloPeriodo}: nenhuma carga encontrada.`,
+        detalhe: proveniencia({ ...baseProveniencia, operacao: 'GROUP_BY', agrupamento: agruparPor, grupos: 0 }),
+        resolveu: true,
+      };
+    }
+    const linhas = grupos.slice(0, TOPO).map((g, i) => {
+      const valorMedio = g.contagem > 0 ? g.valor_total / g.contagem : 0;
+      const cauda =
+        metrica === 'valor_total'
+          ? `${formatarReal(g.valor_total)} (${g.contagem} carga${g.contagem === 1 ? '' : 's'})`
+          : metrica === 'valor_medio'
+            ? `${formatarReal(valorMedio)} por carga (${g.contagem} carga${g.contagem === 1 ? '' : 's'})`
+            : `${g.contagem} carga${g.contagem === 1 ? '' : 's'}`;
+      return `${i + 1}. ${g.chave} — ${cauda}`;
+    });
+    const resto = grupos.length > TOPO ? `\n… e mais ${grupos.length - TOPO} grupo(s).` : '';
+
+    return {
+      texto: `${rotuloPeriodo}, por ${agruparPor}:\n${linhas.join('\n')}${resto}`,
+      detalhe: proveniencia({ ...baseProveniencia, operacao: 'GROUP_BY', agrupamento: agruparPor, grupos: grupos.length }),
+      resolveu: true,
+    };
+  },
+  async verificar(resultado) {
+    return resultado.resolveu
+      ? { confirmado: true, evidencia: 'a planilha da operação LUFT respondeu à consulta' }
+      : { confirmado: false, evidencia: resultado.texto, motivo: 'sem_meio_de_verificar' };
+  },
+};
+
+export const HABILIDADES_PLANILHA_OCIS: readonly Habilidade[] = [
+  consultarCargasLuft,
+  consultarEstatisticasCargasLuft,
+];

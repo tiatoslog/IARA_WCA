@@ -10,9 +10,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  agregarCargas,
   cargasNoPeriodo,
   planilhaOcisDisponivel,
+  todasAsCargas,
+  type CargaCompleta,
   _esquecerLocalizacaoParaTeste,
+  _esquecerCacheTodasParaTeste,
 } from '../servidor/nucleo/ClientePlanilhaOcis';
 
 const VARS = ['MS_GRAPH_TOKEN', 'MS_GRAPH_OCI_URL'] as const;
@@ -23,10 +27,12 @@ function comAmbiente(fn: () => Promise<void>): () => Promise<void> {
     process.env.MS_GRAPH_TOKEN = 'token-de-teste';
     process.env.MS_GRAPH_OCI_URL = 'https://contoso.sharepoint.com/:x:/r/sites/x/planilha.xlsx';
     _esquecerLocalizacaoParaTeste();
+    _esquecerCacheTodasParaTeste();
     try {
       await fn();
     } finally {
       _esquecerLocalizacaoParaTeste();
+      _esquecerCacheTodasParaTeste();
       for (const v of VARS) {
         if (antes[v] === undefined) delete process.env[v];
         else process.env[v] = antes[v];
@@ -217,3 +223,192 @@ test(
     }
   }),
 );
+
+// --- todasAsCargas ----------------------------------------------------------
+
+/** Quatro motoristas, três rotas, uma linha sem OCI (lixo) e uma sem data de coleta. */
+function linhasVariadas(): unknown[][] {
+  const linha = (oci: number, origem: string, destino: string, motorista: string, dataColetaSerial: number | string, valor: number, status = '') =>
+    [0, `${origem}-${destino}`, 0, 'nota', oci, origem, 'SP', destino, 'MG', 46240, motorista, dataColetaSerial, 46248, '', '', '', '', '', '', '', '', status, '', valor];
+  return [
+    linha(200001, 'A', 'B', 'JOAO', 46248, 1000),
+    linha(200002, 'A', 'B', 'JOAO', 46249, 2000),
+    linha(200003, 'C', 'D', 'MARIA', 46248, 500, 'FINALIZADA'),
+    linha(200004, 'A', 'B', 'PEDRO', 46250, 1500),
+    linha(200005, 'C', 'D', 'MARIA', '', 700), // cadastrada, ainda sem coleta
+    [0, '-', '#N/D', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '#N/D'], // lixo
+  ];
+}
+
+function mockFetchVariado(chamadas: { shares: number }): typeof fetch {
+  return (async (url: string) => {
+    const u = String(url);
+    if (u.includes('/shares/')) {
+      chamadas.shares++;
+      return new Response(JSON.stringify({ id: 'ITEM123', parentReference: { driveId: 'DRIVE456' } }), { status: 200 });
+    }
+    if (u.includes('/usedRange')) {
+      return new Response(JSON.stringify({ rowCount: 10, columnCount: 24 }), { status: 200 });
+    }
+    if (u.includes('/range(')) {
+      return new Response(JSON.stringify({ values: linhasVariadas() }), { status: 200 });
+    }
+    throw new Error(`URL inesperada no teste: ${u}`);
+  }) as typeof fetch;
+}
+
+test('sem MS_GRAPH_TOKEN, todasAsCargas recusa sem bater na rede', async () => {
+  const antes = process.env.MS_GRAPH_TOKEN;
+  delete process.env.MS_GRAPH_TOKEN;
+  process.env.MS_GRAPH_OCI_URL = 'https://x/y.xlsx';
+  const fetchOriginal = globalThis.fetch;
+  let bateu = false;
+  globalThis.fetch = (async () => {
+    bateu = true;
+    throw new Error('não devia');
+  }) as typeof fetch;
+  try {
+    const r = await todasAsCargas();
+    assert.equal(r.ok, false);
+    assert.match(r.texto, /MS_GRAPH_TOKEN/);
+    assert.equal(bateu, false);
+  } finally {
+    globalThis.fetch = fetchOriginal;
+    if (antes !== undefined) process.env.MS_GRAPH_TOKEN = antes;
+  }
+});
+
+test(
+  'todasAsCargas inclui cargas SEM data de coleta — "cadastrada" e "coletada" são estados diferentes',
+  comAmbiente(async () => {
+    const fetchOriginal = globalThis.fetch;
+    globalThis.fetch = mockFetchVariado({ shares: 0 });
+    try {
+      const r = await todasAsCargas();
+      assert.equal(r.ok, true);
+      assert.equal(r.cargas.length, 5, 'as 5 linhas reais, a lixo (OCI vazio) fica de fora');
+      const semColeta = r.cargas.find((c) => c.oci === '200005');
+      assert.ok(semColeta, 'a carga cadastrada sem coleta precisa aparecer em todasAsCargas');
+      assert.equal(semColeta!.data_coleta, null);
+    } finally {
+      globalThis.fetch = fetchOriginal;
+    }
+  }),
+);
+
+test(
+  'todasAsCargas cacheia — a segunda chamada não bate em /shares/ de novo',
+  comAmbiente(async () => {
+    const fetchOriginal = globalThis.fetch;
+    const chamadas = { shares: 0 };
+    globalThis.fetch = mockFetchVariado(chamadas);
+    try {
+      await todasAsCargas();
+      await todasAsCargas();
+      assert.equal(chamadas.shares, 1);
+    } finally {
+      globalThis.fetch = fetchOriginal;
+    }
+  }),
+);
+
+test(
+  '_esquecerCacheTodasParaTeste força uma nova leitura do RANGE — mas a localização do arquivo continua cacheada à parte',
+  comAmbiente(async () => {
+    const fetchOriginal = globalThis.fetch;
+    const chamadas = { shares: 0, range: 0 };
+    globalThis.fetch = (async (url: string) => {
+      const u = String(url);
+      if (u.includes('/shares/')) {
+        chamadas.shares++;
+        return new Response(JSON.stringify({ id: 'ITEM123', parentReference: { driveId: 'DRIVE456' } }), { status: 200 });
+      }
+      if (u.includes('/usedRange')) {
+        return new Response(JSON.stringify({ rowCount: 10, columnCount: 24 }), { status: 200 });
+      }
+      if (u.includes('/range(')) {
+        chamadas.range++;
+        return new Response(JSON.stringify({ values: linhasVariadas() }), { status: 200 });
+      }
+      throw new Error(`URL inesperada no teste: ${u}`);
+    }) as typeof fetch;
+    try {
+      await todasAsCargas();
+      _esquecerCacheTodasParaTeste();
+      await todasAsCargas();
+      assert.equal(chamadas.range, 2, 'esquecer o cache de dados precisa forçar uma nova leitura do range');
+      assert.equal(chamadas.shares, 1, 'a localização do arquivo é um cache separado — não precisa refazer /shares/');
+    } finally {
+      globalThis.fetch = fetchOriginal;
+    }
+  }),
+);
+
+// --- agregarCargas (pura, sem rede) ------------------------------------------
+
+function carga(parcial: Partial<CargaCompleta>): CargaCompleta {
+  return {
+    oci: '1',
+    origem: 'A',
+    uf_origem: 'SP',
+    destino: 'B',
+    uf_destino: 'MG',
+    motorista: 'JOAO',
+    data_rec_oci: '2026-08-01',
+    data_coleta: '2026-08-14',
+    data_descarga: '2026-08-14',
+    status: '',
+    status_normalizado: 'SEM_STATUS',
+    valor: 1000,
+    ...parcial,
+  };
+}
+
+test('agregarCargas por motorista soma contagem e valor corretamente', () => {
+  const cargas = [
+    carga({ oci: '1', motorista: 'JOAO', valor: 1000 }),
+    carga({ oci: '2', motorista: 'JOAO', valor: 2000 }),
+    carga({ oci: '3', motorista: 'MARIA', valor: 500 }),
+  ];
+  const grupos = agregarCargas(cargas, 'motorista');
+  const joao = grupos.find((g) => g.chave === 'JOAO');
+  const maria = grupos.find((g) => g.chave === 'MARIA');
+  assert.equal(joao?.contagem, 2);
+  assert.equal(joao?.valor_total, 3000);
+  assert.equal(maria?.contagem, 1);
+  assert.equal(maria?.valor_total, 500);
+});
+
+test('agregarCargas por rota combina origem e destino', () => {
+  const cargas = [carga({ oci: '1', origem: 'X', destino: 'Y' }), carga({ oci: '2', origem: 'X', destino: 'Y' })];
+  const grupos = agregarCargas(cargas, 'rota');
+  assert.equal(grupos.length, 1);
+  assert.match(grupos[0].chave, /X.*Y/);
+  assert.equal(grupos[0].contagem, 2);
+});
+
+test('agregarCargas trata motorista vazio como grupo próprio, não some com o resto', () => {
+  const cargas = [carga({ oci: '1', motorista: '' }), carga({ oci: '2', motorista: 'JOAO' })];
+  const grupos = agregarCargas(cargas, 'motorista');
+  assert.equal(grupos.length, 2);
+  assert.ok(grupos.some((g) => g.chave === '(sem motorista)'));
+});
+
+test('agregarCargas com "nenhum" devolve um único grupo "total"', () => {
+  const cargas = [carga({ oci: '1' }), carga({ oci: '2' }), carga({ oci: '3' })];
+  const grupos = agregarCargas(cargas, 'nenhum');
+  assert.equal(grupos.length, 1);
+  assert.equal(grupos[0].contagem, 3);
+});
+
+test('agregarCargas com lista vazia devolve lista vazia, não erro', () => {
+  assert.deepEqual(agregarCargas([], 'motorista'), []);
+});
+
+test('valor ausente (null) conta na contagem mas soma zero, nunca NaN', () => {
+  const cargas = [carga({ oci: '1', valor: null }), carga({ oci: '2', valor: 100 })];
+  const grupos = agregarCargas(cargas, 'nenhum');
+  assert.equal(grupos[0].contagem, 2);
+  assert.equal(grupos[0].valor_total, 100);
+  assert.ok(!Number.isNaN(grupos[0].valor_total));
+});

@@ -125,6 +125,40 @@ async function lerRange(
   }
 }
 
+const letraColuna = (n: number): string => String.fromCharCode(65 + n);
+
+/**
+ * O par usedRange → range(A{PRIMEIRA_LINHA_DE_DADO}:...) que tanto
+ * `cargasNoPeriodo` quanto `todasAsCargas` precisam. Extraído para não haver
+ * dois lugares reimplementando a mesma leitura de forma sutilmente diferente.
+ */
+async function buscarLinhasReais(
+  t: string,
+  loc: LocalizacaoItem,
+): Promise<{ ok: true; linhas: unknown[][] } | { ok: false; motivo: string }> {
+  const enc = encodeURIComponent(ABA_VIVA);
+  const dimensoes = await fetch(
+    `${GRAPH}/drives/${loc.driveId}/items/${loc.itemId}/workbook/worksheets('${enc}')` +
+      `/usedRange?$select=address,rowCount,columnCount`,
+    { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) },
+  ).catch((erro: Error) => erro);
+  if (dimensoes instanceof Error) {
+    return { ok: false, motivo: `Não consegui ler o tamanho da aba "${ABA_VIVA}": ${dimensoes.message}` };
+  }
+  if (!dimensoes.ok) {
+    const corpo = await dimensoes.text().catch(() => '');
+    return { ok: false, motivo: `Graph recusou o tamanho da aba "${ABA_VIVA}" (HTTP ${dimensoes.status}): ${corpo.slice(0, 200)}` };
+  }
+  const { rowCount, columnCount } = (await dimensoes.json()) as { rowCount: number; columnCount: number };
+  if (rowCount < PRIMEIRA_LINHA_DE_DADO) return { ok: true, linhas: [] };
+
+  const endereco = `A${PRIMEIRA_LINHA_DE_DADO}:${letraColuna(columnCount - 1)}${rowCount}`;
+  const dados = await lerRange(t, loc, ABA_VIVA, endereco);
+  if (!dados.ok) return { ok: false, motivo: dados.motivo };
+
+  return { ok: true, linhas: dados.valores.filter(linhaReal) };
+}
+
 /** Serial de data do Excel (dias desde 1899-12-30) -> "AAAA-MM-DD". O valor é um dia civil puro, sem fuso envolvido. */
 function serialParaISO(serial: number): string {
   const ms = Math.round((serial - 25569) * 86400 * 1000);
@@ -166,8 +200,6 @@ function paraCarga(linha: readonly unknown[]): Carga | null {
   };
 }
 
-const letraColuna = (n: number): string => String.fromCharCode(65 + n);
-
 /**
  * Cargas cuja DATA COLETA cai em `[inicioISO, fimISO]` (inclusive, "AAAA-MM-DD").
  * Um único dia é `inicioISO === fimISO`.
@@ -185,30 +217,10 @@ export async function cargasNoPeriodo(
   const loc = await resolverItem(t);
   if (!loc.ok) return { ok: false, texto: `Não consegui localizar a planilha: ${loc.motivo}`, cargas: [] };
 
-  const enc = encodeURIComponent(ABA_VIVA);
-  const dimensoes = await fetch(
-    `${GRAPH}/drives/${loc.loc.driveId}/items/${loc.loc.itemId}/workbook/worksheets('${enc}')` +
-      `/usedRange?$select=address,rowCount,columnCount`,
-    { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) },
-  ).catch((erro: Error) => erro);
-  if (dimensoes instanceof Error) {
-    return { ok: false, texto: `Não consegui ler o tamanho da aba "${ABA_VIVA}": ${dimensoes.message}`, cargas: [] };
-  }
-  if (!dimensoes.ok) {
-    const corpo = await dimensoes.text().catch(() => '');
-    return { ok: false, texto: `Graph recusou o tamanho da aba "${ABA_VIVA}" (HTTP ${dimensoes.status}): ${corpo.slice(0, 200)}`, cargas: [] };
-  }
-  const { rowCount, columnCount } = (await dimensoes.json()) as { rowCount: number; columnCount: number };
-  if (rowCount < PRIMEIRA_LINHA_DE_DADO) {
-    return { ok: true, texto: 'A aba de cargas está vazia.', cargas: [] };
-  }
+  const resultado = await buscarLinhasReais(t, loc.loc);
+  if (!resultado.ok) return { ok: false, texto: resultado.motivo, cargas: [] };
 
-  const endereco = `A${PRIMEIRA_LINHA_DE_DADO}:${letraColuna(columnCount - 1)}${rowCount}`;
-  const dados = await lerRange(t, loc.loc, ABA_VIVA, endereco);
-  if (!dados.ok) return { ok: false, texto: dados.motivo, cargas: [] };
-
-  const cargas = dados.valores
-    .filter(linhaReal)
+  const cargas = resultado.linhas
     .map(paraCarga)
     .filter((c): c is Carga => c !== null)
     .filter((c) => c.data_coleta >= inicioISO && c.data_coleta <= fimISO)
@@ -233,4 +245,240 @@ export async function cargasNoPeriodo(
     texto: `${cargas.length} carga${cargas.length === 1 ? '' : 's'}:\n${linhas.join('\n')}${resto}`,
     cargas,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Todas as cargas cadastradas — fase 2 do Workbook Intelligence Layer
+// ---------------------------------------------------------------------------
+
+/**
+ * Diferente de `Carga`: aqui `data_coleta` (e as outras datas) podem ser
+ * `null`. "Cadastrada" e "coletada" são estados DIFERENTES — uma OCI pode
+ * estar cadastrada sem coleta marcada ainda, e uma pergunta como "quantas
+ * cargas existem cadastradas" precisa dessas linhas também, não só das que
+ * `cargasNoPeriodo` enxerga.
+ */
+/**
+ * O status BRUTO tem pelo menos três grafias para "finalizado"
+ * (`FINALIZADO`, `finalizado`, `FINALIZADA`) e pelo menos um código sem
+ * significado conhecido (`"7"`, achado em auditoria contra o tenant real em
+ * 14/08/2026). `DESCONHECIDO` é o valor para QUALQUER coisa não mapeada
+ * explicitamente — nunca um palpite. Ver `normalizarStatus`.
+ */
+export type StatusNormalizado = 'FINALIZADO' | 'PAGO' | 'SEM_STATUS' | 'DESCONHECIDO';
+
+/** Só grafias CONFIRMADAS contra o dado real. Um código novo entra como DESCONHECIDO até alguém provar o que significa. */
+const MAPA_STATUS: Readonly<Record<string, StatusNormalizado>> = {
+  FINALIZADO: 'FINALIZADO',
+  FINALIZADA: 'FINALIZADO',
+  PAGO: 'PAGO',
+};
+
+/**
+ * `bruto` nunca é descartado — quem quiser o texto original da célula
+ * continua tendo `CargaCompleta.status`. Isto só decide em qual BALDE a
+ * linha cai para fins de contagem/agrupamento, sem apagar a evidência.
+ */
+export function normalizarStatus(bruto: string): StatusNormalizado {
+  const limpo = bruto.trim();
+  if (!limpo) return 'SEM_STATUS';
+  return MAPA_STATUS[limpo.toUpperCase()] ?? 'DESCONHECIDO';
+}
+
+export interface CargaCompleta {
+  readonly oci: string;
+  readonly origem: string;
+  readonly uf_origem: string;
+  readonly destino: string;
+  readonly uf_destino: string;
+  readonly motorista: string;
+  readonly data_rec_oci: string | null;
+  readonly data_coleta: string | null;
+  readonly data_descarga: string | null;
+  /** O texto exatamente como está na célula. Nunca reescrito. */
+  readonly status: string;
+  /** `status` classificado em `StatusNormalizado`. Ver `normalizarStatus`. */
+  readonly status_normalizado: StatusNormalizado;
+  readonly valor: number | null;
+}
+
+function serialOuNulo(v: unknown): string | null {
+  return typeof v === 'number' ? serialParaISO(v) : null;
+}
+
+function paraCargaCompleta(linha: readonly unknown[]): CargaCompleta {
+  const valorBruto = linha[23];
+  const statusBruto = String(linha[21] ?? '').trim();
+  return {
+    oci: String(linha[4]),
+    origem: String(linha[5] ?? ''),
+    uf_origem: String(linha[6] ?? ''),
+    destino: String(linha[7] ?? ''),
+    uf_destino: String(linha[8] ?? ''),
+    motorista: String(linha[10] ?? '').trim(),
+    data_rec_oci: serialOuNulo(linha[9]),
+    data_coleta: serialOuNulo(linha[11]),
+    data_descarga: serialOuNulo(linha[12]),
+    status: statusBruto,
+    status_normalizado: normalizarStatus(statusBruto),
+    valor: typeof valorBruto === 'number' ? valorBruto : null,
+  };
+}
+
+/** 5 minutos: a planilha não muda a cada segundo, e cada renovação custa uma leitura de ~2600 linhas. */
+const CACHE_TODAS_TTL_MS = 5 * 60 * 1000;
+let cacheTodas: { cargas: readonly CargaCompleta[]; buscadoEm: number } | null = null;
+
+/** Só para teste: mesma razão de `_esquecerLocalizacaoParaTeste`. */
+export function _esquecerCacheTodasParaTeste(): void {
+  cacheTodas = null;
+}
+
+/**
+ * Só para teste: envelhece o cache além do TTL SEM apagá-lo — é o único jeito
+ * de testar "falha com cache velho disponível" sem esperar 5 minutos de
+ * verdade. `_esquecerCacheTodasParaTeste` apaga; esta função só faz o tempo
+ * passar.
+ */
+export function _expirarCacheTodasParaTeste(): void {
+  if (cacheTodas) cacheTodas = { ...cacheTodas, buscadoEm: Date.now() - CACHE_TODAS_TTL_MS - 1000 };
+}
+
+/**
+ * De onde veio o dado devolvido — para quem consome nunca confundir "fresco"
+ * com "velho". `null` só quando não há cargas nenhuma pra reportar (falha
+ * sem cache anterior disponível).
+ */
+export interface FonteDados {
+  readonly cache: boolean;
+  readonly buscado_em: string; // ISO
+  readonly idade_s: number;
+}
+
+function fonteDe(buscadoEmMs: number, deCache: boolean): FonteDados {
+  return {
+    cache: deCache,
+    buscado_em: new Date(buscadoEmMs).toISOString(),
+    idade_s: Math.max(0, Math.round((Date.now() - buscadoEmMs) / 1000)),
+  };
+}
+
+function formatarIdade(segundos: number): string {
+  if (segundos < 60) return `${segundos}s`;
+  const min = Math.floor(segundos / 60);
+  const resto = segundos % 60;
+  return resto > 0 ? `${min}min ${resto}s` : `${min}min`;
+}
+
+type ResultadoTodasAsCargas = {
+  ok: boolean;
+  texto: string;
+  cargas: readonly CargaCompleta[];
+  fonte: FonteDados | null;
+};
+
+/**
+ * Falha na leitura NUNCA serve o cache velho DISFARÇADO de dado atual — mas
+ * também não é obrigada a jogar fora a única informação que tem. Se existe
+ * cache anterior, a mensagem DIZ que não conseguiu atualizar e diz a idade
+ * do último dado válido; `cargas` continua vazio e `ok` continua `false`,
+ * porque quem pergunta "quantas cargas temos" quer um número CONFIÁVEL
+ * AGORA, não um número velho sem aviso.
+ */
+function falhaNaLeitura(motivoBase: string): ResultadoTodasAsCargas {
+  if (!cacheTodas) return { ok: false, texto: motivoBase, cargas: [], fonte: null };
+  const idadeS = Math.round((Date.now() - cacheTodas.buscadoEm) / 1000);
+  return {
+    ok: false,
+    texto: `${motivoBase} O último dado válido disponível é de ${formatarIdade(idadeS)} atrás — não uso um número velho como se fosse atual.`,
+    cargas: [],
+    fonte: fonteDe(cacheTodas.buscadoEm, true),
+  };
+}
+
+/**
+ * TODAS as cargas cadastradas na aba "2026" — cadastradas, não só coletadas.
+ * Cacheado 5 min em memória do processo: as habilidades de estatística
+ * (contagem, ranking, soma) tendem a ser pedidas em sequência numa mesma
+ * conversa, e reler ~2600 linhas a cada pergunta seria custo sem ganho.
+ *
+ * Falha NUNCA usa o cache velho para fingir sucesso — ver `falhaNaLeitura`.
+ */
+export async function todasAsCargas(): Promise<ResultadoTodasAsCargas> {
+  const t = token();
+  if (!t) return { ok: false, texto: 'MS_GRAPH_TOKEN não configurado — planilha de cargas desligada.', cargas: [], fonte: null };
+  if (!urlPlanilha()) {
+    return { ok: false, texto: 'MS_GRAPH_OCI_URL não configurado — não sei qual planilha ler.', cargas: [], fonte: null };
+  }
+
+  if (cacheTodas && Date.now() - cacheTodas.buscadoEm < CACHE_TODAS_TTL_MS) {
+    return {
+      ok: true,
+      texto: `${cacheTodas.cargas.length} cargas cadastradas.`,
+      cargas: cacheTodas.cargas,
+      fonte: fonteDe(cacheTodas.buscadoEm, true),
+    };
+  }
+
+  const loc = await resolverItem(t);
+  if (!loc.ok) return falhaNaLeitura(`Não consegui localizar a planilha: ${loc.motivo}.`);
+
+  const resultado = await buscarLinhasReais(t, loc.loc);
+  if (!resultado.ok) return falhaNaLeitura(`${resultado.motivo}.`);
+
+  const cargas = resultado.linhas.map(paraCargaCompleta);
+  const buscadoEm = Date.now();
+  cacheTodas = { cargas, buscadoEm };
+  return { ok: true, texto: `${cargas.length} cargas cadastradas.`, cargas, fonte: fonteDe(buscadoEm, false) };
+}
+
+// ---------------------------------------------------------------------------
+// Agregação — a parte "cálculo" do Analytics Engine, pura e sem I/O
+// ---------------------------------------------------------------------------
+
+export type AgruparPor = 'motorista' | 'rota' | 'origem' | 'destino' | 'status' | 'status_normalizado' | 'nenhum';
+
+export interface GrupoAgregado {
+  readonly chave: string;
+  readonly contagem: number;
+  readonly valor_total: number;
+}
+
+function chaveDoGrupo(c: CargaCompleta, agruparPor: AgruparPor): string {
+  switch (agruparPor) {
+    case 'motorista':
+      return c.motorista || '(sem motorista)';
+    case 'rota':
+      return `${c.origem || '?'} → ${c.destino || '?'}`;
+    case 'origem':
+      return c.origem || '(sem origem)';
+    case 'destino':
+      return c.destino || '(sem destino)';
+    case 'status':
+      return c.status || '(sem status)';
+    case 'status_normalizado':
+      return c.status_normalizado;
+    case 'nenhum':
+      return 'total';
+  }
+}
+
+/**
+ * Agrupa e soma — a mesma conta que `SUM/COUNT ... GROUP BY` faria, em cima
+ * de dado já tipado. Pura: não busca nada, não decide o que mostrar — quem
+ * chama decide ordenar por `contagem` ou por `valor_total` e cortar o topo.
+ */
+export function agregarCargas(
+  cargas: readonly CargaCompleta[],
+  agruparPor: AgruparPor,
+): readonly GrupoAgregado[] {
+  const grupos = new Map<string, { contagem: number; valor_total: number }>();
+  for (const c of cargas) {
+    const chave = chaveDoGrupo(c, agruparPor);
+    const atual = grupos.get(chave) ?? { contagem: 0, valor_total: 0 };
+    atual.contagem += 1;
+    atual.valor_total += c.valor ?? 0;
+    grupos.set(chave, atual);
+  }
+  return [...grupos.entries()].map(([chave, v]) => ({ chave, ...v }));
 }

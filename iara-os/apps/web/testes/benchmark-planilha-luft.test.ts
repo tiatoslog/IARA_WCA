@@ -31,7 +31,18 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { cargasNoPeriodo, _esquecerLocalizacaoParaTeste } from '../servidor/nucleo/ClientePlanilhaOcis';
+import {
+  cargasNoPeriodo,
+  todasAsCargas,
+  agregarCargas,
+  normalizarStatus,
+  _esquecerLocalizacaoParaTeste,
+  _esquecerCacheTodasParaTeste,
+  _expirarCacheTodasParaTeste,
+} from '../servidor/nucleo/ClientePlanilhaOcis';
+import { interpretarPeriodo } from '../servidor/nucleo/kernel/PeriodoOperacional';
+import { validar, ParametroInvalido } from '../servidor/nucleo/kernel/Habilidade';
+import { consultarEstatisticasCargasLuft } from '../servidor/nucleo/kernel/habilidades/cargasLuft';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE: { linhas: unknown[][] } = JSON.parse(
@@ -46,6 +57,7 @@ function comFixture(fn: () => Promise<void>): () => Promise<void> {
     process.env.MS_GRAPH_TOKEN = 'token-de-teste';
     process.env.MS_GRAPH_OCI_URL = 'https://contoso.sharepoint.com/:x:/r/sites/x/planilha.xlsx';
     _esquecerLocalizacaoParaTeste();
+    _esquecerCacheTodasParaTeste();
     const fetchOriginal = globalThis.fetch;
     globalThis.fetch = (async (url: string) => {
       const u = String(url);
@@ -65,6 +77,7 @@ function comFixture(fn: () => Promise<void>): () => Promise<void> {
     } finally {
       globalThis.fetch = fetchOriginal;
       _esquecerLocalizacaoParaTeste();
+      _esquecerCacheTodasParaTeste();
       for (const v of VARS) {
         if (antes[v] === undefined) delete process.env[v];
         else process.env[v] = antes[v];
@@ -152,3 +165,122 @@ test(
     assert.equal(apareceu, false, 'uma OCI sem DATA COLETA apareceu numa contagem — o filtro vazou');
   }),
 );
+
+// -----------------------------------------------------------------------
+// STAT-00N — estatísticas (fase 2), mesmo fixture congelado.
+//
+// IMPORTANTE: estes números são do FIXTURE (178 linhas fixas), não da
+// planilha ao vivo. "Quantas cargas cadastradas EXISTEM HOJE na planilha
+// real" muda toda vez que a Vania cadastra uma OCI nova — congelar ESSE
+// número como expected_result permanente seria travar um valor que tem que
+// mudar. O que trava aqui é a CONTA: dado um universo fixo e conhecido, o
+// motor de agregação sempre chega no mesmo resultado. Cada número abaixo
+// foi calculado por um script separado direto sobre o arquivo do fixture
+// (não à mão), antes de virar assertion — ver a conversa de 14/08/2026.
+// -----------------------------------------------------------------------
+
+test(
+  'STAT-001 — COUNT(*) sobre o universo todasAsCargas() do fixture = 178',
+  comFixture(async () => {
+    const r = await todasAsCargas();
+    assert.equal(r.ok, true);
+    assert.equal(r.cargas.length, 178);
+  }),
+);
+
+test(
+  'STAT-002 — SUM(valor) sobre o mesmo universo = R$ 316.172,00',
+  comFixture(async () => {
+    const r = await todasAsCargas();
+    const total = r.cargas.reduce((s, c) => s + (c.valor ?? 0), 0);
+    assert.ok(Math.abs(total - 316172) < 0.005, `esperado 316172.00, veio ${total.toFixed(2)}`);
+  }),
+);
+
+test(
+  'STAT-003 — COUNT(data_coleta IS NULL) = 5 (cadastrada ≠ coletada)',
+  comFixture(async () => {
+    const r = await todasAsCargas();
+    const semColeta = r.cargas.filter((c) => c.data_coleta === null);
+    assert.equal(semColeta.length, 5);
+  }),
+);
+
+test(
+  'STAT-004 — GROUP BY motorista, ORDER BY contagem DESC, LIMIT 1 = MOLINA (17)',
+  comFixture(async () => {
+    const r = await todasAsCargas();
+    const grupos = [...agregarCargas(r.cargas, 'motorista')].sort((a, b) => b.contagem - a.contagem);
+    assert.equal(grupos[0].chave, 'MOLINA');
+    assert.equal(grupos[0].contagem, 17);
+  }),
+);
+
+test(
+  'STAT-005/006 — GROUP BY rota, ORDER BY valor_total DESC, LIMIT 1 = PONTES E LACERDA → MIRASSOL DOESTE (R$ 22.495,00)',
+  comFixture(async () => {
+    const r = await todasAsCargas();
+    const grupos = [...agregarCargas(r.cargas, 'rota')].sort((a, b) => b.valor_total - a.valor_total);
+    assert.equal(grupos[0].chave, 'PONTES E LACERDA → MIRASSOL DOESTE');
+    assert.ok(Math.abs(grupos[0].valor_total - 22495) < 0.005);
+  }),
+);
+
+// --- testes negativos ---------------------------------------------------
+
+test('STAT-NEG-001 — data impossível (35/99) não vira consulta, interpretarPeriodo devolve null', () => {
+  assert.equal(interpretarPeriodo('35/99/2026'), null);
+  assert.equal(interpretarPeriodo('cargas do dia 35/99'), null);
+});
+
+test('STAT-NEG-002 — período vazio SEM ambiguidade: "" é "todas as cargas", não erro', () => {
+  // Contrato explícito de PeriodoOperacional: string vazia não é "período inexistente
+  // interpretado errado" — é ausência de filtro, e quem decide o que isso significa
+  // é a habilidade (aqui: todas as cargas cadastradas), nunca um palpite de data.
+  assert.equal(interpretarPeriodo(''), null);
+});
+
+test(
+  'STAT-NEG-003 — fonte indisponível com cache expirado NUNCA finge que o número é atual',
+  comFixture(async () => {
+    const primeira = await todasAsCargas();
+    assert.equal(primeira.ok, true);
+    assert.equal(primeira.fonte?.cache, false);
+
+    _expirarCacheTodasParaTeste();
+
+    globalThis.fetch = (async (url: string) => {
+      if (String(url).includes('/shares/')) {
+        return new Response(JSON.stringify({ error: { message: 'serviceUnavailable' } }), { status: 503 });
+      }
+      throw new Error('não devia ter ido além de /shares/ nesta falha');
+    }) as typeof fetch;
+
+    const segunda = await todasAsCargas();
+    assert.equal(segunda.ok, false, 'com a fonte fora do ar, NUNCA reporta sucesso usando o cache velho');
+    assert.equal(segunda.cargas.length, 0, 'e não entrega os números antigos como se fossem a resposta');
+    assert.match(segunda.texto, /último dado válido/i, 'a mensagem precisa avisar que o dado é velho, não calar sobre isso');
+    assert.equal(segunda.fonte?.cache, true, 'mas a proveniência da falha aponta pro cache que existia');
+  }),
+);
+
+test('STAT-NEG-004 — "agrupar_por" fora da lista aceita é recusado pelo próprio esquema, antes de executar', () => {
+  assert.throws(
+    () => validar(consultarEstatisticasCargasLuft.manifesto.esquema, { agrupar_por: 'coluna_que_nao_existe' }),
+    ParametroInvalido,
+  );
+});
+
+test('STAT-NEG-005 — status "7" nunca vira FINALIZADO por adivinhação', () => {
+  assert.equal(normalizarStatus('7'), 'DESCONHECIDO');
+  assert.notEqual(normalizarStatus('7'), 'FINALIZADO');
+});
+
+test('normalizarStatus colapsa as três grafias de "finalizado" achadas na auditoria, sem tocar o texto original', () => {
+  assert.equal(normalizarStatus('FINALIZADO'), 'FINALIZADO');
+  assert.equal(normalizarStatus('finalizado'), 'FINALIZADO');
+  assert.equal(normalizarStatus('FINALIZADA'), 'FINALIZADO');
+  assert.equal(normalizarStatus('PAGO'), 'PAGO');
+  assert.equal(normalizarStatus(''), 'SEM_STATUS');
+  assert.equal(normalizarStatus('   '), 'SEM_STATUS');
+});
