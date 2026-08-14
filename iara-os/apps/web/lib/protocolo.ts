@@ -119,7 +119,12 @@ export type PacoteCliente =
    * ele. Nunca carrega URL nem hash — o cliente não escolhe DE ONDE baixar
    * nem O QUE validar, isso é o manifesto do motor.
    */
-  | { tipo: 'atualizar_dispositivo'; id: string };
+  | { tipo: 'atualizar_dispositivo'; id: string }
+  /** Dá um nome à máquina, escolhido pela operadora — Etapa 4 (14/08/2026). O
+   *  hostname que o braço reporta sozinho ("DESKTOP-7F2A") não diz nada; "meu
+   *  notebook" ou "PC da sala" diz. `id` é o mesmo `id_credencial` das duas
+   *  ações acima. */
+  | { tipo: 'renomear_dispositivo'; id: string; nome: string };
 
 /**
  * Prioridade de descarte da fila de telemetria. Quanto menor, mais descartável.
@@ -214,6 +219,12 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
     const id = typeof obj.id === 'string' ? obj.id.trim() : '';
     if (!id) return null;
     return { tipo: 'atualizar_dispositivo', id: id.slice(0, 80) };
+  }
+  if (obj.tipo === 'renomear_dispositivo') {
+    const id = typeof obj.id === 'string' ? obj.id.trim() : '';
+    const nome = typeof obj.nome === 'string' ? obj.nome.trim() : '';
+    if (!id || !nome) return null;
+    return { tipo: 'renomear_dispositivo', id: id.slice(0, 80), nome: nome.slice(0, 80) };
   }
   if (obj.tipo === 'preferencias') {
     // `normalizarPreferencias` já é total: qualquer entrada vira uma ficha

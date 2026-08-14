@@ -224,12 +224,18 @@ export function useIaraSocket(credencial: Credencial) {
         setMaquinas(pacote.maquinas);
         setPareamentoDisponivel(pacote.pareamento_disponivel);
         /**
-         * `null` quando o pacote não traz ação: uma simples atualização de
-         * lista APAGA o recado anterior. Sem isso, "código não confere" ficaria
-         * na tela por cima de uma lista que já mudou — o recado sobreviveria ao
-         * fato que o produziu.
+         * SÓ SUBSTITUI quando o pacote traz uma ação nova — nunca apaga com
+         * `null`. Achado em auditoria (14/08/2026): a gaveta reconsulta a
+         * lista a cada 15 s enquanto está aberta (ver `Dispositivos.tsx`), e
+         * essa consulta periódica não carrega `ultima_acao` nenhuma — a
+         * versão antiga fazia `pacote.ultima_acao ?? null`, que apagava
+         * "autorizado com sucesso" quase instantaneamente, bem na hora em
+         * que o operador mais precisava ver a confirmação. Uma ação NOVA
+         * (autorizar, esquecer, renomear, atualizar) sempre chega com
+         * `ultima_acao` preenchida e substitui a anterior por conta própria;
+         * quem faz o recado sumir depois de um tempo é a gaveta, não o poll.
          */
-        setAcaoDispositivo(pacote.ultima_acao ?? null);
+        if (pacote.ultima_acao) setAcaoDispositivo(pacote.ultima_acao);
         return;
       }
 
@@ -515,6 +521,11 @@ export function useIaraSocket(credencial: Credencial) {
     (id: string) => pedirAoBarramento({ tipo: 'atualizar_dispositivo', id }),
     [pedirAoBarramento],
   );
+  /** Etapa 4 (14/08/2026) — dar um nome à máquina, escolhido pela operadora. */
+  const renomearComputador = useCallback(
+    (id: string, nome: string) => pedirAoBarramento({ tipo: 'renomear_dispositivo', id, nome }),
+    [pedirAoBarramento],
+  );
 
   /** Religa após uma recusa terminal — o gesto humano que zera a decisão. */
   const religar = useCallback(() => {
@@ -542,5 +553,6 @@ export function useIaraSocket(credencial: Credencial) {
     autorizarComputador,
     esquecerComputador,
     atualizarComputador,
+    renomearComputador,
   };
 }

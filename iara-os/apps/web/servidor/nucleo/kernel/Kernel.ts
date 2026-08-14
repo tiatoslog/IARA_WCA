@@ -457,9 +457,7 @@ export class Kernel {
       b.publicar({
         tipo: 'TAREFA_CONCLUIDA',
         id_mensagem: randomUUID(),
-        texto:
-          'Não consegui concluir esse pedido. Falhou em: ' +
-          `${mensagem}. O detalhe completo está no console técnico.`,
+        texto: this.mensagemHumanaDeFalha(mensagem),
         rota: 'falha',
         ms: Date.now() - inicio,
       });
@@ -1383,5 +1381,28 @@ export class Kernel {
     if (rota === 'sigilo') return 'recusa_sigilo';
     if (rota === 'plano_local') return 'sistema_local';
     return 'claude_nuvem';
+  }
+
+  /**
+   * A fala do operador não pode virar despejo de JSON.
+   *
+   * Achado em auditoria (14/08/2026): `(erro as Error).message` de um erro do
+   * SDK da Anthropic (sobrecarga, limite de taxa) TRAZ o corpo JSON da
+   * resposta embutido na string — e aquele texto ia inteiro para a bolha de
+   * chat, sem quebra de linha possível, estourando a largura do card. O
+   * `mensagem` bruto continua indo pro evento `FALHA` (console técnico); só a
+   * fala que o operador lê é que precisa ser curta e em português.
+   */
+  private mensagemHumanaDeFalha(bruta: string): string {
+    if (/overloaded_error|rate_limit_error/i.test(bruta)) {
+      return 'A camada de raciocínio da IARA está sobrecarregada agora. Tente de novo em alguns segundos.';
+    }
+    if (/timeout|ETIMEDOUT/i.test(bruta)) {
+      return 'A resposta demorou demais e foi interrompida. Tente de novo.';
+    }
+    const pareceTecnica = bruta.trim().startsWith('{') || bruta.length > 200;
+    return pareceTecnica
+      ? 'Não consegui concluir esse pedido agora. O detalhe técnico ficou registrado; tente de novo.'
+      : `Não consegui concluir esse pedido: ${bruta}`;
   }
 }

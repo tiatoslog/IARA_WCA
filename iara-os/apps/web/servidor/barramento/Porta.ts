@@ -464,7 +464,8 @@ export function conectarOperador(socket: WebSocket): void {
       pacote.tipo === 'dispositivos' ||
       pacote.tipo === 'parear' ||
       pacote.tipo === 'esquecer_dispositivo' ||
-      pacote.tipo === 'atualizar_dispositivo'
+      pacote.tipo === 'atualizar_dispositivo' ||
+      pacote.tipo === 'renomear_dispositivo'
     ) {
       const dono = operador;
       const sessao = minhaSessao;
@@ -508,6 +509,11 @@ export function conectarOperador(socket: WebSocket): void {
             acao = r.ok
               ? { ok: true, texto: `"${r.nome}" foi autorizado. Ele conecta sozinho em segundos.` }
               : { ok: false, texto: r.motivo };
+          } else if (pedido.tipo === 'renomear_dispositivo') {
+            const trocou = await pareamento.renomear(dono.id_usuario, pedido.id, pedido.nome);
+            acao = trocou
+              ? { ok: true, texto: `Pronto — agora ele se chama "${pedido.nome}".` }
+              : { ok: false, texto: 'Não consegui renomear esse computador agora.' };
           } else if (pedido.tipo === 'esquecer_dispositivo') {
             const removida = await pareamento.revogar(dono.id_usuario, pedido.id);
             /**

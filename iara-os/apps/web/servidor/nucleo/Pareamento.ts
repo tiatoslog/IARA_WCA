@@ -152,6 +152,8 @@ export interface RepositorioDispositivos {
   listar(idUsuario: string): Promise<DispositivoPareado[]>;
   /** `false` quando a credencial não é deste operador — ver `revogar`. */
   revogar(idUsuario: string, idCredencial: string): Promise<boolean>;
+  /** `false` quando a credencial não é deste operador ou já foi revogada. */
+  renomear(idUsuario: string, idCredencial: string, novoNome: string): Promise<boolean>;
 }
 
 interface Pendente {
@@ -420,6 +422,19 @@ export class RegistroPareamento {
     return this.repositorio.revogar(idUsuario, idCredencial);
   }
 
+  /**
+   * O NOME É DA OPERADORA, NÃO DO HOSTNAME. Etapa 4 (14/08/2026) — a gaveta
+   * só mostrava o que o braço reportou sozinho (`hostname()`, geralmente algo
+   * como "DESKTOP-7F2A"), e não havia onde trocar isso por "meu notebook" ou
+   * "PC da recepção". Mesma disciplina de `revogar`: `idUsuario` entra na
+   * condição da escrita, nunca é conferido antes e aplicado depois.
+   */
+  renomear(idUsuario: string, idCredencial: string, novoNome: string): Promise<boolean> {
+    const limpo = novoNome.trim().slice(0, 80);
+    if (!limpo) return Promise.resolve(false);
+    return this.repositorio.renomear(idUsuario, idCredencial, limpo);
+  }
+
   private acharPorCodigo(codigo: string): Pendente | null {
     for (const p of this.pendentes.values()) if (iguais(p.codigo, codigo)) return p;
     return null;
@@ -535,6 +550,20 @@ class RepositorioSupabase implements RepositorioDispositivos {
       .update({ revogado_em: new Date().toISOString() })
       /* As duas condições na MESMA escrita. Ler o dono e depois escrever seria
          a janela em que a linha muda de mãos entre os dois passos. */
+      .eq('id_credencial', idCredencial)
+      .eq('id_usuario', idUsuario)
+      .is('revogado_em', null)
+      .select('id_credencial');
+    if (error || !data) return false;
+    return data.length > 0;
+  }
+
+  async renomear(idUsuario: string, idCredencial: string, novoNome: string): Promise<boolean> {
+    const bd = supabase();
+    if (!bd) return false;
+    const { data, error } = await bd
+      .from('dispositivos_pareados')
+      .update({ nome: novoNome })
       .eq('id_credencial', idCredencial)
       .eq('id_usuario', idUsuario)
       .is('revogado_em', null)

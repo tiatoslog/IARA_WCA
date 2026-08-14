@@ -85,6 +85,8 @@ interface Props {
   onEsquecerComputador?: (id: string) => boolean;
   /** Etapa 2 (14/08/2026) — "Atualizar agora" numa máquina desatualizada. */
   onAtualizarComputador?: (id: string) => boolean;
+  /** Etapa 4 (14/08/2026) — dar um nome à máquina, escolhido pela operadora. */
+  onRenomearComputador?: (id: string, nome: string) => boolean;
   /** Código lido do QR do braço (`?parear=`). `null` fora desse caminho. */
   codigoDePareamentoUrl?: string | null;
 }
@@ -117,6 +119,7 @@ export function PainelConversa({
   onAutorizarComputador,
   onEsquecerComputador,
   onAtualizarComputador,
+  onRenomearComputador,
   codigoDePareamentoUrl = null,
 }: Props) {
   const [rascunho, setRascunho] = useState('');
@@ -356,6 +359,7 @@ export function PainelConversa({
             aoAutorizar={onAutorizarComputador ?? (() => false)}
             aoEsquecer={(id) => onEsquecerComputador?.(id)}
             aoAtualizar={(id) => onAtualizarComputador?.(id) ?? false}
+            aoRenomear={(id, nome) => onRenomearComputador?.(id, nome) ?? false}
             aoFechar={() => setGaveta('nenhuma')}
           />
         </div>

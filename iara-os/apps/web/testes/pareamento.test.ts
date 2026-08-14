@@ -111,6 +111,15 @@ class BancoDeMentira implements RepositorioDispositivos {
     return true;
   }
 
+  async renomear(idUsuario: string, idCredencial: string, novoNome: string): Promise<boolean> {
+    const l = this.linhas.find(
+      (x) => x.id_credencial === idCredencial && x.id_usuario === idUsuario && x.revogado_em === null,
+    );
+    if (!l) return false;
+    l.nome = novoNome;
+    return true;
+  }
+
   private descrever(l: Linha): DispositivoPareado {
     return {
       id_credencial: l.id_credencial,
@@ -178,6 +187,26 @@ test('P2. a credencial emitida identifica o dispositivo, e a revogada não ident
     null,
     'uma credencial revogada continuou valendo — o botão "desconectar" seria decoração',
   );
+});
+
+test('P2b. renomear troca o nome exibido, e só o dono pode renomear', async () => {
+  const { p } = registro();
+  const pedido = p.abrir(MAQUINA)!;
+  await p.aprovar(pedido.codigo, ANA);
+  const antes = (await p.listar(ANA.id_usuario))[0];
+  assert.equal(antes.nome, 'DESKTOP-ANA');
+
+  assert.equal(await p.renomear(ANA.id_usuario, antes.id_credencial, 'Meu notebook'), true);
+  const depois = (await p.listar(ANA.id_usuario))[0];
+  assert.equal(depois.nome, 'Meu notebook');
+
+  // Bruno não pode renomear o computador de Ana.
+  assert.equal(await p.renomear(BRUNO.id_usuario, antes.id_credencial, 'roubado'), false);
+  assert.equal((await p.listar(ANA.id_usuario))[0].nome, 'Meu notebook');
+
+  // Nome vazio ou só espaço não apaga o nome existente.
+  assert.equal(await p.renomear(ANA.id_usuario, antes.id_credencial, '   '), false);
+  assert.equal((await p.listar(ANA.id_usuario))[0].nome, 'Meu notebook');
 });
 
 test('P3. a lista do operador só traz as máquinas DELE', async () => {

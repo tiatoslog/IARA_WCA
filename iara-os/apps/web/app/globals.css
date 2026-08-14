@@ -1164,6 +1164,12 @@ ol.plano {
   line-height: 1.55;
   padding: 10px 14px;
   white-space: pre-wrap;
+  /* `pre-wrap` só quebra em espaço/nova-linha — uma palavra sem espaço (JSON
+     cru, URL longa, token) estoura a largura do balão. Achado em auditoria
+     (14/08/2026) com um erro técnico que vazou pra tela: mesmo com a fala
+     saneada na origem (Kernel.mensagemHumanaDeFalha), o balão precisa se
+     defender sozinho de qualquer string sem espaço que chegue até ele. */
+  overflow-wrap: anywhere;
   border: 1px solid var(--c-linha);
   animation: surgir 260ms cubic-bezier(0.3, 0.9, 0.4, 1);
 }
@@ -1520,6 +1526,41 @@ ol.plano {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Etapa 4 (14/08/2026) — o nome vira botão só quando dá pra renomear
+   (máquina pareada). Reset de botão nativo + o mesmo texto de `.maquina-nome`,
+   com um sublinhado tênue no hover: o convite discreto de "isto se edita". */
+.maquina-nome-botao {
+  font-family: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  text-underline-offset: 3px;
+}
+
+.maquina-nome-botao:hover:not(:disabled) {
+  text-decoration: underline dotted var(--c-tinta-3);
+}
+
+.maquina-nome-botao:disabled {
+  cursor: default;
+}
+
+.maquina-nome-editar {
+  font-family: inherit;
+  font-size: var(--t-ui);
+  font-weight: 600;
+  color: var(--c-tinta);
+  background: var(--c-fundo);
+  border: 1px solid var(--c-linha);
+  border-radius: 6px;
+  padding: 1px 6px;
+  width: 100%;
+  min-width: 0;
 }
 
 .maquina-detalhe {

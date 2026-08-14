@@ -482,7 +482,19 @@ export async function inventarioDeMaquinas(
     const vivo = vivosPorCredencial.get(p.id_credencial);
     return {
       id: p.id_credencial,
-      nome: vivo?.nome ?? p.nome,
+      /**
+       * O NOME É SEMPRE O DA COLUNA, NUNCA O AO VIVO — ao contrário de todo o
+       * resto deste objeto. Achado em auditoria (14/08/2026), testando o
+       * "renomear" de ponta a ponta: o valor gravava certo no banco (conferido
+       * direto no Supabase) e a tela CONTINUAVA mostrando o hostname antigo
+       * enquanto a máquina estava conectada — porque `vivo.nome` é o que o
+       * braço reporta sozinho na apresentação (`NOME` do processo, geralmente
+       * um hostname sem graça), e vencia por aqui. É exatamente o hostname que
+       * renomear existe para sobrepor; deixá-lo voltar a cada reconexão
+       * tornaria a função inútil no único momento em que ela importa — a
+       * máquina que está "atendendo agora".
+       */
+      nome: p.nome,
       plataforma: vivo?.plataforma ?? p.plataforma,
       versao: vivo?.versao ?? null,
       conectada: Boolean(vivo),

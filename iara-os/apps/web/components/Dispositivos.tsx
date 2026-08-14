@@ -80,11 +80,13 @@ function Maquina({
   podeAgir,
   aoEsquecer,
   aoAtualizar,
+  aoRenomear,
 }: {
   maquina: MaquinaDoOperador;
   podeAgir: boolean;
   aoEsquecer: (id: string) => void;
   aoAtualizar: (id: string) => void;
+  aoRenomear: (id: string, nome: string) => void;
 }) {
   /**
    * Confirmação em dois toques, no próprio botão. Um `window.confirm` seria uma
@@ -99,6 +101,25 @@ function Maquina({
     return () => clearTimeout(t);
   }, [confirmando]);
 
+  /**
+   * RENOMEAR — Etapa 4 (14/08/2026). O hostname que o braço reporta sozinho
+   * ("DESKTOP-7F2A") não diz nada à operadora; só ela sabe se é "meu
+   * notebook" ou "PC da recepção". Clicar no nome abre a edição — o mesmo
+   * gesto de renomear um arquivo, não um formulário à parte.
+   */
+  const [editando, setEditando] = useState(false);
+  const [rascunhoNome, setRascunhoNome] = useState(maquina.nome);
+  useEffect(() => {
+    if (!editando) setRascunhoNome(maquina.nome);
+  }, [maquina.nome, editando]);
+
+  const confirmarNome = () => {
+    const limpo = rascunhoNome.trim();
+    setEditando(false);
+    if (limpo && limpo !== maquina.nome) aoRenomear(maquina.id, limpo);
+    else setRascunhoNome(maquina.nome);
+  };
+
   return (
     <li className="maquina">
       <span
@@ -106,7 +127,40 @@ function Maquina({
         className={maquina.conectada ? 'maquina-sinal ligado' : 'maquina-sinal'}
       />
       <div className="maquina-corpo">
-        <span className="maquina-nome">{maquina.nome}</span>
+        {editando ? (
+          <input
+            type="text"
+            className="maquina-nome-editar"
+            value={rascunhoNome}
+            maxLength={80}
+            autoFocus
+            aria-label={`Nome de ${maquina.nome}`}
+            onChange={(e) => setRascunhoNome(e.target.value)}
+            onBlur={confirmarNome}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmarNome();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setRascunhoNome(maquina.nome);
+                setEditando(false);
+              }
+            }}
+          />
+        ) : maquina.pareada ? (
+          <button
+            type="button"
+            className="maquina-nome maquina-nome-botao"
+            disabled={!podeAgir}
+            title="Dar um nome a este computador"
+            onClick={() => setEditando(true)}
+          >
+            {maquina.nome}
+          </button>
+        ) : (
+          <span className="maquina-nome">{maquina.nome}</span>
+        )}
         <span className="maquina-detalhe">
           {sistemaLegivel(maquina.plataforma)}
           {' · '}
@@ -201,6 +255,7 @@ export function Dispositivos({
   aoAutorizar,
   aoEsquecer,
   aoAtualizar,
+  aoRenomear,
   aoFechar,
 }: {
   /** `null` = a lista ainda não chegou. Ver o cabeçalho. */
@@ -216,6 +271,8 @@ export function Dispositivos({
   aoEsquecer: (id: string) => void;
   /** Etapa 2 (14/08/2026) — "Atualizar agora". */
   aoAtualizar: (id: string) => void;
+  /** Etapa 4 (14/08/2026) — dar um nome à máquina, escolhido pela operadora. */
+  aoRenomear: (id: string, nome: string) => void;
   aoFechar: () => void;
 }) {
   const [codigo, setCodigo] = useState(codigoInicial ?? '');
@@ -241,6 +298,25 @@ export function Dispositivos({
      responde "não confere" — um erro que a própria tela produziu. */
   useEffect(() => {
     if (ultimaAcao?.ok) setCodigo('');
+  }, [ultimaAcao]);
+
+  /**
+   * O RECADO SOME SOZINHO, DEPOIS DE UM TEMPO PRA LER — nunca antes disso.
+   *
+   * Achado em auditoria (14/08/2026): a versão anterior deixava o servidor
+   * apagar `ultimaAcao` a cada poll de 15 s sem ação nova — e como a gaveta
+   * também pergunta a lista ao ABRIR, um "autorizado com sucesso" podia sumir
+   * em menos de um segundo se a resposta do pareamento e o poll seguinte se
+   * cruzassem. Agora o servidor só troca o recado quando há ação nova (ver
+   * `useIaraSocket`), e é esta tela — não o poll — que decide quando ele
+   * deixa de valer a pena mostrar.
+   */
+  const [recadoLocal, setRecadoLocal] = useState(ultimaAcao);
+  useEffect(() => {
+    setRecadoLocal(ultimaAcao);
+    if (!ultimaAcao) return;
+    const t = setTimeout(() => setRecadoLocal(null), 6000);
+    return () => clearTimeout(t);
   }, [ultimaAcao]);
 
   const autorizar = () => {
@@ -278,6 +354,7 @@ export function Dispositivos({
               podeAgir={conectado}
               aoEsquecer={aoEsquecer}
               aoAtualizar={aoAtualizar}
+              aoRenomear={aoRenomear}
             />
           ))}
         </ul>
@@ -329,24 +406,36 @@ export function Dispositivos({
           </small>
         )}
 
-        {ultimaAcao && (
-          <small className={ultimaAcao.ok ? 'parear-recado ok' : 'parear-recado erro'} role="status">
-            {ultimaAcao.texto}
+        {recadoLocal && (
+          <small className={recadoLocal.ok ? 'parear-recado ok' : 'parear-recado erro'} role="status">
+            {recadoLocal.texto}
           </small>
         )}
       </div>
 
       <div className="ficha-campo">
-        <span>Instalar a automação num computador</span>
+        {/*
+          Achado em auditoria (14/08/2026): o rótulo e a explicação eram os
+          mesmos com zero ou três computadores já ligados — quem já tinha
+          instalado e pareado via a mesma chamada de "instalar", como se nada
+          tivesse funcionado. O botão continua aqui (adicionar uma SEGUNDA
+          máquina é legítimo), só o texto muda de "instalar" para "ligar mais
+          um" quando já existe pelo menos um computador na lista.
+        */}
+        <span>
+          {maquinas && maquinas.length > 0
+            ? 'Ligar outro computador'
+            : 'Instalar a automação num computador'}
+        </span>
         {INSTALADOR ? (
           <>
             <a className="ficha-salvar instalar" href={INSTALADOR} download>
               Baixar o programa
             </a>
             <small>
-              Baixe no computador que você quer usar, abra o arquivo e volte aqui
-              com o código que ele mostrar. Só precisa ser feito uma vez por
-              máquina.
+              {maquinas && maquinas.length > 0
+                ? 'Baixe no computador novo, abra o arquivo e volte aqui com o código que ele mostrar.'
+                : 'Baixe no computador que você quer usar, abra o arquivo e volte aqui com o código que ele mostrar. Só precisa ser feito uma vez por máquina.'}
             </small>
           </>
         ) : (

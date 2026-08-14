@@ -456,21 +456,7 @@ export class ClienteClaude {
       output_config: { effort: this.esforco },
     };
 
-    const stream = this.cliente.messages.stream(
-      parametros as unknown as Parameters<Anthropic['messages']['stream']>[0],
-      { signal: pedido.sinal },
-    );
-
-    let texto = '';
-    for await (const evento of stream) {
-      if (pedido.sinal.aborted) break;
-      if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') {
-        texto += evento.delta.text;
-        pedido.aoReceberTexto(evento.delta.text);
-      }
-    }
-
-    const final = await stream.finalMessage();
+    const { texto, final } = await this.transmitirComRetentativa(parametros, pedido);
     const recusado = final.stop_reason === 'refusal';
 
     return {
@@ -482,5 +468,72 @@ export class ClienteClaude {
       cache_lido: final.usage.cache_read_input_tokens ?? 0,
       recusado,
     };
+  }
+
+  /**
+   * RETENTATIVA SÓ ANTES DO PRIMEIRO TOKEN. Achado em auditoria (14/08/2026):
+   * `overloaded_error` da Anthropic derrubava o turno inteiro na primeira
+   * sobrecarga, sem nenhuma nova tentativa — o operador via a falha crua
+   * (consertada em `Kernel.mensagemHumanaDeFalha`) mesmo quando um segundo
+   * disparo, um instante depois, teria funcionado.
+   *
+   * A retentativa só é segura enquanto NENHUM pedaço de texto chegou ainda ao
+   * operador (`algumTextoChegou`): repetir depois de texto parcial duplicaria
+   * ou misturaria a fala na tela, o que é pior que a falha original. Por isso
+   * o corte é rígido — um único `content_block_delta` já fecha a porta da
+   * retentativa, e o erro sobe puro para quem chamou.
+   */
+  private async transmitirComRetentativa(
+    parametros: Record<string, unknown>,
+    pedido: PedidoRaciocinio,
+  ): Promise<{ texto: string; final: Anthropic.Message }> {
+    const MAX_TENTATIVAS = 3;
+    const RECUO_BASE_MS = 1000;
+
+    for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
+      let texto = '';
+      let algumTextoChegou = false;
+      try {
+        const stream = this.cliente!.messages.stream(
+          parametros as unknown as Parameters<Anthropic['messages']['stream']>[0],
+          { signal: pedido.sinal },
+        );
+        for await (const evento of stream) {
+          if (pedido.sinal.aborted) break;
+          if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') {
+            texto += evento.delta.text;
+            algumTextoChegou = true;
+            pedido.aoReceberTexto(evento.delta.text);
+          }
+        }
+        const final = await stream.finalMessage();
+        return { texto, final };
+      } catch (erro) {
+        const podeTentarDeNovo =
+          !pedido.sinal.aborted &&
+          !algumTextoChegou &&
+          this.ehErroTransitorio(erro) &&
+          tentativa < MAX_TENTATIVAS;
+        if (!podeTentarDeNovo) throw erro;
+        const espera = RECUO_BASE_MS * 2 ** (tentativa - 1);
+        await new Promise((resolver) => setTimeout(resolver, espera));
+      }
+    }
+    // Inatingível: o laço acima sempre retorna ou lança antes de terminar as
+    // tentativas — mas o TypeScript não sabe disso sem um retorno explícito.
+    throw new Error('retentativa esgotada sem lançar o erro original');
+  }
+
+  /** 429 (limite de taxa) e 529/`overloaded_error` (sobrecarga) são o par que
+   *  realmente se resolve tentando de novo alguns segundos depois; o resto —
+   *  400 de payload malformado, 401 de credencial errada — tentar de novo só
+   *  repete o mesmo erro mais devagar. */
+  private ehErroTransitorio(erro: unknown): boolean {
+    const status = (erro as { status?: number } | null)?.status;
+    if (status === 429 || status === 500 || status === 502 || status === 503 || status === 529) {
+      return true;
+    }
+    const mensagem = erro instanceof Error ? erro.message : String(erro);
+    return /overloaded_error|rate_limit_error/i.test(mensagem);
   }
 }
