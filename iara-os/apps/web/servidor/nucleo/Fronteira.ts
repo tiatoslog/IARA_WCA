@@ -183,6 +183,9 @@ export const LEITURA_EXTERNA: readonly string[] = [
   // Microsoft Graph: lê e-mail e busca no SharePoint. Ver `POST_SEM_EFEITO`
   // para o POST de busca — é consulta, não escrita.
   'servidor/nucleo/ClienteGraph.ts',
+  // Lê a planilha de cargas da operação LUFT via Graph. Só GET — nada é
+  // criado, alterado nem entregue a ninguém no SharePoint.
+  'servidor/nucleo/ClientePlanilhaOcis.ts',
 ];
 
 /**

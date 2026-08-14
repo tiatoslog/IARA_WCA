@@ -129,6 +129,9 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
   // contra o tenant da Atos Log); um tenant de outra geografia só precisa
   // declarar o valor que a própria Graph disser ser válido.
   MS_GRAPH_REGIAO: { natureza: 'texto', papel: 'região exigida pela Search API em token de aplicativo' },
+  // A planilha "VANIA - CONTROLE OCIS 2025" (operação LUFT). Link de
+  // compartilhamento, não caminho — ver `ClientePlanilhaOcis.ts`.
+  MS_GRAPH_OCI_URL: { natureza: 'url', papel: 'link da planilha de controle de OCIs (operação LUFT)' },
 
   // — o canal WhatsApp
   WHATSAPP_TOKEN: { natureza: 'segredo_cabecalho', papel: 'token da Graph API' },
