@@ -33,11 +33,55 @@
  * Layer, fase 1).
  */
 
+import XLSX from 'xlsx';
+
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const TEMPO_LIMITE_MS = 15_000;
 const ABA_VIVA = '2026';
 /** Linha 1 é cabeçalho; dado real começa na 5 (linhas 2-4 são sub-cabeçalho/resumo). */
 const PRIMEIRA_LINHA_DE_DADO = 5;
+
+// ---------------------------------------------------------------------------
+// Retentativa — só para o que vale a pena repetir
+// ---------------------------------------------------------------------------
+
+/**
+ * 429 (Graph pedindo pra esperar), 502/503/504 (backend fora do ar por um
+ * instante — foi exatamente o que aconteceu em 14/08/2026: o serviço de
+ * SESSÃO do Excel Online, não a Graph em si, devolveu
+ * `FileOpenHostServiceUnavailable`). 401/403/404 são definitivos — insistir
+ * não resolve, só atrasa a resposta que já sabemos que vai falhar.
+ */
+const HTTP_RETENTAVEL = new Set([429, 502, 503, 504]);
+const RETENTATIVAS_MAX = 3;
+const RETENTATIVA_BASE_MS = 400;
+
+function esperar(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * `fetch` com até `RETENTATIVAS_MAX` tentativas para erro transitório (HTTP
+ * ou de rede/timeout). Devolve a `Response` da última tentativa (pode não
+ * ser `.ok`) ou lança o erro de rede da última tentativa — quem chama
+ * continua tratando os dois casos como já tratava, só que agora depois de
+ * já ter insistido.
+ */
+async function fetchComRetentativa(url: string, opts: RequestInit): Promise<Response> {
+  for (let tentativa = 1; tentativa <= RETENTATIVAS_MAX; tentativa++) {
+    try {
+      const resposta = await fetch(url, opts);
+      if (resposta.ok || !HTTP_RETENTAVEL.has(resposta.status) || tentativa === RETENTATIVAS_MAX) {
+        return resposta;
+      }
+    } catch (erro) {
+      if (tentativa === RETENTATIVAS_MAX) throw erro;
+    }
+    await esperar(RETENTATIVA_BASE_MS * 2 ** (tentativa - 1));
+  }
+  // Inalcançável: o laço sempre devolve ou lança na última iteração.
+  throw new Error('fetchComRetentativa: estado inalcançável');
+}
 
 function token(): string {
   return (process.env.MS_GRAPH_TOKEN ?? '').trim();
@@ -81,7 +125,7 @@ async function resolverItem(t: string): Promise<{ ok: true; loc: LocalizacaoItem
 
   const shareId = paraShareId(urlPlanilha());
   try {
-    const resposta = await fetch(
+    const resposta = await fetchComRetentativa(
       `${GRAPH}/shares/${shareId}/driveItem?$select=id,parentReference`,
       { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) },
     );
@@ -110,7 +154,7 @@ async function lerRange(
     `${GRAPH}/drives/${loc.driveId}/items/${loc.itemId}/workbook/worksheets('${encodeURIComponent(aba)}')` +
     `/range(address='${endereco}')?$select=values`;
   try {
-    const resposta = await fetch(caminho, {
+    const resposta = await fetchComRetentativa(caminho, {
       headers: { Authorization: `Bearer ${t}` },
       signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
     });
@@ -125,19 +169,62 @@ async function lerRange(
   }
 }
 
+/**
+ * FALLBACK — baixa o `.xlsx` bruto e lê localmente. Existe porque o erro que
+ * derrubou a leitura em 14/08/2026 não veio da Graph: veio do serviço de
+ * SESSÃO do Excel Online (`FileOpenHostServiceUnavailable`), que a API de
+ * range acima depende e este caminho não. `/content` é download de arquivo
+ * comum — mesma confiabilidade de baixar qualquer arquivo do SharePoint.
+ *
+ * Só entra em jogo depois que `buscarLinhasReais` já tentou a API (com
+ * retentativa) e falhou de verdade — nunca é o caminho padrão, por custar
+ * mais banda (o arquivo inteiro, ~2 MB, em vez de um range seletivo).
+ */
+async function baixarEParsearArquivo(
+  t: string,
+  loc: LocalizacaoItem,
+): Promise<{ ok: true; linhas: unknown[][] } | { ok: false; motivo: string }> {
+  try {
+    const resposta = await fetchComRetentativa(
+      `${GRAPH}/drives/${loc.driveId}/items/${loc.itemId}/content`,
+      { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) },
+    );
+    if (!resposta.ok) {
+      return { ok: false, motivo: `Graph recusou o download do arquivo (HTTP ${resposta.status})` };
+    }
+    const buffer = Buffer.from(await resposta.arrayBuffer());
+    const pasta = XLSX.read(buffer, { type: 'buffer' });
+    const folha = pasta.Sheets[ABA_VIVA];
+    if (!folha) return { ok: false, motivo: `o arquivo baixado não tem a aba "${ABA_VIVA}"` };
+
+    // `raw: true` mantém data como serial numérico (igual a Graph) em vez de
+    // converter para `Date` — as duas fontes precisam produzir o MESMO
+    // formato pra `paraCarga`/`paraCargaCompleta` funcionarem sem saber qual
+    // caminho as trouxe.
+    const todasAsLinhas = XLSX.utils.sheet_to_json<unknown[]>(folha, { header: 1, raw: true, defval: '' });
+    const linhas = todasAsLinhas.slice(PRIMEIRA_LINHA_DE_DADO - 1);
+    return { ok: true, linhas };
+  } catch (erro) {
+    return { ok: false, motivo: (erro as Error).message };
+  }
+}
+
 const letraColuna = (n: number): string => String.fromCharCode(65 + n);
+
+/** De onde as linhas vieram — auditável em `fonte.via`, sem aparecer na resposta ao operador. */
+export type ViaLeitura = 'api' | 'download';
 
 /**
  * O par usedRange → range(A{PRIMEIRA_LINHA_DE_DADO}:...) que tanto
  * `cargasNoPeriodo` quanto `todasAsCargas` precisam. Extraído para não haver
  * dois lugares reimplementando a mesma leitura de forma sutilmente diferente.
  */
-async function buscarLinhasReais(
+async function buscarLinhasReaisViaApi(
   t: string,
   loc: LocalizacaoItem,
 ): Promise<{ ok: true; linhas: unknown[][] } | { ok: false; motivo: string }> {
   const enc = encodeURIComponent(ABA_VIVA);
-  const dimensoes = await fetch(
+  const dimensoes = await fetchComRetentativa(
     `${GRAPH}/drives/${loc.driveId}/items/${loc.itemId}/workbook/worksheets('${enc}')` +
       `/usedRange?$select=address,rowCount,columnCount`,
     { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) },
@@ -157,6 +244,33 @@ async function buscarLinhasReais(
   if (!dados.ok) return { ok: false, motivo: dados.motivo };
 
   return { ok: true, linhas: dados.valores.filter(linhaReal) };
+}
+
+/**
+ * A leitura de verdade: API primeiro (com retentativa já embutida em cada
+ * chamada). SÓ se ela falhar de ponta a ponta é que cai pro download bruto —
+ * automático, sem o operador perceber qual caminho respondeu. Se os DOIS
+ * falharem, o motivo reportado é o da API (é o caminho padrão, e é o que
+ * quem for investigar precisa ver primeiro); o motivo do download fica só
+ * no log técnico, para não empilhar dois parágrafos de erro na resposta.
+ */
+async function buscarLinhasReais(
+  t: string,
+  loc: LocalizacaoItem,
+): Promise<{ ok: true; linhas: unknown[][]; via: ViaLeitura } | { ok: false; motivo: string }> {
+  const viaApi = await buscarLinhasReaisViaApi(t, loc);
+  if (viaApi.ok) return { ok: true, linhas: viaApi.linhas, via: 'api' };
+
+  const viaDownload = await baixarEParsearArquivo(t, loc);
+  if (viaDownload.ok) {
+    const linhas = viaDownload.linhas.filter(linhaReal);
+    console.warn(
+      `[iara] planilha LUFT: API falhou (${viaApi.motivo}) — respondeu via download bruto do arquivo, sem interrupção para o operador.`,
+    );
+    return { ok: true, linhas, via: 'download' };
+  }
+
+  return { ok: false, motivo: viaApi.motivo };
 }
 
 /** Serial de data do Excel (dias desde 1899-12-30) -> "AAAA-MM-DD". O valor é um dia civil puro, sem fuso envolvido. */
@@ -327,7 +441,7 @@ function paraCargaCompleta(linha: readonly unknown[]): CargaCompleta {
 
 /** 5 minutos: a planilha não muda a cada segundo, e cada renovação custa uma leitura de ~2600 linhas. */
 const CACHE_TODAS_TTL_MS = 5 * 60 * 1000;
-let cacheTodas: { cargas: readonly CargaCompleta[]; buscadoEm: number } | null = null;
+let cacheTodas: { cargas: readonly CargaCompleta[]; buscadoEm: number; via: ViaLeitura } | null = null;
 
 /** Só para teste: mesma razão de `_esquecerLocalizacaoParaTeste`. */
 export function _esquecerCacheTodasParaTeste(): void {
@@ -353,13 +467,16 @@ export interface FonteDados {
   readonly cache: boolean;
   readonly buscado_em: string; // ISO
   readonly idade_s: number;
+  /** Qual caminho de leitura respondeu — a API (padrão) ou o download bruto (fallback automático). */
+  readonly via: ViaLeitura;
 }
 
-function fonteDe(buscadoEmMs: number, deCache: boolean): FonteDados {
+function fonteDe(buscadoEmMs: number, deCache: boolean, via: ViaLeitura): FonteDados {
   return {
     cache: deCache,
     buscado_em: new Date(buscadoEmMs).toISOString(),
     idade_s: Math.max(0, Math.round((Date.now() - buscadoEmMs) / 1000)),
+    via,
   };
 }
 
@@ -392,7 +509,7 @@ function falhaNaLeitura(motivoBase: string): ResultadoTodasAsCargas {
     ok: false,
     texto: `${motivoBase} O último dado válido disponível é de ${formatarIdade(idadeS)} atrás — não uso um número velho como se fosse atual.`,
     cargas: [],
-    fonte: fonteDe(cacheTodas.buscadoEm, true),
+    fonte: fonteDe(cacheTodas.buscadoEm, true, cacheTodas.via),
   };
 }
 
@@ -416,7 +533,7 @@ export async function todasAsCargas(): Promise<ResultadoTodasAsCargas> {
       ok: true,
       texto: `${cacheTodas.cargas.length} cargas cadastradas.`,
       cargas: cacheTodas.cargas,
-      fonte: fonteDe(cacheTodas.buscadoEm, true),
+      fonte: fonteDe(cacheTodas.buscadoEm, true, cacheTodas.via),
     };
   }
 
@@ -428,8 +545,8 @@ export async function todasAsCargas(): Promise<ResultadoTodasAsCargas> {
 
   const cargas = resultado.linhas.map(paraCargaCompleta);
   const buscadoEm = Date.now();
-  cacheTodas = { cargas, buscadoEm };
-  return { ok: true, texto: `${cargas.length} cargas cadastradas.`, cargas, fonte: fonteDe(buscadoEm, false) };
+  cacheTodas = { cargas, buscadoEm, via: resultado.via };
+  return { ok: true, texto: `${cargas.length} cargas cadastradas.`, cargas, fonte: fonteDe(buscadoEm, false, resultado.via) };
 }
 
 // ---------------------------------------------------------------------------

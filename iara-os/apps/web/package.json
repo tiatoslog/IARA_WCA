@@ -33,7 +33,8 @@
     "react-dom": "^19.0.0",
     "three": "^0.180.0",
     "tsx": "^4.19.2",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",

@@ -88,8 +88,31 @@ prova que existe e nunca mais regride: `STAT-NEG-005` prova que `"7"` não vira 
 problema sem travar um teste nele é o mesmo problema voltando em silêncio dali a três meses — a mesma
 lição do incidente que criou `Configuracao.ts`.
 
+## 9. Erro transitório tem retentativa; falha de ponta a ponta tem um segundo caminho — SE existir um
+
+Achado em 14/08/2026: o 503 que derrubou a leitura não veio da Graph — veio do serviço de SESSÃO do
+Excel Online (`FileOpenHostServiceUnavailable`), que a API de range seletivo depende e um download de
+arquivo comum não. Duas defesas, nesta ordem, e as duas só valem a pena quando a causa real da falha
+foi investigada, não assumida:
+
+- **Retentativa com backoff** só para o que é transitório por natureza (429/502/503/504, falha de rede).
+  Erro definitivo (401/403/404) nunca retenta — insistir não conserta permissão nem arquivo inexistente,
+  só atrasa a resposta que já sabia que ia falhar.
+- **Caminho alternativo automático**, só quando existir um de verdade e ele tiver sido PROVADO
+  equivalente ao principal — não aproximadamente parecido. Aqui: baixar o `.xlsx` bruto e ler localmente
+  (biblioteca `xlsx`/SheetJS, instalada a partir do CDN oficial do mantenedor — a versão publicada no
+  registro do npm tem duas vulnerabilidades altas sem correção, achado durante esta mesma implementação).
+  A prova de equivalência foi rodar os dois caminhos contra o tenant real e comparar linha a linha: 2.642
+  cargas nos dois, zero OCI divergente, valor total idêntico ao centavo. Sem essa prova, um "caminho B"
+  que devolve número diferente do caminho A é pior que não ter caminho B — ninguém mais confiaria em
+  nenhum dos dois.
+
+O que NÃO fica pra trás quando isso é implementado: a regra do item 4 continua de pé. Automático não é
+o mesmo que sem limite — se os dois caminhos falharem, a resposta continua sendo a recusa honesta com a
+idade do último dado válido, nunca um terceiro palpite.
+
 ---
 
-Nenhuma habilidade nova entra no catálogo lendo uma fonte externa sem passar pelas 8 perguntas acima.
+Nenhuma habilidade nova entra no catálogo lendo uma fonte externa sem passar pelas 9 perguntas acima.
 Se a resposta para alguma for "ainda não pensei nisso", a habilidade não está pronta — está com a
 primeira metade feita.

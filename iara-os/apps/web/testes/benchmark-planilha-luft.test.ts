@@ -249,9 +249,12 @@ test(
 
     _expirarCacheTodasParaTeste();
 
+    // 401 (não 503) de propósito: é um erro DEFINITIVO — não deve disparar
+    // retentativa, então este teste continua rápido e não testa duas coisas
+    // ao mesmo tempo (retentativa tem suíte própria, ver mais abaixo).
     globalThis.fetch = (async (url: string) => {
       if (String(url).includes('/shares/')) {
-        return new Response(JSON.stringify({ error: { message: 'serviceUnavailable' } }), { status: 503 });
+        return new Response(JSON.stringify({ error: { message: 'InvalidAuthenticationToken' } }), { status: 401 });
       }
       throw new Error('não devia ter ido além de /shares/ nesta falha');
     }) as typeof fetch;
