@@ -41,6 +41,7 @@ import {
 } from '../servidor/nucleo/Pareamento';
 import { inventarioDeMaquinas, PonteDispositivos } from '../servidor/barramento/PonteDispositivos';
 import { lerPacoteCliente } from '../lib/protocolo';
+import { VERSAO_MINIMA_BRACO, versaoBracoDesatualizada } from '../lib/execucao';
 
 // ===========================================================================
 // O BANCO CONTROLÁVEL
@@ -677,4 +678,96 @@ test('a dona ainda pode clicar duas vezes sem emitir duas credenciais', async ()
   assert.equal(primeira.ok, true);
   assert.equal(segunda.ok, true, 'duplo clique é o caso comum e não pode virar erro');
   assert.equal(banco.linhas.length, 1, 'o segundo clique não pode deixar credencial órfã no banco');
+});
+
+// ===========================================================================
+// 7. VERSÃO MÍNIMA DO BRAÇO — Stage 1 do sistema de atualização (14/08/2026)
+//
+// O braço, uma vez instalado, ficava congelado na versão baixada para
+// sempre — o handshake já carregava `versao` desde sempre, mas nada
+// comparava. Esta seção prova as duas metades: a função pura de comparação
+// (`lib/execucao.ts`) e a integração real com `inventarioDeMaquinas`, que é
+// o que a gaveta Dispositivos de fato lê.
+// ===========================================================================
+
+test('VM-001..004. versaoBracoDesatualizada compara contra a mínima, e null nunca acusa', () => {
+  assert.equal(versaoBracoDesatualizada('1.0.0'), true, 'VM-001: abaixo da mínima é desatualizada');
+  assert.equal(versaoBracoDesatualizada(VERSAO_MINIMA_BRACO), false, 'VM-002: igual à mínima não é desatualizada');
+  assert.equal(versaoBracoDesatualizada('1.2.0'), false, 'VM-003: acima da mínima não é desatualizada');
+  assert.equal(
+    versaoBracoDesatualizada(null),
+    false,
+    'VM-004: sem dado ao vivo, não afirma o que não apurou',
+  );
+});
+
+test('VM-008. versão malformada não lança, e nunca vira falso positivo por acidente', () => {
+  assert.doesNotThrow(() => versaoBracoDesatualizada('abc'));
+  assert.doesNotThrow(() => versaoBracoDesatualizada(''));
+  assert.doesNotThrow(() => versaoBracoDesatualizada('1'));
+  // Segmento não numérico vira 0 — "abc" não é maior nem menor por mágica,
+  // só não compara como versão de verdade.
+  assert.equal(versaoBracoDesatualizada(''), false);
+});
+
+test('VM-005. braço conectado ABAIXO da mínima aparece "desatualizada" na gaveta', async () => {
+  const { p } = registro();
+  const token = await parear(p, ANA, 'PC-ANTIGO');
+
+  const ponte = new PonteDispositivos(p);
+  const socket = new SocketDeBraco();
+  ponte.conectar(socket as unknown as WebSocket);
+  socket.emit(
+    'message',
+    Buffer.from(
+      JSON.stringify({
+        tipo: 'apresentacao',
+        id_usuario: 'mentira-do-cliente',
+        nome: 'PC-ANTIGO',
+        plataforma: 'win32 10.0.26200',
+        versao: '1.0.0', // abaixo de VERSAO_MINIMA_BRACO
+        token,
+      }),
+    ),
+  );
+  await espera(40);
+
+  const maquinas = await inventarioDeMaquinas(ANA.id_usuario, ponte, p);
+  assert.equal(maquinas.length, 1);
+  assert.equal(maquinas[0].desatualizada, true);
+});
+
+test('VM-006. braço conectado NA mínima ou acima não recebe o aviso', async () => {
+  const { p } = registro();
+  const token = await parear(p, ANA, 'PC-ATUAL');
+
+  const ponte = new PonteDispositivos(p);
+  const socket = new SocketDeBraco();
+  ponte.conectar(socket as unknown as WebSocket);
+  socket.apresentar(token, 'PC-ATUAL'); // helper já manda versao: '1.1.0'
+  await espera(40);
+
+  const maquinas = await inventarioDeMaquinas(ANA.id_usuario, ponte, p);
+  assert.equal(maquinas.length, 1);
+  assert.equal(maquinas[0].desatualizada, false);
+});
+
+test('VM-007. máquina pareada OFFLINE (sem sinal ao vivo) nunca é acusada de desatualizada', async () => {
+  /**
+   * A coluna do banco não guarda versão nenhuma (ver `Pareamento.ts`) — só o
+   * socket vivo sabe em que versão o braço está agora. Uma máquina desligada
+   * não pode herdar a acusação de uma sessão anterior nem ser presumida
+   * desatualizada por falta de dado: as duas seriam a mesma mentira
+   * operacional que o resto do projeto já recusa em outros lugares.
+   */
+  const { p } = registro();
+  await parear(p, ANA, 'PC-DESLIGADO'); // nunca conecta nesta suíte
+
+  const ponte = new PonteDispositivos(p);
+  const maquinas = await inventarioDeMaquinas(ANA.id_usuario, ponte, p);
+
+  assert.equal(maquinas.length, 1);
+  assert.equal(maquinas[0].conectada, false);
+  assert.equal(maquinas[0].versao, null);
+  assert.equal(maquinas[0].desatualizada, false);
 });

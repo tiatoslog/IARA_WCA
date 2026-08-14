@@ -1550,6 +1550,16 @@ ol.plano {
   flex: none;
 }
 
+/* Coral quente, nunca vermelho saturado — mesma paleta de alerta do resto. */
+.maquina-desatualizada {
+  color: var(--c-alerta);
+}
+
+.maquina-desatualizada a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .maquina-vazio {
   margin: 0;
   font-size: var(--t-rotulo);

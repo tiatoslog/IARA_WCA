@@ -100,6 +100,25 @@ function Maquina({
           {' · '}
           {maquina.conectada ? 'atendendo agora' : `desligado — ${quandoFoi(maquina.vista_em)}`}
         </span>
+        {/*
+          Achado em auditoria (14/08/2026): o braço, uma vez instalado, ficava
+          congelado na versão baixada para sempre — nada detectava nem avisava
+          quando ficava para trás. Stage 1 do sistema de atualização: só
+          detecção e aviso aqui, nada de baixar/substituir sozinho ainda.
+        */}
+        {maquina.desatualizada && (
+          <span className="maquina-detalhe maquina-desatualizada">
+            versão do programa desatualizada
+            {INSTALADOR && (
+              <>
+                {' — '}
+                <a href={INSTALADOR} download>
+                  baixe a versão nova
+                </a>
+              </>
+            )}
+          </span>
+        )}
       </div>
       {maquina.pareada ? (
         <button

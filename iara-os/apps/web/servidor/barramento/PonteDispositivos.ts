@@ -45,6 +45,7 @@
 import type { WebSocket } from 'ws';
 import {
   lerPacoteBraco,
+  versaoBracoDesatualizada,
   type DescricaoDispositivo,
   type MaquinaDoOperador,
   type PacoteBraco,
@@ -447,6 +448,10 @@ export async function inventarioDeMaquinas(
          carimbado na apresentação e ficaria parado o dia inteiro numa máquina
          que está trabalhando. */
       vista_em: vivo?.visto_em ?? p.ultimo_uso_em,
+      // Só a versão AO VIVO decide isto — a coluna do banco não guarda versão
+      // nenhuma, e afirmar desatualização sobre uma máquina desligada agora
+      // seria opinar sobre um dado que ninguém mediu.
+      desatualizada: versaoBracoDesatualizada(vivo?.versao ?? null),
     };
   });
 
@@ -468,6 +473,7 @@ export async function inventarioDeMaquinas(
       pareada: false,
       pareada_em: null,
       vista_em: c.visto_em,
+      desatualizada: versaoBracoDesatualizada(c.versao),
     });
   }
 

@@ -334,6 +334,59 @@ export interface MaquinaDoOperador {
   readonly pareada_em: number | null;
   /** Última vez que esta máquina deu sinal — a "última sessão" da tela. */
   readonly vista_em: number | null;
+  /**
+   * Abaixo de `VERSAO_MINIMA_BRACO`? Ver `versaoBracoDesatualizada`.
+   *
+   * `false` quando `versao` é `null` — a máquina não está conectada agora, ou
+   * nunca reportou versão nenhuma. Não afirmar desatualização sobre um dado
+   * que não existe é a mesma disciplina que o resto do sistema já aplica a
+   * `sem_meio_de_verificar`: silêncio é honesto, acusação sem prova não é.
+   */
+  readonly desatualizada: boolean;
+}
+
+/**
+ * A VERSÃO MÍNIMA que o motor aceita sem avisar a operadora.
+ *
+ * Fonte única da verdade — Stage 1 do sistema de atualização (14/08/2026). O
+ * braço já mandava a própria versão (`VERSAO` em `servidor/braco/principal.ts`)
+ * no handshake desde sempre; o que faltava era ALGUÉM comparar. Esta constante
+ * é esse alguém: sobe quando uma versão nova do braço exige um mínimo novo do
+ * lado de quem já está instalado, e o valor abaixo dela é quando a operadora
+ * passa a ver o aviso na gaveta Dispositivos.
+ *
+ * Isto NÃO baixa nem substitui o executável sozinho — essa é a Stage 2
+ * (Updater separado, com validação de integridade), deliberadamente fora
+ * deste escopo. Aqui só se detecta e avisa.
+ */
+export const VERSAO_MINIMA_BRACO = '1.1.0';
+
+/**
+ * Compara duas versões `major.minor.patch` (sem qualificador de pré-release).
+ * Segmento ausente ou não numérico vira `0` — nunca lança, porque uma versão
+ * malformada não pode derrubar a checagem inteira; ela só perde precedência.
+ */
+function compararVersoes(a: string, b: string): number {
+  const pa = a.split('.').map((n) => Number.parseInt(n, 10) || 0);
+  const pb = b.split('.').map((n) => Number.parseInt(n, 10) || 0);
+  const tamanho = Math.max(pa.length, pb.length);
+  for (let i = 0; i < tamanho; i++) {
+    const diferenca = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diferenca !== 0) return diferenca;
+  }
+  return 0;
+}
+
+/**
+ * `versao` está abaixo de `VERSAO_MINIMA_BRACO`?
+ *
+ * `null` devolve `false` de propósito — ver o comentário do campo
+ * `desatualizada` em `MaquinaDoOperador`. Igual à mínima NÃO é desatualizada:
+ * o aviso é para quem está para trás, não para quem está em dia.
+ */
+export function versaoBracoDesatualizada(versao: string | null): boolean {
+  if (!versao) return false;
+  return compararVersoes(versao, VERSAO_MINIMA_BRACO) < 0;
 }
 
 // ---------------------------------------------------------------------------
