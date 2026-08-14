@@ -136,6 +136,26 @@ export const EFEITO_EXTERNO: readonly string[] = [
   'servidor/canais/WhatsApp.ts',
   // `spawn` (shell) e `mkdir` (disco do operador).
   'servidor/nucleo/AgenteLocal.ts',
+  /**
+   * O SEGUNDO CLIENTE DO WHATSAPP — envio proativo, não resposta a webhook.
+   *
+   * `servidor/canais/WhatsApp.ts` já cobria a metade REATIVA (responder quem
+   * escreveu, via `PortaWhatsapp` → `PortalEfeitos`). A habilidade
+   * `enviar_whatsapp` precisa da metade PROATIVA — a IARA inicia a mensagem —
+   * e essa metade usa o desenho R2 de `acionar_energia`: arma uma pendência,
+   * exige "confirmo" do MESMO operador, e só então efetiva. É um fluxo
+   * síncrono demais para o portal reativo (a Meta responde dentro da mesma
+   * chamada que confirma, e `resolver_confirmacao` precisa gravar esse
+   * resultado no MESMO jornal antes de devolver a fala) — por isso ganhou
+   * cliente próprio em vez de reaproveitar `integracoes/whatsapp.ts`.
+   *
+   * Continua sendo EFEITO EXTERNO — mandar mensagem para um contato real é
+   * exatamente o que essa categoria existe para marcar — e continua só
+   * alcançável pelo caminho que `G3` prova: `AgenteLocal.ts` o importa, e
+   * `AgenteLocal.ts` só é alcançado pelo catálogo (`resolver_confirmacao`),
+   * que é o portal.
+   */
+  'servidor/nucleo/ClienteWhatsapp.ts',
 ];
 
 /**
@@ -160,6 +180,9 @@ export const LEITURA_EXTERNA: readonly string[] = [
   'servidor/nucleo/BuscaWeb.ts', // busca na web
   'servidor/nucleo/OrquestradorAcoes.ts', // previsão do tempo
   'servidor/nucleo/Voz.ts', // síntese de voz: texto entra, áudio sai
+  // Microsoft Graph: lê e-mail e busca no SharePoint. Ver `POST_SEM_EFEITO`
+  // para o POST de busca — é consulta, não escrita.
+  'servidor/nucleo/ClienteGraph.ts',
 ];
 
 /**
@@ -294,6 +317,13 @@ export const POST_SEM_EFEITO: Record<string, string> = {
     'alterado ou entregue, e nenhum terceiro é alcançado. É a mesma operação ' +
     'que o navegador faz sozinho para manter a operadora logada; aqui o dono da ' +
     'sessão é um processo em vez de uma aba.',
+  'servidor/nucleo/ClienteGraph.ts':
+    'POST contra `/search/query` da Microsoft Search API — é a sintaxe que a ' +
+    'Graph exige para consulta com corpo (o termo de busca vai no corpo, não ' +
+    'numa query string), não uma escrita. Nada é criado, alterado ou entregue a ' +
+    'ninguém: a chamada devolve documentos que o operador já tinha acesso, do ' +
+    'mesmo jeito que `GET /me/messages` lê e-mail. É a mesma classe de ' +
+    '"POST que na verdade lê" do `search/query` da própria documentação da Graph.',
 };
 
 /**

@@ -42,6 +42,7 @@ import {
   type Disco,
   type ProcessoMedido,
 } from './SondasDesempenho';
+import { enviarWhatsapp as enviarWhatsappGraph } from './ClienteWhatsapp';
 
 /**
  * O que uma ação das mãos devolve.
@@ -360,13 +361,36 @@ const VALIDADE_PENDENCIA_MS = 60_000;
  * `id` é o nonce que dá à pendência uma identidade própria, para que
  * "confirmo" nunca seja um cheque em branco sobre o slot atual.
  */
-interface Pendencia {
+interface PendenciaEnergia {
+  readonly tipo: 'energia';
   readonly id: string;
   readonly acao: AcaoEnergia;
   readonly sessao: string;
   readonly criada_em: number;
   readonly expira_em: number;
 }
+
+/**
+ * A pendência de envio de WhatsApp — MESMO desenho da de energia, mesma
+ * pergunta ("alguém fora da IARA percebe?") respondida "sim" pelas duas.
+ * Vive no MESMO slot por operador (`pendencias`), nunca um Map à parte: dois
+ * mapas para duas ações irreversíveis seria reabrir, por um caminho
+ * diferente, exatamente o defeito que motivou `sessao` na pendência de
+ * energia — duas fontes de verdade que um dia divergem sobre o que está
+ * pendente. Com um slot só, a pergunta "o que este 'confirmo' libera?" tem
+ * sempre uma resposta, nunca duas.
+ */
+interface PendenciaWhatsapp {
+  readonly tipo: 'whatsapp';
+  readonly id: string;
+  readonly destinatario: string;
+  readonly mensagem: string;
+  readonly sessao: string;
+  readonly criada_em: number;
+  readonly expira_em: number;
+}
+
+type Pendencia = PendenciaEnergia | PendenciaWhatsapp;
 
 /** Assinatura compatível com `child_process.spawn` — injetável nos testes
  *  para que "confirmar desligamento" seja testável sem desligar nada. */
@@ -716,6 +740,19 @@ const executorGitReal: ExecutorGit = (argumentos, diretorio) =>
     );
   });
 
+/**
+ * O envio de UMA mensagem de WhatsApp — assinatura mínima, sem conhecer nada
+ * de pendência ou confirmação. Quem decide QUANDO chamar é `AgenteLocal`; a
+ * função em si só sabe falar com a Meta. Ver `ClienteWhatsapp.ts`.
+ */
+export type EnviadorWhatsapp = (
+  destinatario: string,
+  mensagem: string,
+) => Promise<{ ok: boolean; texto: string }>;
+
+const enviarWhatsappReal: EnviadorWhatsapp = (destinatario, mensagem) =>
+  enviarWhatsappGraph(destinatario, mensagem);
+
 // ---------------------------------------------------------------------------
 
 export class AgenteLocal {
@@ -756,6 +793,12 @@ export class AgenteLocal {
      * estar certa. Com um repositório real a suíte só provaria o caminho feliz.
      */
     private readonly executorGit: ExecutorGit = executorGitReal,
+    /**
+     * O envio de WhatsApp. Injetável pela mesma razão do executor de
+     * energia: "confirmar envio" precisa ser testável sem mandar mensagem de
+     * verdade para o número de teste de ninguém.
+     */
+    private readonly enviadorWhatsapp: EnviadorWhatsapp = enviarWhatsappReal,
   ) {}
 
   private auditar(idUsuario: string, acao: string, permitido: boolean, detalhe: string): void {
@@ -1552,21 +1595,32 @@ export class AgenteLocal {
   }
 
   /** R2: nunca executa — registra a pendência e devolve o pedido de confirmação. */
-  pedirEnergia(idUsuario: string, acao: AcaoEnergia, sessao: string): string {
+  /** Rótulo de UMA LINHA para qualquer pendência — usado só para dizer "descartei o pedido anterior de X". */
+  private rotuloPendencia(p: Pendencia): string {
+    return p.tipo === 'energia' ? ROTULO_ENERGIA[p.acao] : `a mensagem de WhatsApp para ${p.destinatario}`;
+  }
+
+  private pendenciaAnteriorTrocada(idUsuario: string, rotuloNova: string): string {
     /**
      * Substituir uma pendência é FATO DITO, não sobrescrita muda.
      *
-     * Sem esta frase, quem pediu "desligar" e depois "reiniciar" fica com dois
-     * pedidos na cabeça e um só no sistema — e o "confirmo" seguinte resolve o
-     * que o sistema guardou, não o que a pessoa lembra.
+     * Sem esta frase, quem pediu "desligar" e depois "reiniciar" — ou pediu
+     * "desligar" e depois "manda mensagem pro fulano" — fica com dois pedidos
+     * na cabeça e um só no sistema, porque o slot é UM por operador (ver o
+     * comentário de `PendenciaWhatsapp`). O "confirmo" seguinte resolve o que
+     * o sistema guardou, não o que a pessoa lembra.
      */
     const anterior = this.pendencias.get(idUsuario);
-    const trocou =
-      anterior && Date.now() <= anterior.expira_em && anterior.acao !== acao
-        ? `Descartei o pedido anterior de ${ROTULO_ENERGIA[anterior.acao]}. `
-        : '';
+    if (!anterior || Date.now() > anterior.expira_em) return '';
+    const rotuloAnterior = this.rotuloPendencia(anterior);
+    return rotuloAnterior === rotuloNova ? '' : `Descartei o pedido anterior de ${rotuloAnterior}. `;
+  }
+
+  pedirEnergia(idUsuario: string, acao: AcaoEnergia, sessao: string): string {
+    const trocou = this.pendenciaAnteriorTrocada(idUsuario, ROTULO_ENERGIA[acao]);
 
     this.pendencias.set(idUsuario, {
+      tipo: 'energia',
       id: randomUUID(),
       acao,
       sessao,
@@ -1578,6 +1632,34 @@ export class AgenteLocal {
       `${trocou}Entendido: você quer ${ROTULO_ENERGIA[acao]}. Isso interrompe tudo que estiver aberto, ` +
       `então preciso da sua confirmação explícita. Responda "confirmo ${ROTULO_ENERGIA[acao].split(' ')[0]}" ` +
       `— ou só "confirmo" — em até 1 minuto. "cancela" desiste.`
+    );
+  }
+
+  /**
+   * R2 aplicado a comunicação: NUNCA envia aqui — registra a pendência e
+   * devolve o pedido de confirmação. Mesma trava dupla de `acionar_energia`
+   * (interlock em memória + operação persistida no jornal, as duas amarradas
+   * a operador+sessão); ver `ClienteWhatsapp.ts` para o porquê deste módulo
+   * nunca chamar a Meta diretamente.
+   */
+  pedirWhatsapp(idUsuario: string, destinatario: string, mensagem: string, sessao: string): string {
+    const rotuloNovo = `a mensagem de WhatsApp para ${destinatario}`;
+    const trocou = this.pendenciaAnteriorTrocada(idUsuario, rotuloNovo);
+
+    this.pendencias.set(idUsuario, {
+      tipo: 'whatsapp',
+      id: randomUUID(),
+      destinatario,
+      mensagem,
+      sessao,
+      criada_em: Date.now(),
+      expira_em: Date.now() + VALIDADE_PENDENCIA_MS,
+    });
+    this.auditar(idUsuario, 'whatsapp_pendente', true, `para ${destinatario}, aguardando confirmação (${sessao})`);
+    const previa = mensagem.length > 80 ? `${mensagem.slice(0, 80)}…` : mensagem;
+    return (
+      `${trocou}Confirma o envio para ${destinatario}: "${previa}"? Responda "confirmo" em até 1 minuto. ` +
+      '"cancela" desiste. Mensagem entregue não se desfaz — por isso pergunto antes.'
     );
   }
 
@@ -1601,6 +1683,23 @@ export class AgenteLocal {
         );
       }
       return 'Não há nenhuma ação aguardando confirmação — ou ela expirou. Pode pedir de novo.';
+    }
+
+    /**
+     * GUARDA DE TIPO, DE PROPÓSITO REDUNDANTE COM `resolverConfirmacao`.
+     *
+     * Em uso normal, quem chama já conferiu `tipoPendencia` antes de decidir
+     * entre este método e `confirmarComunicacao` — nunca deveria cair aqui
+     * com uma pendência de WhatsApp. Mas "nunca deveria" é exatamente a frase
+     * que o incidente de 11/08/2026 (`PorteiroAutorizacao.ts`) invalidou: uma
+     * garantia que só existe no chamador, e não aqui, é uma garantia que um
+     * chamador novo pode esquecer de honrar. Recusar SEM consumir a
+     * pendência deixa quem realmente sabe tratá-la (`confirmarComunicacao`)
+     * ainda com o que precisa.
+     */
+    if (pendencia.tipo !== 'energia') {
+      this.auditar(idUsuario, 'energia:confirmar_chamado_para_whatsapp', false, sessao);
+      return 'Isto não é uma pendência de energia — chamada errada, nada foi tocado.';
     }
 
     this.pendencias.delete(idUsuario);
@@ -1644,6 +1743,52 @@ export class AgenteLocal {
   /** Existe pendência válida PARA ESTE DIÁLOGO? (usado pelo fluxo de confirmação) */
   temPendencia(idUsuario: string, sessao: string): boolean {
     return this.valida(idUsuario, sessao) !== null;
+  }
+
+  /**
+   * QUAL TIPO de pendência válida existe para este diálogo, sem consumir
+   * nada. `resolverConfirmacao` chama isto ANTES de decidir entre `confirmar`
+   * (energia, síncrono, dispara e não espera) e `confirmarComunicacao`
+   * (assíncrono, espera a Meta responder) — as duas ações têm naturezas
+   * diferentes demais para viver atrás da mesma assinatura de função.
+   */
+  tipoPendencia(idUsuario: string, sessao: string): Pendencia['tipo'] | null {
+    return this.valida(idUsuario, sessao)?.tipo ?? null;
+  }
+
+  /**
+   * A confirmação de WhatsApp — irmã assíncrona de `confirmar`.
+   *
+   * POR QUE NÃO É A MESMA FUNÇÃO: `confirmar` devolve `string` porque
+   * "desligar" é fogo-e-esquece — `this.executor` solta o comando e a
+   * verdade sobre o que aconteceu não é observável deste processo (por isso
+   * o jornal marca `desconhecida`, nunca `sucesso`). Enviar mensagem é
+   * diferente: a Meta responde SÍNCRONO, dentro desta mesma chamada, com
+   * sucesso ou erro — fingir que não sei o resultado quando ele já chegou
+   * seria pior que a "mentira operacional" que este arquivo inteiro existe
+   * para impedir.
+   *
+   * `null` quando não há pendência de WhatsApp válida — quem chama decide o
+   * que fazer (normalmente nem chega a chamar, porque já conferiu
+   * `tipoPendencia` antes).
+   */
+  async confirmarComunicacao(
+    idUsuario: string,
+    sessao: string,
+  ): Promise<{ texto: string; sucesso: boolean } | null> {
+    const pendencia = this.valida(idUsuario, sessao);
+    if (!pendencia || pendencia.tipo !== 'whatsapp') return null;
+
+    this.pendencias.delete(idUsuario);
+
+    const resultado = await this.enviadorWhatsapp(pendencia.destinatario, pendencia.mensagem);
+    this.auditar(
+      idUsuario,
+      `whatsapp:${resultado.ok ? 'enviado' : 'falhou'}`,
+      resultado.ok,
+      `${pendencia.id}: ${resultado.texto}`,
+    );
+    return { texto: resultado.texto, sucesso: resultado.ok };
   }
 }
 

@@ -1,67 +1,43 @@
 /**
- * Integrações externas — declaradas, ainda não ligadas.
+ * Integrações externas — Microsoft Graph (e-mail, SharePoint) e WhatsApp.
  *
- * POR QUE EXISTEM ANTES DE FUNCIONAR
- *
- * Uma habilidade sem credencial não é a mesma coisa que uma habilidade que não
- * existe. Declarar aqui produz três efeitos que valem o arquivo:
+ * IMPLEMENTADAS em 14/08/2026. Até então este arquivo só DECLARAVA as três
+ * habilidades — manifesto revisado, `indisponivelPorque` checando a
+ * credencial, `executar` lançando "declarada mas não implementada". Essa
+ * fase valeu o próprio arquivo por três efeitos que continuam valendo:
  *
  *  1. O manifesto mostra ao operador o que a IARA PODERIA fazer e o que falta
  *     ligar — em vez de o sistema parecer limitado quando está desconfigurado.
  *  2. O Planejador não as oferece à LLM enquanto indisponíveis, então nunca
  *     nasce um plano que depende de algo que vai falhar no meio.
- *  3. O contrato (esquema, permissões, timeout) já está revisado quando a
- *     credencial chegar. Ligar vira preencher `executar`.
+ *  3. O contrato (esquema, permissões, timeout) já estava revisado quando a
+ *     credencial chegou — ligar foi só preencher `executar`.
  *
  * Todas pedem `escrita` ou tocam dado de terceiro, e por isso nenhuma é
- * concedida ao papel `operador` por padrão — ver `Seguranca.ts`.
+ * concedida ao papel `operador` por padrão — ver `Seguranca.ts`. NENHUMA foi
+ * testada contra um provedor real: `MS_GRAPH_TOKEN` e `WHATSAPP_TOKEN`
+ * continuam ausentes neste ambiente. Os testes cobrem o contrato HTTP com
+ * `fetch` simulado — ver `testes/graph.test.ts` e `testes/whatsapp.test.ts`.
  */
 
 import type { Habilidade } from '../Habilidade';
+import { buscarEmails, buscarSharepoint, graphDisponivel } from '../../ClienteGraph';
+import { agenteLocal } from '../../AgenteLocal';
+import { whatsappDisponivel } from '../../ClienteWhatsapp';
 
-/** Fábrica das habilidades ainda não implementadas. */
-function pendente(
-  manifesto: Habilidade['manifesto'],
-  variavel: string,
-): Habilidade {
-  return {
-    manifesto,
-    indisponivelPorque() {
-      return process.env[variavel]?.trim() ? null : `falta ${variavel} no ambiente`;
-    },
-    async executar() {
-      // Nunca deveria ser alcançado: o Gerenciador filtra por disponibilidade
-      // antes. Se chegou aqui, é bug de roteamento — e falhar alto é melhor
-      // que devolver texto inventado.
-      throw new Error(
-        `${manifesto.id} está declarada mas não implementada. Configure ${variavel} e implemente o executor.`,
-      );
-    },
-
-    /**
-     * Verificação declarada, ainda não implementável — pelo mesmo motivo que o
-     * executor: não há provedor ligado.
-     *
-     * Existe agora porque o contrato do catálogo exige que toda habilidade de
-     * risco médio ou alto saiba se verificar (`testes/verificacao.test.ts`), e
-     * porque a forma correta de "ainda não sei" é dizer isso, não omitir.
-     *
-     * QUEM IMPLEMENTAR `executar` IMPLEMENTA ISTO JUNTO. Para um envio, a
-     * verificação real é: status do provedor, destinatário confirmado e
-     * carimbo de tempo do envio — nunca o código de retorno da chamada HTTP.
-     */
-    async verificar() {
-      return {
-        confirmado: false,
-        evidencia: `${manifesto.id} não tem provedor ligado; nada foi enviado`,
-        motivo: 'sem_meio_de_verificar' as const,
-      };
-    },
-  };
-}
-
-export const lerEmails = pendente(
-  {
+/**
+ * IMPLEMENTADA em 14/08/2026, contra a Microsoft Graph real
+ * (`servidor/nucleo/ClienteGraph.ts`). Sem `MS_GRAPH_TOKEN` continua
+ * declarada e desligada — `indisponivelPorque` é o mesmo contrato de antes,
+ * só que agora `executar` de fato chama a API em vez de lançar.
+ *
+ * NÃO TESTADA CONTRA UM TENANT REAL: os testes cobrem o contrato HTTP
+ * (`fetch` simulado) contra a documentação pública da Graph, não uma conta
+ * de verdade — ninguém neste ambiente tem `MS_GRAPH_TOKEN` configurado. Isso
+ * fica registrado como lacuna, não escondido.
+ */
+export const lerEmails: Habilidade = {
+  manifesto: {
     id: 'ler_emails',
     nome: 'Caixa de entrada',
     descricao:
@@ -78,15 +54,44 @@ export const lerEmails = pendente(
       limite: { tipo: 'numero', padrao: 10 },
     },
   },
-  'MS_GRAPH_TOKEN',
-);
+  indisponivelPorque() {
+    return graphDisponivel() ? null : 'falta MS_GRAPH_TOKEN no ambiente';
+  },
+  async executar(ctx) {
+    const filtro = String(ctx.parametros.filtro ?? '');
+    const limite = Number(ctx.parametros.limite ?? 10);
+    const r = await buscarEmails(filtro, limite);
+    return { texto: r.texto, detalhe: `Microsoft Graph: ${filtro ? `busca "${filtro}"` : 'recentes'}`, resolveu: r.ok };
+  },
+  /**
+   * Leitura verifica lendo de novo, não comparando com o passado — a mesma
+   * disciplina de `capturar_tela`: o que se confere é "a fonte respondeu",
+   * não "o número bate com uma expectativa que ninguém tinha".
+   */
+  async verificar(resultado) {
+    return resultado.resolveu
+      ? { confirmado: true, evidencia: 'Microsoft Graph respondeu à consulta de mensagens' }
+      : { confirmado: false, evidencia: resultado.texto, motivo: 'sem_meio_de_verificar' };
+  },
+};
 
-export const enviarWhatsapp = pendente(
-  {
+/**
+ * IMPLEMENTADA em 14/08/2026 — mesmo desenho de R2 do `acionar_energia`
+ * (`servidor/nucleo/AgenteLocal.ts`): esta habilidade NUNCA envia. Ela ARMA
+ * uma pendência (interlock em memória + operação persistida no jornal, as
+ * duas amarradas a operador+sessão) e devolve o pedido de confirmação. Quem
+ * de fato manda a mensagem é `resolver_confirmacao`, só depois do MESMO
+ * operador dizer "confirmo" na MESMA conversa, dentro de 60s.
+ *
+ * NÃO TESTADA CONTRA UM NÚMERO REAL — mesma lacuna nomeada em `lerEmails`.
+ */
+export const enviarWhatsapp: Habilidade = {
+  manifesto: {
     id: 'enviar_whatsapp',
     nome: 'Envio de WhatsApp',
     descricao:
-      'Envia mensagem de WhatsApp para um contato da operação. Ação irreversível: exige confirmação explícita do operador antes de disparar.',
+      'Envia mensagem de WhatsApp para um contato da operação. NUNCA executa direto: registra uma ' +
+      'pendência e pede confirmação explícita do operador.',
     dominio: 'comunicacao',
     capacidade: 'automacao',
     // `externo`, não `escrita`: chega em OUTRA PESSOA. Mensagem enviada ao
@@ -96,19 +101,79 @@ export const enviarWhatsapp = pendente(
     timeout_ms: 10000,
     custo: 'zero',
     risco: 'alto',
-    // A família inteira que este contrato existe para proteger: mensagem entregue
-    // ao destinatário não se desfaz, e o provedor não oferece exatamente-uma-vez.
-    idempotencia: 'escrita_nao_idempotente',
+    // Esta habilidade não envia nada: ela ARMA uma pendência. Pedir duas vezes
+    // seguidas para o MESMO destinatário/mensagem converge para uma pendência
+    // só — quem carrega o efeito irreversível é `resolver_confirmacao`. Mesma
+    // semântica de `acionar_energia`.
+    idempotencia: 'escrita_idempotente',
     esquema: {
       destinatario: { tipo: 'texto', obrigatorio: true },
-      mensagem: { tipo: 'texto', obrigatorio: true },
+      mensagem: { tipo: 'texto', obrigatorio: true, max: 1000 },
     },
   },
-  'WHATSAPP_TOKEN',
-);
+  indisponivelPorque() {
+    return whatsappDisponivel() ? null : 'falta WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID no ambiente';
+  },
+  async executar(ctx) {
+    const destinatario = String(ctx.parametros.destinatario ?? '').trim();
+    const mensagem = String(ctx.parametros.mensagem ?? '').trim();
+    if (!destinatario || !mensagem) {
+      return {
+        texto: 'Preciso do destinatário e do texto da mensagem para armar o envio.',
+        detalhe: 'parâmetro ausente',
+        resolveu: false,
+      };
+    }
 
-export const buscarDocumentoSharepoint = pendente(
-  {
+    /**
+     * MESMO PADRÃO DE `acionar_energia`: a operação persistida vem ANTES do
+     * interlock em memória, e `armada ?? pendenteDe(...)` deduplica pedido
+     * repetido em vez de empilhar. Ver o comentário completo em
+     * `agenteLocal.ts` (`acionarEnergia.executar`) — não repetido aqui
+     * palavra por palavra para não divergir de lá com o tempo.
+     */
+    const armada = await ctx.registro.armar({
+      id_usuario: ctx.id_usuario,
+      sessao: ctx.sessao,
+      habilidade: 'envio_whatsapp',
+      risco: 'alto',
+      semantica: 'escrita_nao_idempotente',
+      parametros: { destinatario, mensagem },
+      origem_pedido: ctx.operacao?.id_operacao ?? ctx.sessao,
+    });
+    const pendente = armada ?? ctx.registro.pendenteDe(ctx.id_usuario, ctx.sessao);
+
+    if (!pendente) {
+      return {
+        texto:
+          `Você já tem um envio para ${destinatario} aguardando confirmação em outra conversa. ` +
+          'Confirme por lá — não armo o mesmo envio duas vezes.',
+        detalhe: 'recusada: pendência idêntica em outro contexto',
+        resolveu: false,
+      };
+    }
+
+    return {
+      texto: agenteLocal.pedirWhatsapp(ctx.id_usuario, destinatario, mensagem, ctx.sessao),
+      detalhe: `whatsapp para ${destinatario} pendente de confirmação (${pendente.id_operacao})`,
+      resolveu: true,
+    };
+  },
+  /** O que esta habilidade PROMETE é registrar uma pendência — não enviar nada. */
+  async verificar(_resultado, ctx) {
+    return agenteLocal.temPendencia(ctx.id_usuario, ctx.sessao)
+      ? { confirmado: true, evidencia: 'pendência registrada e dentro da janela de 60s' }
+      : {
+          confirmado: false,
+          evidencia: 'nenhuma pendência ativa para este operador após a execução',
+          motivo: 'divergente',
+        };
+  },
+};
+
+/** Ver o comentário de `lerEmails`: mesma data, mesmo cliente, mesma lacuna de teste contra tenant real. */
+export const buscarDocumentoSharepoint: Habilidade = {
+  manifesto: {
     id: 'buscar_documento_sharepoint',
     nome: 'Busca no SharePoint',
     descricao:
@@ -122,8 +187,20 @@ export const buscarDocumentoSharepoint = pendente(
     idempotencia: 'leitura',
     esquema: { consulta: { tipo: 'texto', obrigatorio: true } },
   },
-  'MS_GRAPH_TOKEN',
-);
+  indisponivelPorque() {
+    return graphDisponivel() ? null : 'falta MS_GRAPH_TOKEN no ambiente';
+  },
+  async executar(ctx) {
+    const consulta = String(ctx.parametros.consulta ?? '');
+    const r = await buscarSharepoint(consulta);
+    return { texto: r.texto, detalhe: `Microsoft Graph Search: "${consulta}"`, resolveu: r.ok };
+  },
+  async verificar(resultado) {
+    return resultado.resolveu
+      ? { confirmado: true, evidencia: 'Microsoft Graph Search respondeu à consulta' }
+      : { confirmado: false, evidencia: resultado.texto, motivo: 'sem_meio_de_verificar' };
+  },
+};
 
 export const HABILIDADES_INTEGRACAO: readonly Habilidade[] = [
   lerEmails,

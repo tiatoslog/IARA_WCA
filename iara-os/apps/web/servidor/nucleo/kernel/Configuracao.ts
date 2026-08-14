@@ -106,6 +106,12 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
   IARA_VOZ_EDGE: { natureza: 'texto', papel: 'voz do Edge TTS' },
   IARA_VOZ_NEURAL: { natureza: 'sinalizador', papel: 'liga a voz neural' },
 
+  // — Microsoft Graph (e-mail e SharePoint)
+  MS_GRAPH_TOKEN: {
+    natureza: 'segredo_cabecalho',
+    papel: 'access token da Microsoft Graph (caixa de entrada e busca no SharePoint)',
+  },
+
   // — o canal WhatsApp
   WHATSAPP_TOKEN: { natureza: 'segredo_cabecalho', papel: 'token da Graph API' },
   WHATSAPP_PHONE_ID: { natureza: 'texto', papel: 'id do número' },

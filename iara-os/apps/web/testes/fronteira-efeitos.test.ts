@@ -116,6 +116,16 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       'do mesmo jeito que o navegador da operadora faz sozinho. Ver a entrada ' +
       'dele em `Fronteira.ts`, que registra por que a classificação como efeito ' +
       'externo foi tentada e recusada.',
+    [path.join('servidor', 'nucleo', 'ClienteGraph.ts')]:
+      'LEITURA — e-mail e busca no SharePoint via Microsoft Graph, sem efeito ' +
+      'no mundo. O POST de `/search/query` é consulta, não escrita — ver a ' +
+      'entrada dele em `Fronteira.ts` (`POST_SEM_EFEITO`).',
+    [path.join('servidor', 'nucleo', 'ClienteWhatsapp.ts')]:
+      'EFEITO EXTERNO — envio proativo de WhatsApp pelo desenho R2 de ' +
+      '`enviar_whatsapp`/`resolver_confirmacao` (arma pendência, exige ' +
+      '"confirmo", só então chama a Meta). Só `AgenteLocal.ts` o importa, que ' +
+      'já é EFEITO EXTERNO e só é alcançado pelo catálogo — ver a entrada dele ' +
+      'em `Fronteira.ts` e o porteiro correspondente em `G3`.',
   };
 
   const comFetch = fontes(path.join(RAIZ, 'servidor'))

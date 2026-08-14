@@ -590,7 +590,15 @@ export const resolverConfirmacao: Habilidade = {
      * — inclusive com a fala do executor dizendo, na linha de cima, que não
      * havia ação pendente. Duas frases contraditórias na mesma resposta.
      */
-    const havia = agenteLocal.temPendencia(ctx.id_usuario, ctx.sessao);
+    /**
+     * O TIPO decide qual confirmação executar depois — síncrona e fogo-e-
+     * esquece para energia, assíncrona e que espera a Meta responder para
+     * WhatsApp. Ver `AgenteLocal.confirmarComunicacao` para o porquê de não
+     * serem a mesma função. `havia` continua existindo como nome porque é
+     * exatamente o que as próximas linhas perguntam: havia ALGUMA pendência?
+     */
+    const tipo = agenteLocal.tipoPendencia(ctx.id_usuario, ctx.sessao);
+    const havia = tipo !== null;
 
     /** A operação persistida que corresponde a esta pendência, se houver. */
     await ctx.registro.expirarVencidas();
@@ -685,6 +693,54 @@ export const resolverConfirmacao: Habilidade = {
       'executando',
       { fonte: 'executor', descricao: 'autorizado; acionando o dispositivo', instante: new Date().toISOString() },
     );
+
+    /**
+     * WHATSAPP DIVERGE AQUI, e só aqui: as duas travas (interlock + jornal) já
+     * concordaram do mesmo jeito para os dois tipos — a diferença é que enviar
+     * mensagem tem resultado OBSERVÁVEL dentro deste processo (a Meta responde
+     * síncrono), e fingir que não sei se deu certo, quando sei, seria a mesma
+     * mentira operacional que este arquivo inteiro existe para impedir. Energia
+     * não tem essa opção — ver o comentário de `confirmarComunicacao`.
+     */
+    if (tipo === 'whatsapp') {
+      const resultado = await agenteLocal.confirmarComunicacao(ctx.id_usuario, ctx.sessao);
+      if (!resultado) {
+        // A pendência sumiu entre a validação de tipo (linha acima) e agora —
+        // só possível se outra chamada concorrente a consumiu no meio dos
+        // `await` de autorização. Falhar honesto é melhor que adivinhar.
+        await ctx.registro.marcar(operacaoPendente.id_operacao, 'desconhecida', {
+          fonte: 'executor',
+          descricao: 'pendência consumida entre a autorização e a confirmação',
+          instante: new Date().toISOString(),
+        });
+        return {
+          texto: 'A pendência sumiu bem na hora de confirmar — pode ter sido resolvida em outra conversa. Peça de novo se precisar.',
+          detalhe: 'whatsapp: pendência consumida entre autorizar e confirmar',
+          resolveu: false,
+        };
+      }
+      /**
+       * `aceita_pelo_provedor`, não um `sucesso` que não existe no vocabulário
+       * de `Operacao.ts` — e a ausência é de propósito, não lacuna: a Meta
+       * confirma que RECEBEU a mensagem, não que ela chegou a alguém. Ver o
+       * comentário do próprio estado em `Operacao.ts`.
+       */
+      await ctx.registro.marcar(
+        operacaoPendente.id_operacao,
+        resultado.sucesso ? 'aceita_pelo_provedor' : 'falhou',
+        {
+          fonte: 'executor',
+          descricao: resultado.sucesso ? 'mensagem aceita pelo provedor' : `provedor recusou: ${resultado.texto}`,
+          instante: new Date().toISOString(),
+        },
+      );
+      return {
+        texto: resultado.texto,
+        detalhe: `whatsapp: ${resultado.sucesso ? 'enviado' : 'falhou'}`,
+        resolveu: resultado.sucesso,
+      };
+    }
+
     const texto = agenteLocal.confirmar(ctx.id_usuario, ctx.sessao);
     await ctx.registro.marcar(operacaoPendente.id_operacao, 'desconhecida', {
       fonte: 'executor',
@@ -696,15 +752,17 @@ export const resolverConfirmacao: Habilidade = {
   },
 
   /**
-   * Os dois ramos verificam coisas diferentes, e só um é verificável.
+   * TRÊS RAMOS agora, não dois — WhatsApp entrou com uma propriedade que nem
+   * cancelar nem confirmar-energia têm: é verificável DE VERDADE. A Meta
+   * responde dentro desta chamada, então "confirmado" aqui não é opinião, é o
+   * que o provedor disse — nos dois sentidos, sucesso ou recusa.
    *
    * CANCELAR é: a pendência sumiu. Confere-se e pronto.
    *
-   * CONFIRMAR agenda um `shutdown /t 20`. Um processo que vai ser encerrado
-   * pelo sistema em 20 segundos não tem como provar, de dentro de si mesmo,
-   * que o encerramento vai acontecer — e se conseguisse, não estaria mais vivo
-   * para relatar. A resposta ao operador precisa carregar essa limitação em
-   * vez de um "pronto" que ninguém apurou.
+   * CONFIRMAR ENERGIA agenda um `shutdown /t 20`. Um processo que vai ser
+   * encerrado pelo sistema em 20 segundos não tem como provar, de dentro de
+   * si mesmo, que o encerramento vai acontecer — e se conseguisse, não
+   * estaria mais vivo para relatar.
    */
   async verificar(resultado, ctx) {
     if (ctx.parametros.resposta !== 'confirmo') {
@@ -712,6 +770,17 @@ export const resolverConfirmacao: Habilidade = {
         ? { confirmado: false, evidencia: 'pendência ainda ativa após o cancelamento', motivo: 'divergente' }
         : { confirmado: true, evidencia: 'nenhuma pendência ativa; cancelamento efetivado' };
     }
+
+    if (resultado.detalhe.startsWith('whatsapp:')) {
+      if (resultado.detalhe.includes('consumida entre')) {
+        return { confirmado: false, evidencia: resultado.texto, motivo: 'divergente' };
+      }
+      // Sucesso OU falha — os dois são fato conhecido, porque a Meta
+      // respondeu dentro desta mesma chamada. `confirmado: true` nos dois
+      // casos: o que se verifica é "sei o que aconteceu", não "deu certo".
+      return { confirmado: true, evidencia: resultado.texto };
+    }
+
     /**
      * Confirmação sem pendência não agendou nada, e dizer que agendou é a
      * mentira operacional que esta camada inteira existe para impedir. Não é

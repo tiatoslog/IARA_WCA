@@ -241,6 +241,30 @@ test('G3. o EFEITO EXTERNO só é alcançado a partir do portal ou do catálogo'
      * para a família de energia, que ainda não atravessa a ponte.
      */
     'servidor/nucleo/ExecutorDesktop.ts',
+    /**
+     * O DESENHO R2 DO ENVIO PROATIVO. Decisão de arquitetura, não ajuste de teste.
+     *
+     * `AgenteLocal.ts` já é EFEITO EXTERNO por conta própria (`spawn`, `mkdir`),
+     * e agora também importa `ClienteWhatsapp.ts` para a metade de
+     * `resolver_confirmacao` que efetiva um envio armado por `enviar_whatsapp`.
+     * O caminho continua nascendo no catálogo: só `habilidades/agenteLocal.ts`
+     * (já porteiro, acima) chama `agenteLocal.confirmarComunicacao`, que é quem
+     * chega em `ClienteWhatsapp`. Ver o comentário de `ClienteWhatsapp.ts` em
+     * `Fronteira.ts` para o porquê de não reaproveitar `integracoes/whatsapp.ts`.
+     */
+    'servidor/nucleo/AgenteLocal.ts',
+    /**
+     * A HABILIDADE QUE ARMA O ENVIO. Mesma categoria de `habilidades/agenteLocal.ts`
+     * logo acima: catálogo, alcançável só via `Kernel.abrirOperacao`.
+     *
+     * Importa `ClienteWhatsapp`/`ClienteGraph` só para `whatsappDisponivel()` e
+     * `graphDisponivel()` — checagem de credencial, não efeito — e importa
+     * `AgenteLocal` só para `agenteLocal.pedirWhatsapp(...)`, que ARMA a
+     * pendência (mesmo desenho de `acionar_energia`) sem chamar o provedor.
+     * Quem de fato chama `ClienteWhatsapp` é `resolver_confirmacao`, em
+     * `habilidades/agenteLocal.ts` — já porteiro.
+     */
+    'servidor/nucleo/kernel/habilidades/integracoes.ts',
     'servidor/canais/PortaWhatsapp.ts', // usa o portal; não importa o cliente
     'servidor/barramento/Porta.ts',
     'servidor/principal.ts',
