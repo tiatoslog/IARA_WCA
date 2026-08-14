@@ -1,25 +1,20 @@
 ---
 name: orquestrador
 description: >-
-  IARA Intelligent Assurance Orchestrator — gerencia de forma autônoma
-  qualidade, segurança, regressão, verificação e evidência de qualquer
-  alteração de código no projeto IARA. Use esta skill sempre que o usuário
-  pedir para implementar, corrigir ou alterar código e quiser garantia real
-  de que a mudança funciona — não apenas "parece certo" ou "o build passou".
-  Aciona-se também quando o usuário mencionar explicitamente "orquestrador",
-  test plan, plano de testes, evidência de teste, QA independente, garantia
-  de qualidade, regressão, Playwright, ou pedir para preparar um PR com
-  evidências. Esta skill governa TODO o ciclo: baseline → test plan escrito
-  ANTES da implementação → implementação → seleção inteligente de testes →
-  execução real (incluindo Playwright quando há UI) → coleta de evidência
-  bruta → validação da evidência por um segundo processo → loop de correção
-  → decisão final de aprovar ou bloquear → PR com evidências anexadas. Ela
-  proíbe declarar sucesso com base em código que "parece correto", testes
-  não executados, mocks como prova de integração real, ou afirmações textuais
-  sem evidência (screenshot, network trace, console log). Prefira esta skill
-  a qualquer atalho de "rodei o build e passou" sempre que a mudança tiver
-  qualquer superfície de risco — UI, API, banco, autenticação, autorização,
-  memória do agente, ou fluxo do usuário.
+  IARA Intelligent Assurance Orchestrator — gerencia qualidade, segurança,
+  regressão, verificação e evidência de qualquer alteração de código no
+  projeto IARA. Use sempre que o usuário pedir para implementar, corrigir ou
+  alterar código e quiser garantia real de que funciona, não só "parece
+  certo" ou "o build passou". Aciona também quando mencionar orquestrador,
+  test plan, evidência de teste, QA independente, regressão, Playwright, ou
+  pedir PR com evidências. Governa o ciclo: baseline, test plan ANTES da
+  implementação, seleção inteligente de testes, execução real (Playwright
+  quando há UI), evidência bruta validada por um segundo processo, loop de
+  correção, aprovar ou bloquear, PR com evidências. Proíbe declarar sucesso
+  com base em código "correto na aparência", testes não executados, mocks
+  como prova de integração real, ou afirmação textual sem evidência. Prefira
+  isso a qualquer atalho de "build passou" quando a mudança tocar UI, API,
+  banco, autenticação, autorização, memória do agente ou fluxo do usuário.
 ---
 
 # IARA Intelligent Assurance Orchestrator
