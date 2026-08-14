@@ -280,7 +280,15 @@ async function buscarEdge(texto: string, hash: string): Promise<boolean> {
 
   try {
     const tts = await conexaoViva();
-    const { audioStream } = tts.toStream(texto);
+    /**
+     * PROSÓDIA MAIS MADURA — achado ao vivo em auditoria (14/08/2026): a voz
+     * padrão da Francisca soa "animada" demais para o registro da IARA
+     * ("Madura, calma, articulada", ver `ClienteClaude.ts`). O timbre não
+     * muda — pitch e ritmo levemente abaixo do padrão bastam para tirar o
+     * brilho de apresentadora sem soar arrastado ou robótico. Mesmo
+     * princípio do `useVoz.ts` do lado do cliente: "SUTIL basta".
+     */
+    const { audioStream } = tts.toStream(texto, { pitch: '-6%', rate: '-6%' });
 
     const bytes = await new Promise<Buffer>((resolver, rejeitar) => {
       const pedacos: Buffer[] = [];

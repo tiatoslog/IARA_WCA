@@ -1845,19 +1845,14 @@ ol.plano {
     cursor: pointer;
   }
 
+  /* A GEMA SAIU DO CELULAR — decisão de produto (14/08/2026). No mobile a
+     conversa é o trabalho inteiro; a presença recolhida ficava flutuando
+     por cima do cabeçalho e competindo com ele por atenção numa tela já
+     pequena. Fica só a conversa. O palco expandido (`recolhida={false}`)
+     continua existindo no componente — só não há mais toque que leve até
+     ele no celular; reabrir é troca de decisão, não de código. */
   .tela.chat-expandido .presenca {
-    position: fixed;
-    /* `env()` porque a notch existe: no iPhone o topo da viewport fica embaixo
-       do relógio, e a gema apareceria cortada pela metade. */
-    top: calc(env(safe-area-inset-top, 0px) + 12px);
-    right: 14px;
-    z-index: 40;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 1px solid var(--c-linha-forte);
-    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+    display: none;
   }
 
   .tela.chat-expandido .painel-conversa {
@@ -1891,11 +1886,10 @@ ol.plano {
     display: none;
   }
 
-  /* O cabeçalho da conversa passa por baixo da gema flutuante. O recuo é do
-     tamanho dela mais a folga, para o ponto verde do enlace não sumir atrás. */
+  /* Só a folga do notch continua — sem a gema flutuando por cima, o resto do
+     cabeçalho volta ao padding normal (`.conversa-cabecalho` na base). */
   .tela.chat-expandido .conversa-cabecalho {
     padding-top: calc(env(safe-area-inset-top, 0px) + 18px);
-    padding-right: 82px;
   }
 }
 
