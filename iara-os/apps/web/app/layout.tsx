@@ -45,6 +45,27 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
 };
 
+/**
+ * ROTA DINÂMICA, NUNCA CACHEADA. Achado em auditoria (14/08/2026): sem esta
+ * linha o Next trata `/` como estática — sem `cookies()`/`headers()` nem
+ * `fetch` não-cacheado no caminho de render, nada aqui "parece" dinâmico pra
+ * ele — e serve o MESMO HTML prerenderado (`x-nextjs-cache: HIT`,
+ * `Cache-Control: s-maxage=31536000`, quase 1 ano) pra todo mundo,
+ * indefinidamente, até o próximo build. Esse HTML referencia os arquivos JS
+ * com hash da build em que foi gerado — um deploy novo sobe código novo no
+ * servidor, mas quem abre a IARA continua recebendo o índice antigo, que
+ * carrega o JS antigo. Causa raiz de "o celular tá sempre na versão velha"
+ * mesmo com deploy confirmado em dia na Railway: a sala inteira é ao vivo
+ * (WebSocket, voz, presença) e não pode ser servida do cache.
+ *
+ * PRECISA estar aqui, no layout (Server Component) — a mesma declaração em
+ * `app/page.tsx` não bastou: aquele arquivo é 'use client', e o Next não lê
+ * config de segmento de um módulo que vira bundle de cliente. Confirmado ao
+ * vivo: com o export só na page, o deploy saiu e o header continuou
+ * `x-nextjs-cache: HIT` — daí a mudança pra cá.
+ */
+export const dynamic = 'force-dynamic';
+
 export const viewport: Viewport = {
   // A cor da casca: é ela que pinta a barra do sistema quando o app abre
   // instalado. Grafite — anda junto com `--iara-bg` e com o manifest.
