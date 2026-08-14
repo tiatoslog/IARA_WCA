@@ -19,6 +19,7 @@ import type { Percepcao, Passo, Plano } from './Evento';
 import { extrairAssuntoLembrete } from './Quando';
 import { planosPropostos } from './PlanosPropostos';
 import { passosExecutaveis } from './Investigacao';
+import { corrigirTypos } from '../texto';
 
 function passo(
   indice: number,
@@ -86,14 +87,41 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
     };
   },
 
-  infraestrutura: (p) => ({
-    objetivo: 'Responder sobre o estado da infraestrutura',
-    origem: 'deterministico',
-    // `consultar_infraestrutura` e não `executar_consulta_sql`: aquela funciona
-    // com ou sem banco, esta some do catálogo sem Supabase. Receita
-    // determinística não pode depender de credencial opcional.
-    passos: [passo(0, 'Consultar base de centrais', 'consultar_infraestrutura', { uf: extrairUf(p.bruto) })],
-  }),
+  /**
+   * "Quais centrais estão inativas?" achado ao vivo em auditoria (14/08/2026):
+   * `consultar_infraestrutura` só devolve centrais ATIVAS — não tem noção de
+   * status. Antes desta correção, QUALQUER frase com "central" caía nesta
+   * receita e nunca sobrava chance de o raciocínio emergente escolher
+   * `executar_consulta_sql` com a consulta pré-aprovada `centrais_inativas`
+   * (ela existe, está no catálogo, e nunca era alcançada). A IARA respondia
+   * "não tenho essa consulta liberada" sobre uma consulta que tinha — mentira
+   * por rota errada, não por falta de capacidade.
+   *
+   * A correção NÃO aponta direto para `executar_consulta_sql`: isso violaria
+   * a mesma regra do comentário abaixo ("receita determinística nunca depende
+   * de habilidade opcional", travada em teste). Em vez disso, esta âncora
+   * DESISTE — devolve o mesmo plano de `planoDeRaciocinio` — e deixa o
+   * raciocínio emergente escolher. `descricaoParaPrompt` já lista
+   * `centrais_inativas` com o rótulo certo quando o Supabase está ligado, e
+   * lista `[DESLIGADA: ...]` quando não está — dos dois jeitos, honesto.
+   */
+  infraestrutura: (p) => {
+    if (INATIVA_INFRAESTRUTURA.test(normalizarLocal(p.bruto))) {
+      return {
+        objetivo: p.objetivo_provavel === 'indeterminado' ? 'Atender o pedido do operador' : p.objetivo_provavel,
+        origem: 'emergente',
+        passos: [passo(0, 'Raciocinar sobre o pedido', 'raciocinio', {})],
+      };
+    }
+    return {
+      objetivo: 'Responder sobre o estado da infraestrutura',
+      origem: 'deterministico',
+      // `consultar_infraestrutura` e não `executar_consulta_sql`: aquela funciona
+      // com ou sem banco, esta some do catálogo sem Supabase. Receita
+      // determinística não pode depender de credencial opcional.
+      passos: [passo(0, 'Consultar base de centrais', 'consultar_infraestrutura', { uf: extrairUf(p.bruto) })],
+    };
+  },
 
   incidente: (p) => ({
     objetivo: 'Recuperar histórico de incidente equivalente',
@@ -360,11 +388,16 @@ export function ehAfirmacao(bruto: string): boolean {
 }
 
 function normalizarLocal(bruto: string): string {
-  return bruto
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
+  // `corrigirTypos` tolera erro de digitação de uma letra nas palavras que as
+  // âncoras reconhecem — mesmo motivo do `Percepcao.ts`, aqui é a segunda
+  // rodada de reconhecimento (marcar/listar/cancelar lembrete etc).
+  return corrigirTypos(
+    bruto
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .trim(),
+  );
 }
 
 /**
@@ -482,11 +515,23 @@ export function extrairLocalCaptura(bruto: string): string {
  * a palavra "cancelar" no assunto seria lido como um pedido de cancelamento, e a
  * IARA apagaria justamente o recado que estava sendo criado.
  */
+/** Ver o comentário da receita `infraestrutura`. */
+const INATIVA_INFRAESTRUTURA = /\b(inativ\w*|parad\w*|fora de operac\w*|desativad\w*)\b/;
+
 const CANCELAR_LEMBRETE =
   /\b(cancel\w*|apag\w*|remov\w*|desmarc\w*|exclu\w*|esquec\w*|tir[ae]|deleta\w*)\s+(?:(?:o|a|os|as|aquele|aquela|aqueles|esse|essa|este|esta|meu|minha|meus|minhas)\s+)*lembrete/;
 
+/**
+ * "o que eu marquei" era a ÚNICA frase de recapitulação reconhecida — achado
+ * ao vivo em auditoria (14/08/2026): "confirma o que você já marcou" (pessoa e
+ * tempo verbal diferentes, mesmo pedido) não casava com nada aqui, caía no
+ * `return` padrão de `lembrete()` e virava uma TENTATIVA DE CRIAR lembrete
+ * — que falhava dizendo "não consegui entender ... como horário", uma recusa
+ * sem relação nenhuma com o que foi perguntado. `marc(?:ou|amos|aram|ei)` cobre
+ * as conjugações de quem pergunta (eu marquei / você marcou / a gente marcou).
+ */
 const LISTAR_LEMBRETE =
-  /\b(quais|quantos|que)\s+(?:sao\s+)?(?:os\s+|meus\s+)?lembrete|\b(lista|listar|liste|mostra|mostrar|mostre|ver|vejo|tenho)\s+(?:algum\s+|os\s+|meus\s+|meu\s+)?lembrete|\bmeus\s+lembretes\b|\bminha\s+agenda\b|\bo que eu marquei\b/;
+  /\b(quais|quantos|que)\s+(?:sao\s+)?(?:os\s+|meus\s+)?lembrete|\b(lista|listar|liste|mostra|mostrar|mostre|ver|vejo|tenho)\s+(?:algum\s+|os\s+|meus\s+|meu\s+)?lembrete|\bmeus\s+lembretes\b|\bminha\s+agenda\b|\bo que (?:eu|voce|a gente)\s+(?:ja\s+)?marc(?:ou|amos|aram|ei)\b/;
 
 export function ehCancelamentoDeLembrete(bruto: string): boolean {
   return CANCELAR_LEMBRETE.test(normalizarLocal(bruto));

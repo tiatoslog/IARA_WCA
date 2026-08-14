@@ -11,7 +11,7 @@
 
 import type { LeituraOperador } from '../../../lib/estado';
 import type { Percepcao, TipoEntrada, Urgencia } from './Evento';
-import { normalizar } from '../texto';
+import { corrigirTypos, normalizar } from '../texto';
 import { TeoriaDaMente, type SinalTemporal } from '../TeoriaDaMente';
 import {
   ehPerguntaSobreResolver,
@@ -351,8 +351,11 @@ export class MotorPercepcao {
      * mesmo não sendo um comando.
      */
     const vozes = separarVozes(bruto);
-    const t = normalizar(bruto);
-    const tPropria = vozes.temRelato ? normalizar(vozes.propria) : t;
+    // `corrigirTypos` só ajuda a ÂNCORA reconhecer a palavra — o texto usado
+    // para extrair o que o operador realmente pediu continua sendo `bruto`,
+    // sem correção nenhuma. Ver o comentário da função em `texto.ts`.
+    const t = corrigirTypos(normalizar(bruto));
+    const tPropria = vozes.temRelato ? corrigirTypos(normalizar(vozes.propria)) : t;
 
     /**
      * Uma âncora de EFEITO só sobrevive quando a frase de fato PEDE a ação.

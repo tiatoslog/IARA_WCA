@@ -342,6 +342,22 @@ test('"me lembre de cancelar a reunião" MARCA, não cancela', () => {
   assert.equal(habilidadeDe('me lembre de cancelar a reunião às 14h'), 'agendar_lembrete');
 });
 
+/**
+ * Achado ao vivo em auditoria (14/08/2026): uma pergunta de RECAPITULAÇÃO
+ * ("o que você já marcou?") não é um pedido de marcar nada, mas caía no
+ * `return` padrão de `lembrete()` — a mesma classe de defeito do roteador de
+ * clima, "tema não é pergunta", só que para agenda: mencionar "lembrete" não
+ * é pedir para criar um.
+ */
+test('recapitular o que já foi marcado LISTA, não tenta marcar de novo', () => {
+  assert.equal(habilidadeDe('o que você já marcou de lembrete?'), 'listar_lembretes');
+  assert.equal(habilidadeDe('confirma o que a gente marcou de lembrete'), 'listar_lembretes');
+  // Sem a palavra "lembrete"/"agenda" no texto não há âncora determinística —
+  // e é correto cair no raciocínio emergente, que decide com o contexto da
+  // conversa. Este caso NÃO é o defeito: é o comportamento pretendido.
+  assert.equal(habilidadeDe('o que eu marquei mesmo?'), 'raciocinio');
+});
+
 test('as três habilidades de agenda estão no catálogo', () => {
   for (const id of ['agendar_lembrete', 'listar_lembretes', 'cancelar_lembrete']) {
     assert.ok(IDS.has(id), `habilidade ausente do catálogo: ${id}`);

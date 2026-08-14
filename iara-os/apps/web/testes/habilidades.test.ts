@@ -232,6 +232,33 @@ test('receita determinística nunca depende de habilidade opcional', () => {
   }
 });
 
+/**
+ * Achado ao vivo em auditoria (14/08/2026): "quais centrais estão inativas?"
+ * caía na receita determinística de `consultar_infraestrutura` (que só sabe
+ * ativas) e a IARA negava ter a consulta `centrais_inativas` — que existe no
+ * catálogo. A âncora "infraestrutura" agora desiste para esse recorte
+ * específico e devolve ao raciocínio emergente, sem violar o teste acima
+ * (nenhuma receita determinística passa a apontar para `executar_consulta_sql`).
+ */
+test('pergunta sobre centrais INATIVAS não usa a receita de centrais ativas', () => {
+  const planejador = new Planejador();
+  const percepcao = new MotorPercepcao();
+
+  for (const frase of ['quais centrais estão inativas?', 'quais centrais estão paradas?']) {
+    const plano = planejador.planejar(percepcao.perceber(frase));
+    assert.equal(plano.origem, 'emergente', `"${frase}" deveria cair no raciocínio emergente`);
+    assert.notEqual(
+      plano.passos[0]?.habilidade,
+      'consultar_infraestrutura',
+      `"${frase}" não pode usar a receita que só sabe responder sobre ativas`,
+    );
+  }
+
+  // O caso positivo continua intacto: perguntar por ativas usa a receita de sempre.
+  const ativas = planejador.planejar(percepcao.perceber('quantas centrais ativas temos?'));
+  assert.equal(ativas.passos[0]?.habilidade, 'consultar_infraestrutura');
+});
+
 test('todo domínio declarado no manifesto existe', () => {
   for (const h of CATALOGO) {
     assert.ok(DOMINIOS[h.manifesto.dominio], `${h.manifesto.id}: domínio inválido`);

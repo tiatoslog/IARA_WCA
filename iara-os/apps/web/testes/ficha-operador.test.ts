@@ -62,6 +62,19 @@ test('ficha totalmente vazia e sem nome não gasta token nenhum', () => {
   assert.ok(fichaVazia(PREFERENCIAS_PADRAO));
 });
 
+/**
+ * Achado ao vivo em auditoria (14/08/2026): o nome da credencial vem cru do
+ * e-mail de login ("daiane", derivado de daiane@atoslog.com.br) e ia direto
+ * pro prompt em minúscula — a IARA escrevia "..., daiane" no meio de frases.
+ * A mesma correção já existia do lado do cliente (`PainelConversa.tsx`, para
+ * a saudação do cabeçalho); faltava aqui.
+ */
+test('nome cru da credencial (minúsculo, do e-mail de login) sai capitalizado', () => {
+  const bloco = TeoriaDaMente.overrideDePreferencias(PREFERENCIAS_PADRAO, 'daiane');
+  assert.match(bloco, /Chame-o de "Daiane"/);
+  assert.doesNotMatch(bloco, /Chame-o de "daiane"/);
+});
+
 test('"como chamar" vence o nome da credencial', () => {
   const bloco = TeoriaDaMente.overrideDePreferencias(
     { ...PREFERENCIAS_PADRAO, como_chamar: 'Dai' },

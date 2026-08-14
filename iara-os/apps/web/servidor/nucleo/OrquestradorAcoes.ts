@@ -203,6 +203,19 @@ export class OrquestradorAcoes {
       cidade = resolvida || 'onde você está';
     }
 
+    /**
+     * SEM APARELHO, A FRASE PRECISA DIZER QUE É O ESCRITÓRIO — não só o nome.
+     *
+     * Achado ao vivo em auditoria (14/08/2026): sem posição do aparelho, a
+     * resposta nomeava `IARA_CIDADE` (Cuiabá) com a MESMA frase de confiança
+     * que teria com a posição real de quem perguntou. Uma operadora em
+     * Valinhos recebeu "provavelmente não chove hoje em Cuiabá" sem nada na
+     * frase dizendo que aquele "Cuiabá" era o escritório, não ela. É o mesmo
+     * defeito que o comentário acima já resolveu para "nenhuma coordenada" —
+     * reaberto aqui, no caminho que TEM coordenada de fallback.
+     */
+    const ehPadraoDoEscritorio = !doAparelho;
+
     if (!lat || !lon) {
       return {
         ok: false,
@@ -226,8 +239,10 @@ export class OrquestradorAcoes {
       if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
       const dados = (await resposta.json()) as RespostaMeteo;
 
-      if (horizonte === 'agora') return { texto: this.redigirAgora(dados, cidade), ok: true };
-      return { texto: this.redigirDia(dados, cidade, horizonte), ok: true };
+      if (horizonte === 'agora') {
+        return { texto: this.redigirAgora(dados, cidade, ehPadraoDoEscritorio), ok: true };
+      }
+      return { texto: this.redigirDia(dados, cidade, horizonte, ehPadraoDoEscritorio), ok: true };
     } catch (erro) {
       return {
         texto:
@@ -287,7 +302,7 @@ export class OrquestradorAcoes {
     }
   }
 
-  private redigirAgora(dados: RespostaMeteo, cidade: string): string {
+  private redigirAgora(dados: RespostaMeteo, cidade: string, ehPadraoDoEscritorio: boolean): string {
     const atual = dados.current;
     if (!atual || typeof atual.temperature_2m !== 'number') {
       throw new Error('payload sem leitura corrente');
@@ -299,8 +314,14 @@ export class OrquestradorAcoes {
       (atual.precipitation ?? 0) > 0
         ? ` Choveu ${atual.precipitation} mm na última hora.`
         : ' Não choveu na última hora.';
+    // Ver `ehPadraoDoEscritorio` em `consultarClima`: sem posição do aparelho,
+    // a frase precisa dizer que a cidade é o padrão da empresa, não a de quem
+    // perguntou — senão soa como localização confirmada.
+    const aviso = ehPadraoDoEscritorio
+      ? ` (padrão do escritório — ainda não sei onde você está)`
+      : '';
     return (
-      `Agora em ${cidade}: ${atual.temperature_2m} °C, ${condicao}, ` +
+      `Agora em ${cidade}${aviso}: ${atual.temperature_2m} °C, ${condicao}, ` +
       `umidade em ${atual.relative_humidity_2m ?? '—'}%.${chuva}`
     );
   }
@@ -312,7 +333,12 @@ export class OrquestradorAcoes {
    * probabilidade e os milímetros vêm depois, como sustentação — e o dia é
    * nomeado ("hoje", "amanhã") para nunca sobrar dúvida sobre qual foi lido.
    */
-  private redigirDia(dados: RespostaMeteo, cidade: string, horizonte: Horizonte): string {
+  private redigirDia(
+    dados: RespostaMeteo,
+    cidade: string,
+    horizonte: Horizonte,
+    ehPadraoDoEscritorio: boolean,
+  ): string {
     const i = horizonte === 'amanha' ? 1 : 0;
     const d = dados.daily;
     const probabilidade = d?.precipitation_probability_max?.[i];
@@ -333,8 +359,10 @@ export class OrquestradorAcoes {
           : `Provavelmente não chove ${quando}`;
 
     const condicao = CODIGOS_TEMPO[d?.weather_code?.[i] ?? -1];
+    // Ver `ehPadraoDoEscritorio` em `consultarClima`.
+    const aviso = ehPadraoDoEscritorio ? ' (padrão do escritório — ainda não sei onde você está)' : '';
     const partes = [
-      `${veredito} em ${cidade}: ${Math.round(p)}% de probabilidade`,
+      `${veredito} em ${cidade}${aviso}: ${Math.round(p)}% de probabilidade`,
       typeof acumulado === 'number' ? `${acumulado} mm previstos` : '',
       condicao ? `céu ${condicao}` : '',
       typeof maxima === 'number' && typeof minima === 'number'

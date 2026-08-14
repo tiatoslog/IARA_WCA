@@ -11,7 +11,7 @@
 
 import { OCEAN_IARA, type LeituraOperador, type MatrizOcean } from '../../lib/estado';
 import { fichaVazia, type PreferenciasOperador } from '../../lib/perfil';
-import { normalizar } from './texto';
+import { capitalizarNome, normalizar } from './texto';
 
 const CRISE =
   /\b(urgente|urgencia|parou|caiu|travou|nao funciona|nao esta funcionando|prejuizo|perdendo|critico|emergencia|socorro|pane|fora do ar)\b/;
@@ -121,7 +121,9 @@ export class TeoriaDaMente {
     preferencias: PreferenciasOperador,
     nomeCredencial: string,
   ): string {
-    const nome = preferencias.como_chamar || nomeCredencial;
+    // `como_chamar` é texto que o próprio operador escreveu — não se mexe
+    // nele. `nomeCredencial` vem cru do e-mail de login e precisa da correção.
+    const nome = preferencias.como_chamar || capitalizarNome(nomeCredencial);
     const linhas: string[] = ['FICHA DO OPERADOR (declarada por ele, não inferida)'];
 
     if (nome) linhas.push(`- Chame-o de "${nome}".`);

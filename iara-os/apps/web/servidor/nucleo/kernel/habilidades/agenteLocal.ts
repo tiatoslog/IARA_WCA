@@ -282,7 +282,18 @@ export const listarArquivos: Habilidade = {
   },
 };
 
-/** O estado da máquina do operador — memória, processador, tempo ligado, rede. */
+/**
+ * O estado da máquina do operador — memória, processador, tempo ligado, rede.
+ *
+ * SÍNCRONA: `executar` espera `braco.executar` terminar (2-3s típico) e o
+ * resultado vira parte desta MESMA resposta — não existe segunda mensagem
+ * chegando depois. Achado ao vivo em auditoria (14/08/2026): a IARA disse "o
+ * retorno vem por ele, não por mim; assim que chegar eu te digo" e nunca
+ * completou a promessa — confundiu esta chamada direta com o ciclo autônomo
+ * (`CicloAutonomo`/`Vigia`), que usa a MESMA ação (`medir_desempenho`) mas de
+ * fato reporta depois, por iniciativa própria. A descrição deixa isso
+ * explícito para não repetir a confusão.
+ */
 export const informacoesSistema: Habilidade = {
   manifesto: {
     id: 'informacoes_sistema',
@@ -290,7 +301,8 @@ export const informacoesSistema: Habilidade = {
     descricao:
       'Consulta o estado do computador do operador: memória em uso, processador, tempo ligado e ' +
       'interfaces de rede. Use para "quanto de memória meu computador está usando", "meu computador ' +
-      'está conectado", "como está o PC".',
+      'está conectado", "como está o PC". SÍNCRONA: o resultado sai nesta mesma resposta, em poucos ' +
+      'segundos — nunca diga que vai avisar depois, porque não há um "depois" aqui.',
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],
