@@ -34,6 +34,7 @@ import { formatarCodigo, pareamento } from './nucleo/Pareamento';
 import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
 import { diagnosticoWhatsapp } from './canais/WhatsApp';
 import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
+import { iniciarRenovacaoAutomaticaGraph, pararRenovacaoAutomaticaGraph } from './nucleo/ClienteGraph';
 import { estadoDaChave } from './nucleo/kernel/Prova';
 import { conferirAmbiente } from './nucleo/kernel/Configuracao';
 
@@ -332,6 +333,13 @@ async function subir(): Promise<void> {
 
   const inicioProcesso = Date.now();
 
+  /**
+   * Dispara ANTES do `listen`: a primeira troca de credencial por token não
+   * precisa esperar a porta abrir, e assim a caixa de entrada já pode estar
+   * pronta na primeira requisição em vez de na primeira renovação.
+   */
+  const statusRenovacaoGraph = iniciarRenovacaoAutomaticaGraph();
+
   const servidorHttp = createServer((req, res) => {
     const caminho = (req.url ?? '').split('?')[0];
 
@@ -569,6 +577,7 @@ async function subir(): Promise<void> {
     );
     console.log(`[iara] ${diagnosticoWhatsapp()}`);
     console.log(`[iara] voz: ${diagnosticoVoz()}`);
+    console.log(`[iara] Microsoft Graph: ${statusRenovacaoGraph}`);
     /**
      * O ESTADO DA CHAVE DE PROVA, dito em voz alta na subida.
      *
@@ -628,6 +637,7 @@ async function subir(): Promise<void> {
   const encerrar = () => {
     console.log('\n[iara] encerrando...');
     clearInterval(heartbeat);
+    pararRenovacaoAutomaticaGraph();
     encerrarResidentes();
     ponteDispositivos.encerrar();
     wss.close();

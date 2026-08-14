@@ -111,6 +111,24 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
     natureza: 'segredo_cabecalho',
     papel: 'access token da Microsoft Graph (caixa de entrada e busca no SharePoint)',
   },
+  // As três a seguir são opcionais: só existem para a renovação AUTOMÁTICA do
+  // MS_GRAPH_TOKEN (client credentials flow). Ver `ClienteGraph.ts`.
+  MS_GRAPH_CLIENT_ID: {
+    natureza: 'texto',
+    papel: 'client ID do app no Azure AD (renovação automática do MS_GRAPH_TOKEN)',
+  },
+  MS_GRAPH_TENANT_ID: {
+    natureza: 'texto',
+    papel: 'tenant ID do Azure AD (renovação automática do MS_GRAPH_TOKEN)',
+  },
+  MS_GRAPH_CLIENT_SECRET: {
+    natureza: 'segredo',
+    papel: 'client secret do app no Azure AD (renovação automática do MS_GRAPH_TOKEN)',
+  },
+  // A Search API exige isto em token de aplicativo. Padrão 'BRA' (confirmado
+  // contra o tenant da Atos Log); um tenant de outra geografia só precisa
+  // declarar o valor que a própria Graph disser ser válido.
+  MS_GRAPH_REGIAO: { natureza: 'texto', papel: 'região exigida pela Search API em token de aplicativo' },
 
   // — o canal WhatsApp
   WHATSAPP_TOKEN: { natureza: 'segredo_cabecalho', papel: 'token da Graph API' },
