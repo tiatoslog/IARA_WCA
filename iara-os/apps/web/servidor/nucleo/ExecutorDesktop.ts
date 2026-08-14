@@ -75,7 +75,8 @@ export async function executarOrdem(
     switch (ordem.acao) {
       case 'abrir_aplicativo': {
         const pedido = String(ordem.parametros.aplicativo ?? '');
-        return relato(ordem, inicio, onde, dispositivo, await agenteLocal.abrirAplicativo(usuario, pedido));
+        const url = typeof ordem.parametros.url === 'string' ? ordem.parametros.url : undefined;
+        return relato(ordem, inicio, onde, dispositivo, await agenteLocal.abrirAplicativo(usuario, pedido, url));
       }
 
       case 'fechar_aplicativo': {

@@ -444,6 +444,68 @@ test('abrir a ligação publica o estado — a faixa parava de mentir', async ()
 });
 
 // ---------------------------------------------------------------------------
+// ESCUTA — dois achados da auditoria de 14/08/2026, relatados por operadora
+// real: "a vigia nunca funciona, mesmo chamando 'ei iara' ela não responde
+// mostrando que está escutando, e mesmo dando um comando depois, nada
+// acontece". Sem harness de DOM/render neste projeto (suíte Node pura), a
+// prova é de CÓDIGO — no mesmo formato dos dois testes acima.
+// ---------------------------------------------------------------------------
+
+test('religamento silencioso deixava de tocar `estado` — a faixa congelava em "vigiando"', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const fonte = await readFile(new URL('../hooks/useEscuta.ts', import.meta.url), 'utf8');
+
+  // O ramo de retry (ANTES de estourar o orçamento) precisa publicar um
+  // estado transitório — sem isso, a faixa "vigília ligada — diga 'ei IARA'"
+  // fica na tela, palavra por palavra igual ao caso em que o microfone está
+  // de fato ouvindo, durante até ~14 s de tentativas silenciosas.
+  const trechoRetry = fonte.slice(
+    fonte.indexOf("falhasSeguidas.current < TETO_FALHAS_SEGUIDAS"),
+    fonte.indexOf('// Orçamento estourado'),
+  );
+  assert.ok(
+    /setEstado\('reconectando'\)/.test(trechoRetry),
+    'religar em silêncio sem publicar `reconectando` é a UI mentindo que está ouvindo',
+  );
+
+  // O tipo precisa admitir o novo estado, e a UI precisa poder distingui-lo
+  // de `indisponivel` (que oferece "Tentar de novo") e de `vigiando`
+  // (que diz "estou ouvindo de verdade").
+  assert.ok(
+    /'reconectando'/.test(fonte.slice(0, fonte.indexOf('export function useEscuta'))),
+    'EstadoEscuta precisa declarar "reconectando" no tipo exportado',
+  );
+});
+
+test('comando reconhecido que falha ao enviar não pode travar a escuta em silêncio', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const fonte = await readFile(new URL('../hooks/useEscuta.ts', import.meta.url), 'utf8');
+
+  const enviarAcumulado = fonte.slice(
+    fonte.indexOf('const enviarAcumulado'),
+    fonte.indexOf('const rearmarSilencio'),
+  );
+  assert.ok(
+    /cbConcluir\.current\(texto\)/.test(enviarAcumulado),
+    'o resultado do envio precisa ser capturado, não descartado',
+  );
+  assert.ok(
+    /===\s*false/.test(enviarAcumulado) && /setEstado\(ativaRef\.current \? 'ouvindo' : 'vigiando'\)/.test(enviarAcumulado),
+    'envio que falha (socket fechado) precisa devolver a escuta para "ouvindo"/"vigiando" — ' +
+      'sem isto, `estado` fica preso em "processando" para sempre e "nada acontece" depois do comando',
+  );
+
+  // O contrato só funciona se quem fornece `aoConcluirFala` de fato propagar
+  // um booleano — `PainelConversa.tsx` encaminha o retorno de `onEnviar`
+  // (que já é `boolean`), em vez de descartá-lo como antes.
+  const painel = await readFile(new URL('../components/PainelConversa.tsx', import.meta.url), 'utf8');
+  assert.ok(
+    /aoConcluirFala:\s*\(texto\)\s*=>\s*onEnviar\(texto\)/.test(painel),
+    'aoConcluirFala precisa devolver o resultado de onEnviar, não só chamá-lo',
+  );
+});
+
+// ---------------------------------------------------------------------------
 // 5. PRESENÇA — a articulação morria no fim do TEXTO, não no fim da FALA
 //
 // `progresso()` devolve `null` durante toda a síntese do navegador (ela não

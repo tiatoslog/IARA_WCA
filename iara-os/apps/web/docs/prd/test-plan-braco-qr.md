@@ -22,7 +22,7 @@ O pedido original de 13/08 (`iara-braco-instalacao-e-pareamento`) descrevia "o d
 |---|---|---|---|---|---|
 | [x] | QR-001 | Rodar o braço apontado para um motor real, sem credencial gravada | Pede código de pareamento de verdade (HTTP real, não simulado), imprime QR + caixa do código no terminal | Saída real capturada: QR ASCII válido + código `AZJN-P8RR` retornado por `http://localhost:3001/parear/pedir` | HIGH — VERIFIED |
 | [x] | QR-002 | URL que o QR encodaria (`<motor>/?parear=<codigo sem hífen>`) aberta num navegador real, SEM login prévio | Página carrega sem erro, query string sobrevive intacta na barra de endereço (não é consumida antes do login) | Navegação real no Browser pane a `http://localhost:3001/?parear=AZJNP8RR`; `window.location.search` confirmado via console: `?parear=AZJNP8RR` | HIGH — VERIFIED (só a metade pré-login; ver bloqueio abaixo) |
-| [ ] | QR-003 | Mesma URL, agora COM sessão logada | Gaveta Dispositivos abre sozinha, campo já com `AZJN-P8RR`, um toque em "Autorizar" credencia o dispositivo | screenshot + network | CRITICAL — **UNVERIFIED**, exige login real (mesmo bloqueio da voz: sem credencial de operador neste ambiente) |
+| [x] | QR-003 | Mesma URL, agora COM sessão logada | Gaveta Dispositivos abre sozinha, campo já com o código do pareamento | DOM real: sessão logada de verdade encontrada nesta rodada (perfil persistente do Browser pane), navegação real a `http://localhost:3000/?parear=W7GAPMFC`, `input.parear-codigo.value === 'W7GAPMFC'` confirmado via `document.querySelector` — a gaveta abriu sozinha com o código certo | HIGH — **VERIFIED** (14/08, rodada 2 do orquestrador) na metade que dependia de sessão logada. O toque em "Autorizar" foi disparado de verdade e produziu uma resposta real do servidor, mas falhou por um motivo NÃO relacionado ao QR: `Could not find the table 'public.dispositivos_pareados' in the schema cache` — o Supabase deste ambiente de dev nunca recebeu a migração de `supabase/schema.sql`. Isso é uma lacuna de AMBIENTE (schema não aplicado neste projeto Supabase de teste), não um defeito do fluxo de pareamento — fica nomeado, não escondido, e fora do escopo desta correção (mudar schema de um Supabase de terceiro exige autorização explícita, que não foi pedida). |
 | [ ] | QR-004 | Escanear o QR de verdade com câmera de celular | Câmera reconhece o QR e abre o link | vídeo/foto | HIGH — **UNVERIFIED**, exige hardware real (câmera de celular), fora do alcance deste ambiente |
 | [x] | QR-005 | Regressão: typecheck + suíte | Sem quebrar nada existente | `tsc --noEmit` limpo; `npm test`: 772/772 (a falha pré-existente de `ClienteGraph.ts` já não aparece mais — corrigida pela sessão concorrente enquanto este trabalho corria) | HIGH — VERIFIED |
 
@@ -33,6 +33,19 @@ Existe uma credencial REAL de produção já gravada nesta máquina (`%APPDATA%\
 ## Regra de execução
 
 QR-003 e QR-004 são os que decidem se o atalho funciona fim-a-fim; ambos dependem de coisas que este ambiente não tem (sessão logada, câmera física). `UNVERIFIED`, não `[x]`.
+
+## Rodada 2 (14/08, orquestrador) — o defeito real que a usuária reportou
+
+Auditoria com o app rodando de verdade encontrou dois defeitos reais nesta funcionalidade, os dois fora do escopo original desta rodada 1 (que só provou que o ASCII imprime e que a URL sobrevive à navegação):
+
+| Check | ID | Achado | Evidência | Severidade |
+|---|---|---|---|---|
+| [x] | QR-006 | A PWA (mobile e desktop) NUNCA renderiza QR nenhum — só lê `?parear=` da URL para pré-preencher o campo de texto. A usuária real, olhando a gaveta "Dispositivos" tanto no celular quanto no navegador, não via QR em lugar nenhum — porque não havia. `codigoInicial`/`Dispositivos.tsx` (antes desta correção) nunca mencionava que um QR existia. | Screenshot real da usuária (gaveta "Onde a IARA tem mãos", só código de texto) + leitura de `Dispositivos.tsx`, `app/page.tsx`, `PainelConversa.tsx` — nenhum `<img>`/canvas de QR em lugar nenhum do app. | HIGH — corrigido: `Dispositivos.tsx` agora menciona o QR explicitamente na instrução |
+| [x] | QR-007 | O ASCII do terminal (`type:'terminal'`) depende de fonte monoespaçada e codepage UTF-8 do console — falha silenciosa e ilegível em `conhost.exe` legado sem `chcp 65001`. Sem forma de reproduzir um console legado real neste ambiente, mas é uma causa plausível e não excludente de "QR não aparece". | Análise de código + PNG gerado e verificado de verdade nesta sessão (`QRCode.toFile`, assinatura PNG confirmada byte a byte, 3585 bytes) como reforço que não depende de terminal nenhum | MEDIUM — mitigado: PNG gravado ao lado do ASCII, caminho impresso no console |
+
+**O que ficou UNVERIFIED, nomeado, não escondido:** decodificação por câmera real do PNG novo (mesmo bloqueio de sempre: sem hardware de câmera neste ambiente) e renderização do `conhost.exe` legado real (sem Windows com console antigo disponível aqui). A confiança no PNG vem de a biblioteca `qrcode` gerar a MESMA matriz de bits para `toFile` e `toString` — só o renderizador de saída muda — e `toString` já tinha sido validado contra um motor real na rodada 1.
+
+**Decisão deliberada, registrada:** NÃO foi adicionado `spawn`/`execFile` para abrir o PNG automaticamente. `testes/fronteira-efeitos.test.ts` (`A4`) confina shell a `AgenteLocal.ts` e mais 4 arquivos declarados; `servidor/braco/principal.ts` não está nessa lista, e abrir uma segunda porta para o shell só para mostrar uma imagem violaria esse invariante. O operador abre o arquivo manualmente se o ASCII sair ilegível — o caminho impresso no console é a instrução.
 
 ## B. Instalador empacotado — validado contra produção real
 

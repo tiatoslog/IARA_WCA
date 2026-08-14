@@ -256,7 +256,24 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     acionavel: true,
   },
   {
-    re: /\b(diagnostico|diagnosticar|autoteste|auto-teste|checagem geral|status geral|voce esta (ok|bem|funcionando|online)|esta tudo (ok|certo|funcionando))\b/,
+    /**
+     * A SEGUNDA METADE (a partir de `descubr[ae]`) fecha um caso real, achado
+     * em auditoria (14/08/2026): "descubra se o computador está conectado
+     * então" não continha nenhuma palavra da primeira metade — nem
+     * "diagnóstico", nem "autoteste" — e caía fora de QUALQUER âncora. Sem
+     * receita determinística nem decomposição (frase curta, sem verbo da
+     * lista de `mereceDecomposicao`), o pedido ia para `raciocinio_direto`,
+     * que não executa nenhuma habilidade: a IARA respondia "vou verificar" e
+     * o turno acabava ali — a promessa nunca virava chamada de
+     * `diagnosticar_sistema`, e o operador precisava mandar outra mensagem
+     * para arrancar uma resposta de verdade (que, sem ter rodado a
+     * habilidade nenhuma vez, era a LLM inventando um desfecho).
+     *
+     * "Conectado" é literalmente a pergunta que `diagnosticar_sistema`
+     * responde no primeiro elo verificável (linha "Computador" do painel) —
+     * é a âncora certa, só faltava reconhecer a frase.
+     */
+    re: /\b(diagnostico|diagnosticar|autoteste|auto-teste|checagem geral|status geral|voce esta (ok|bem|funcionando|online)|esta tudo (ok|certo|funcionando))\b|\b(descubr[ae]|verific[ae]|confir[ae]|confer[ei]|ve[ja])\s+se\s+(o\s+|meu\s+)?computador\s+(esta|ta)\s+(mesmo\s+)?conectad[oa]\b|\bcomputador\s+(esta|ta)\s+conectad[oa]\b|\b(esta|ta)\s+conectad[oa]\s+(a\s+)?(voce|mim|iara)\b/,
     nome: 'diagnostico',
     acionavel: true,
   },

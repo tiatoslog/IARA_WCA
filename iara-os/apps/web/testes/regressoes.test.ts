@@ -16,6 +16,10 @@ import { FilaTelemetria } from '../servidor/barramento/FilaTelemetria';
 import { EstadoAtomico } from '../servidor/nucleo/EstadoAtomico';
 import type { PacoteServidor } from '../lib/protocolo';
 import { SNAPSHOT_INICIAL } from '../hooks/useIaraSocket';
+import { Kernel } from '../servidor/nucleo/kernel/Kernel';
+import { BarramentoEventos } from '../servidor/nucleo/kernel/BarramentoEventos';
+import type { MemoriaOperacional } from '../servidor/nucleo/MemoriaOperacional';
+import type { RegistroMemoria } from '../lib/estado';
 
 /**
  * NOTA DE CONSOLIDAÇÃO (11/08/2026).
@@ -145,4 +149,144 @@ test('definirOperador para OUTRO operador zera métricas', async () => {
   await estado.definirOperador({ id_usuario: 'operador-2', nome: 'Operador 2', visto_em: 'y' });
   const depois = estado.instantaneo().metricas.afinidade;
   assert.notEqual(depois, 0.7);
+});
+
+// ---------------------------------------------------------------------------
+// Percepção — "descubra se o computador está conectado" caía fora de toda
+// âncora (auditoria 14/08/2026): sem receita e sem decomposição, o pedido ia
+// para `raciocinio_direto`, que não executa `diagnosticar_sistema` — a IARA
+// respondia "vou verificar" e o turno acabava ali, sem nunca rodar a
+// habilidade. Ver Kernel.ts (trava contra promessa vazia) para a outra
+// metade do conserto.
+// ---------------------------------------------------------------------------
+
+test('"descubra se o computador está conectado" vira âncora de diagnóstico', () => {
+  assert.ok(ancorasDe('Descubra se o computador está conectado então').includes('diagnostico'));
+  assert.ok(ancorasDe('verifica se o computador está conectado').includes('diagnostico'));
+  assert.ok(ancorasDe('confere se meu computador está mesmo conectado').includes('diagnostico'));
+  assert.ok(ancorasDe('o computador está conectado a você?').includes('diagnostico'));
+});
+
+test('"diagnóstico" continua reconhecido — a âncora antiga não regrediu', () => {
+  assert.ok(ancorasDe('faça um diagnóstico completo do sistema').includes('diagnostico'));
+  assert.ok(ancorasDe('você está funcionando?').includes('diagnostico'));
+});
+
+test('"o computador está conectado à internet lá na fábrica" não é sobre a IARA', () => {
+  // A âncora exige "conectado A VOCÊ/MIM/IARA" ou a forma "computador está
+  // conectado" sem complemento — "conectado à internet" tem complemento
+  // próprio e não é a pergunta que `diagnosticar_sistema` responde.
+  assert.ok(
+    !ancorasDe('o computador da fábrica está conectado à rede elétrica de reserva').includes(
+      'diagnostico',
+    ),
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Kernel — a IARA não pode prometer o que não vai cumprir NESTE turno
+// (auditoria 14/08/2026, a segunda metade do conserto de cima).
+//
+// Nem toda frase vai ganhar uma âncora nova — o roteador determinístico é
+// finito por desenho, e vai continuar existindo pedido que cai em
+// `raciocinio_direto` (nenhuma habilidade executada). O que esta trava fecha
+// é o efeito colateral: nesse caminho a LLM não pode dizer "vou verificar"/
+// "vou rodar" e encerrar o turno como se algo estivesse em andamento, porque
+// nada está — e ninguém vai completar depois.
+// ---------------------------------------------------------------------------
+
+function memoriaVazia(): MemoriaOperacional {
+  return {
+    async registrar() {},
+    async historico() {
+      return [] as RegistroMemoria[];
+    },
+    async carregarGlobal() {
+      return '';
+    },
+    async lerPreferencias() {
+      return {} as never;
+    },
+  } as unknown as MemoriaOperacional;
+}
+
+test('rota sem nenhuma habilidade executada instrui a LLM a não prometer ação futura', async () => {
+  const barramento = new BarramentoEventos('s-promessa');
+  let overridePersonaCapturada = '';
+
+  const kernel = new Kernel({
+    sessao: 's-promessa',
+    idUsuario: 'daiane',
+    outrosOperadores: [],
+    estado: new EstadoAtomico(),
+    memoria: memoriaVazia(),
+    barramento,
+    raciocinio: {
+      disponivel: true,
+      modelo: 'teste',
+      async planejar() {
+        return null; // nunca deveria ser chamado nesta rota; null é o desfecho seguro se for.
+      },
+      async responder(p: { overridePersona: string; aoReceberTexto: (t: string) => void }) {
+        overridePersonaCapturada = p.overridePersona;
+        p.aoReceberTexto('resposta de teste');
+        return { texto: 'resposta de teste', tokens_entrada: 0, tokens_saida: 0, cache_lido: 0 };
+      },
+    } as unknown as import('../servidor/nucleo/kernel/MotorRaciocinio').MotorRaciocinio,
+  });
+
+  // Frase sem âncora nenhuma e curta o bastante para não merecer decomposição
+  // → rota `raciocinio_direto`, plano de passo único `raciocinio`, nenhuma
+  // habilidade executada (é exatamente o caminho que produziu "vou
+  // verificar" seguido de silêncio na auditoria real).
+  await kernel.processar('o que você acha dessa ideia?');
+
+  assert.ok(
+    overridePersonaCapturada.includes('NÃO ACIONOU NENHUMA FERRAMENTA'),
+    `overridePersona deveria conter a trava contra promessa vazia; recebido: ${overridePersonaCapturada}`,
+  );
+});
+
+test('rota com habilidade REALMENTE executada não recebe a trava de promessa vazia', async () => {
+  const barramento = new BarramentoEventos('s-promessa-2');
+  let overridePersonaCapturada = '';
+
+  const kernel = new Kernel({
+    sessao: 's-promessa-2',
+    idUsuario: 'daiane',
+    outrosOperadores: [],
+    estado: new EstadoAtomico(),
+    memoria: memoriaVazia(),
+    barramento,
+    raciocinio: {
+      disponivel: true,
+      modelo: 'teste',
+      async planejar() {
+        return {
+          objetivo: 'diagnosticar',
+          origem: 'deterministico' as const,
+          passos: [
+            { indice: 0, descricao: 'diagnóstico', habilidade: 'diagnosticar_sistema', parametros: {} },
+            { indice: 1, descricao: 'comentar', habilidade: 'raciocinio', parametros: {} },
+          ],
+        };
+      },
+      async responder(p: { overridePersona: string; aoReceberTexto: (t: string) => void }) {
+        overridePersonaCapturada = p.overridePersona;
+        p.aoReceberTexto('resposta de teste');
+        return { texto: 'resposta de teste', tokens_entrada: 0, tokens_saida: 0, cache_lido: 0 };
+      },
+    } as unknown as import('../servidor/nucleo/kernel/MotorRaciocinio').MotorRaciocinio,
+  });
+
+  // Mensagem composta o bastante para merecer decomposição pela LLM
+  // (`plano_cognitivo`), cujo plano fake acima INCLUI um passo real —
+  // `execucao.passos` não fica vazio, e a trava não deveria disparar.
+  await kernel.processar('analise o diagnóstico do computador e depois me dê sua opinião sobre o resultado');
+
+  const contemTrava = overridePersonaCapturada?.includes('NÃO ACIONOU NENHUMA FERRAMENTA') ?? false;
+  assert.ok(
+    !contemTrava,
+    'overridePersona não deveria conter a trava quando uma habilidade real rodou neste turno',
+  );
 });

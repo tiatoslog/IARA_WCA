@@ -171,11 +171,19 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
     ],
   }),
 
-  abrir_app: (p) => ({
-    objetivo: 'Abrir aplicativo autorizado',
-    origem: 'deterministico',
-    passos: [passo(0, 'Abrir o aplicativo pedido', 'abrir_aplicativo', { aplicativo: p.bruto })],
-  }),
+  abrir_app: (p) => {
+    const site = extrairSiteAbertura(p.bruto);
+    return {
+      objetivo: 'Abrir aplicativo autorizado',
+      origem: 'deterministico',
+      passos: [
+        passo(0, 'Abrir o aplicativo pedido', 'abrir_aplicativo', {
+          aplicativo: p.bruto,
+          ...(site ? { site } : {}),
+        }),
+      ],
+    };
+  },
 
   fechar_app: (p) => ({
     objetivo: 'Fechar aplicativo autorizado',
@@ -483,6 +491,36 @@ export function extrairApelidoRepositorio(bruto: string): string {
   // "o", "meu", "esse" casam o grupo e não nomeiam nada.
   if (/^(o|a|os|as|meu|minha|esse|essa|este|esta|aqui|ai)$/i.test(nome)) return '';
   return nome;
+}
+
+/**
+ * O SITE dentro do pedido de abrir aplicativo — "abra o chrome no
+ * youtube.com", "abre o navegador em https://iara.up.railway.app".
+ *
+ * `undefined`, não string vazia, quando não há nada a extrair: é o sinal que
+ * `AgenteLocal.abrirAplicativo` usa para nem tentar validar URL nenhuma. Duas
+ * formas reconhecidas, e só duas — a lição de `resolverAplicativo` (substring
+ * contra lista fechada) vale aqui pelo motivo oposto: um domínio "adivinhado"
+ * a partir de uma palavra solta ("abra o chrome" ⇏ "chrome.com") seria a
+ * IARA inventando destino, não reconhecendo um.
+ *
+ *   1. um endereço `http://`/`https://` já escrito por extenso;
+ *   2. um token com PONTO E TLD reconhecível ("youtube.com", "iara.up.railway.app")
+ *      — nunca uma palavra solta, porque é o ponto que separa "abra o site
+ *      google" (sem TLD, não é endereço) de "abra o google.com" (é).
+ *
+ * A validação de FORMATO de verdade (esquema, espaço, aspas) não mora aqui —
+ * mora em `AgenteLocal.validarUrlAbertura`, que roda de qualquer forma antes
+ * do `spawn`. Esta função só decide SE HÁ algo para oferecer a ela.
+ */
+export function extrairSiteAbertura(bruto: string): string | undefined {
+  const comEsquema = bruto.match(/https?:\/\/[^\s'"]+/i);
+  if (comEsquema) return comEsquema[0].replace(/[.,;!?)]+$/, '');
+
+  const dominio = bruto.match(
+    /\b([a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*\.(?:com\.br|gov\.br|org\.br|net\.br|com|org|net|io|co|app|dev))\b/i,
+  );
+  return dominio ? `https://${dominio[1]}` : undefined;
 }
 
 export function extrairLocalAutorizado(bruto: string): string {

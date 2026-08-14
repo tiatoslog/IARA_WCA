@@ -43,7 +43,8 @@
 import { WebSocket } from 'ws';
 import { config as carregarEnv } from 'dotenv';
 import { createInterface } from 'node:readline';
-import { hostname, platform, release } from 'node:os';
+import { hostname, platform, release, tmpdir } from 'node:os';
+import path from 'node:path';
 import QRCode from 'qrcode';
 import {
   lerPacoteMotor,
@@ -203,6 +204,33 @@ async function parearEsteComputador(): Promise<boolean> {
     console.log(qr);
     console.log('  Aponte a câmera do celular (já logado na IARA) para o QR acima,');
     console.log('  ou digite o código abaixo na aba Dispositivos:\n');
+
+    /**
+     * O ASCII ACIMA DEPENDE DO CONSOLE — achado em auditoria (14/08/2026): um
+     * `conhost.exe` legado sem codepage UTF-8, ou uma fonte não-monoespaçada,
+     * transforma os blocos Unicode em ruído ilegível sem avisar ninguém, e o
+     * operador via "QR não aparece" mesmo com o código impresso do lado certo.
+     * Uma imagem PNG não depende de fonte de terminal nenhuma — é sempre
+     * nítida, sempre escaneável. `QRCode.toFile` é uma chamada de biblioteca
+     * (o `writeFile` de verdade mora dentro do pacote `qrcode`, não aqui), e
+     * este arquivo não abre o resultado sozinho: `spawn`/`execFile` continuam
+     * confinados ao `AgenteLocal` por desenho (`testes/fronteira-efeitos.test.ts`,
+     * `A4`), e o braço não tem — nem deveria ter — uma segunda porta para o
+     * shell só para abrir uma imagem.
+     */
+    try {
+      const caminhoQr = path.join(
+        tmpdir(),
+        `iara-pareamento-${pedido.codigo.replace(/-/g, '')}.png`,
+      );
+      await QRCode.toFile(caminhoQr, linkPareamento, { width: 512, margin: 2 });
+      console.log(`  Se o desenho acima saiu ilegível no seu terminal, abra este arquivo:`);
+      console.log(`  ${caminhoQr}\n`);
+    } catch {
+      /* PNG é reforço, não a via principal — o ASCII acima e o código abaixo
+         já bastam sozinhos. Falha ao gravar (disco cheio, sem permissão) não
+         pode derrubar o pareamento. */
+    }
   } catch {
     /* Endereço não vira QR válido (ex.: motor sem esquema http/https) — o
        código continua funcionando sozinho, então isto nunca é fatal. */

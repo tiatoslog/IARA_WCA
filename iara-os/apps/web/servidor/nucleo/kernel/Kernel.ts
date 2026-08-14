@@ -1241,6 +1241,35 @@ export class Kernel {
       ),
       TeoriaDaMente.overrideDePersona(percepcao.leitura),
       TeoriaDaMente.overrideDeFamiliaridade(instantaneo.metricas.afinidade),
+      /**
+       * A TRAVA CONTRA A PROMESSA VAZIA — achada em auditoria (14/08/2026).
+       *
+       * `execucao.passos` só ganha entrada quando um passo REAL de habilidade
+       * rodou (`executarPlano` pula o passo `raciocinio` com `continue`, sem
+       * empurrar nada para a lista). Chegar aqui com a lista vazia significa
+       * que este turno é 100% conversa: nenhuma ferramenta foi acionada, e
+       * nenhuma vai ser depois — o turno termina no texto que sai daqui.
+       *
+       * Sem esta trava, a persona ("nomeie a capacidade") e o hábito de
+       * assistente de escrever "vou verificar"/"vou rodar" se combinam numa
+       * promessa que ninguém cumpre: o texto sai como resposta FINAL, o
+       * turno fecha, e o operador só descobre que nada aconteceu mandando
+       * outra mensagem — que a LLM, sem nenhum resultado real para relatar,
+       * respondia inventando um desfecho. As duas metades desse defeito
+       * fecham aqui: a primeira impede a promessa vazia; a correção da
+       * âncora de `diagnostico` (`Percepcao.ts`) fecha o caso concreto que a
+       * expôs, fazendo mais pedidos chegarem a este método já com um passo
+       * executado de verdade.
+       */
+      execucao.passos.length === 0
+        ? 'ESTE TURNO NÃO ACIONOU NENHUMA FERRAMENTA E NENHUMA VAI RODAR DEPOIS: ' +
+          'você está respondendo só com o que já sabe agora. Nunca diga "vou verificar", ' +
+          '"vou rodar", "vou checar" ou qualquer variação de ação futura — você não tem como ' +
+          'cumprir essa promessa neste turno, e o operador só vai saber que nada aconteceu se ' +
+          'mandar outra mensagem perguntando. Responda com o que você sabe agora; se a resposta ' +
+          'exige uma ação real (rodar diagnóstico, abrir algo, medir alguma coisa), diga isso e ' +
+          'peça o pedido de forma mais direta, para que ele seja executado de verdade desta vez.'
+        : '',
     ]
       .filter(Boolean)
       .join('\n\n');

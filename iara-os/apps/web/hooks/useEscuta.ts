@@ -203,7 +203,20 @@ export function pareceEco(ouvido: string, falaDaIara: string | null): boolean {
   return normalizar(falaDaIara).includes(o);
 }
 
-export type EstadoEscuta = 'inativa' | 'vigiando' | 'ouvindo' | 'processando' | 'indisponivel';
+/**
+ * `reconectando` é DIFERENTE de `indisponivel`: o orçamento de falha ainda não
+ * estourou, o microfone vai voltar sozinho em segundos, e não há nada para o
+ * operador decidir — não é o "Tentar de novo" do religamento manual, é só a
+ * IARA sendo honesta sobre um intervalo em que ela ainda não está ouvindo de
+ * verdade, apesar da vigília continuar ligada.
+ */
+export type EstadoEscuta =
+  | 'inativa'
+  | 'vigiando'
+  | 'ouvindo'
+  | 'processando'
+  | 'reconectando'
+  | 'indisponivel';
 
 export interface Escuta {
   estado: EstadoEscuta;
@@ -226,8 +239,20 @@ export interface Escuta {
 }
 
 export interface OpcoesEscuta {
-  /** Chamado quando a pessoa termina de falar. */
-  aoConcluirFala: (texto: string) => void;
+  /**
+   * Chamado quando a pessoa termina de falar.
+   *
+   * O RETORNO IMPORTA — achado em auditoria (14/08/2026). Antes era `void`, e
+   * `enviarAcumulado` nunca sabia se o texto reconhecido de fato saiu para o
+   * barramento. Quando o socket caía bem no instante do silêncio que dispara o
+   * envio, o comando reconhecido desaparecia: `estado` ficava preso em
+   * `'processando'` para sempre (só um `onresult` novo o tira de lá), e do
+   * ponto de vista de quem chamou "ei IARA" e falou um comando, "nada
+   * acontece" — sem nenhum jeito de saber que a causa foi a conexão, e sem o
+   * microfone voltar a ouvir sozinho. `false` é o sinal para `enviarAcumulado`
+   * desistir da espera e voltar a ouvir.
+   */
+  aoConcluirFala: (texto: string) => boolean | void;
   /** Chamado quando a pessoa começa a falar enquanto a IARA fala. */
   aoInterromper: () => void;
   /**
@@ -330,7 +355,18 @@ export function useEscuta({
     setParcial('');
     if (texto.length < MINIMO_CARACTERES) return;
     setEstado('processando');
-    cbConcluir.current(texto);
+    const enviou = cbConcluir.current(texto);
+    /**
+     * `false` EXPLÍCITO — não a ausência de erro — é o único sinal que conta.
+     * `enviar()` do socket já registra um alerta próprio quando o barramento
+     * está fechado; o que faltava era o MICROFONE saber que o pedido não foi
+     * a lugar nenhum. Sem isto, `estado` ficava preso em `'processando'` até
+     * a pessoa falar de novo por conta própria — e como a vigília às vezes
+     * está sozinha, sem ninguém olhando o log técnico, o efeito observado era
+     * "falei o comando e não aconteceu nada", sem explicação nem religamento.
+     * Volta a ouvir na hora: se o operador falar de novo, tenta de novo.
+     */
+    if (enviou === false) setEstado(ativaRef.current ? 'ouvindo' : 'vigiando');
   }, []);
 
   const rearmarSilencio = useCallback(() => {
@@ -492,6 +528,19 @@ export function useEscuta({
         falhasSeguidas.current += 1;
         if (falhasSeguidas.current < TETO_FALHAS_SEGUIDAS) {
           atrasoReligar.current = ESPERA_BASE_FALHA_MS * 2 ** (falhasSeguidas.current - 1);
+          /**
+           * A TELA NÃO PODE MENTIR DURANTE O RELIGAMENTO — achado em auditoria
+           * (14/08/2026): até aqui, nada tocava `estado` nas primeiras
+           * `TETO_FALHAS_SEGUIDAS - 1` falhas (até ~14 s de backoff). A faixa
+           * ficava parada em `'vigiando'`, e "vigília ligada — diga 'ei IARA'"
+           * continuava na tela, palavra por palavra igual ao caso em que o
+           * microfone está de fato ouvindo. Quem chamasse bem nesse intervalo
+           * via exatamente o sintoma relatado: nenhuma mudança, silêncio total.
+           * `onstart` (linha abaixo) volta a `'ouvindo'`/`'vigiando'` sozinho
+           * assim que um religamento realmente pega — este estado é só a
+           * verdade sobre a janela em que ainda não pegou.
+           */
+          setEstado('reconectando');
           return;
         }
         // Orçamento estourado: parar de tentar e CONTAR.

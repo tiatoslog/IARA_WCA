@@ -214,9 +214,7 @@ export function PainelConversa({
       ]
         .filter(Boolean)
         .join(' ') || null,
-    aoConcluirFala: (texto) => {
-      onEnviar(texto);
-    },
+    aoConcluirFala: (texto) => onEnviar(texto),
     aoInterromper: onInterromper,
     // "Ei IARA" respondido com voz: a confirmação de que ela está ouvindo.
     // Devolver `false` (voz desligada) faz a escuta soar o toque de despertar.
@@ -494,6 +492,18 @@ export function PainelConversa({
         {escuta.estado === 'vigiando' && (
           <div className="conversa-dica">
             vigília ligada — diga <b>“ei IARA”</b> para abrir a ligação
+          </div>
+        )}
+        {/*
+          Achado em auditoria (14/08/2026): sem esta linha, a dica acima ficava
+          congelada dizendo "vigília ligada" durante as tentativas silenciosas
+          de religar o reconhecedor (até ~14 s por falha) — quem chamasse "ei
+          IARA" nessa janela via a mesma frase de sempre e nenhum indício de
+          que o microfone não estava, de fato, ouvindo nada.
+        */}
+        {escuta.estado === 'reconectando' && (
+          <div className="conversa-dica">
+            o microfone caiu por um instante — religando sozinha…
           </div>
         )}
       </footer>

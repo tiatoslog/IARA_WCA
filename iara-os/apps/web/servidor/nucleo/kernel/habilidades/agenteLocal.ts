@@ -128,7 +128,9 @@ export const abrirAplicativo: Habilidade = {
     nome: 'Abrir aplicativo',
     descricao:
       'Abre um aplicativo de uma lista fechada e revisada (Bloco de Notas, Calculadora, Paint, ' +
-      'Explorador de Arquivos, Chrome, Edge). Não executa comando arbitrário.',
+      'Explorador de Arquivos, Chrome, Edge). Não executa comando arbitrário. Para Chrome/Edge, ' +
+      'aceita opcionalmente um "site" (endereço http:// ou https:// completo) para abrir já ' +
+      'naquela página — outros aplicativos da lista não têm o que fazer com um endereço.',
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],
@@ -146,12 +148,26 @@ export const abrirAplicativo: Habilidade = {
     // duas perguntas são independentes. Lançar o Bloco de Notas duas vezes abre
     // duas janelas, e o processo é solto com `unref`: não há como recolher.
     idempotencia: 'escrita_nao_idempotente',
-    esquema: { aplicativo: { tipo: 'texto', obrigatorio: true } },
+    esquema: {
+      aplicativo: { tipo: 'texto', obrigatorio: true },
+      /**
+       * A VALIDAÇÃO DE VERDADE (esquema http/https, sem espaço, sem aspas)
+       * mora em `AgenteLocal.validarUrlAbertura` — o `CampoEsquema` genérico
+       * só sabe conferir tipo, presença e teto de tamanho, não formato de
+       * URL. `max` aqui é só o cinto de segurança contra um valor absurdo
+       * chegando cedo demais; a recusa que importa é a de lá.
+       */
+      site: { tipo: 'texto', obrigatorio: false, max: 2000 },
+    },
   },
   async executar(ctx) {
+    const site = ctx.parametros.site;
     const relato = await braco.executar({
       acao: 'abrir_aplicativo',
-      parametros: { aplicativo: String(ctx.parametros.aplicativo) },
+      parametros: {
+        aplicativo: String(ctx.parametros.aplicativo),
+        ...(typeof site === 'string' && site.trim() ? { url: site } : {}),
+      },
       id_usuario: ctx.id_usuario,
       sessao: ctx.sessao,
       chave_idempotencia: ctx.operacao?.id_operacao,

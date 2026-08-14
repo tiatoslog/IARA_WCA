@@ -241,8 +241,10 @@ export function Dispositivos({
               </button>
             </div>
             <small>
-              Abra o programa da IARA no computador. Ele mostra um código de oito
-              letras e números — digite aqui.
+              Abra o programa da IARA no computador. Ele mostra um QR e um código
+              de oito letras e números — aponte a câmera do celular para o QR
+              (abre esta gaveta com o código já preenchido), ou digite o código
+              aqui à mão.
             </small>
           </>
         ) : (

@@ -24,7 +24,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Braco, type PonteDeOrdens } from '../servidor/nucleo/Braco';
-import { AgenteLocal, resolverAplicativo } from '../servidor/nucleo/AgenteLocal';
+import { AgenteLocal, resolverAplicativo, validarUrlAbertura } from '../servidor/nucleo/AgenteLocal';
+import { extrairSiteAbertura } from '../servidor/nucleo/kernel/Planejador';
 import { MotorPercepcao } from '../servidor/nucleo/kernel/Percepcao';
 import { novaExecucaoId, type OrdemExecucao, type RelatoExecucao } from '../../web/lib/execucao';
 import type { DispositivoConectado } from '../servidor/barramento/PonteDispositivos';
@@ -551,5 +552,117 @@ test('G2. as âncoras novas não roubam frases umas das outras', () => {
   assert.ok(
     !p.perceber('nao abra o chrome').ancoras.includes('abrir_app'),
     '"não abra" é o oposto de um pedido de abertura',
+  );
+});
+
+// ===========================================================================
+// 8. Abrir aplicativo COM SITE — a IARA passa a navegar, não só abrir vazio
+// ===========================================================================
+
+test('H1. validarUrlAbertura aceita http/https limpo e recusa o resto', () => {
+  assert.equal(validarUrlAbertura('https://youtube.com'), null);
+  assert.equal(validarUrlAbertura('http://intranet.atoslog.com.br/painel'), null);
+
+  assert.ok(validarUrlAbertura(''), 'vazio precisa ser recusado');
+  assert.ok(validarUrlAbertura('youtube.com'), 'sem esquema precisa ser recusado');
+  assert.ok(validarUrlAbertura('javascript:alert(1)'), 'esquema perigoso precisa ser recusado');
+  assert.ok(validarUrlAbertura('file:///C:/segredos.txt'), 'file: precisa ser recusado');
+  assert.ok(validarUrlAbertura('chrome://settings'), 'esquema interno do navegador precisa ser recusado');
+  assert.ok(
+    validarUrlAbertura('http://x.com --headless'),
+    'espaço (candidato a injeção de flag) precisa ser recusado',
+  );
+  assert.ok(validarUrlAbertura('http://x.com"'), 'aspas precisam ser recusadas');
+});
+
+test('H2. Bloco de Notas recusa URL sem lançar processo nenhum', async () => {
+  let lancadorChamado = false;
+  const agente = new AgenteLocal(
+    () => undefined,
+    async () => 0,
+    async () => {
+      lancadorChamado = true;
+      return { subiu: true, motivo: '' };
+    },
+    async () => [1],
+  );
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o bloco de notas', 'https://youtube.com');
+  assert.equal(r.ok, false);
+  assert.equal(r.codigo_erro, 'PARAMETRO_INVALIDO');
+  assert.equal(lancadorChamado, false, 'app que não aceita URL não pode nem chegar a lançar processo');
+});
+
+test('H3. URL inválida é recusada ANTES do spawn — nenhum processo é lançado', async () => {
+  let lancadorChamado = false;
+  const agente = new AgenteLocal(
+    () => undefined,
+    async () => 0,
+    async () => {
+      lancadorChamado = true;
+      return { subiu: true, motivo: '' };
+    },
+    async () => [1],
+  );
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o chrome', 'javascript:alert(1)');
+  assert.equal(r.ok, false);
+  assert.equal(r.codigo_erro, 'PARAMETRO_INVALIDO');
+  assert.equal(lancadorChamado, false, 'URL recusada não pode chegar ao spawn');
+});
+
+test('H4. URL válida chega ao spawn como argumento próprio, e a resposta cita o endereço', async () => {
+  let argumentosRecebidos: string[] = [];
+  let vez = 0;
+  const agente = new AgenteLocal(
+    () => undefined,
+    async () => 0,
+    async (_comando, argumentos) => {
+      argumentosRecebidos = argumentos;
+      return { subiu: true, motivo: '' };
+    },
+    async () => (vez++ === 0 ? [] : [4321]),
+  );
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o chrome', 'https://youtube.com');
+  assert.equal(r.ok, true);
+  assert.deepEqual(
+    argumentosRecebidos,
+    ['/c', 'start', '', 'chrome', 'https://youtube.com'],
+    'a URL precisa chegar como um argumento próprio do array, nunca concatenada a outro',
+  );
+  assert.match(r.texto, /youtube\.com/);
+});
+
+test('H5. sem URL, o comportamento de sempre continua idêntico (argv sem site nenhum)', async () => {
+  let argumentosRecebidos: string[] = [];
+  let vez = 0;
+  const agente = new AgenteLocal(
+    () => undefined,
+    async () => 0,
+    async (_comando, argumentos) => {
+      argumentosRecebidos = argumentos;
+      return { subiu: true, motivo: '' };
+    },
+    async () => (vez++ === 0 ? [] : [4321]),
+  );
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o chrome');
+  assert.equal(r.ok, true);
+  assert.deepEqual(argumentosRecebidos, ['/c', 'start', '', 'chrome']);
+  assert.doesNotMatch(r.texto, /https?:\/\//);
+});
+
+test('H6. extrairSiteAbertura só reconhece endereço explícito ou domínio com TLD — nunca adivinha', () => {
+  assert.equal(extrairSiteAbertura('abra o chrome no youtube.com'), 'https://youtube.com');
+  assert.equal(
+    extrairSiteAbertura('abre o navegador em https://iara.up.railway.app/painel'),
+    'https://iara.up.railway.app/painel',
+  );
+  assert.equal(extrairSiteAbertura('abra o chrome'), undefined);
+  assert.equal(
+    extrairSiteAbertura('abra o chrome'),
+    undefined,
+    'sem ponto+TLD não há o que extrair — nunca inventa domínio a partir de palavra solta',
   );
 });

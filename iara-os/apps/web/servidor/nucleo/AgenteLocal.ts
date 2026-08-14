@@ -178,6 +178,12 @@ interface AplicativoAutorizado {
    * de escolher a explicação mais simpática. Ver o retorno de `fecharAplicativo`.
    */
   moderno?: boolean;
+  /**
+   * Este app aceita um endereço para abrir direto nele — hoje só os
+   * navegadores. Bloco de Notas, Calculadora e Explorador não têm o que fazer
+   * com uma URL, e oferecer o campo para eles seria uma promessa vazia.
+   */
+  aceitaUrl?: boolean;
 }
 
 /**
@@ -198,10 +204,42 @@ const APLICATIVOS: Record<string, AplicativoAutorizado> = {
   explorer: { rotulo: 'Explorador de Arquivos', comando: 'explorer.exe', argumentos: [], processo: 'explorer.exe', fechavel: false },
   arquivos: { rotulo: 'Explorador de Arquivos', comando: 'explorer.exe', argumentos: [], processo: 'explorer.exe', fechavel: false },
   // Navegadores instalam fora do PATH; `start` resolve pelo registro do app.
-  chrome: { rotulo: 'Google Chrome', comando: 'cmd.exe', argumentos: ['/c', 'start', '', 'chrome'], processo: 'chrome.exe', fechavel: true },
-  edge: { rotulo: 'Microsoft Edge', comando: 'cmd.exe', argumentos: ['/c', 'start', '', 'msedge'], processo: 'msedge.exe', fechavel: true },
-  navegador: { rotulo: 'Microsoft Edge', comando: 'cmd.exe', argumentos: ['/c', 'start', '', 'msedge'], processo: 'msedge.exe', fechavel: true },
+  chrome: { rotulo: 'Google Chrome', comando: 'cmd.exe', argumentos: ['/c', 'start', '', 'chrome'], processo: 'chrome.exe', fechavel: true, aceitaUrl: true },
+  edge: { rotulo: 'Microsoft Edge', comando: 'cmd.exe', argumentos: ['/c', 'start', '', 'msedge'], processo: 'msedge.exe', fechavel: true, aceitaUrl: true },
+  navegador: { rotulo: 'Microsoft Edge', comando: 'cmd.exe', argumentos: ['/c', 'start', '', 'msedge'], processo: 'msedge.exe', fechavel: true, aceitaUrl: true },
 };
+
+/**
+ * O site é o único parâmetro deste catálogo que o operador escolhe livremente
+ * e que vira `argv` de um navegador de verdade — por isso a validação mora
+ * aqui, ao lado do `spawn`, e não só no esquema genérico da habilidade.
+ *
+ * `http(s)://` obrigatório fecha a porta mais perigosa sozinho: `javascript:`,
+ * `data:`, `file:` e os esquemas internos do navegador (`chrome://`,
+ * `edge://`) nunca passam no prefixo. Proibir espaço e aspas fecha a segunda:
+ * sem eles, uma URL não vira um SEGUNDO argumento nem consegue carregar uma
+ * flag do navegador por engano (`--headless`, por exemplo) — e como
+ * `argumentos` é sempre um array passado a `spawn` sem `shell: true`, não há
+ * injeção de shell (`;`, `&&`, `|`) para se preocupar aqui, só injeção de
+ * flag, e é essa que a ausência de espaço fecha.
+ */
+export function validarUrlAbertura(url: string): string | null {
+  const t = url.trim();
+  if (!t) return 'endereço vazio';
+  if (t.length > 2000) return 'endereço longo demais';
+  if (/\s/.test(t)) return 'endereço não pode ter espaço';
+  if (/['"]/.test(t)) return 'endereço não pode ter aspas';
+  if (!/^https?:\/\//i.test(t)) return 'só endereço http:// ou https://';
+  try {
+    const analisado = new URL(t);
+    if (analisado.protocol !== 'http:' && analisado.protocol !== 'https:') {
+      return 'só endereço http:// ou https://';
+    }
+  } catch {
+    return 'endereço malformado';
+  }
+  return null;
+}
 
 /**
  * "o Bloco de Notas", "a Calculadora".
@@ -877,7 +915,7 @@ export class AgenteLocal {
    * Agora são três perguntas, feitas em ordem, e cada uma pode devolver "não":
    * o aplicativo está autorizado? o lançamento subiu? o processo apareceu?
    */
-  async abrirAplicativo(idUsuario: string, pedido: string): Promise<RelatoAcao> {
+  async abrirAplicativo(idUsuario: string, pedido: string, url?: string): Promise<RelatoAcao> {
     const app = resolverAplicativo(pedido);
     if (!app) {
       this.auditar(idUsuario, 'abrir_aplicativo', false, pedido.slice(0, 60));
@@ -894,13 +932,54 @@ export class AgenteLocal {
     }
 
     /**
+     * O SITE É OPCIONAL E VALIDADO ANTES DE TOCAR O `spawn`.
+     *
+     * Duas recusas diferentes moram aqui, e a distinção importa para a frase
+     * que volta ao operador: "esse app não abre endereço" (pediu URL para o
+     * Bloco de Notas) é sobre a ESCOLHA do aplicativo; "endereço inválido" é
+     * sobre a URL em si. As duas são `PARAMETRO_INVALIDO` — nenhuma delas
+     * chegou perto de lançar processo nenhum.
+     */
+    const urlLimpa = url?.trim() || null;
+    if (urlLimpa) {
+      if (!app.aceitaUrl) {
+        this.auditar(idUsuario, 'abrir_aplicativo', false, `${app.rotulo}: nao aceita url`);
+        return {
+          ok: false,
+          texto: `${app.rotulo} não abre endereço — só um navegador faz isso. Posso abrir ${app.rotulo} sem endereço, ou abrir o Chrome/Edge já no site.`,
+          prova: {
+            confirmado: false,
+            evidencia: `"${app.rotulo}" não aceita parâmetro de URL; nada foi lançado`,
+            motivo: 'nao_encontrado',
+          },
+          codigo_erro: 'PARAMETRO_INVALIDO',
+        };
+      }
+      const motivoInvalido = validarUrlAbertura(urlLimpa);
+      if (motivoInvalido) {
+        this.auditar(idUsuario, 'abrir_aplicativo', false, `url invalida: ${motivoInvalido}`);
+        return {
+          ok: false,
+          texto: `Esse endereço não passa na minha validação (${motivoInvalido}). Preciso de um link http:// ou https:// completo, sem espaço.`,
+          prova: {
+            confirmado: false,
+            evidencia: `URL recusada: ${motivoInvalido}`,
+            motivo: 'nao_encontrado',
+          },
+          codigo_erro: 'PARAMETRO_INVALIDO',
+        };
+      }
+    }
+    const argumentos = urlLimpa ? [...app.argumentos, urlLimpa] : app.argumentos;
+
+    /**
      * A FOTO DE ANTES é o que dá sentido à foto de depois. "Chrome está
      * rodando" não prova nada quando o Chrome já estava rodando — é a diferença
      * entre os dois instantes que carrega informação, e sem o antes essa
      * verificação seria só uma forma mais cara de dizer "sim".
      */
     const antes = await this.sonda(app.processo);
-    const lancamento = await this.lancador(app.comando, app.argumentos);
+    const lancamento = await this.lancador(app.comando, argumentos);
 
     if (!lancamento.subiu) {
       this.auditar(idUsuario, 'abrir_aplicativo', false, `${app.rotulo}: ${lancamento.motivo}`);
@@ -925,7 +1004,9 @@ export class AgenteLocal {
       this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} (sem sonda)`);
       return {
         ok: true,
-        texto: `Mandei ${artigoDe(app.rotulo)} ${app.rotulo} abrir. Não consigo conferir a tabela de processos desta máquina, então não tenho como te garantir que a janela apareceu.`,
+        texto:
+          `Mandei ${artigoDe(app.rotulo)} ${app.rotulo} abrir${urlLimpa ? ` em ${urlLimpa}` : ''}. ` +
+          'Não consigo conferir a tabela de processos desta máquina, então não tenho como te garantir que a janela apareceu.',
         prova: {
           confirmado: false,
           evidencia: 'lançamento aceito; a tabela de processos não é consultável nesta plataforma',
@@ -952,7 +1033,7 @@ export class AgenteLocal {
       const novos = depois.length - antes.length;
       return {
         ok: true,
-        texto: `Pronto. Abri ${artigoDe(app.rotulo)} ${app.rotulo} no computador.`,
+        texto: `Pronto. Abri ${artigoDe(app.rotulo)} ${app.rotulo} no computador${urlLimpa ? `, já em ${urlLimpa}` : ''}.`,
         prova: {
           confirmado: true,
           evidencia:
@@ -979,9 +1060,10 @@ export class AgenteLocal {
       return {
         ok: true,
         texto:
-          `${artigoDe(app.rotulo)==="a"?"A":"O"} ${app.rotulo} já estava aberto no computador e eu mandei abrir de novo. ` +
+          `${artigoDe(app.rotulo)==="a"?"A":"O"} ${app.rotulo} já estava aberto no computador e eu mandei abrir de novo${urlLimpa ? ` em ${urlLimpa}` : ''}. ` +
           'Ele traz a janela existente para a frente em vez de criar um processo novo, ' +
-          'então não tenho como te provar que uma janela nova apareceu.',
+          'então não tenho como te provar que uma janela nova apareceu' +
+          (urlLimpa ? ' — mas o endereço deve ter aberto numa aba nova dela.' : '.'),
         prova: {
           confirmado: false,
           evidencia: `${app.processo} já estava em execução antes do pedido (${antes.length} processo(s)); a contagem não mudou`,
