@@ -33,6 +33,7 @@ import {
 } from './Seguranca';
 import { RegistroErros } from './RegistroErros';
 import { PorteiroAutorizacao } from './PorteiroAutorizacao';
+import { motivoDaRecusa, nivelAtual, podeSem } from './Autonomia';
 import type { Plano } from './Evento';
 import { PermissaoNegada, ParametroInvalido, type Habilidade, type Risco } from './Habilidade';
 import { confirmaAcontecimento, VERBO_DO_ESTADO, type EstadoExecucao } from './Verdade';
@@ -612,6 +613,54 @@ export class Kernel {
           esperado: 'ação de risco alto só nasce de pedido direto do operador',
           instante: new Date().toISOString(),
         });
+        continue;
+      }
+
+      /**
+       * TETO DE AUTONOMIA — achado em auditoria (14/08/2026): `Autonomia.ts`
+       * define quatro capacidades na escada, mas só `falar_sem_ser_chamada`
+       * (o `Vigia`) era de fato consultada. `executar_pedido` — a mais baixa
+       * da escada, "rodar o que o operador pediu neste turno" — nunca era
+       * checada em lugar nenhum: um operador que configurasse
+       * `IARA_AUTONOMIA=conversa` esperando "nenhuma habilidade roda" via
+       * habilidade alguma executando de qualquer jeito.
+       *
+       * NÃO É A CORREÇÃO COMPLETA. `executar_plano_aprovado` (rodar os
+       * passos de um plano já autorizado, que a escada propositalmente exige
+       * um degrau ACIMA de `executar_pedido`) continua sem checagem própria:
+       * a receita `executar_plano` do Planejador marca `origem:
+       * 'deterministico'` para os passos do plano aprovado exatamente como
+       * marca para qualquer pedido direto — as duas formas são
+       * indistinguíveis aqui sem uma mudança no tipo `Plano`, e inventar essa
+       * distinção sob pressão de tempo é o tipo de decisão de design que essa
+       * auditoria decidiu NÃO tomar às pressas. Resultado prático: no nível
+       * `comando`, um passo de plano aprovado roda quando a escada diz que
+       * deveria exigir `plano`. Nível padrão (`plano`) não é afetado — nesse
+       * nível as duas capacidades já liberam a mesma coisa. Débito nomeado,
+       * não escondido.
+       */
+      const nivelAutonomia = nivelAtual();
+      if (!podeSem(nivelAutonomia, 'executar_pedido')) {
+        const motivo = motivoDaRecusa(nivelAutonomia, 'executar_pedido');
+        this.trabalho.registrarErro();
+        passos.push({
+          descricao: passo.descricao,
+          habilidade: passo.habilidade,
+          estado: 'aguardando_confirmacao',
+          texto: '',
+          evidencia: motivo,
+        });
+        this.auditoria.registrar({
+          instante: new Date().toISOString(),
+          sessao: this.dep.sessao,
+          id_usuario: this.dep.idUsuario,
+          traco: b.tracoAtual,
+          acao: `autonomia_insuficiente:${passo.habilidade}`,
+          detalhe: `nível "${nivelAutonomia}" não alcança "executar_pedido"`,
+          permitido: false,
+        });
+        b.publicar({ tipo: 'FALHA', modulo: 'autonomia', mensagem: motivo });
+        b.publicar({ tipo: 'PASSO_CONCLUIDO', passo, resumo: 'barrado pelo teto de autonomia', ms: 0 });
         continue;
       }
 

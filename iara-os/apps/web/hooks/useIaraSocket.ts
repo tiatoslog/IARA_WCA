@@ -118,6 +118,13 @@ export function useIaraSocket(credencial: Credencial) {
   const conectado = conexao === 'conectado';
 
   const socketRef = useRef<WebSocket | null>(null);
+  /**
+   * Espelho de `falas` para o `onclose`, que é registrado uma vez por efeito
+   * (dependências não incluem `falas`) e leria um valor congelado se lesse o
+   * state direto — mesmo problema que `enviar`/`aplicar` evitam com
+   * `setState` funcional, só que `onclose` não é um setter, é uma leitura.
+   */
+  const falasRef = useRef<Fala[]>([]);
   const ultimoSeq = useRef(0);
   const contadorLog = useRef(0);
   const tentativas = useRef(0);
@@ -126,6 +133,10 @@ export function useIaraSocket(credencial: Credencial) {
   const recusado = useRef(false);
   /** Religa manualmente após uma recusa terminal. */
   const [chaveReligar, setChaveReligar] = useState(0);
+
+  useEffect(() => {
+    falasRef.current = falas;
+  }, [falas]);
 
   const registrarLog = useCallback((nivel: NivelLog, texto: string) => {
     contadorLog.current += 1;
@@ -294,6 +305,28 @@ export function useIaraSocket(credencial: Credencial) {
           );
           setConexao('desconectado');
           return;
+        }
+        /**
+         * MENSAGEM PERDIDA EM VOO — achado ao vivo em auditoria (14/08):
+         * `enviar()` despacha e esquece; sem isto, um restart do motor no
+         * meio do processamento derrubava a conexão, o cliente reconectava
+         * sozinho, e o pedido do operador ficava sem resposta E sem aviso —
+         * ela precisava notar e reenviar por conta própria.
+         *
+         * O sinal é barato e não depende de correlacionar mensagem com
+         * resposta pelo barramento: se a ÚLTIMA fala conhecida é do
+         * OPERADOR (nenhuma fala da IARA chegou depois dela), a conexão caiu
+         * com um pedido pendente. Falso positivo é impossível aqui: em uso
+         * normal, a última fala só é do operador no instante entre enviar e
+         * a primeira resposta chegar — e nesse instante a conexão não caiu.
+         */
+        const ultima = falasRef.current[falasRef.current.length - 1];
+        if (ultima?.papel === 'operador') {
+          registrarLog(
+            'alerta',
+            'Perdi a conexão enquanto respondia. Não sei se a mensagem chegou — ' +
+              'confira a resposta e, se não vier, envie de novo.',
+          );
         }
         setConexao('reconectando');
         agendarReconexao();

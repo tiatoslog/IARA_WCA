@@ -40,6 +40,10 @@ import { aplicativoFechavelDoProcesso } from '../servidor/nucleo/AgenteLocal';
 import { MotorPercepcao } from '../servidor/nucleo/kernel/Percepcao';
 import { Planejador } from '../servidor/nucleo/kernel/Planejador';
 import { CATALOGO } from '../servidor/nucleo/kernel/habilidades';
+import { BarramentoEventos } from '../servidor/nucleo/kernel/BarramentoEventos';
+import { EstadoAtomico } from '../servidor/nucleo/EstadoAtomico';
+import { Kernel } from '../servidor/nucleo/kernel/Kernel';
+import type { MemoriaOperacional } from '../servidor/nucleo/MemoriaOperacional';
 
 function medicao(parcial: Partial<Medicao> = {}): Medicao {
   return {
@@ -133,6 +137,94 @@ test('a recusa diz o que falta e que a decisão é do operador', () => {
   const frase = motivoDaRecusa('plano', 'falar_sem_ser_chamada');
   assert.match(frase, /sugestao/);
   assert.match(frase, /a decisão é sua/);
+});
+
+// ---------------------------------------------------------------------------
+// 1b. O teto de autonomia, checado de ponta a ponta pelo Kernel
+// ---------------------------------------------------------------------------
+
+/**
+ * Achado ao vivo em auditoria (14/08/2026): `podeSem`/`Autonomia.ts` sempre
+ * existiram testados em isolamento (testes acima), mas `Kernel.ts` só
+ * consultava a escada para UMA das quatro capacidades (`falar_sem_ser_chamada`,
+ * via `Vigia`). `executar_pedido` — rodar o que o operador pediu neste turno —
+ * nunca era checada: `IARA_AUTONOMIA=conversa` não impedia habilidade nenhuma
+ * de rodar, ao contrário do que a própria escada promete. Estes dois testes
+ * provam a integração real, não só a função pura.
+ */
+function memoriaMinima(): MemoriaOperacional {
+  return {
+    registrar: async () => undefined,
+    historico: async () => [],
+    insightsPendentes: async () => [],
+    consumirInsight: async () => undefined,
+    gravarInsight: async () => undefined,
+    consolidar: async () => undefined,
+    carregarGlobal: async () => '',
+  } as unknown as MemoriaOperacional;
+}
+
+test('IARA_AUTONOMIA=conversa barra até o pedido mais simples, de ponta a ponta', async () => {
+  const antes = process.env.IARA_AUTONOMIA;
+  process.env.IARA_AUTONOMIA = 'conversa';
+  try {
+    const barramento = new BarramentoEventos('teste-autonomia-1');
+    const kernel = new Kernel({
+      sessao: 'teste-autonomia-1',
+      idUsuario: 'op-autonomia-1',
+      outrosOperadores: [],
+      estado: new EstadoAtomico(),
+      memoria: memoriaMinima(),
+      barramento,
+    });
+
+    const tipos: string[] = [];
+    let resposta = '';
+    barramento.assinarTudo((e) => {
+      tipos.push(e.tipo);
+      if (e.tipo === 'TAREFA_CONCLUIDA') resposta = e.texto;
+    });
+
+    // "que horas são?" é a mesma rota determinística e sem rede usada em
+    // `kernel.test.ts` — se ISTO for barrado, o teto vale para qualquer coisa.
+    await kernel.processar('que horas são?');
+
+    assert.ok(tipos.includes('FALHA'), 'a recusa por autonomia precisa ser um FALHA registrado');
+    assert.match(resposta, /autonomia/i);
+    assert.match(resposta, /a decisão é sua/);
+    assert.doesNotMatch(resposta, /\d{2}:\d{2}/, 'a hora real não pode vazar de um pedido barrado');
+  } finally {
+    if (antes === undefined) delete process.env.IARA_AUTONOMIA;
+    else process.env.IARA_AUTONOMIA = antes;
+  }
+});
+
+test('nível padrão continua executando pedido direto normalmente', async () => {
+  const antes = process.env.IARA_AUTONOMIA;
+  delete process.env.IARA_AUTONOMIA;
+  try {
+    const barramento = new BarramentoEventos('teste-autonomia-2');
+    const kernel = new Kernel({
+      sessao: 'teste-autonomia-2',
+      idUsuario: 'op-autonomia-2',
+      outrosOperadores: [],
+      estado: new EstadoAtomico(),
+      memoria: memoriaMinima(),
+      barramento,
+    });
+
+    let resposta = '';
+    barramento.assinar('TAREFA_CONCLUIDA', (e) => {
+      resposta = e.texto;
+    });
+
+    await kernel.processar('que horas são?');
+
+    assert.match(resposta, /\d{2}:\d{2}/, 'nível padrão não pode barrar o que já funcionava');
+  } finally {
+    if (antes === undefined) delete process.env.IARA_AUTONOMIA;
+    else process.env.IARA_AUTONOMIA = antes;
+  }
 });
 
 // ---------------------------------------------------------------------------
