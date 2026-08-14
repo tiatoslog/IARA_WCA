@@ -44,6 +44,7 @@ import { WebSocket } from 'ws';
 import { config as carregarEnv } from 'dotenv';
 import { createInterface } from 'node:readline';
 import { hostname, platform, release } from 'node:os';
+import QRCode from 'qrcode';
 import {
   lerPacoteMotor,
   type OrdemExecucao,
@@ -187,6 +188,24 @@ async function parearEsteComputador(): Promise<boolean> {
     const motivo = erro instanceof PareamentoRecusado ? erro.message : (erro as Error).message;
     console.error(`\n  Não consegui pedir o código de conexão: ${motivo}\n`);
     return false;
+  }
+
+  /**
+   * O QR É ATALHO, O CÓDIGO É A SEGURANÇA. Quem aprova precisa estar numa
+   * sessão já logada — o QR só poupa digitar 8 caracteres, abrindo a aba
+   * Dispositivos com o código pronto. Ele não pode ser gerado se `motor` não
+   * for uma URL http(s) de verdade (motor local sem endereço, por exemplo) —
+   * nesse caso a operadora ainda tem o código para digitar à mão.
+   */
+  try {
+    const linkPareamento = `${motor.replace(/\/+$/, '')}/?parear=${pedido.codigo.replace(/-/g, '')}`;
+    const qr = await QRCode.toString(linkPareamento, { type: 'terminal', small: true });
+    console.log(qr);
+    console.log('  Aponte a câmera do celular (já logado na IARA) para o QR acima,');
+    console.log('  ou digite o código abaixo na aba Dispositivos:\n');
+  } catch {
+    /* Endereço não vira QR válido (ex.: motor sem esquema http/https) — o
+       código continua funcionando sozinho, então isto nunca é fatal. */
   }
 
   console.log('  ┌────────────────────────────────────────────────┐');

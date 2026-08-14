@@ -80,6 +80,8 @@ interface Props {
   onPedirDispositivos?: () => boolean;
   onAutorizarComputador?: (codigo: string) => boolean;
   onEsquecerComputador?: (id: string) => boolean;
+  /** Código lido do QR do braço (`?parear=`). `null` fora desse caminho. */
+  codigoDePareamentoUrl?: string | null;
 }
 
 /** Qual gaveta está aberta sobre o fluxo da conversa. Uma de cada vez: as duas
@@ -108,9 +110,15 @@ export function PainelConversa({
   onPedirDispositivos,
   onAutorizarComputador,
   onEsquecerComputador,
+  codigoDePareamentoUrl = null,
 }: Props) {
   const [rascunho, setRascunho] = useState('');
   const [gaveta, setGaveta] = useState<Gaveta>('nenhuma');
+
+  /** O QR só poupa dois gestos: abrir a gaveta certa e digitar o código. */
+  useEffect(() => {
+    if (codigoDePareamentoUrl) setGaveta('dispositivos');
+  }, [codigoDePareamentoUrl]);
   const fim = useRef<HTMLDivElement | null>(null);
 
   /**
@@ -337,6 +345,7 @@ export function PainelConversa({
             conectado={conectado}
             pareamentoDisponivel={pareamentoDisponivel}
             ultimaAcao={acaoDispositivo}
+            codigoInicial={codigoDePareamentoUrl}
             aoPedirLista={onPedirDispositivos}
             aoAutorizar={onAutorizarComputador ?? (() => false)}
             aoEsquecer={(id) => onEsquecerComputador?.(id)}

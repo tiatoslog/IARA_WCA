@@ -67,6 +67,24 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
   }, [voz, interromper]);
 
   /**
+   * O QR do braço aponta para `?parear=CODIGO` nesta mesma origem. Lido uma
+   * vez, no primeiro quadro em que a sala já existe (ou seja, depois do
+   * login) — e removido da URL na hora, para que um F5 ou um link
+   * reencaminhado não reabra a gaveta com um código que talvez já tenha sido
+   * usado ou expirado.
+   */
+  const [codigoDePareamentoUrl, setCodigoDePareamentoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const codigo = params.get('parear');
+    if (!codigo) return;
+    setCodigoDePareamentoUrl(codigo);
+    params.delete('parear');
+    const resto = params.toString();
+    window.history.replaceState(null, '', resto ? `?${resto}` : window.location.pathname);
+  }, []);
+
+  /**
    * MODO CHAT — o celular, e só ele.
    *
    * No computador a hierarquia é a de sempre: a presença domina o campo visual
@@ -132,6 +150,7 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         onPedirDispositivos={pedirDispositivos}
         onAutorizarComputador={autorizarComputador}
         onEsquecerComputador={esquecerComputador}
+        codigoDePareamentoUrl={codigoDePareamentoUrl}
       />
 
       {/* Política de mídia do navegador exige um gesto antes de tocar som.

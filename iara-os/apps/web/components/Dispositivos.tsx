@@ -132,6 +132,7 @@ export function Dispositivos({
   pareamentoDisponivel,
   ultimaAcao,
   aoPedirLista,
+  codigoInicial = null,
   aoAutorizar,
   aoEsquecer,
   aoFechar,
@@ -142,12 +143,14 @@ export function Dispositivos({
   /** `false` quando a instalação está sem banco: não há onde guardar o par. */
   pareamentoDisponivel: boolean;
   ultimaAcao: { ok: boolean; texto: string } | null;
+  /** Veio do QR do braço — poupa digitar, não poupa o toque em "Autorizar". */
+  codigoInicial?: string | null;
   aoPedirLista: () => boolean;
   aoAutorizar: (codigo: string) => boolean;
   aoEsquecer: (id: string) => void;
   aoFechar: () => void;
 }) {
-  const [codigo, setCodigo] = useState('');
+  const [codigo, setCodigo] = useState(codigoInicial ?? '');
 
   /**
    * Pergunta ao abrir e a cada 15 s enquanto a gaveta está aberta.
