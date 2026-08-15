@@ -1,0 +1,31 @@
+[
+  {
+    "id": "00-inicial",
+    "avisos": [
+      "Raciocínio em nuvem desligado (sem ANTHROPIC_API_KEY) — clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ],
+    "faixas": [
+      "Modo local sem autenticação — a identidade vem de um seletor, não de um login. Não exponha este processo à internet."
+    ]
+  },
+  {
+    "id": "FAL-004-diagnostico-offline",
+    "prompt": "Faça um diagnóstico do sistema.",
+    "resposta": "Diagnóstico da IARA:\n\n● Motor          ONLINE       processo vivo, respondendo a esta conversa (win32)\n● Barramento     ONLINE       esta resposta atravessou o WebSocket para chegar até você\n◐ Banco          DEGRADADO    persistência em uso: arquivos locais (dados/)\n○ Computador     OFFLINE      nenhum braço conectado a este operador\n◐ Executor       DEGRADADO    sem braço; ações correm na máquina onde o motor está — que pode não ser a sua\n◐ Ferramentas    DEGRADADO    30 no catálogo; sem credencial: Consulta ao banco operacional, Envio de WhatsApp\n○ Raciocínio     OFFLINE      OLLAMA_URL configurada (http://127.0.0.1:11499) mas o servidor não responde — o Ollama está desligado, a porta está errada ou a rede não alcança. Não é falta de configuração: é servidor declarado e mudo.\n\nÚltimas execuções no seu computador:\n  IARA-20260815-716b-000001  medir_desempenho → recebida (0 ms, alvo: motor)\n  IARA-20260815-716b-000001  medir_desempenho → validando (0 ms, alvo: motor)\n  IARA-20260815-716b-000001  medir_desempenho → executando (1 ms, alvo: motor)\n  IARA-20260815-716b-000001  medir_desempenho → sucesso (7340 ms, alvo: motor)",
+    "ms": 26482,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio em nuvem desligado (sem ANTHROPIC_API_KEY) — clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  },
+  {
+    "id": "FAL-004-pergunta-honesta",
+    "prompt": "Explique em uma frase o que é logística.",
+    "resposta": "Isso exige raciocínio aberto, e a camada de raciocínio está desligada — falta a chave da Anthropic no ambiente, e não há Ollama local configurado e alcançável. Prefiro dizer isso a improvisar. Local eu resolvo: clima, hora, infraestrutura, histórico de incidentes e busca.",
+    "ms": 29147,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio em nuvem desligado (sem ANTHROPIC_API_KEY) — clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  }
+]

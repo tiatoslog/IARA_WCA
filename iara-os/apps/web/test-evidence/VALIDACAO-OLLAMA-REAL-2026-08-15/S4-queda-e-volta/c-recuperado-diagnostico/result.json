@@ -1,0 +1,21 @@
+[
+  {
+    "id": "00-inicial",
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ],
+    "faixas": [
+      "Modo local sem autenticação — a identidade vem de um seletor, não de um login. Não exponha este processo à internet."
+    ]
+  },
+  {
+    "id": "FAL-003-diagnostico-pos-religada",
+    "prompt": "Faça um diagnóstico do sistema.",
+    "resposta": "Diagnóstico da IARA:\n\n● Motor          ONLINE       processo vivo, respondendo a esta conversa (win32)\n● Barramento     ONLINE       esta resposta atravessou o WebSocket para chegar até você\n◐ Banco          DEGRADADO    persistência em uso: arquivos locais (dados/)\n○ Computador     OFFLINE      nenhum braço conectado a este operador\n◐ Executor       DEGRADADO    sem braço; ações correm na máquina onde o motor está — que pode não ser a sua\n◐ Ferramentas    DEGRADADO    30 no catálogo; sem credencial: Consulta ao banco operacional, Envio de WhatsApp\n● Raciocínio     ONLINE       raciocínio local via Ollama (llama3.2:3b) em http://127.0.0.1:11434\n\nÚltimas execuções no seu computador:\n  IARA-20260815-f707-000007  medir_desempenho → executando (0 ms, alvo: motor)\n  IARA-20260815-f707-000007  medir_desempenho → sucesso (6201 ms, alvo: motor)\n  IARA-20260815-f707-000008  medir_desempenho → recebida (0 ms, alvo: motor)\n  IARA-20260815-f707-000008  medir_desempenho → validando (5 ms, alvo: motor)\n  IARA-20260815-f707-000008  medir_desempenho → executando (12 ms, alvo: motor)\n  IARA-20260815-f707-000008  medir_desempenho → sucesso (2909 ms, alvo: motor)",
+    "ms": 26573,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  }
+]

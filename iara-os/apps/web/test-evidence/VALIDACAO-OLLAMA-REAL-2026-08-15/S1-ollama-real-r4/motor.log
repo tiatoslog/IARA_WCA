@@ -1,0 +1,131 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\daian\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\Users\daian\Desktop\IARA\IARA_WCA\iara-os\apps\web\package-lock.json
+
+[iara] IARA OS em http://localhost:3057
+[iara] barramento em /barramento (mesma porta, mesma origem)
+[iara] persistência: arquivos locais (dados/)
+[iara] mãos: NESTE processo (win32) — e em qualquer braço que conectar em /dispositivo
+[iara] canal WhatsApp: desligado (falta WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN)
+[iara] voz: neural do Edge, voz "pt-BR-FranciscaNeural" (grátis; desligável com IARA_VOZ_NEURAL=0)
+[iara] transcrição: desligada (sem IARA_STT_CHAVE) — a fala continua sendo reconhecida pelo navegador
+[iara] Microsoft Graph: automático (client credentials — renova sozinho minutos antes de cada expiração)
+[iara] jornal de operações: selado (IARA_CHAVE_PROVA ativa)
+[iara] autenticação: DESLIGADA — modo local. NÃO EXPONHA ESTE PROCESSO À INTERNET.
+[iara] índice histórico carregado
+[iara] MS_GRAPH_TOKEN renovado automaticamente — próxima renovação em 55 min
+ ○ Compiling / ...
+ ⚠ ./node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/onnxruntime-web/dist/ort.min.js
+./node_modules/@ricky0123/vad-web/dist/non-real-time-vad.js
+./node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+./node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+./node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+./node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+./node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+ GET / 200 in 3861ms
+ GET / 200 in 2759ms
+ GET / 200 in 60ms
+ GET / 200 in 62ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+{"canal":"execucao","instante":"2026-08-15T19:10:12.986Z","execucao_id":"IARA-20260815-f707-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":1}
+{"canal":"execucao","instante":"2026-08-15T19:10:12.988Z","execucao_id":"IARA-20260815-f707-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":2}
+{"canal":"execucao","instante":"2026-08-15T19:10:12.988Z","execucao_id":"IARA-20260815-f707-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":2}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 100%, mem 87.5%, 14 processo(s)"}
+{"canal":"execucao","instante":"2026-08-15T19:10:16.476Z","execucao_id":"IARA-20260815-f707-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 14 processos lidos","ms":3490}
+{"canal":"auditoria","instante":"2026-08-15T19:10:38.146Z","sessao":"daiane","id_usuario":"daiane","traco":"40ad2306-e66e-420b-b707-954f4d15bea5","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"480e95a9-218b-4c1e-83cf-974502b9ed00","ok":true,"pensar_ms":749861,"sintese_ms":2513,"caracteres":280}
+{"canal":"execucao","instante":"2026-08-15T19:23:23.089Z","execucao_id":"IARA-20260815-f707-000002","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-15T19:23:23.091Z","execucao_id":"IARA-20260815-f707-000002","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":3}
+{"canal":"execucao","instante":"2026-08-15T19:23:23.092Z","execucao_id":"IARA-20260815-f707-000002","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":3}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 84.5%, mem 85.9%, 14 processo(s)"}
+{"canal":"execucao","instante":"2026-08-15T19:23:26.345Z","execucao_id":"IARA-20260815-f707-000002","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 14 processos lidos","ms":3256}
+{"canal":"auditoria","instante":"2026-08-15T19:23:46.250Z","sessao":"daiane","id_usuario":"daiane","traco":"7713563d-fca2-49f8-86d3-ce8eed4d0faf","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"auditoria","instante":"2026-08-15T19:28:14.155Z","sessao":"daiane","id_usuario":"daiane","traco":"7713563d-fca2-49f8-86d3-ce8eed4d0faf","acao":"parametro_invalido:consultar_memoria_corporativa","detalhe":"falta \"consulta\"","permitido":false}
+{"canal":"voz","id_mensagem":"6c954e06-0402-4be0-9784-da83da8ac283","ok":true,"pensar_ms":267908,"sintese_ms":2268,"caracteres":140}
+{"canal":"auditoria","instante":"2026-08-15T19:28:56.020Z","sessao":"daiane","id_usuario":"daiane","traco":"76e4203a-f1e8-4442-b0a5-f45b175d76a8","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"452721aa-60f6-463d-89b5-a63c166179c5","ok":true,"pensar_ms":53711,"sintese_ms":1611,"caracteres":44}
+{"canal":"auditoria","instante":"2026-08-15T19:30:33.127Z","sessao":"daiane","id_usuario":"daiane","traco":"556fabcd-83f5-4947-9bb2-44f7bb9d3a41","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (diagnostico) → plano determinístico.","permitido":true}
+{"canal":"voz","id_mensagem":"ad942f72-f4fb-4365-9930-3a58b5e7151b","ok":true,"pensar_ms":20,"sintese_ms":12865,"caracteres":1161}
+ GET / 200 in 204ms
+{"canal":"execucao","instante":"2026-08-15T19:31:55.642Z","execucao_id":"IARA-20260815-f707-000003","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-15T19:31:55.647Z","execucao_id":"IARA-20260815-f707-000003","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":5}
+{"canal":"execucao","instante":"2026-08-15T19:31:55.651Z","execucao_id":"IARA-20260815-f707-000003","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":9}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 100%, mem 88.8%, 13 processo(s)"}
+{"canal":"execucao","instante":"2026-08-15T19:32:04.243Z","execucao_id":"IARA-20260815-f707-000003","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 13 processos lidos","ms":8601}
+{"canal":"auditoria","instante":"2026-08-15T19:32:21.536Z","sessao":"daiane","id_usuario":"daiane","traco":"fe77cb30-c749-4be9-ba90-56603c4ce313","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (energia) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"53327f7f-a0a4-4d3c-863b-bdeff0df9521","hash_intencao":"0ef579450e907de48bbb6b6aff2d5e5dbcbe470785be8dbb5c0339c5eb3d9291","id_usuario":"daiane","sessao":"daiane","papel":"administrador","escopo":["rede","banco","memoria","llm","escrita","externo"],"politica":"risco_alto/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"ddb68582de06cc08559f014fa97986578e4e7669142b1d3f10060e62fe2dc35b","permitido":true}
+{"canal":"agente_local","usuario":"daiane","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (daiane)"}
+{"canal":"voz","id_mensagem":"824a1bb3-f8c2-4efa-a225-8ac5882de7bc","ok":true,"pensar_ms":19,"sintese_ms":1594,"caracteres":214}
+{"canal":"auditoria","instante":"2026-08-15T19:33:03.628Z","sessao":"daiane","id_usuario":"daiane","traco":"20507327-8cee-458c-b506-0cab83aa70f1","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (energia) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"f35face1-4ec0-4bc2-bad9-2ef27546598f","hash_intencao":"f08bae3a7407ac98ae1b79ec79cb2d9e23ab15b5b95741feeefa529872dda465","id_usuario":"daiane","sessao":"daiane","papel":"administrador","escopo":["rede","banco","memoria","llm","escrita","externo"],"politica":"risco_alto/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"429542ade2e0c4b99cda2d3c0e3d38fb2ff24a06367cf1fcb0d91d50886c6f01","permitido":true}
+{"canal":"agente_local","usuario":"daiane","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (daiane)"}
+{"canal":"voz","id_mensagem":"1cd5d30c-aa6a-49a8-bf5a-4ce8763d31f1","ok":true,"pensar_ms":11,"sintese_ms":1,"caracteres":214}
+ GET / 200 in 74ms
+{"canal":"execucao","instante":"2026-08-15T19:34:15.959Z","execucao_id":"IARA-20260815-f707-000004","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-15T19:34:15.963Z","execucao_id":"IARA-20260815-f707-000004","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":4}
+{"canal":"execucao","instante":"2026-08-15T19:34:15.964Z","execucao_id":"IARA-20260815-f707-000004","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":5}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 100%, mem 87.7%, 14 processo(s)"}
+{"canal":"execucao","instante":"2026-08-15T19:34:22.156Z","execucao_id":"IARA-20260815-f707-000004","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 14 processos lidos","ms":6197}
+{"canal":"auditoria","instante":"2026-08-15T19:34:38.607Z","sessao":"daiane","id_usuario":"daiane","traco":"281162f4-111d-4c18-b5cb-34e74f9d9753","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"lacuna_capacidade","hash":"575d2c12f44b","contagem":1}
+{"canal":"voz","id_mensagem":"487592de-04be-43a2-be47-0e199c3ffeb3","ok":true,"pensar_ms":309494,"sintese_ms":1893,"caracteres":132}
+ GET / 200 in 167ms
+{"canal":"execucao","instante":"2026-08-15T19:40:56.651Z","execucao_id":"IARA-20260815-f707-000005","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-15T19:40:56.651Z","execucao_id":"IARA-20260815-f707-000005","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-15T19:40:56.651Z","execucao_id":"IARA-20260815-f707-000005","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 75.6%, mem 89.1%, 14 processo(s)"}
+{"canal":"execucao","instante":"2026-08-15T19:40:59.565Z","execucao_id":"IARA-20260815-f707-000005","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 14 processos lidos","ms":2914}
+{"canal":"auditoria","instante":"2026-08-15T19:41:17.753Z","sessao":"daiane","id_usuario":"daiane","traco":"f73d71f2-71ce-4d88-9a52-cf59678f729b","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+{"canal":"voz","id_mensagem":"b03b47a4-4f74-42da-8f3b-c7668b4fed05","ok":true,"pensar_ms":2,"sintese_ms":1827,"caracteres":272}
+ GET / 200 in 68ms
+{"canal":"execucao","instante":"2026-08-15T19:42:51.232Z","execucao_id":"IARA-20260815-f707-000006","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-15T19:42:51.233Z","execucao_id":"IARA-20260815-f707-000006","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":1}
+{"canal":"execucao","instante":"2026-08-15T19:42:51.233Z","execucao_id":"IARA-20260815-f707-000006","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":1}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 100%, mem 97.7%, 14 processo(s)"}
+{"canal":"execucao","instante":"2026-08-15T19:42:57.719Z","execucao_id":"IARA-20260815-f707-000006","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 14 processos lidos","ms":6487}
+{"canal":"auditoria","instante":"2026-08-15T19:43:46.958Z","sessao":"daiane","id_usuario":"daiane","traco":"cf179374-564a-41e7-8296-92a258da6a27","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+ GET / 200 in 84ms
+{"canal":"execucao","instante":"2026-08-15T19:52:05.654Z","execucao_id":"IARA-20260815-f707-000007","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-15T19:52:05.654Z","execucao_id":"IARA-20260815-f707-000007","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-15T19:52:05.654Z","execucao_id":"IARA-20260815-f707-000007","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 100%, mem 95.5%, 13 processo(s)"}
+{"canal":"execucao","instante":"2026-08-15T19:52:11.855Z","execucao_id":"IARA-20260815-f707-000007","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 13 processos lidos","ms":6201}
+[iara] MS_GRAPH_TOKEN renovado automaticamente — próxima renovação em 55 min
+ GET / 200 in 152ms
+ GET / 200 in 79ms
+{"canal":"execucao","instante":"2026-08-15T20:22:51.843Z","execucao_id":"IARA-20260815-f707-000008","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-15T20:22:51.848Z","execucao_id":"IARA-20260815-f707-000008","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":5}
+{"canal":"execucao","instante":"2026-08-15T20:22:51.855Z","execucao_id":"IARA-20260815-f707-000008","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":12}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 84.5%, mem 89%, 14 processo(s)"}
+{"canal":"execucao","instante":"2026-08-15T20:22:54.752Z","execucao_id":"IARA-20260815-f707-000008","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 14 processos lidos","ms":2909}
+{"canal":"auditoria","instante":"2026-08-15T20:23:13.348Z","sessao":"daiane","id_usuario":"daiane","traco":"6effa311-41f8-4bc7-9bf4-fc182522b7e4","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (diagnostico) → plano determinístico.","permitido":true}
+{"canal":"voz","id_mensagem":"3104be04-da6e-4d78-bef9-ede91ee4dcec","ok":true,"pensar_ms":73,"sintese_ms":10585,"caracteres":1162}

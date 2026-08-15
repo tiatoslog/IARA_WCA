@@ -1,0 +1,31 @@
+[
+  {
+    "id": "00-inicial",
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ],
+    "faixas": [
+      "Modo local sem autenticação — a identidade vem de um seletor, não de um login. Não exponha este processo à internet."
+    ]
+  },
+  {
+    "id": "FAL-007-auto-diagnostico",
+    "prompt": "Faça um diagnóstico do sistema.",
+    "resposta": "Diagnóstico da IARA:\n\n● Motor          ONLINE       processo vivo, respondendo a esta conversa (win32)\n● Barramento     ONLINE       esta resposta atravessou o WebSocket para chegar até você\n◐ Banco          DEGRADADO    persistência em uso: arquivos locais (dados/)\n○ Computador     OFFLINE      nenhum braço conectado a este operador\n◐ Executor       DEGRADADO    sem braço; ações correm na máquina onde o motor está — que pode não ser a sua\n◐ Ferramentas    DEGRADADO    30 no catálogo; sem credencial: Consulta ao banco operacional, Envio de WhatsApp\n● Raciocínio     ONLINE       raciocínio local via Ollama (llama3.2:3b) em http://127.0.0.1:11434\n\nÚltimas execuções no seu computador:\n  IARA-20260815-7b6f-000001  medir_desempenho → recebida (1 ms, alvo: motor)\n  IARA-20260815-7b6f-000001  medir_desempenho → validando (9 ms, alvo: motor)\n  IARA-20260815-7b6f-000001  medir_desempenho → executando (11 ms, alvo: motor)\n  IARA-20260815-7b6f-000001  medir_desempenho → sucesso (4033 ms, alvo: motor)",
+    "ms": 25799,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  },
+  {
+    "id": "FAL-007-auto-pergunta",
+    "prompt": "Responda em uma frase: o que é cross-docking?",
+    "resposta": "Cross-docking é o recebimento e envio de carga de uma operadora para outra operadora sem que a carga passe por estocagem ou depósito intermediário.",
+    "ms": 312939,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  }
+]

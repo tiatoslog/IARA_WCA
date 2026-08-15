@@ -83,18 +83,35 @@ const TTL_SONDA_MS = 30_000;
 /** Sonda: teto de espera — a subida do motor nunca fica presa nisto. */
 const PRAZO_SONDA_MS = 1_500;
 
+/**
+ * Janela de contexto PEDIDA ao servidor. O binário real usa 4096 por padrão —
+ * e trunca o prompt EM SILÊNCIO quando ele não cabe. Descoberto no E2E-004 de
+ * 15/08/2026, com o Ollama de verdade: a PERSONA sozinha tem ~3,7k tokens, e o
+ * modelo respondia sem jamais ter visto o começo dela. O stub dos testes nunca
+ * poderia revelar isso — é exatamente a classe de defeito "doc ≠ binário" que
+ * a lacuna E2E-004 existia para caçar. 8192 comporta PERSONA + catálogo +
+ * conversa curta; quem precisa de mais declara `OLLAMA_CONTEXTO`, pagando o
+ * custo de RAM sabendo que está pagando.
+ */
+const CONTEXTO_PADRAO = 8192;
+
 export class ClienteOllama implements ProvedorRaciocinio {
   readonly origem = 'local' as const;
   readonly modelo: string;
   private readonly url: string;
+  private readonly contexto: number;
   private alcancavel = false;
   private instanteSonda = 0;
+  /** Chamadas de `/api/chat` em andamento — ver `sondar()`. */
+  private emVoo = 0;
 
   constructor() {
     // Sem sonda aqui: a fábrica (e os testes) instanciam isto sem tocar rede.
     // A primeira sonda real acontece via `Porta` → `prepararRaciocinio()`.
     this.modelo = lerConfig('OLLAMA_MODELO') ?? 'llama3.1';
     this.url = (lerConfig('OLLAMA_URL') ?? 'http://127.0.0.1:11434').replace(/\/+$/, '');
+    const declarado = Number(lerConfig('OLLAMA_CONTEXTO'));
+    this.contexto = Number.isFinite(declarado) && declarado > 0 ? declarado : CONTEXTO_PADRAO;
   }
 
   /**
@@ -109,16 +126,29 @@ export class ClienteOllama implements ProvedorRaciocinio {
     return this.alcancavel;
   }
 
-  /** `GET /api/tags` com prazo curto. Nunca lança — indisponível é resposta, não erro. */
+  /**
+   * `GET /api/tags` com prazo curto. Nunca lança — indisponível é resposta,
+   * não erro.
+   *
+   * COM STREAM EM VOO, A SONDA NÃO DERRUBA O CACHE. Descoberto no E2E-004 com
+   * o binário real em CPU saturada: uma geração longa deixa a máquina a 100%,
+   * o `/api/tags` passa a demorar mais que o prazo da sonda, e a sonda de
+   * fundo marcava o servidor como morto ENQUANTO ele respondia o turno — o
+   * check de síntese do Kernel via `disponivel:false` e trocava uma resposta
+   * real pelo fallback honesto. Uma chamada ativa é evidência melhor que a
+   * sonda; a queda real continua coberta pelo `ehErroDeConexao` em voo, que
+   * zera o cache na hora.
+   */
   async sondar(): Promise<boolean> {
     this.instanteSonda = Date.now();
+    if (this.emVoo > 0) return this.alcancavel;
     try {
       const resposta = await fetch(`${this.url}/api/tags`, {
         signal: AbortSignal.timeout(PRAZO_SONDA_MS),
       });
       this.alcancavel = resposta.ok;
     } catch {
-      this.alcancavel = false;
+      if (this.emVoo === 0) this.alcancavel = false;
     }
     return this.alcancavel;
   }
@@ -200,10 +230,29 @@ export class ClienteOllama implements ProvedorRaciocinio {
     pedido: PedidoRaciocinio,
     marcarTextoEntregue: () => void,
   ): Promise<RespostaRaciocinio> {
+    this.emVoo += 1;
+    try {
+      return await this.transmitirDeVerdade(mensagens, pedido, marcarTextoEntregue);
+    } finally {
+      this.emVoo -= 1;
+    }
+  }
+
+  private async transmitirDeVerdade(
+    mensagens: Array<{ role: string; content: string }>,
+    pedido: PedidoRaciocinio,
+    marcarTextoEntregue: () => void,
+  ): Promise<RespostaRaciocinio> {
     const resposta = await fetch(`${this.url}/api/chat`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ model: this.modelo, messages: mensagens, stream: true }),
+      body: JSON.stringify({
+        model: this.modelo,
+        messages: mensagens,
+        stream: true,
+        // Sempre declarado — ver `CONTEXTO_PADRAO`: o padrão do binário trunca.
+        options: { num_ctx: this.contexto },
+      }),
       signal: pedido.sinal,
     });
 
@@ -248,6 +297,12 @@ export class ClienteOllama implements ProvedorRaciocinio {
       }
     }
     if (sobra) consumirLinha(sobra);
+
+    // Stream completo é a prova de alcançabilidade mais barata que existe —
+    // renova o cache para que uma sonda estourada durante a geração não deixe
+    // um `false` velho valendo depois que a resposta inteira já atravessou.
+    this.alcancavel = true;
+    this.instanteSonda = Date.now();
 
     return { texto, tokens_entrada, tokens_saida, cache_lido: 0, recusado: false };
   }

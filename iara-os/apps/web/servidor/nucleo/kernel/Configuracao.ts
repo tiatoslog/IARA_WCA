@@ -91,6 +91,8 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
   IARA_PROVEDOR: { natureza: 'texto', papel: 'provedor de raciocínio: anthropic, ollama ou auto' },
   OLLAMA_URL: { natureza: 'url', papel: 'endereço do servidor Ollama local' },
   OLLAMA_MODELO: { natureza: 'texto', papel: 'modelo servido pelo Ollama' },
+  // O padrão do binário (4096) trunca o prompt em silêncio — ver ClienteOllama.
+  OLLAMA_CONTEXTO: { natureza: 'numero', papel: 'janela de contexto pedida ao Ollama' },
 
   // — o banco
   SUPABASE_URL: { natureza: 'url', papel: 'endereço do Supabase' },

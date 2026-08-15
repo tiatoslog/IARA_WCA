@@ -1,0 +1,21 @@
+[
+  {
+    "id": "00-inicial",
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ],
+    "faixas": [
+      "Modo local sem autenticação — a identidade vem de um seletor, não de um login. Não exponha este processo à internet."
+    ]
+  },
+  {
+    "id": "FAL-001-modelo-inexistente",
+    "prompt": "Explique em uma frase o que é logística.",
+    "resposta": "Não consegui concluir esse pedido: Ollama respondeu 404: {\"error\":\"model 'modelo-que-nao-existe' not found\"}",
+    "ms": 25353,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  }
+]

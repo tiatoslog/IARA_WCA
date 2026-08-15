@@ -1,0 +1,24 @@
+[
+  {
+    "id": "VOZ-001a-estado-inicial",
+    "presente": true,
+    "habilitado": true,
+    "title": "Conversar por voz"
+  },
+  {
+    "id": "VOZ-001b-apos-clique",
+    "faixas": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos.",
+      "Ouvindo. Fale normalmente; eu envio quando você parar."
+    ],
+    "aria_pressed": "true"
+  },
+  {
+    "id": "VOZ-001c-apos-15s",
+    "faixas": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos.",
+      "Ouvindo. Fale normalmente; eu envio quando você parar."
+    ],
+    "title": "Encerrar a ligação"
+  }
+]

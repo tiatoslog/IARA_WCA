@@ -1,0 +1,67 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\daian\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\Users\daian\Desktop\IARA\IARA_WCA\iara-os\apps\web\package-lock.json
+
+[iara] IARA OS em http://localhost:3057
+[iara] barramento em /barramento (mesma porta, mesma origem)
+[iara] persistência: arquivos locais (dados/)
+[iara] mãos: NESTE processo (win32) — e em qualquer braço que conectar em /dispositivo
+[iara] canal WhatsApp: desligado (falta WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN)
+[iara] voz: neural do Edge, voz "pt-BR-FranciscaNeural" (grátis; desligável com IARA_VOZ_NEURAL=0)
+[iara] transcrição: desligada (sem IARA_STT_CHAVE) — a fala continua sendo reconhecida pelo navegador
+[iara] Microsoft Graph: automático (client credentials — renova sozinho minutos antes de cada expiração)
+[iara] jornal de operações: selado (IARA_CHAVE_PROVA ativa)
+[iara] autenticação: DESLIGADA — modo local. NÃO EXPONHA ESTE PROCESSO À INTERNET.
+[iara] índice histórico carregado
+[iara] MS_GRAPH_TOKEN renovado automaticamente — próxima renovação em 55 min
+ ○ Compiling / ...
+ ⚠ ./node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/onnxruntime-web/dist/ort.min.js
+./node_modules/@ricky0123/vad-web/dist/non-real-time-vad.js
+./node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+./node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+./node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+./node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+./node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+ GET / 200 in 4635ms
+ GET / 200 in 2205ms
+ GET / 200 in 99ms
+ GET / 200 in 58ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+{"canal":"execucao","instante":"2026-08-15T20:24:53.051Z","execucao_id":"IARA-20260815-5038-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-15T20:24:53.052Z","execucao_id":"IARA-20260815-5038-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":1}
+{"canal":"execucao","instante":"2026-08-15T20:24:53.052Z","execucao_id":"IARA-20260815-5038-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":1}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 100%, mem 92.5%, 13 processo(s)"}
+{"canal":"execucao","instante":"2026-08-15T20:25:01.962Z","execucao_id":"IARA-20260815-5038-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 13 processos lidos","ms":8911}
+{"canal":"auditoria","instante":"2026-08-15T20:25:22.001Z","sessao":"daiane","id_usuario":"daiane","traco":"8273ae99-6992-44e7-b890-62c1615cca4d","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"48cfc169-1f40-44d4-aae8-de4c4a7c2cb3","ok":true,"pensar_ms":6295,"sintese_ms":484,"caracteres":9}
+{"canal":"auditoria","instante":"2026-08-15T20:26:09.119Z","sessao":"daiane","id_usuario":"daiane","traco":"d75db487-6b05-430d-9a59-7cb802a50ef4","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (diagnostico) → plano determinístico.","permitido":true}
+{"canal":"voz","id_mensagem":"e6249764-4bde-4a7d-88e8-fd930d3f508f","ok":true,"pensar_ms":9,"sintese_ms":12896,"caracteres":957}

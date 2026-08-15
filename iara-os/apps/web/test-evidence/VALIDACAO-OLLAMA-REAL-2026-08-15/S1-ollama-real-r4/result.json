@@ -1,0 +1,51 @@
+[
+  {
+    "id": "00-inicial",
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ],
+    "faixas": [
+      "Modo local sem autenticação — a identidade vem de um seletor, não de um login. Não exponha este processo à internet."
+    ]
+  },
+  {
+    "id": "E2E-004a-pergunta",
+    "prompt": "Explique em duas frases o que a Atos Log faz.",
+    "resposta": "A Atos Log é uma empresa de transporte e logística, que opera a frota de veículos, organiza o fluxo de carga e fornece serviços de segurança e gestão de estoques.\n\nEla atua na região Centro-Oeste do Brasil, com pontos em Mato Grosso, Mato Grosso do Sul, Goiás, São Paulo e Paraná.",
+    "ms": 775658,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  },
+  {
+    "id": "E2E-004b-memoria-t1",
+    "prompt": "Lembre desta palavra para mim: girassol. Só confirme que anotou.",
+    "resposta": "Não executei isso. Consulta memória corporativa para obter a definição da palavra girassol.: falta \"consulta\". Nada foi alterado na máquina.",
+    "ms": 294764,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  },
+  {
+    "id": "E2E-004b-memoria-t2",
+    "prompt": "Qual foi a palavra que pedi para você lembrar?",
+    "resposta": "Você não tem nenhum lembrete marcado comigo.",
+    "ms": 84124,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  },
+  {
+    "id": "E2E-005-diagnostico",
+    "prompt": "Faça um diagnóstico do sistema.",
+    "resposta": "Diagnóstico da IARA:\n\n● Motor          ONLINE       processo vivo, respondendo a esta conversa (win32)\n● Barramento     ONLINE       esta resposta atravessou o WebSocket para chegar até você\n◐ Banco          DEGRADADO    persistência em uso: arquivos locais (dados/)\n○ Computador     OFFLINE      nenhum braço conectado a este operador\n◐ Executor       DEGRADADO    sem braço; ações correm na máquina onde o motor está — que pode não ser a sua\n◐ Ferramentas    DEGRADADO    30 no catálogo; sem credencial: Consulta ao banco operacional, Envio de WhatsApp\n● Raciocínio     ONLINE       raciocínio local via Ollama (llama3.2:3b) em http://127.0.0.1:11434\n\nÚltimas execuções no seu computador:\n  IARA-20260815-f707-000001  medir_desempenho → executando (2 ms, alvo: motor)\n  IARA-20260815-f707-000001  medir_desempenho → sucesso (3490 ms, alvo: motor)\n  IARA-20260815-f707-000002  medir_desempenho → recebida (0 ms, alvo: motor)\n  IARA-20260815-f707-000002  medir_desempenho → validando (3 ms, alvo: motor)\n  IARA-20260815-f707-000002  medir_desempenho → executando (3 ms, alvo: motor)\n  IARA-20260815-f707-000002  medir_desempenho → sucesso (3256 ms, alvo: motor)",
+    "ms": 29499,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  }
+]

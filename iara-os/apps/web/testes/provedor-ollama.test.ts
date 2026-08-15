@@ -44,6 +44,8 @@ async function comAmbiente<T>(
 interface Stub {
   url: string;
   contagemChat: () => number;
+  /** Corpos crus de cada POST /api/chat, na ordem — para asserção de payload. */
+  corpos: () => string[];
   fechar: () => Promise<void>;
 }
 
@@ -51,6 +53,7 @@ function stubOllama(
   aoChat: (res: http.ServerResponse, chamada: number) => void,
 ): Promise<Stub> {
   let chamadas = 0;
+  const corpos: string[] = [];
   const servidor = http.createServer((req, res) => {
     if (req.url === '/api/tags') {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -58,8 +61,15 @@ function stubOllama(
       return;
     }
     if (req.url === '/api/chat') {
-      chamadas += 1;
-      aoChat(res, chamadas);
+      let corpo = '';
+      req.on('data', (pedaco) => {
+        corpo += pedaco;
+      });
+      req.on('end', () => {
+        corpos.push(corpo);
+        chamadas += 1;
+        aoChat(res, chamadas);
+      });
       return;
     }
     res.writeHead(404).end();
@@ -70,6 +80,7 @@ function stubOllama(
       resolver({
         url: `http://127.0.0.1:${porta}`,
         contagemChat: () => chamadas,
+        corpos: () => corpos,
         fechar: () =>
           new Promise<void>((r) => {
             servidor.closeAllConnections?.();
@@ -197,6 +208,148 @@ test('UN-023. 500 na primeira tentativa retenta e conclui na segunda', async () 
       assert.equal(resposta.texto, 'recuperado');
       assert.equal(stub.contagemChat(), 2);
     });
+  } finally {
+    await stub.fechar();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Janela de contexto — o binário real trunca em silêncio no padrão dele
+// ---------------------------------------------------------------------------
+
+const respostaCurta = (res: http.ServerResponse) => {
+  res.writeHead(200, { 'content-type': 'application/x-ndjson' });
+  res.write(linhaConteudo('ok'));
+  res.end(linhaFinal(1, 1));
+};
+
+test('UN-024. payload SEMPRE declara options.num_ctx — 8192 sem OLLAMA_CONTEXTO', async () => {
+  const stub = await stubOllama(respostaCurta);
+  try {
+    await comAmbiente(
+      { OLLAMA_URL: stub.url, OLLAMA_MODELO: undefined, OLLAMA_CONTEXTO: undefined },
+      async () => {
+        const cliente = new ClienteOllama();
+        assert.equal(await cliente.sondar(), true);
+        await cliente.raciocinar(pedido());
+        const corpo = JSON.parse(stub.corpos()[0]) as {
+          options?: { num_ctx?: number };
+        };
+        assert.equal(
+          corpo.options?.num_ctx,
+          8192,
+          'sem num_ctx no payload o binário usa 4096 e trunca a PERSONA em silêncio',
+        );
+      },
+    );
+  } finally {
+    await stub.fechar();
+  }
+});
+
+test('UN-025. OLLAMA_CONTEXTO declarado vence o padrão; contaminado é RECUSADO, nunca limpo', async () => {
+  const stub = await stubOllama(respostaCurta);
+  try {
+    await comAmbiente(
+      { OLLAMA_URL: stub.url, OLLAMA_MODELO: undefined, OLLAMA_CONTEXTO: '16384' },
+      async () => {
+        const cliente = new ClienteOllama();
+        assert.equal(await cliente.sondar(), true);
+        await cliente.raciocinar(pedido());
+        const corpo = JSON.parse(stub.corpos()[0]) as { options?: { num_ctx?: number } };
+        assert.equal(corpo.options?.num_ctx, 16384);
+      },
+    );
+    // Valor não numérico: `lerConfig` recusa na CONSTRUÇÃO (ConfiguracaoInvalida),
+    // pela mesma regra da chave contaminada — configuração errada aparece na
+    // subida, nunca vira um 8192 silencioso que esconde o erro de quem declarou.
+    await comAmbiente(
+      { OLLAMA_URL: stub.url, OLLAMA_MODELO: undefined, OLLAMA_CONTEXTO: 'batata' },
+      async () => {
+        assert.throws(() => new ClienteOllama(), /OLLAMA_CONTEXTO/);
+      },
+    );
+  } finally {
+    await stub.fechar();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Sonda × stream em voo — lentidão não pode virar ausência
+// ---------------------------------------------------------------------------
+
+test('UN-026. sonda estourada DURANTE um stream em voo não derruba o cache', async () => {
+  // O stub segura o stream aberto; a sonda vai falhar (a rota /api/tags deste
+  // teste passa a responder 500) enquanto a chamada está viva.
+  const pendente: { res: http.ServerResponse | null } = { res: null };
+  let tagsQuebrada = false;
+  const servidor = http.createServer((req, res) => {
+    if (req.url === '/api/tags') {
+      if (tagsQuebrada) {
+        res.writeHead(500).end();
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ models: [] }));
+      return;
+    }
+    if (req.url === '/api/chat') {
+      req.resume();
+      req.on('end', () => {
+        res.writeHead(200, { 'content-type': 'application/x-ndjson' });
+        res.write(linhaConteudo('primeiro'));
+        pendente.res = res; // fica aberto até o teste liberar
+      });
+      return;
+    }
+    res.writeHead(404).end();
+  });
+  const porta = await new Promise<number>((r) =>
+    servidor.listen(0, '127.0.0.1', () => r((servidor.address() as AddressInfo).port)),
+  );
+
+  try {
+    await comAmbiente(
+      { OLLAMA_URL: `http://127.0.0.1:${porta}`, OLLAMA_MODELO: undefined, OLLAMA_CONTEXTO: undefined },
+      async () => {
+        const cliente = new ClienteOllama();
+        assert.equal(await cliente.sondar(), true);
+
+        tagsQuebrada = true;
+        const chegou = new Promise<void>((r) => {
+          void cliente.raciocinar(pedido(() => r()));
+        });
+        await chegou; // stream vivo, primeiro pedaço entregue
+
+        // A sonda falha AGORA — e não pode derrubar o que o stream prova.
+        assert.equal(await cliente.sondar(), true, 'sonda estourada venceu um stream em voo');
+        assert.equal(cliente.disponivel, true);
+
+        pendente.res?.end(linhaFinal(2, 1));
+      },
+    );
+  } finally {
+    pendente.res?.end();
+    servidor.closeAllConnections?.();
+    await new Promise<void>((r) => servidor.close(() => r()));
+  }
+});
+
+test('UN-027. stream que completa renova a alcançabilidade e o instante da sonda', async () => {
+  const stub = await stubOllama(respostaCurta);
+  try {
+    await comAmbiente(
+      { OLLAMA_URL: stub.url, OLLAMA_MODELO: undefined, OLLAMA_CONTEXTO: undefined },
+      async () => {
+        const cliente = new ClienteOllama();
+        assert.equal(await cliente.sondar(), true);
+        await cliente.raciocinar(pedido());
+        // Logo após o stream: disponível SEM depender de TTL nem de nova
+        // sonda — o getter não pode disparar sonda de fundo aqui, e o valor
+        // tem de ser true porque a resposta inteira acabou de atravessar.
+        assert.equal(cliente.disponivel, true);
+      },
+    );
   } finally {
     await stub.fechar();
   }

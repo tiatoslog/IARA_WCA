@@ -1,0 +1,25 @@
+[
+  {
+    "id": "00-inicial",
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ],
+    "faixas": [
+      "Modo local sem autenticação — a identidade vem de um seletor, não de um login. Não exponha este processo à internet."
+    ]
+  },
+  {
+    "id": "E2E-004a-pergunta",
+    "prompt": "Explique em duas frases o que a Atos Log faz.",
+    "resposta": "Isso exige raciocínio aberto, e a camada de raciocínio está desligada — falta a chave da Anthropic no ambiente, e não há Ollama local configurado e alcançável. Prefiro dizer isso a improvisar. Local eu resolvo: clima, hora, infraestrutura, histórico de incidentes e busca.",
+    "ms": 500183,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  },
+  {
+    "id": "ERRO-DRIVER",
+    "erro": "Error: page.waitForTimeout: Page crashed"
+  }
+]

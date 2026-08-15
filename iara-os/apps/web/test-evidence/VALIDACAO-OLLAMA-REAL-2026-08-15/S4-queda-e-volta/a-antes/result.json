@@ -1,0 +1,21 @@
+[
+  {
+    "id": "00-inicial",
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ],
+    "faixas": [
+      "Modo local sem autenticação — a identidade vem de um seletor, não de um login. Não exponha este processo à internet."
+    ]
+  },
+  {
+    "id": "FAL-002a-funcionando",
+    "prompt": "Responda em uma frase: o que é uma OCI na operação da Atos Log?",
+    "resposta": "Uma OCI é a Operação de Conhecimento Interno, que é a codificação de cada carga de transporte feita na Atos Log, em formato digital.",
+    "ms": 332786,
+    "estourou": false,
+    "avisos": [
+      "Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima, infraestrutura, histórico, hora e busca seguem ativos."
+    ]
+  }
+]
