@@ -263,7 +263,7 @@ export function PainelConversa({
    * Só captura microfone quando a escuta já está aberta (vigília ou ligação) —
    * nunca antes de a operadora ter pedido para ouvir.
    */
-  useDeteccaoVocal({
+  const deteccao = useDeteccaoVocal({
     ativar: escuta.ativa || escuta.vigilia,
     iaraFalando,
     aoIniciarFala: onInterromper,
@@ -461,6 +461,30 @@ export function PainelConversa({
                 Tentar de novo
               </button>
             )}
+          </div>
+        )}
+
+        {/*
+          MICROFONE ABERTO E MUDO — o defeito que custou uma semana em 15/08/2026
+          e que a interface não tinha como contar.
+
+          O microfone padrão do Windows apontava para uma webcam de celular
+          desconectada: fluxo válido, 48 kHz, faixa ativa, silêncio digital. Tudo
+          acendia, o botão ficava habilitado, a faixa dizia "ouvindo" — e nada
+          era reconhecido, sem uma palavra sobre o porquê.
+
+          O reconhecedor não sabe disto nem pode: `SpeechRecognition` não informa
+          nem deixa escolher dispositivo. Quem sabe é o fluxo do VAD, que é áudio
+          de verdade e mede zero. É por isso que esta faixa nasce ali e não aqui —
+          fato observado, como todo evento visual deste sistema.
+        */}
+        {deteccao.semSinal && (
+          <div className="escuta-faixa alerta">
+            Estou ouvindo
+            {deteccao.dispositivo ? ` "${deteccao.dispositivo}"` : ' o microfone'} e não chega som
+            nenhum. Verifique o dispositivo de entrada do Windows — o Chrome usa o{' '}
+            <strong>dispositivo de comunicação padrão</strong>, que é outro campo, no painel antigo
+            de Som.
           </div>
         )}
 

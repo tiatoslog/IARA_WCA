@@ -79,8 +79,10 @@ sonda, não o palpite. Toque, fale por 5 s, e depois ouça o que foi gravado.</p
 <audio id="ouvir" controls style="width:100%;margin-top:0.6rem;display:none"></audio>
 
 <h2>3 · O reconhecimento entrega texto?</h2>
-<p class="sub" style="margin:0.4rem 0 0">Este toque é o gesto do usuário. Fale uma frase e espere:
-a sonda testa também o religamento automático, que é onde o iOS costuma morrer calado.</p>
+<p class="sub" style="margin:0.4rem 0 0">Este toque é o gesto do usuário. Fale uma frase e
+<strong>depois não toque em nada</strong> — nem em Parar. O teste que importa só acontece quando o
+navegador encerra a sessão sozinho: é aí que a sonda tenta religar sem gesto, que é o que a vigília
+do "ei IARA" precisa fazer o dia inteiro. Pode levar de 30 s a alguns minutos de silêncio.</p>
 <button id="btFala" class="principal">Iniciar reconhecimento e falar</button>
 <button id="btParar">Parar</button>
 
