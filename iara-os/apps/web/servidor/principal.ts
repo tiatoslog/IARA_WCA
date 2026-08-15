@@ -29,7 +29,14 @@ import { conectarOperador, encerrarResidentes, prepararMotor } from './barrament
 import { ponteDispositivos } from './barramento/PonteDispositivos';
 import { motorTemMaos } from './nucleo/Braco';
 import { persistenciaEmUso } from './nucleo/ClienteSupabase';
-import { autenticacaoAtiva } from './nucleo/Autenticacao';
+import { autenticacaoAtiva, verificarToken } from './nucleo/Autenticacao';
+import {
+  MAX_BYTES_AUDIO,
+  diagnosticoTranscricao,
+  extensaoDe,
+  transcrever,
+  transcricaoDisponivel,
+} from './nucleo/Transcricao';
 import { formatarCodigo, pareamento } from './nucleo/Pareamento';
 import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
 import { diagnosticoWhatsapp } from './canais/WhatsApp';
@@ -136,6 +143,98 @@ async function lerCorpoJson(req: IncomingMessage, maxBytes = 4096): Promise<Reco
 
 const textoDe = (v: unknown, padrao: string): string =>
   typeof v === 'string' && v.trim() ? v.trim() : padrao;
+
+/**
+ * Corpo BINÁRIO com o mesmo teto contado enquanto chega que o `lerCorpoJson` —
+ * e aqui o cuidado importa mais, porque áudio é grande por natureza e um
+ * `Content-Length` mentiroso viraria megabytes de memória do motor à disposição
+ * de quem mandasse. `null` significa "estourou o teto", nunca "quase lá".
+ */
+async function lerCorpoBinario(req: IncomingMessage, maxBytes: number): Promise<Buffer | null> {
+  const pedacos: Buffer[] = [];
+  let total = 0;
+  for await (const pedaco of req) {
+    const b = pedaco as Buffer;
+    total += b.length;
+    if (total > maxBytes) return null;
+    pedacos.push(b);
+  }
+  return Buffer.concat(pedacos);
+}
+
+/**
+ * TRANSCRIÇÃO — o navegador captura, o motor entende.
+ *
+ * A rota devolve TEXTO e para por aí. Ela não fala com o Kernel, não cria
+ * turno, não dispara intenção: o cliente recebe a transcrição e a manda pelo
+ * barramento como se tivesse sido digitada. É o que mantém a promessa de que
+ * nenhum sistema novo de percepção nasce daqui — a fala entra pela mesma porta
+ * do texto, e `Percepcao`, porteiro, jornal e verificador continuam sendo o
+ * único caminho até uma ação.
+ *
+ * Fica fora do Next pela mesma razão do áudio da voz e do pareamento: a chave e
+ * o estado vivem na memória deste processo, e em modo headless o Next nem
+ * existe aqui.
+ */
+async function tratarTranscricao(
+  req: IncomingMessage,
+  res: import('node:http').ServerResponse,
+): Promise<void> {
+  if (req.method !== 'POST') {
+    responderJson(res, 405, { erro: 'use POST' });
+    return;
+  }
+  // A MESMA trava de origem do barramento, do pareamento e da porta dos braços.
+  if (!origemPermitida(req)) {
+    responderJson(res, 403, { erro: 'origem não autorizada' });
+    return;
+  }
+  if (!transcricaoDisponivel()) {
+    responderJson(res, 503, {
+      erro: 'transcrição desligada neste motor',
+      // Dito com todas as letras: sem isto o cliente não tem como distinguir
+      // "o motor não transcreve" de "o motor falhou ao transcrever", e cairia
+      // no mesmo silêncio ambíguo que custou uma semana no microfone.
+      detalhe: 'defina IARA_STT_CHAVE no motor ou continue com o reconhecimento do navegador',
+    });
+    return;
+  }
+
+  /**
+   * A identidade vem do TOKEN, nunca de um campo do corpo — é o invariante de
+   * `Autenticacao.ts`, e vale aqui pela mesma razão que vale no socket: quem
+   * controla o navegador controla o que digita. Em modo local (sem Supabase) o
+   * motor já grita na subida que não deve ser exposto; a trava de origem é o
+   * que resta, e é o mesmo contrato das outras rotas.
+   */
+  if (autenticacaoAtiva()) {
+    const cabecalho = req.headers.authorization ?? '';
+    const token = cabecalho.startsWith('Bearer ') ? cabecalho.slice(7).trim() : undefined;
+    if (!(await verificarToken(token))) {
+      responderJson(res, 401, { erro: 'sessão inválida' });
+      return;
+    }
+  }
+
+  const tipo = (req.headers['content-type'] ?? '').split(';')[0].trim();
+  if (!extensaoDe(tipo)) {
+    responderJson(res, 415, { erro: `formato de áudio não suportado: ${tipo || '(ausente)'}` });
+    return;
+  }
+
+  const bytes = await lerCorpoBinario(req, MAX_BYTES_AUDIO);
+  if (!bytes) {
+    responderJson(res, 413, { erro: 'áudio grande demais' });
+    return;
+  }
+
+  const r = await transcrever(bytes, tipo);
+  if (!r.ok) {
+    responderJson(res, 502, { erro: r.motivo, ms: r.ms });
+    return;
+  }
+  responderJson(res, 200, { texto: r.texto, ms: r.ms });
+}
 
 async function tratarPareamento(
   caminho: string,
@@ -418,6 +517,14 @@ async function subir(): Promise<void> {
       return;
     }
 
+    if (caminho === '/transcrever') {
+      void tratarTranscricao(req, res).catch((e: Error) => {
+        console.warn(`[iara] transcrição: ${e.message}`);
+        if (!res.headersSent) responderJson(res, 500, { erro: 'falha interna' });
+      });
+      return;
+    }
+
     const voz = ROTA_VOZ.exec(caminho);
 
     if (voz) {
@@ -577,6 +684,7 @@ async function subir(): Promise<void> {
     );
     console.log(`[iara] ${diagnosticoWhatsapp()}`);
     console.log(`[iara] voz: ${diagnosticoVoz()}`);
+    console.log(`[iara] transcrição: ${diagnosticoTranscricao()}`);
     console.log(`[iara] Microsoft Graph: ${statusRenovacaoGraph}`);
     /**
      * O ESTADO DA CHAVE DE PROVA, dito em voz alta na subida.

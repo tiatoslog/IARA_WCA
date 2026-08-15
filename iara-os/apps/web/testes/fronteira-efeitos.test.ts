@@ -105,6 +105,12 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       'LEITURA — previsão do tempo, sem efeito no mundo',
     [path.join('servidor', 'nucleo', 'Voz.ts')]:
       'LEITURA — síntese de voz: texto entra, áudio sai, nada muda no mundo',
+    [path.join('servidor', 'nucleo', 'Transcricao.ts')]:
+      'LEITURA — transcrição de fala: áudio entra, texto sai, nada muda no ' +
+      'mundo. É o espelho do `Voz.ts`, e a diferença que importa não é de ' +
+      'efeito e sim de CONTEÚDO: o que sai daqui é a voz do operador, não a ' +
+      'resposta da IARA. Ver a entrada em `Fronteira.ts`, que refaz a ' +
+      'classificação em vez de herdá-la do vizinho.',
     [path.join('servidor', 'braco', 'pareamento.ts')]:
       'ESTADO INTERNO — o cliente das rotas /parear/* do motor da própria ' +
       'IARA. Não é rota para provedor de terceiro: é este computador pedindo ' +

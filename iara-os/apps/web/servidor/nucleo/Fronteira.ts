@@ -180,6 +180,10 @@ export const LEITURA_EXTERNA: readonly string[] = [
   'servidor/nucleo/BuscaWeb.ts', // busca na web
   'servidor/nucleo/OrquestradorAcoes.ts', // previsão do tempo
   'servidor/nucleo/Voz.ts', // síntese de voz: texto entra, áudio sai
+  // Transcrição de fala: áudio entra, texto sai. O espelho do `Voz.ts` — e o
+  // único módulo daqui por onde sai a VOZ do operador, não conteúdo que a IARA
+  // produziu. Não muda nada no provedor; muda o que este sistema expõe.
+  'servidor/nucleo/Transcricao.ts',
   // Microsoft Graph: lê e-mail e busca no SharePoint. Ver `POST_SEM_EFEITO`
   // para o POST de busca — é consulta, não escrita.
   'servidor/nucleo/ClienteGraph.ts',
@@ -309,6 +313,15 @@ export const POST_SEM_EFEITO: Record<string, string> = {
   'servidor/nucleo/Voz.ts':
     'POST de síntese de voz: o texto entra, o áudio volta. Nada é criado, ' +
     'alterado ou entregue a ninguém no provedor — é uma função pura cara.',
+  'servidor/nucleo/Transcricao.ts':
+    'POST de transcrição: o áudio entra, o texto volta. Nada é criado, ' +
+    'alterado ou entregue a ninguém no provedor — mesma função pura cara do ' +
+    'TTS, na direção oposta. O que ESTA entrada precisa dizer, e que a do ' +
+    '`Voz.ts` não precisava: o corpo enviado é a voz do operador. Não é ' +
+    'fronteira nova — o `SpeechRecognition` do Chrome já mandava esse mesmo ' +
+    'áudio ao serviço de fala do Google, sem nada declarado em lugar nenhum. ' +
+    'A diferença é que agora está escrito aqui, tem provedor escolhido e ' +
+    'desliga tirando uma variável de ambiente.',
   'servidor/braco/pareamento.ts':
     'Dois POST contra o motor da PRÓPRIA IARA, na primeira execução deste ' +
     'computador: um abre um pedido de pareamento (uma linha efêmera na memória ' +
