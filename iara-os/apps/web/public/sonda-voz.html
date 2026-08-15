@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IARA — sonda de voz</title>
+<style>
+  :root {
+    --bg: #16181c; --tinta: #e6e8ec; --fraca: #8b9099;
+    --linha: #262a31; --ok: #7fd1b9; --alerta: #e8a08a; --neutro: #9fb4d8;
+    font-size: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.25rem 1rem 3rem; background: var(--bg); color: var(--tinta);
+    font: 400 0.95rem/1.5 ui-sans-serif, -apple-system, system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1 { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem; letter-spacing: -0.01em; }
+  p.sub { margin: 0 0 1.5rem; color: var(--fraca); font-size: 0.85rem; }
+  h2 { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+       color: var(--fraca); margin: 1.75rem 0 0.6rem; }
+  .campo { display: flex; justify-content: space-between; gap: 1rem; padding: 0.4rem 0;
+           border-bottom: 1px solid var(--linha); font-size: 0.85rem; }
+  .campo span:last-child { color: var(--fraca); text-align: right; font-variant-numeric: tabular-nums;
+                           word-break: break-word; }
+  .sim { color: var(--ok) !important; } .nao { color: var(--alerta) !important; }
+  button {
+    -webkit-appearance: none; appearance: none; width: 100%; margin-top: 0.5rem;
+    padding: 0.85rem 1rem; border: 1px solid var(--linha); border-radius: 0.6rem;
+    background: #1d2026; color: var(--tinta); font: inherit; font-weight: 500; cursor: pointer;
+  }
+  button:active { background: #232732; }
+  button.principal { border-color: #3a4150; background: #232732; }
+  .medidor { height: 0.5rem; border-radius: 0.25rem; background: var(--linha); overflow: hidden;
+             margin-top: 0.6rem; }
+  .medidor i { display: block; height: 100%; width: 0; background: var(--neutro);
+               transition: width 0.06s linear; }
+  select {
+    -webkit-appearance: none; appearance: none; width: 100%; margin-top: 0.5rem;
+    padding: 0.7rem 0.85rem; border: 1px solid var(--linha); border-radius: 0.6rem;
+    background: #101216; color: var(--tinta); font: inherit; font-size: 0.85rem;
+  }
+  #log { margin-top: 0.6rem; padding: 0.75rem; background: #101216; border: 1px solid var(--linha);
+         border-radius: 0.5rem; font: 400 0.75rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+         white-space: pre-wrap; word-break: break-word; max-height: 22rem; overflow-y: auto;
+         color: var(--fraca); }
+  #log b { color: var(--tinta); font-weight: 500; }
+  #log .e { color: var(--alerta); }
+  #log .g { color: var(--ok); }
+</style>
+</head>
+<body>
+
+<h1>IARA — sonda de voz</h1>
+<p class="sub">Página solta de diagnóstico. Não fala com o motor, não altera nada.
+Toque nos dois botões e mande o log de volta.</p>
+
+<h2>Ambiente</h2>
+<div id="ambiente"></div>
+
+<h2>1 · O microfone chega até a página?</h2>
+<p class="sub" style="margin:0.4rem 0 0">Fluxo próprio via <code>getUserMedia</code> — independente do
+reconhecimento. Se a barra mexe quando você fala, o áudio existe e o problema é adiante.</p>
+<button id="btAudio">Abrir microfone e medir nível</button>
+<select id="dispositivo"><option value="">— dispositivo padrão do sistema —</option></select>
+<p class="sub" style="margin:0.4rem 0 0">Trocar aqui reabre o microfone naquele dispositivo. Um microfone
+virtual (webcam de celular, cabo virtual, headset desligado) entrega fluxo válido e som nenhum — o pico
+abaixo é o que separa os dois casos.</p>
+<div class="medidor"><i id="barra"></i></div>
+<div id="nivel" class="campo" style="border:0"><span>pico</span><span>—</span></div>
+
+<h2>2 · O navegador consegue GRAVAR esse áudio?</h2>
+<p class="sub" style="margin:0.4rem 0 0">Pré-requisito da arquitetura nova: sem <code>MediaRecorder</code>
+produzindo bytes, não há o que mandar para o Whisper. O formato varia por plataforma — quem diz qual é a
+sonda, não o palpite. Toque, fale por 5 s, e depois ouça o que foi gravado.</p>
+<button id="btGravar">Gravar 5 segundos e conferir os bytes</button>
+<div id="gravacao"></div>
+<audio id="ouvir" controls style="width:100%;margin-top:0.6rem;display:none"></audio>
+
+<h2>3 · O reconhecimento entrega texto?</h2>
+<p class="sub" style="margin:0.4rem 0 0">Este toque é o gesto do usuário. Fale uma frase e espere:
+a sonda testa também o religamento automático, que é onde o iOS costuma morrer calado.</p>
+<button id="btFala" class="principal">Iniciar reconhecimento e falar</button>
+<button id="btParar">Parar</button>
+
+<h2>Log</h2>
+<div id="log"></div>
+<button id="btCopiar">Copiar log</button>
+
+<script>
+(function () {
+  'use strict';
+
+  var t0 = Date.now();
+  var alvoLog = document.getElementById('log');
+  var linhas = [];
+
+  function log(texto, classe) {
+    var ms = Date.now() - t0;
+    var bruto = '[' + String(ms).padStart(6, ' ') + 'ms] ' + texto;
+    linhas.push(bruto);
+    var el = document.createElement('div');
+    if (classe) el.className = classe;
+    el.textContent = bruto;
+    alvoLog.appendChild(el);
+    alvoLog.scrollTop = alvoLog.scrollHeight;
+  }
+
+  function campo(pai, rotulo, valor, veredito) {
+    var d = document.createElement('div');
+    d.className = 'campo';
+    var a = document.createElement('span'); a.textContent = rotulo;
+    var b = document.createElement('span'); b.textContent = valor;
+    if (veredito === true) b.classList.add('sim');
+    if (veredito === false) b.classList.add('nao');
+    d.appendChild(a); d.appendChild(b); pai.appendChild(d);
+    linhas.push('  ' + rotulo + ': ' + valor);
+  }
+
+  // -- Ambiente ------------------------------------------------------------
+  var amb = document.getElementById('ambiente');
+  var Rec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  var qual = window.SpeechRecognition ? 'SpeechRecognition'
+           : window.webkitSpeechRecognition ? 'webkitSpeechRecognition' : 'ausente';
+  var standalone = (window.navigator.standalone === true) ||
+                   (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+
+  linhas.push('=== IARA sonda de voz ===');
+  campo(amb, 'contexto seguro', window.isSecureContext ? 'sim' : 'NÃO', window.isSecureContext);
+  campo(amb, 'origem', location.origin);
+  campo(amb, 'PWA standalone', standalone ? 'sim' : 'não', standalone ? false : true);
+  campo(amb, 'construtor de fala', qual, !!Rec);
+  campo(amb, 'speechSynthesis', ('speechSynthesis' in window) ? 'sim' : 'não',
+        ('speechSynthesis' in window));
+  campo(amb, 'getUserMedia', (navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+        ? 'sim' : 'não', !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+  // `in` e não leitura da propriedade: LER `AudioContext.prototype.audioWorklet`
+  // invoca o getter sem instância e lança "Illegal invocation", derrubando a
+  // sonda inteira antes de ela reportar qualquer coisa.
+  campo(amb, 'AudioWorklet', (window.AudioContext && ('audioWorklet' in window.AudioContext.prototype))
+        ? 'sim' : 'não');
+  campo(amb, 'MediaRecorder', window.MediaRecorder ? 'sim' : 'não', !!window.MediaRecorder);
+  campo(amb, 'navegador', navigator.userAgent);
+
+  /**
+   * Formatos que o MediaRecorder aceita. NÃO é curiosidade: o Chrome entrega
+   * webm/opus e o iOS entrega mp4/aac — o gateway que receber o áudio não pode
+   * assumir um dos dois. Quem decide o que o cliente manda é esta lista, medida
+   * no aparelho, não a documentação.
+   */
+  var CANDIDATOS = [
+    'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus',
+    'audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/aac', 'audio/wav',
+  ];
+  var suportados = [];
+  if (window.MediaRecorder && MediaRecorder.isTypeSupported) {
+    for (var ci = 0; ci < CANDIDATOS.length; ci++) {
+      if (MediaRecorder.isTypeSupported(CANDIDATOS[ci])) suportados.push(CANDIDATOS[ci]);
+    }
+    campo(amb, 'formatos de gravação', suportados.length ? suportados.join(', ') : 'NENHUM dos testados',
+          suportados.length > 0);
+  } else if (window.MediaRecorder) {
+    campo(amb, 'formatos de gravação', 'isTypeSupported ausente — o navegador escolhe');
+  }
+
+  /**
+   * Estado da permissão ANTES de pedir, e a lista de entradas. Os dois são
+   * assíncronos, então entram na tela depois — e os dois degradam de propósito:
+   * o iOS não implementa Permissions API para microfone, e ausência ali não é
+   * defeito nenhum.
+   */
+  if (navigator.permissions && navigator.permissions.query) {
+    try {
+      navigator.permissions.query({ name: 'microphone' }).then(
+        function (s) { campo(amb, 'permissão (antes de pedir)', s.state, s.state === 'granted'); },
+        function () { campo(amb, 'permissão (antes de pedir)', 'consulta recusada'); }
+      );
+    } catch (e) {
+      campo(amb, 'permissão (antes de pedir)', 'sem suporte a "microphone" (normal no iOS)');
+    }
+  } else {
+    campo(amb, 'permissão (antes de pedir)', 'Permissions API ausente (normal no iOS)');
+  }
+
+  if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+    navigator.mediaDevices.enumerateDevices().then(function (ds) {
+      var entradas = ds.filter(function (d) { return d.kind === 'audioinput'; });
+      campo(amb, 'entradas de áudio', String(entradas.length), entradas.length > 0);
+      entradas.forEach(function (d, i) {
+        // Rótulo vazio antes da permissão é comportamento correto do navegador,
+        // não falha: ele não entrega nome de dispositivo a quem não foi autorizado.
+        campo(amb, '· entrada ' + (i + 1), d.label || '(nome oculto até autorizar)');
+      });
+    }, function (e) { campo(amb, 'entradas de áudio', 'falhou: ' + e); });
+  }
+
+  // `continuous` aceito não significa `continuous` honrado — mas recusado no
+  // set já explica sozinho por que a vigília não sobrevive.
+  if (Rec) {
+    try {
+      var teste = new Rec();
+      teste.continuous = true;
+      teste.interimResults = true;
+      campo(amb, 'continuous aceito', teste.continuous ? 'sim' : 'NÃO — volta a false',
+            teste.continuous === true);
+      campo(amb, 'interimResults aceito', teste.interimResults ? 'sim' : 'NÃO — volta a false',
+            teste.interimResults === true);
+    } catch (e) {
+      campo(amb, 'construção', 'lançou: ' + e, false);
+    }
+  }
+
+  // -- 1. nível de áudio ---------------------------------------------------
+  var barra = document.getElementById('barra');
+  var campoNivel = document.getElementById('nivel').lastElementChild;
+  var pico = 0;
+  /** Reaproveitado pela gravação: dois getUserMedia não são necessários aqui. */
+  var fluxoAberto = null;
+
+  var seletor = document.getElementById('dispositivo');
+  /** Invalida o laço de medição anterior ao reabrir o microfone noutro dispositivo. */
+  var laco = 0;
+
+  /**
+   * Reenumera COM permissão concedida. Antes da permissão o navegador devolve
+   * rótulo vazio de propósito — não é falha, é ele recusando entregar nome de
+   * dispositivo a quem não foi autorizado. Só depois do primeiro `getUserMedia`
+   * dá para montar um seletor com nome de gente.
+   */
+  function preencherSeletor() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    navigator.mediaDevices.enumerateDevices().then(function (ds) {
+      var escolhido = seletor.value;
+      seletor.innerHTML = '';
+      var padrao = document.createElement('option');
+      padrao.value = '';
+      padrao.textContent = '— dispositivo padrão do sistema —';
+      seletor.appendChild(padrao);
+      ds.filter(function (d) { return d.kind === 'audioinput'; }).forEach(function (d) {
+        var o = document.createElement('option');
+        o.value = d.deviceId;
+        o.textContent = d.label || d.deviceId.slice(0, 12);
+        seletor.appendChild(o);
+      });
+      seletor.value = escolhido;
+    });
+  }
+
+  function abrirMicrofone() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      log('getUserMedia ausente neste navegador', 'e');
+      return;
+    }
+    // Um microfone por vez: deixar o anterior aberto mantém o indicador de uso
+    // aceso e, em alguns dispositivos, impede a segunda captura.
+    if (fluxoAberto) {
+      fluxoAberto.getTracks().forEach(function (t) { t.stop(); });
+      fluxoAberto = null;
+    }
+    pico = 0;
+    campoNivel.textContent = '—';
+    campoNivel.className = '';
+    var id = seletor.value;
+    var pedido = id ? { audio: { deviceId: { exact: id } } } : { audio: true };
+    log('pedindo getUserMedia' + (id ? ' (dispositivo escolhido)' : ' (padrão do sistema)') + '...');
+
+    navigator.mediaDevices.getUserMedia(pedido).then(function (fluxo) {
+      fluxoAberto = fluxo;
+      preencherSeletor();
+      var faixas = fluxo.getAudioTracks();
+      log('microfone ABERTO — ' + faixas.length + ' faixa(s)', 'g');
+      if (faixas[0]) {
+        log('  dispositivo: "' + faixas[0].label + '"');
+        var c = faixas[0].getSettings ? faixas[0].getSettings() : {};
+        log('  taxa=' + c.sampleRate + ' canais=' + c.channelCount +
+            ' AEC=' + c.echoCancellation + ' NS=' + c.noiseSuppression);
+      }
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      var ctx = new Ctx();
+      // iOS abre o contexto suspenso mesmo com gesto; sem isto o medidor fica zerado.
+      if (ctx.state === 'suspended') ctx.resume();
+      log('  AudioContext: ' + ctx.state + ' @ ' + ctx.sampleRate + 'Hz');
+      var fonte = ctx.createMediaStreamSource(fluxo);
+      var an = ctx.createAnalyser();
+      an.fftSize = 512;
+      fonte.connect(an);
+      var buf = new Uint8Array(an.fftSize);
+      laco += 1;
+      var meu = laco;
+      (function quadro() {
+        if (meu !== laco) return; // outro dispositivo assumiu
+        an.getByteTimeDomainData(buf);
+        var max = 0;
+        for (var i = 0; i < buf.length; i++) {
+          var v = Math.abs(buf[i] - 128) / 128;
+          if (v > max) max = v;
+        }
+        barra.style.width = Math.min(100, max * 140) + '%';
+        if (max > pico) {
+          pico = max;
+          campoNivel.textContent = (pico * 100).toFixed(1) + '%';
+          campoNivel.className = pico > 0.02 ? 'sim' : '';
+        }
+        requestAnimationFrame(quadro);
+      })();
+    }).catch(function (e) {
+      log('getUserMedia RECUSADO: ' + (e && e.name) + ' — ' + (e && e.message), 'e');
+    });
+  }
+
+  document.getElementById('btAudio').addEventListener('click', abrirMicrofone);
+  // Trocar de dispositivo só faz sentido reabrindo — o fluxo antigo não migra.
+  seletor.addEventListener('change', function () {
+    if (fluxoAberto) abrirMicrofone();
+  });
+
+  // -- 2. gravação ---------------------------------------------------------
+  var alvoGravacao = document.getElementById('gravacao');
+  var ouvir = document.getElementById('ouvir');
+  var DURACAO_MS = 5000;
+
+  function comFluxo(seguir) {
+    if (fluxoAberto && fluxoAberto.active) { seguir(fluxoAberto); return; }
+    log('gravação: abrindo microfone...');
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (f) {
+      fluxoAberto = f;
+      seguir(f);
+    }, function (e) {
+      gravando = false;
+      log('gravação: getUserMedia RECUSADO: ' + (e && e.name) + ' — ' + (e && e.message), 'e');
+    });
+  }
+
+  /**
+   * Duas gravações simultâneas entrelaçam os pedaços no log e produzem dois
+   * relatórios sobre o mesmo trecho de fala — foi o que aconteceu no teste real
+   * de 15/08. Numa sonda isso é pior que um bug comum: ela existe para não
+   * deixar dúvida, e log ambíguo é exatamente a dúvida que ela deveria matar.
+   */
+  var gravando = false;
+
+  document.getElementById('btGravar').addEventListener('click', function () {
+    if (!window.MediaRecorder) {
+      log('MediaRecorder AUSENTE — a arquitetura nova não roda neste navegador', 'e');
+      return;
+    }
+    if (gravando) { log('já estou gravando — espere os 5 s terminarem'); return; }
+    gravando = true;
+    alvoGravacao.innerHTML = '';
+    comFluxo(function (fluxo) {
+      var tipo = suportados.length ? suportados[0] : '';
+      var mr;
+      try {
+        mr = tipo ? new MediaRecorder(fluxo, { mimeType: tipo }) : new MediaRecorder(fluxo);
+      } catch (e) {
+        gravando = false;
+        log('MediaRecorder LANÇOU na construção: ' + e, 'e');
+        return;
+      }
+
+      var pedacos = [];
+      var iniciou = Date.now();
+      log('gravando ' + (DURACAO_MS / 1000) + 's em "' + (mr.mimeType || '(padrão)') + '" — fale agora');
+
+      mr.ondataavailable = function (ev) {
+        if (!ev.data || !ev.data.size) { log('  pedaço VAZIO (0 bytes)', 'e'); return; }
+        pedacos.push(ev.data);
+        log('  pedaço ' + pedacos.length + ': ' + ev.data.size + ' bytes', 'g');
+      };
+      mr.onerror = function (ev) { log('MediaRecorder onerror: ' + (ev.error || ev), 'e'); };
+
+      mr.onstop = function () {
+        gravando = false;
+        var ms = Date.now() - iniciou;
+        var blob = new Blob(pedacos, { type: mr.mimeType || 'audio/webm' });
+        campo(alvoGravacao, 'formato gravado', blob.type || '(sem tipo)', !!blob.type);
+        campo(alvoGravacao, 'pedaços', String(pedacos.length), pedacos.length > 0);
+        campo(alvoGravacao, 'bytes totais', String(blob.size), blob.size > 1024);
+        campo(alvoGravacao, 'duração real', ms + ' ms');
+        /**
+         * PICO NO RELATÓRIO, e não só na tela — foi o que faltou no primeiro
+         * teste real: o log copiado não trazia o nível, e o silêncio teve de ser
+         * inferido pelo tamanho dos pedaços. Medida que só existe na tela é
+         * medida que não chega em quem vai diagnosticar.
+         */
+        campo(alvoGravacao, 'pico de nível', pico > 0 ? (pico * 100).toFixed(1) + '%' : 'nada medido',
+              pico > 0.02);
+        var bps = ms > 0 ? Math.round(blob.size / (ms / 1000)) : 0;
+        campo(alvoGravacao, 'taxa real', bps + ' bytes/s', bps >= 1000);
+
+        /**
+         * O TESTE QUE PEGA MICROFONE VIRTUAL MUDO. Fala de verdade em Opus/AAC
+         * dá alguns milhares de bytes por segundo; codec sem nada para codificar
+         * cai para ~250. Um fluxo de webcam de celular desconectada, cabo virtual
+         * ou headset desligado abre normalmente, reporta 48 kHz e uma faixa ativa,
+         * e entrega silêncio — tudo "funciona" e não há som em lugar nenhum.
+         */
+        if (bps > 0 && bps < 1000) {
+          log('DIAGNÓSTICO: ' + bps + ' bytes/s é silêncio, não fala. O microfone abriu e ' +
+              'não capta som. Escolha outro dispositivo no seletor acima e grave de novo — ' +
+              'não é a pipeline.', 'e');
+        } else if (blob.size <= 1024) {
+          log('DIAGNÓSTICO: ' + blob.size + ' bytes não é áudio. O stream abriu e não ' +
+              'produziu som — microfone mudo, não pipeline quebrada.', 'e');
+        } else {
+          /**
+           * A REPRODUÇÃO NÃO É ENFEITE. Bytes suficientes provam que houve
+           * gravação, não que houve VOZ: silêncio comprimido também pesa. Ouvir
+           * é o único jeito de a sonda não mentir um ✓ verde.
+           */
+          log('gravação OK: ' + blob.size + ' bytes em ' + ms + 'ms. Ouça abaixo — bytes ' +
+              'suficientes provam gravação, só o ouvido prova que é a sua voz.', 'g');
+        }
+        ouvir.src = URL.createObjectURL(blob);
+        ouvir.style.display = 'block';
+      };
+
+      try {
+        // Fatia de 1 s: é exatamente assim que o upload em pedaços precisa
+        // funcionar na arquitetura nova, então melhor descobrir aqui se o
+        // aparelho entrega pedaço a pedaço ou só um blob no fim.
+        mr.start(1000);
+      } catch (e) {
+        gravando = false;
+        log('start() do MediaRecorder LANÇOU: ' + e, 'e');
+        return;
+      }
+      setTimeout(function () { if (mr.state !== 'inactive') mr.stop(); }, DURACAO_MS);
+    });
+  });
+
+  // -- 3. reconhecimento ---------------------------------------------------
+  var r = null;
+  var querendo = false;
+  var sessoes = 0;
+  var resultados = 0;
+  var testouReligar = false;
+
+  document.getElementById('btFala').addEventListener('click', function () {
+    if (!Rec) { log('sem construtor de fala — nada a testar', 'e'); return; }
+    if (r) { log('já existe um reconhecedor; toque em Parar antes'); return; }
+
+    r = new Rec();
+    r.lang = 'pt-BR';
+    r.continuous = true;
+    r.interimResults = true;
+    r.maxAlternatives = 1;
+    querendo = true;
+    resultados = 0;
+    testouReligar = false;
+
+    r.onstart = function () { sessoes++; log('onstart (sessão ' + sessoes + ')', 'g'); };
+    r.onaudiostart = function () { log('onaudiostart — o motor de fala abriu o áudio', 'g'); };
+    r.onsoundstart = function () { log('onsoundstart — som detectado'); };
+    r.onspeechstart = function () { log('onspeechstart — FALA detectada', 'g'); };
+    r.onspeechend = function () { log('onspeechend'); };
+    r.onsoundend = function () { log('onsoundend'); };
+    r.onaudioend = function () { log('onaudioend'); };
+    r.onnomatch = function () { log('onnomatch — ouviu e não entendeu', 'e'); };
+
+    r.onresult = function (ev) {
+      resultados++;
+      var finais = '', parciais = '';
+      for (var i = ev.resultIndex; i < ev.results.length; i++) {
+        var res = ev.results[i];
+        if (res.isFinal) finais += res[0].transcript;
+        else parciais += res[0].transcript;
+      }
+      log('onresult #' + resultados +
+          (finais ? ' FINAL="' + finais + '"' : '') +
+          (parciais ? ' parcial="' + parciais + '"' : ''), 'g');
+    };
+
+    r.onerror = function (ev) {
+      log('onerror: ' + ev.error + (ev.message ? ' — ' + ev.message : ''), 'e');
+    };
+
+    /**
+     * O TESTE QUE IMPORTA. Religar de dentro de um timer não tem gesto do
+     * usuário — é exatamente o que `useEscuta` faz, e a suspeita é que o
+     * WebKit recuse. Se `start()` LANÇA aqui, nenhum `onend` novo virá e o
+     * reconhecedor morre calado: o defeito, reproduzido.
+     */
+    r.onend = function () {
+      log('onend (sessão ' + sessoes + ' encerrada; ' + resultados + ' resultado(s))');
+      if (!querendo) { log('parado a pedido — fim'); return; }
+      if (testouReligar) { log('já testei o religamento; não insisto'); return; }
+      testouReligar = true;
+      log('→ religando em 250ms SEM gesto do usuário (como useEscuta faz)...');
+      setTimeout(function () {
+        if (!querendo) return;
+        try {
+          r.start();
+          log('start() sem gesto NÃO lançou — esperando onstart...', 'g');
+          setTimeout(function () {
+            if (sessoes < 2) {
+              log('DIAGNÓSTICO: start() não lançou, mas onstart nunca veio. ' +
+                  'Reconhecedor morto em silêncio.', 'e');
+            }
+          }, 2500);
+        } catch (e) {
+          log('DIAGNÓSTICO: start() sem gesto LANÇOU ' + (e && e.name) + ' — ' +
+              (e && e.message) + '. Nenhum onend virá; a vigília morre aqui.', 'e');
+        }
+      }, 250);
+    };
+
+    try {
+      r.start();
+      log('start() com gesto: aceito. Fale agora.');
+    } catch (e) {
+      log('start() com gesto LANÇOU: ' + (e && e.name) + ' — ' + (e && e.message), 'e');
+      r = null;
+    }
+  });
+
+  document.getElementById('btParar').addEventListener('click', function () {
+    querendo = false;
+    if (!r) { log('nada rodando'); return; }
+    try { r.stop(); } catch (e) { log('stop() lançou: ' + e, 'e'); }
+    log('parada pedida — ' + sessoes + ' sessão(ões), ' + resultados + ' resultado(s)');
+    setTimeout(function () { r = null; }, 500);
+  });
+
+  // -- copiar --------------------------------------------------------------
+  document.getElementById('btCopiar').addEventListener('click', function () {
+    var texto = linhas.join('\n');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(
+        function () { log('log copiado.'); },
+        function () { mostrarParaSelecionar(texto); }
+      );
+    } else {
+      mostrarParaSelecionar(texto);
+    }
+  });
+
+  function mostrarParaSelecionar(texto) {
+    var ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.cssText = 'width:100%;height:12rem;margin-top:0.5rem;background:#101216;' +
+                       'color:#e6e8ec;border:1px solid #262a31;border-radius:0.5rem;padding:0.5rem;' +
+                       'font:0.75rem ui-monospace,Menlo,monospace';
+    document.body.appendChild(ta);
+    ta.select();
+    log('não consegui copiar sozinho — selecione o texto na caixa abaixo.');
+  }
+
+  log('sonda pronta.');
+})();
+</script>
+</body>
+</html>
