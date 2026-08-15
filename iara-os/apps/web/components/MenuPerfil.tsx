@@ -16,17 +16,18 @@ export function MenuPerfil({
   aoAbrirPerfil,
   aoAbrirDispositivos,
   aoAbrirAutomacao,
-  aoAbrirInstalar,
   aoSair,
 }: {
   aoAbrirPerfil: () => void;
   aoAbrirDispositivos: () => void;
   aoAbrirAutomacao: () => void;
-  /** A gaveta que leva a IARA para o aparelho (PWA) e aponta para o Braço. */
-  aoAbrirInstalar: () => void;
   /** `null` no seletor local (sem credencial real para encerrar sessão). */
   aoSair: (() => void) | null;
 }) {
+  /* Duas gavetas de assunto, não três (15/08/2026): Dispositivos gerencia e
+     pareia (inclusive ESTE aparelho — a linha do PWA mora lá); Automação é o
+     programa — baixar uma vez, versão, atualização. A gaveta "Instalar" durou
+     um dia: era um terceiro nome para o mesmo assunto. */
   return (
     <div className="menu-perfil" role="menu">
       <button type="button" role="menuitem" className="menu-perfil-item" onClick={aoAbrirPerfil}>
@@ -37,9 +38,6 @@ export function MenuPerfil({
       </button>
       <button type="button" role="menuitem" className="menu-perfil-item" onClick={aoAbrirAutomacao}>
         Automação
-      </button>
-      <button type="button" role="menuitem" className="menu-perfil-item" onClick={aoAbrirInstalar}>
-        Instalar no aparelho
       </button>
       {aoSair && (
         <>

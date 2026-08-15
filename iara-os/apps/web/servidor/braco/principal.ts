@@ -75,7 +75,7 @@ import {
 carregarEnv({ path: '.env.local' });
 carregarEnv();
 
-const VERSAO = '1.1.0';
+const VERSAO = '1.2.0';
 
 /**
  * O ENDEREÇO DA IARA, assado no executável em tempo de empacotamento.
@@ -380,7 +380,7 @@ function enviar(pacote: PacoteBraco): void {
   try {
     socket.send(JSON.stringify(pacote));
   } catch (erro) {
-    console.warn(`[braço] não consegui responder ao motor: ${(erro as Error).message}`);
+    console.warn(`[IARA] não consegui responder ao motor: ${(erro as Error).message}`);
   }
 }
 
@@ -427,7 +427,7 @@ function percentualMudou(anterior: number, novo: number): boolean {
 
 async function atualizar(pedido: { url: string; sha256: string; versao: string }): Promise<void> {
   if (atualizando) {
-    console.warn('[braço] pedido de atualização ignorado: já existe uma em andamento');
+    console.warn('[IARA] pedido de atualização ignorado: já existe uma em andamento');
     return;
   }
   atualizando = true;
@@ -438,7 +438,7 @@ async function atualizar(pedido: { url: string; sha256: string; versao: string }
     const motivo =
       'este processo está rodando em modo de desenvolvimento (tsx), não como o programa instalado — ' +
       'atualização automática só se aplica ao executável empacotado.';
-    console.warn(`[braço] atualização recusada: ${motivo}`);
+    console.warn(`[IARA] atualização recusada: ${motivo}`);
     enviar({ tipo: 'atualizacao_falhou', motivo });
     return;
   }
@@ -448,7 +448,7 @@ async function atualizar(pedido: { url: string; sha256: string; versao: string }
   let ultimoPercentualEnviado = -1;
 
   try {
-    console.log(`[braço] baixando atualização (${pedido.versao}) de ${pedido.url}`);
+    console.log(`[IARA] baixando atualização (${pedido.versao}) de ${pedido.url}`);
     const resposta = await fetch(pedido.url);
     if (!resposta.ok || !resposta.body) {
       throw new Error(`servidor respondeu ${resposta.status}`);
@@ -490,7 +490,7 @@ async function atualizar(pedido: { url: string; sha256: string; versao: string }
     }
 
     enviar({ tipo: 'progresso_atualizacao', percentual: 100 });
-    console.log('[braço] download íntegro; preparando a troca do executável');
+    console.log('[IARA] download íntegro; preparando a troca do executável');
     religarComVersaoNova(caminhoNovo);
     /**
      * `return`, NÃO um `throw`. BUG REAL, achado testando de verdade
@@ -515,7 +515,7 @@ async function atualizar(pedido: { url: string; sha256: string; versao: string }
       }
     }
     const motivo = (erro as Error).message;
-    console.error(`[braço] atualização falhou: ${motivo}`);
+    console.error(`[IARA] atualização falhou: ${motivo}`);
     enviar({ tipo: 'atualizacao_falhou', motivo });
     atualizando = false;
   }
@@ -577,7 +577,7 @@ function religarComVersaoNova(caminhoNovo: string): void {
   });
   processo.unref();
 
-  console.log('[braço] religamento agendado; encerrando esta versão agora');
+  console.log('[IARA] religamento agendado; encerrando esta versão agora');
   socket?.close(1000, 'atualizando');
   encerrando = true;
   // Uma folga curta para o `spawn` acima terminar de registrar o processo
@@ -591,7 +591,7 @@ async function atender(ordem: OrdemExecucao): Promise<void> {
   const guardado = concluidas.get(ordem.execucao_id);
   if (guardado) {
     if (guardado.assinatura === assinatura) {
-      console.log(`[braço] ${ordem.execucao_id} já executada; reenviando o relato original`);
+      console.log(`[IARA] ${ordem.execucao_id} já executada; reenviando o relato original`);
       enviar({ tipo: 'concluida', relato: guardado.relato });
       return;
     }
@@ -601,14 +601,14 @@ async function atender(ordem: OrdemExecucao): Promise<void> {
      * uma ação que ninguém pediu. Descarta o cache e executa o que chegou.
      */
     console.warn(
-      `[braço] ${ordem.execucao_id} reaproveitado para outra ordem ` +
+      `[IARA] ${ordem.execucao_id} reaproveitado para outra ordem ` +
         `("${guardado.assinatura}" → "${assinatura}"); descartando o relato antigo e executando a nova`,
     );
     concluidas.delete(ordem.execucao_id);
   }
   const jaCorrendo = emCurso.get(ordem.execucao_id);
   if (jaCorrendo) {
-    console.log(`[braço] ${ordem.execucao_id} já está em curso; ignorando a cópia`);
+    console.log(`[IARA] ${ordem.execucao_id} já está em curso; ignorando a cópia`);
     return;
   }
 
@@ -631,7 +631,7 @@ async function atender(ordem: OrdemExecucao): Promise<void> {
   for (const [k, v] of concluidas) if (agora - v.em > 5 * 60_000) concluidas.delete(k);
 
   console.log(
-    `[braço] ${ordem.execucao_id} ${ordem.acao} → ${relato.estado} ` +
+    `[IARA] ${ordem.execucao_id} ${ordem.acao} → ${relato.estado} ` +
       `(${relato.duracao_ms} ms) — ${relato.prova.evidencia}`,
   );
   enviar({ tipo: 'concluida', relato });
@@ -662,7 +662,7 @@ async function conectar(): Promise<void> {
      */
     const motivo = erro instanceof SessaoExpirada ? erro.message : (erro as Error).message;
     console.error(
-      `[braço] não consegui renovar a sessão deste computador: ${motivo}\n` +
+      `[IARA] não consegui renovar a sessão deste computador: ${motivo}\n` +
         '        Apague o arquivo abaixo e abra o programa de novo para parear ' +
         `este computador outra vez\n        (${caminhoCredencial()}).`,
     );
@@ -674,12 +674,12 @@ async function conectar(): Promise<void> {
     // Um aviso por tentativa, e não um erro: contra um motor local isto é o
     // funcionamento normal, e o motor é quem decide se aceita.
     console.warn(
-      '[braço] sem credencial gravada e sem IARA_TOKEN — só o motor em modo local vai aceitar. ' +
+      '[IARA] sem credencial gravada e sem IARA_TOKEN — só o motor em modo local vai aceitar. ' +
         'Para conectar na IARA da nuvem, feche e abra o programa: ele pede um código de pareamento.',
     );
   }
 
-  console.log(`[braço] conectando em ${DESTINO}…`);
+  console.log(`[IARA] conectando em ${DESTINO}…`);
 
   const ws = new WebSocket(DESTINO, {
     /**
@@ -694,7 +694,7 @@ async function conectar(): Promise<void> {
   socket = ws;
 
   ws.on('open', () => {
-    console.log('[braço] conectado; apresentando este computador');
+    console.log('[IARA] conectado; apresentando este computador');
     enviar({
       tipo: 'apresentacao',
       id_usuario: ID_USUARIO,
@@ -713,12 +713,12 @@ async function conectar(): Promise<void> {
       // O recuo só volta ao mínimo quando a conexão de fato SERVIU. Zerar no
       // `open` faria um motor que aceita e recusa em seguida virar laço apertado.
       recuo = RECUO_INICIAL_MS;
-      console.log(`[braço] registrado no motor como ${pacote.id_dispositivo} (operador ${ID_USUARIO})`);
+      console.log(`[IARA] registrado no motor como ${pacote.id_dispositivo} (operador ${ID_USUARIO})`);
       return;
     }
 
     if (pacote.tipo === 'recusado') {
-      console.error(`[braço] o motor recusou este computador: ${pacote.motivo}`);
+      console.error(`[IARA] o motor recusou este computador: ${pacote.motivo}`);
       return;
     }
 
@@ -735,7 +735,7 @@ async function conectar(): Promise<void> {
          * relato deixa o motor esperando até o prazo, e o operador recebe
          * "não sei" no lugar de "deu errado".
          */
-        console.error(`[braço] falha ao atender ${pacote.ordem.execucao_id}: ${erro.message}`);
+        console.error(`[IARA] falha ao atender ${pacote.ordem.execucao_id}: ${erro.message}`);
         enviar({
           tipo: 'concluida',
           relato: {
@@ -757,13 +757,13 @@ async function conectar(): Promise<void> {
     socket = null;
     if (encerrando) return;
     const explicacao = motivo.toString() || 'sem motivo declarado';
-    console.warn(`[braço] conexão fechada (${codigo}: ${explicacao}); tentando de novo em ${recuo} ms`);
+    console.warn(`[IARA] conexão fechada (${codigo}: ${explicacao}); tentando de novo em ${recuo} ms`);
     tentarDeNovo();
   });
 
   ws.on('error', (erro: Error) => {
     // O `close` vem logo atrás e é ele quem reagenda; aqui só se explica.
-    console.warn(`[braço] erro de conexão: ${erro.message}`);
+    console.warn(`[IARA] erro de conexão: ${erro.message}`);
   });
 }
 
@@ -780,14 +780,14 @@ function origemDe(url: string): string {
 
 const encerrar = () => {
   encerrando = true;
-  console.log('\n[braço] encerrando…');
+  console.log('\n[IARA] encerrando…');
   socket?.close(1000, 'encerrando');
   setTimeout(() => process.exit(0), 300).unref();
 };
 process.on('SIGINT', encerrar);
 process.on('SIGTERM', encerrar);
 
-console.log(`[braço] IARA — braço v${VERSAO} em ${NOME} (${platform()} ${release()})`);
+console.log(`[IARA] IARA — Automação v${VERSAO} em ${NOME} (${platform()} ${release()})`);
 /**
  * O pareamento acontece ANTES da primeira conexão, e não em paralelo com ela.
  *

@@ -1,33 +1,44 @@
 'use client';
 
 /**
- * AUTOMAÇÃO — a folha de manutenção do Braço, separada do quadro de chaves.
+ * AUTOMAÇÃO — o programa que dá mãos à IARA, e só ele.
+ * ("Braço" é o nome interno do executor; para a operadora, chama-se Automação.)
  *
  * QUE OBJETO DA SALA É ISTO. `Dispositivos` é o quadro de chaves: quais
- * máquinas atendem agora. Esta tela é a folha pregada ao lado — o programa em
- * si, a versão publicada, o que fazer se ele estiver desatualizado. Uma
- * pessoa que só quer saber "minhas mãos estão vivas?" nunca precisa passar
- * por aqui; uma que precisa reinstalar ou entender o Braço, sim.
+ * máquinas atendem, parear uma nova, desconectar. Esta folha é sobre o
+ * PROGRAMA: baixar uma vez, ver a versão, atualizar quando houver novidade —
+ * o desenho fechado com a operadora em 15/08/2026, depois de um dia em que
+ * três gavetas falavam do mesmo assunto.
  *
- * NÃO REPETE a lista de máquinas — isso já é fato de `Dispositivos`, e o
- * projeto tem uma regra escrita contra o mesmo fato aparecendo em dois
- * lugares (`PainelConversa`: "antes cada fato aparecia em dois ou três
- * lugares e a tela inteira virava eco"). Aqui só o AGREGADO (quantas
- * atendem agora), que é uma pergunta diferente de "quais são".
+ * ESTE é o único botão de baixar do produto. O assistente de pareamento e o
+ * quadro apontam para cá em vez de duplicá-lo: dois botões de baixar em telas
+ * diferentes era duas chances de divergirem.
  */
 
 import { lerManifestoBraco, type MaquinaDoOperador } from '../lib/execucao';
 
 export function Automacao({
   maquinas,
+  podeAgir,
+  aoAtualizar,
   aoFechar,
 }: {
   /** `null` = a lista ainda não chegou. */
   maquinas: MaquinaDoOperador[] | null;
+  podeAgir: boolean;
+  /** A mesma ordem de atualização da linha do quadro — ver `Dispositivos`. */
+  aoAtualizar: (id: string) => void;
   aoFechar: () => void;
 }) {
   const manifesto = lerManifestoBraco();
-  const conectadas = (maquinas ?? []).filter((m) => m.conectada).length;
+  const lista = maquinas ?? [];
+  const conectadas = lista.filter((m) => m.conectada).length;
+  /** Só as que dá para atualizar AGORA: desatualizadas, conectadas e sem uma
+   *  atualização já em andamento. As desconectadas avisam na própria linha do
+   *  quadro quando voltarem. */
+  const atualizaveis = lista.filter(
+    (m) => m.desatualizada && m.conectada && m.atualizando === null,
+  );
 
   return (
     <section className="ficha" aria-label="Automação da IARA">
@@ -39,8 +50,9 @@ export function Automacao({
       </header>
 
       <p className="ficha-nota">
-        O Braço é a automação que dá mãos à IARA num computador: sem ele, ela
-        conversa mas não abre programa nem cria pasta em lugar nenhum.
+        A Automação é o que dá mãos à IARA num computador: sem ela, a IARA
+        conversa mas não abre programa nem cria pasta em lugar nenhum. Instala-se
+        uma vez em cada computador.
       </p>
 
       <div className="ficha-campo">
@@ -58,13 +70,22 @@ export function Automacao({
       </div>
 
       <div className="ficha-campo">
-        <span>Baixar o Braço</span>
+        <span>Baixar a Automação</span>
         {manifesto.url ? (
           <>
             <a className="ficha-salvar instalar" href={manifesto.url} download>
-              Baixar o programa
+              Baixar a Automação
             </a>
-            {manifesto.notas && <small className="maquina-notas-versao">{manifesto.notas}</small>}
+            {/* O aviso azul do Windows NÃO pode ser surpresa — a decisão de não
+                assinar o executável (e o porquê) está no cabeçalho de
+                `scripts/empacotar-braco.ts`; a instrução mora aqui, onde a
+                pessoa baixa. */}
+            <small>
+              O Windows mostra um aviso azul na primeira abertura (o programa
+              ainda não tem assinatura de empresa): clique em{' '}
+              <strong>Mais informações</strong> →{' '}
+              <strong>Executar assim mesmo</strong>. Só na primeira vez.
+            </small>
           </>
         ) : (
           <small>
@@ -75,10 +96,42 @@ export function Automacao({
         )}
       </div>
 
-      <p className="ficha-nota">
-        Uma máquina desatualizada avisa sozinha, na sua própria linha do quadro
-        de dispositivos — não é preciso conferir versão aqui uma a uma.
-      </p>
+      <div className="ficha-campo">
+        <span>Versão</span>
+        {maquinas === null ? (
+          <small>Perguntando…</small>
+        ) : lista.length === 0 ? (
+          <small>Nenhum computador pareado ainda — a versão aparece aqui depois.</small>
+        ) : atualizaveis.length === 0 && lista.every((m) => !m.desatualizada) ? (
+          <p className="automacao-status ativo">
+            <span aria-hidden className="maquina-sinal ligado" />
+            Todos os computadores estão na versão atual.
+          </p>
+        ) : (
+          <>
+            {manifesto.notas && (
+              <small className="maquina-notas-versao">Novidade: {manifesto.notas}</small>
+            )}
+            {atualizaveis.map((m) => (
+              <button
+                key={m.id}
+                className="ficha-salvar"
+                disabled={!podeAgir}
+                title="Baixa, confere e substitui sozinha — o computador reabre a IARA na versão nova"
+                onClick={() => aoAtualizar(m.id)}
+              >
+                Atualizar aplicativo em {m.nome}
+              </button>
+            ))}
+            {atualizaveis.length === 0 && (
+              <small>
+                Há computador desatualizado, mas desligado agora — quando ligar,
+                a linha dele no quadro de Dispositivos oferece a atualização.
+              </small>
+            )}
+          </>
+        )}
+      </div>
     </section>
   );
 }

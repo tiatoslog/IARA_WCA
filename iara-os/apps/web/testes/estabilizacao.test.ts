@@ -556,12 +556,18 @@ test('comando reconhecido que falha ao enviar não pode travar a escuta em silê
   );
 
   // O contrato só funciona se quem fornece `aoConcluirFala` de fato propagar
-  // um booleano — `PainelConversa.tsx` encaminha o retorno de `onEnviar`
-  // (que já é `boolean`), em vez de descartá-lo como antes.
+  // um booleano. Desde 15/08/2026 o caminho passa por `enviarContando` (que
+  // registra a pergunta para os atalhos personalizados) — o que este teste
+  // garante é a CADEIA: aoConcluirFala devolve enviarContando, e
+  // enviarContando devolve o booleano de onEnviar em vez de descartá-lo.
   const painel = await readFile(new URL('../components/PainelConversa.tsx', import.meta.url), 'utf8');
   assert.ok(
-    /aoConcluirFala:\s*\(texto\)\s*=>\s*onEnviar\(texto\)/.test(painel),
-    'aoConcluirFala precisa devolver o resultado de onEnviar, não só chamá-lo',
+    /aoConcluirFala:\s*\(texto\)\s*=>\s*enviarContando\(texto\)/.test(painel),
+    'aoConcluirFala precisa devolver o resultado de enviarContando, não só chamá-lo',
+  );
+  assert.ok(
+    /const aceitou = onEnviar\(texto\);[\s\S]{0,200}return aceitou;/.test(painel),
+    'enviarContando precisa propagar o booleano de onEnviar — é ele que devolve a escuta para "ouvindo"',
   );
 });
 

@@ -31,8 +31,13 @@ import type { SnapshotCognitivo } from '../lib/snapshot';
 import { Automacao } from './Automacao';
 import { Dispositivos } from './Dispositivos';
 import { FichaOperador, fichaDoSnapshot } from './FichaOperador';
-import { InstalarIara } from './InstalarIara';
 import { MenuPerfil } from './MenuPerfil';
+import {
+  lerHistorico,
+  registrarPergunta,
+  sugerir,
+  type PerguntaContada,
+} from '../lib/sugestoes';
 
 const ROTULO_ESTAGIO: Record<EstagioCognitivo, string> = {
   ocioso: 'à disposição',
@@ -97,9 +102,9 @@ interface Props {
 }
 
 /** Qual gaveta está aberta sobre o fluxo da conversa. Uma de cada vez: as
- *  cinco ocupam o mesmo espaço, e "aberta" é um estado do painel, não de
- *  cada uma. `perfil` é o menu pequeno; as outras quatro ocupam o fluxo inteiro. */
-type Gaveta = 'nenhuma' | 'perfil' | 'ficha' | 'dispositivos' | 'automacao' | 'instalar';
+ *  quatro ocupam o mesmo espaço, e "aberta" é um estado do painel, não de
+ *  cada uma. `perfil` é o menu pequeno; as outras três ocupam o fluxo inteiro. */
+type Gaveta = 'nenhuma' | 'perfil' | 'ficha' | 'dispositivos' | 'automacao';
 
 export function PainelConversa({
   estado,
@@ -178,8 +183,42 @@ export function PainelConversa({
 
   const ocupada = estado.estagio !== 'ocioso' && estado.estagio !== 'escutando';
 
+  /**
+   * OS ATALHOS DA SALA VAZIA SÃO DE QUEM PERGUNTA (15/08/2026, a pedido da
+   * operadora): as 3 perguntas mais repetidas DESTA conta, completadas com as
+   * padrão enquanto o histórico não existe. A conta mora em `lib/sugestoes`
+   * (pura, testada); aqui só se guarda por `id_usuario` no localStorage — o
+   * histórico é deste aparelho, o que é honesto: é nele que a pessoa digita.
+   */
+  const idOperador = estado.operador?.id_usuario ?? 'local';
+  const [historicoPerguntas, setHistoricoPerguntas] = useState<PerguntaContada[]>([]);
+  useEffect(() => {
+    setHistoricoPerguntas(lerHistorico(window.localStorage.getItem(`iara.perguntas.${idOperador}`)));
+  }, [idOperador]);
+
+  const contarPergunta = (texto: string) => {
+    setHistoricoPerguntas((atual) => {
+      const novo = registrarPergunta(atual, texto, Date.now());
+      try {
+        window.localStorage.setItem(`iara.perguntas.${idOperador}`, JSON.stringify(novo));
+      } catch {
+        /* localStorage cheio ou bloqueado: os atalhos degradam para as
+           sugestões padrão, e a conversa em si não pode ser afetada. */
+      }
+      return novo;
+    });
+  };
+
+  const sugestoes = sugerir(historicoPerguntas, SUGESTOES);
+
+  const enviarContando = (texto: string): boolean => {
+    const aceitou = onEnviar(texto);
+    if (aceitou) contarPergunta(texto);
+    return aceitou;
+  };
+
   const submeter = () => {
-    if (onEnviar(rascunho)) setRascunho('');
+    if (enviarContando(rascunho)) setRascunho('');
   };
 
   /**
@@ -248,7 +287,9 @@ export function PainelConversa({
       ]
         .filter(Boolean)
         .join(' ') || null,
-    aoConcluirFala: (texto) => onEnviar(texto),
+    // Pergunta falada conta como pergunta: os atalhos da sala são de quem
+    // pergunta, por qualquer boca.
+    aoConcluirFala: (texto) => enviarContando(texto),
     aoInterromper: onInterromper,
     // "Ei IARA" respondido com voz: a confirmação de que ela está ouvindo.
     // Devolver `false` (voz desligada) faz a escuta soar o toque de despertar.
@@ -305,7 +346,6 @@ export function PainelConversa({
                   aoAbrirPerfil={() => setGaveta('ficha')}
                   aoAbrirDispositivos={() => setGaveta('dispositivos')}
                   aoAbrirAutomacao={() => setGaveta('automacao')}
-                  aoAbrirInstalar={() => setGaveta('instalar')}
                   aoSair={onSair ? () => onSair() : null}
                 />
               )}
@@ -403,17 +443,16 @@ export function PainelConversa({
             aoEsquecer={(id) => onEsquecerComputador?.(id)}
             aoAtualizar={(id) => onAtualizarComputador?.(id) ?? false}
             aoRenomear={(id, nome) => onRenomearComputador?.(id, nome) ?? false}
+            aoAbrirAutomacao={() => setGaveta('automacao')}
             aoFechar={() => setGaveta('nenhuma')}
           />
         </div>
       ) : gaveta === 'automacao' ? (
         <div className="conversa-fluxo rolagem">
-          <Automacao maquinas={maquinas} aoFechar={() => setGaveta('nenhuma')} />
-        </div>
-      ) : gaveta === 'instalar' ? (
-        <div className="conversa-fluxo rolagem">
-          <InstalarIara
-            aoAbrirDispositivos={() => setGaveta('dispositivos')}
+          <Automacao
+            maquinas={maquinas}
+            podeAgir={conectado}
+            aoAtualizar={(id) => onAtualizarComputador?.(id) ?? false}
             aoFechar={() => setGaveta('nenhuma')}
           />
         </div>
@@ -422,8 +461,13 @@ export function PainelConversa({
         {falas.length === 0 && (
           <div className="sugestoes">
             <p className="sugestoes-titulo">A sala está aberta</p>
-            {SUGESTOES.map((s) => (
-              <button key={s} className="sugestao" onClick={() => onEnviar(s)} disabled={!conectado}>
+            {sugestoes.map((s) => (
+              <button
+                key={s}
+                className="sugestao"
+                onClick={() => enviarContando(s)}
+                disabled={!conectado}
+              >
                 {s}
               </button>
             ))}

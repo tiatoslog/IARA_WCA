@@ -94,8 +94,8 @@ export function ConvitePareamento({
         </p>
         <small className="convite-codigo-nota">
           Sem câmera? Abra a IARA no celular, vá em <strong>Dispositivos</strong>{' '}
-          e digite o código acima. Ele vale por 5 minutos — se expirar, o Braço
-          mostra um novo.
+          e digite o código acima. Ele vale por 5 minutos — se expirar, a
+          Automação mostra um novo.
         </small>
       </section>
     </div>

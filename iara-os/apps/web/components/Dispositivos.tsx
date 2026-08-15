@@ -25,6 +25,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { EsteAparelho } from './EsteAparelho';
 import { lerManifestoBraco, type MaquinaDoOperador } from '../lib/execucao';
 
 /** Lida uma vez por módulo — as três variáveis são estáticas de build, não
@@ -240,6 +241,7 @@ export function Dispositivos({
   aoEsquecer,
   aoAtualizar,
   aoRenomear,
+  aoAbrirAutomacao,
   aoFechar,
 }: {
   /** `null` = a lista ainda não chegou. Ver o cabeçalho. */
@@ -258,6 +260,9 @@ export function Dispositivos({
   aoAtualizar: (id: string) => void;
   /** Etapa 4 (14/08/2026) — dar um nome à máquina, escolhido pela operadora. */
   aoRenomear: (id: string, nome: string) => void;
+  /** O download do programa mora na folha de Automação — o assistente aponta
+   *  para lá em vez de duplicar o botão (um caminho só, 15/08/2026). */
+  aoAbrirAutomacao: () => void;
   aoFechar: () => void;
 }) {
   /**
@@ -337,7 +342,7 @@ export function Dispositivos({
   return (
     <section className="ficha" aria-label="Computadores conectados">
       <header className="ficha-cabecalho">
-        <h2>{vista === 'conectar' ? 'Conectar computador' : 'Onde a IARA tem mãos'}</h2>
+        <h2>{vista === 'conectar' ? 'Parear novo dispositivo' : 'Onde a IARA tem mãos'}</h2>
         {vista === 'lista' && (
           <button
             type="button"
@@ -355,6 +360,14 @@ export function Dispositivos({
 
       {vista === 'lista' ? (
         <>
+          {/* A linha do PRÓPRIO aparelho, acima dos computadores: ele também é
+              um dispositivo, e é aqui que se instala a IARA nele (o item de
+              menu "Instalar" durou um dia — ver `EsteAparelho`). */}
+          <div className="ficha-campo">
+            <span>Este aparelho</span>
+            <EsteAparelho />
+          </div>
+
           {maquinas === null ? (
             <p className="maquina-vazio">Perguntando…</p>
           ) : maquinas.length === 0 ? (
@@ -384,7 +397,7 @@ export function Dispositivos({
               onClick={() => setVista('conectar')}
               disabled={!conectado}
             >
-              + Conectar computador
+              + Parear novo dispositivo
             </button>
           ) : (
             <small>
@@ -415,25 +428,23 @@ export function Dispositivos({
             <li className="dispositivos-passo">
               <span className="dispositivos-passo-numero">1</span>
               <div className="dispositivos-passo-corpo">
-                <p>Instale o Braço</p>
-                {MANIFESTO.url ? (
-                  <a className="ficha-salvar instalar" href={MANIFESTO.url} download>
-                    Baixar o programa
-                  </a>
-                ) : (
-                  <small>
-                    Ainda não há um instalador publicado nesta instalação. Quem
-                    cuida do sistema gera o programa com{' '}
-                    <code>npm run empacotar:braco</code> e publica o endereço dele
-                    em <code>NEXT_PUBLIC_IARA_INSTALADOR</code>.
-                  </small>
-                )}
+                <p>Instale a Automação no computador novo</p>
+                {/* Sem botão de baixar aqui: o download tem UM endereço no
+                    produto — a folha de Automação — e este passo leva até ele. */}
+                <button
+                  type="button"
+                  className="dispositivos-conectar-novo"
+                  onClick={aoAbrirAutomacao}
+                >
+                  Baixar na aba Automação →
+                </button>
+                <small>Já instalou? Pule para o passo 2.</small>
               </div>
             </li>
             <li className="dispositivos-passo">
               <span className="dispositivos-passo-numero">2</span>
               <div className="dispositivos-passo-corpo">
-                <p>Abra o Braço no computador</p>
+                <p>Abra a Automação no computador</p>
                 <small>
                   A IARA abre na tela dele com um QR e um código de oito letras e
                   números.

@@ -1546,6 +1546,21 @@ export class Kernel {
    * fala que o operador lê é que precisa ser curta e em português.
    */
   private mensagemHumanaDeFalha(bruta: string): string {
+    /**
+     * SEM CRÉDITO NÃO É "TENTE DE NOVO" — incidente real de 15/08/2026: a
+     * conta da Anthropic zerou e TODO turno de nuvem passou a falhar com a
+     * mensagem genérica, que mandava a operadora tentar de novo uma coisa que
+     * nunca ia funcionar. Ela concluiu, com razão, que a IARA inteira estava
+     * quebrada. Falta de crédito tem UM conserto (recarregar) e UMA pessoa
+     * que consegue fazê-lo — a mensagem precisa dizer exatamente isso.
+     */
+    if (/credit balance is too low|billing/i.test(bruta)) {
+      return (
+        'A cota da nuvem desta instalação acabou — não é defeito, é crédito. ' +
+        'Avise quem administra a IARA para recarregar em console.anthropic.com. ' +
+        'Enquanto isso continuo com o que é local: clima, hora, infraestrutura, histórico e busca.'
+      );
+    }
     if (/overloaded_error|rate_limit_error/i.test(bruta)) {
       return 'A camada de raciocínio da IARA está sobrecarregada agora. Tente de novo em alguns segundos.';
     }
