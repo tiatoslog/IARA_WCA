@@ -178,52 +178,16 @@ essa lista é a única coisa que impede uma página qualquer de abrir um socket
 para o seu motor. As regras de casamento (curinga, âncoras, o que NÃO casa)
 estão em `lib/origens.ts`, com os casos negativos em `testes/origens.test.ts`.
 
-### Deploy separado: Next na Vercel, motor no Railway
+### Decisão: sem Vercel, um serviço Railway só (15/08/2026)
 
-Modo `headless`: o motor sobe **sem** instanciar o Next e entrega só o que exige
-estado vivo — o WebSocket, o áudio da voz (que mora em memória) e o webhook do
-WhatsApp. Custa duas URLs, dois deploys e um WebSocket cross-origin.
+Um deploy separado (Next na Vercel, motor headless no Railway) foi cogitado em
+12/08/2026 e **descartado** em 15/08/2026: custa duas URLs, dois deploys e um
+WebSocket cross-origin, sem ganho para o tamanho atual da operação. `IARA_MODO`
+fica sempre vazio (= unificado) em produção — não use `headless`.
 
-**Railway** — projeto com Root Directory `iara-os/apps/web`, builder Dockerfile:
-
-```
-IARA_MODO=headless
-IARA_ORIGENS=https://iara.atoslog.com.br     # domínio EXATO, sem curinga
-SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY, WHATSAPP_*, …
-```
-
-**Vercel** — Root Directory `iara-os/apps/web` (no painel; não cabe no
-`vercel.json`). Só três variáveis, e nenhum segredo:
-
-```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-NEXT_PUBLIC_IARA_WS=wss://<motor>.up.railway.app/barramento
-```
-
-O `buildCommand` do `vercel.json` é `next build`, não `npm run build`, porque os
-dois são a mesma coisa e o primeiro não depende de o script continuar existindo.
-A região `gru1` (São Paulo) é onde as rotas de servidor do Next executam — a
-página é estática, mas o primeiro byte não é.
-
-Três coisas que quebram esse deploy de forma silenciosa, todas já travadas no
-código, e vale saber por quê:
-
-1. **`NEXT_PUBLIC_*` é embutida em tempo de build.** Trocar o domínio do motor
-   exige **redeploy** do front. Só editar no painel deixa a IARA presa em
-   "reconectando…" sem erro nenhum.
-2. **`IARA_ORIGENS` vazio em headless** significa que ninguém conecta — "mesma
-   origem" não existe quando o front mora noutro domínio. O motor avisa na
-   subida.
-3. **Curinga (`https://*.vercel.app`) faz o motor recusar subir** em produção.
-   Não é exagero: qualquer pessoa registra um subdomínio `vercel.app` de graça
-   em minutos, e o curinga troca a lista de origens autorizadas pela internet.
-   Para ter preview, suba um segundo motor com `IARA_AMBIENTE=homologacao` e
-   banco próprio.
-
-**Voltar atrás custa uma variável.** `IARA_MODO=unificado` no Railway devolve o
-sistema inteiro a um endereço só — é por isso que o `Dockerfile` continua
-rodando `npm run build` mesmo quando o processo sobe headless.
+O `Dockerfile` roda `npm run build` mesmo quando um dia alguém precisar
+reativar esse modo por emergência (ver comentário no arquivo), mas isso deixou
+de ser um caminho de deploy suportado ou documentado como opção.
 
 ## PWA — instalar no celular e no desktop
 

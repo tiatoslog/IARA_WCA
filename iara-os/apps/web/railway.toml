@@ -1,6 +1,8 @@
-# Railway — deploy do motor da IARA (decisão de arquitetura de 08/08/2026:
-# kernel na nuvem, agente local nas máquinas; a separação do frontend foi
-# decidida em 12/08/2026 — Next na Vercel, motor aqui).
+# Railway — deploy da IARA inteira, um processo só (decisão de arquitetura de
+# 08/08/2026: kernel na nuvem, agente local nas máquinas). A separação de
+# frontend (Next na Vercel, motor aqui) foi cogitada em 12/08/2026 e
+# SUPERADA em 15/08/2026: não haverá Vercel — Next e motor sobem juntos
+# neste mesmo serviço Railway, sempre. Ver `README.md` § Deploy.
 #
 # Variáveis a configurar no painel do Railway antes do primeiro deploy:
 #   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  → sem elas o motor RECUSA subir
@@ -11,8 +13,9 @@
 #                                              https://iara.atoslog.com.br
 #                                              Curinga faz o motor recusar subir
 #                                              sem IARA_AMBIENTE=homologacao.
-#   IARA_MODO=headless                       → não instancia o Next; a interface
-#                                              é servida pela Vercel
+#   IARA_MODO                                → deixe vazio (= unificado). Não
+#                                              use `headless`: não há mais
+#                                              segundo host para servir o Next.
 #
 # O agente local (criar pasta, abrir app, energia) NÃO age aqui — age na
 # máquina de cada operador, via IARA Desktop. Enquanto o canal reverso não
