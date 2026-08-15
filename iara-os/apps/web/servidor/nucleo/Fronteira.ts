@@ -186,6 +186,9 @@ export const LEITURA_EXTERNA: readonly string[] = [
   // Lê a planilha de cargas da operação LUFT via Graph. Só GET — nada é
   // criado, alterado nem entregue a ninguém no SharePoint.
   'servidor/nucleo/ClientePlanilhaOcis.ts',
+  // Inferência local via Ollama: o prompt entra, o texto volta. Mesmo caso do
+  // TTS — ver a justificativa do POST em `POST_SEM_EFEITO`.
+  'servidor/nucleo/ClienteOllama.ts',
 ];
 
 /**
@@ -327,6 +330,11 @@ export const POST_SEM_EFEITO: Record<string, string> = {
     'ninguém: a chamada devolve documentos que o operador já tinha acesso, do ' +
     'mesmo jeito que `GET /me/messages` lê e-mail. É a mesma classe de ' +
     '"POST que na verdade lê" do `search/query` da própria documentação da Graph.',
+  'servidor/nucleo/ClienteOllama.ts':
+    'POST de inferência local: o prompt entra, o texto volta em stream. Nada é ' +
+    'criado, alterado ou entregue a ninguém no servidor Ollama — que roda na ' +
+    'máquina do operador ou na rede privada dele — e nenhum terceiro é ' +
+    'alcançado. É uma função pura cara, o mesmo caso do TTS logo acima.',
 };
 
 /**

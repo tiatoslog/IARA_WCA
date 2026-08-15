@@ -309,6 +309,7 @@ export class CompiladorSnapshot {
       telemetria: { ...this.telemetria, eventos_no_traco: this.barramento.trilhaAtual().length, descartados },
       luzes: this.projetarLuzes(base),
       nuvem_indisponivel: base.nuvem_indisponivel,
+      origem_raciocinio: base.origem_raciocinio,
       fala: this.fala,
       // Cópia com arrays congelados por spread: o acumulador continua mutável
       // aqui dentro, mas o que sai pela fronteira é dado morto, como todo o

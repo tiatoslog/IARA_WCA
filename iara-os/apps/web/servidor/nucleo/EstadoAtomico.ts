@@ -19,6 +19,7 @@ import {
   type LeituraOperador,
   type MapaLuzes,
   type MetricasVitais,
+  type OrigemRaciocinio,
   type PerfilOperador,
 } from '../../lib/estado';
 import { TravaAssincrona } from './TravaAssincrona';
@@ -83,9 +84,17 @@ export class EstadoAtomico {
     });
   }
 
-  async definirNuvemIndisponivel(valor: boolean): Promise<void> {
+  /**
+   * Os DOIS campos sob a mesma trava, de propósito: `nuvem_indisponivel`
+   * preserva a semântica original ("a nuvem Anthropic não está utilizável") e
+   * `origem_raciocinio` diz o que existe no lugar. Gravá-los em chamadas
+   * separadas abriria uma janela em que o snapshot afirma "sem nuvem" e "sem
+   * origem" ao mesmo tempo — e a projeção mostraria um aviso mentiroso.
+   */
+  async definirOrigemRaciocinio(origem: OrigemRaciocinio): Promise<void> {
     await this.trava.executar(() => {
-      this.estado.nuvem_indisponivel = valor;
+      this.estado.origem_raciocinio = origem;
+      this.estado.nuvem_indisponivel = origem !== 'nuvem';
       this.proximoSeq();
     });
   }

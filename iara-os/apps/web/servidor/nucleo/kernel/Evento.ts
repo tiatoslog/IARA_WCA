@@ -131,7 +131,7 @@ export type EventoKernel =
       confirmado: boolean;
       evidencia: string;
     })
-  | (EventoBase & { tipo: 'RACIOCINIO_INICIADO'; modelo: string })
+  | (EventoBase & { tipo: 'RACIOCINIO_INICIADO'; modelo: string; origem: 'nuvem' | 'local' })
   | (EventoBase & {
       tipo: 'RACIOCINIO_CONCLUIDO';
       tokens_entrada: number;

@@ -17,7 +17,8 @@
 
 import type { Plano, Passo, Percepcao } from './Evento';
 import type { ManifestoHabilidade } from './Habilidade';
-import { ClienteClaude, NuvemIndisponivel } from '../ClienteClaude';
+import { criarProvedorRaciocinio } from '../FabricaRaciocinio';
+import { ProvedorIndisponivel, type ProvedorRaciocinio } from '../ProvedorRaciocinio';
 import { PorteiroAutorizacao } from './PorteiroAutorizacao';
 import type { RegistroMemoria } from '../../../lib/estado';
 
@@ -50,14 +51,30 @@ const MAX_PASSOS = 6;
 export class MotorRaciocinio {
   private readonly porteiro = new PorteiroAutorizacao();
 
-  constructor(private readonly claude = new ClienteClaude()) {}
+  constructor(private readonly provedor: ProvedorRaciocinio = criarProvedorRaciocinio()) {}
 
   get disponivel(): boolean {
-    return this.claude.disponivel;
+    return this.provedor.disponivel;
   }
 
+  /**
+   * Delegado ao provedor — que é a ÚNICA fonte de verdade sobre o modelo.
+   * A versão anterior lia `process.env.IARA_MODELO` cru aqui, fora do
+   * `lerConfig`, e era uma segunda fonte que podia divergir da primeira.
+   */
   get modelo(): string {
-    return process.env.IARA_MODELO?.trim() || 'claude-opus-5';
+    return this.provedor.modelo;
+  }
+
+  /** De onde vem o raciocínio: telemetria e snapshot. */
+  get origem(): 'nuvem' | 'local' {
+    return this.provedor.origem;
+  }
+
+  /** Sonda ativa do provedor, quando ele tem uma (Ollama). Chamada na abertura
+   *  da sessão para o snapshot nascer com a origem certa. */
+  async preparar(): Promise<void> {
+    await this.provedor.sondar?.();
   }
 
   // -------------------------------------------------------------------------
@@ -74,7 +91,7 @@ export class MotorRaciocinio {
     catalogo: readonly ManifestoHabilidade[],
     sinal: AbortSignal,
   ): Promise<Plano | null> {
-    if (!this.claude.disponivel) return null;
+    if (!this.provedor.disponivel) return null;
 
     /**
      * O que a LLM pode sequer NOMEAR num plano.
@@ -162,7 +179,7 @@ export class MotorRaciocinio {
 
     let bruto = '';
     try {
-      const r = await this.claude.raciocinar({
+      const r = await this.provedor.raciocinar({
         mensagem: instrucao,
         historico: [],
         overridePersona:
@@ -175,7 +192,7 @@ export class MotorRaciocinio {
       });
       bruto = r.texto || bruto;
     } catch (erro) {
-      if (erro instanceof NuvemIndisponivel) return null;
+      if (erro instanceof ProvedorIndisponivel) return null;
       if (sinal.aborted) return null;
       return null;
     }
@@ -270,7 +287,7 @@ export class MotorRaciocinio {
         `Não repita literalmente o que já foi dito.`
       : pedido.enunciado;
 
-    const r = await this.claude.raciocinar({
+    const r = await this.provedor.raciocinar({
       mensagem,
       historico: pedido.historico,
       overridePersona: pedido.overridePersona,

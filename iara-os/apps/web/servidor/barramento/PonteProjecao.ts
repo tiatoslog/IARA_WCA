@@ -367,7 +367,13 @@ export class PonteProjecao {
             `${e.confirmado ? 'o mundo confirma' : 'NÃO confirmado'} — ${e.evidencia}`,
         };
       case 'RACIOCINIO_INICIADO':
-        return { nivel: 'info', texto: `Acionando ${e.modelo} na nuvem.` };
+        return {
+          nivel: 'info',
+          texto:
+            e.origem === 'local'
+              ? `Raciocinando localmente com ${e.modelo}.`
+              : `Acionando ${e.modelo} na nuvem.`,
+        };
       case 'RACIOCINIO_CONCLUIDO':
         return {
           nivel: 'info',

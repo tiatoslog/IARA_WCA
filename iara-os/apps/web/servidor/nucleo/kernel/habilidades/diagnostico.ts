@@ -23,6 +23,7 @@ import { braco, motorTemMaos } from '../../Braco';
 import { ponteDispositivos } from '../../../barramento/PonteDispositivos';
 import { persistenciaEmUso } from '../../ClienteSupabase';
 import { configUtilizavel } from '../Configuracao';
+import { estadoRaciocinio } from '../../FabricaRaciocinio';
 
 /** O vocabulário do §27: quatro estados, e `desconhecido` é um deles de propósito. */
 type Saude = 'ONLINE' | 'OFFLINE' | 'DEGRADADO' | 'DESCONHECIDO';
@@ -75,6 +76,13 @@ export const diagnosticarSistema: Habilidade = {
      */
     const nuvem = configUtilizavel('ANTHROPIC_API_KEY');
     const chaveContaminada = !nuvem && Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+    /**
+     * A MESMA decisão da fábrica, com sonda ATIVA quando o provedor é o Ollama:
+     * "configurado" e "respondendo" são estados diferentes, e um painel que os
+     * confunde manda quem investiga procurar no lugar errado — é a lição da
+     * chave contaminada, aplicada ao provedor local.
+     */
+    const raciocinio = await estadoRaciocinio();
 
     /**
      * Import tardio e deliberado. `habilidades/index.ts` importa ESTE arquivo
@@ -140,17 +148,32 @@ export const diagnosticarSistema: Habilidade = {
       linha(
         'Raciocínio',
         // OFFLINE e não DEGRADADO quando contaminada, e a distinção é o ponto:
-        // DEGRADADO é o modo local DELIBERADO, que funciona como projetado.
-        // Chave contaminada é uma capacidade fora do ar por engano de deploy —
-        // duas situações com o mesmo sintoma e consertos opostos.
-        nuvem ? 'ONLINE' : chaveContaminada ? 'OFFLINE' : 'DEGRADADO',
-        nuvem
+        // DEGRADADO é o modo sem-raciocínio DELIBERADO, que funciona como
+        // projetado. Chave contaminada e Ollama declarado-mas-mudo são
+        // capacidades fora do ar por engano de deploy — mesmo sintoma da
+        // ausência, conserto oposto.
+        raciocinio.origem === 'nuvem'
+          ? 'ONLINE'
+          : raciocinio.origem === 'local'
+            ? raciocinio.alcancavel
+              ? 'ONLINE'
+              : 'OFFLINE'
+            : chaveContaminada
+              ? 'OFFLINE'
+              : 'DEGRADADO',
+        raciocinio.origem === 'nuvem'
           ? 'chave da nuvem válida'
-          : chaveContaminada
-            ? 'ANTHROPIC_API_KEY está no ambiente mas é inutilizável — mais de uma ' +
-              'configuração no mesmo campo, ou formato errado. Não é falta de chave: ' +
-              'é chave contaminada, e o conserto é no painel de variáveis do host.'
-            : 'sem ANTHROPIC_API_KEY: respondo pelo caminho local, sem raciocínio livre',
+          : raciocinio.origem === 'local'
+            ? raciocinio.alcancavel
+              ? `raciocínio local via Ollama (${raciocinio.modelo}) em ${raciocinio.url}`
+              : `OLLAMA_URL configurada (${raciocinio.url}) mas o servidor não responde — ` +
+                'o Ollama está desligado, a porta está errada ou a rede não alcança. ' +
+                'Não é falta de configuração: é servidor declarado e mudo.'
+            : chaveContaminada
+              ? 'ANTHROPIC_API_KEY está no ambiente mas é inutilizável — mais de uma ' +
+                'configuração no mesmo campo, ou formato errado. Não é falta de chave: ' +
+                'é chave contaminada, e o conserto é no painel de variáveis do host.'
+              : 'sem ANTHROPIC_API_KEY e sem OLLAMA_URL: respondo pelo caminho local, sem raciocínio livre',
       ),
     ];
 

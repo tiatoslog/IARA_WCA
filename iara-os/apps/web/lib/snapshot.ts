@@ -18,6 +18,7 @@ import type {
   LeituraOperador,
   MapaLuzes,
   MetricasVitais,
+  OrigemRaciocinio,
   PerfilOperador,
 } from './estado';
 
@@ -233,6 +234,7 @@ export interface SnapshotCognitivo {
   /** Projeção espacial derivada de `capacidades`. A sala em pixel art usa isto. */
   readonly luzes: MapaLuzes;
   readonly nuvem_indisponivel: boolean;
+  readonly origem_raciocinio: OrigemRaciocinio;
 
   /** `null` quando a IARA não está falando nem acabou de falar. */
   readonly fala: FalaProjetada | null;

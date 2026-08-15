@@ -31,7 +31,6 @@ import { lerPacoteCliente } from '../../lib/protocolo';
 import { outrosOperadores } from '../../lib/operadores';
 import { lerManifestoBraco, manifestoAtualizacaoDisponivel } from '../../lib/execucao';
 import { papelDe } from '../nucleo/kernel/Papeis';
-import { configUtilizavel } from '../nucleo/kernel/Configuracao';
 import { LimiteVazao } from '../nucleo/kernel/Seguranca';
 import { esquecerLocal, registrarLocal } from '../nucleo/LocalOperador';
 import {
@@ -280,7 +279,16 @@ export function conectarOperador(socket: WebSocket): void {
             barramento: r.barramento,
           });
 
-          await r.estado.definirNuvemIndisponivel(!nuvemLigada());
+          /**
+           * PRESENÇA NÃO É VALIDADE — a lição de 13/08 continua de pé, agora
+           * atrás do provedor: `origemRaciocinio` responde `nenhuma` tanto para
+           * chave ausente quanto para Ollama declarado e fora do ar, porque a
+           * sonda acabou de perguntar ao servidor de verdade. Um snapshot que
+           * anunciasse raciocínio local com o Ollama morto seria o mesmo defeito
+           * da chave contaminada com outro figurino.
+           */
+          await r.kernel.prepararRaciocinio();
+          await r.estado.definirOrigemRaciocinio(r.kernel.origemRaciocinio);
 
           // Compilador, ponte e ciclo nascem com o PRIMEIRO espelho e morrem
           // com o último; espelhos seguintes só se penduram no que já existe.
@@ -668,19 +676,6 @@ export function conectarOperador(socket: WebSocket): void {
   socket.on('error', (erro: Error) => {
     console.warn(`[iara] socket: ${erro.message}`);
   });
-}
-
-/**
- * PRESENÇA NÃO É VALIDADE, e esta função dizia que era.
- *
- * `Boolean(env.ANTHROPIC_API_KEY?.trim())` respondia `true` para a chave
- * contaminada de 13/08. O efeito: o motor se declarava com raciocínio profundo
- * ligado, a `FuncaoExecutiva` roteava para a nuvem, e a nuvem falhava — toda
- * vez, com a credencial na mensagem de erro. Um sistema que se diz saudável e
- * falha a cada requisição é pior que um que se diz quebrado.
- */
-function nuvemLigada(): boolean {
-  return configUtilizavel('ANTHROPIC_API_KEY');
 }
 
 export function encerrarResidentes(): void {

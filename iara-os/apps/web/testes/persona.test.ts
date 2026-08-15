@@ -19,7 +19,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { PERSONA } from '../servidor/nucleo/ClienteClaude';
+import { PERSONA } from '../servidor/nucleo/Persona';
 import { TeoriaDaMente } from '../servidor/nucleo/TeoriaDaMente';
 import type { LeituraOperador } from '../lib/estado';
 

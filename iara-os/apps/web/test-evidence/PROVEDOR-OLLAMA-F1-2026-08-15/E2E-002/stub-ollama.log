@@ -1,0 +1,5 @@
+[stub] servidor Ollama de teste em http://127.0.0.1:30877
+[stub] 2026-08-15T15:36:34.976Z GET /api/tags
+[stub] 2026-08-15T15:36:59.799Z POST /api/chat modelo=modelo-teste planejador=true mensagens=2
+[stub] 2026-08-15T15:36:59.813Z POST /api/chat modelo=modelo-teste planejador=false mensagens=20
+[stub] 2026-08-15T15:37:51.445Z GET /api/tags

@@ -120,6 +120,11 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       'LEITURA — e-mail e busca no SharePoint via Microsoft Graph, sem efeito ' +
       'no mundo. O POST de `/search/query` é consulta, não escrita — ver a ' +
       'entrada dele em `Fronteira.ts` (`POST_SEM_EFEITO`).',
+    [path.join('servidor', 'nucleo', 'ClienteOllama.ts')]:
+      'LEITURA — inferência local via Ollama: o prompt entra, o texto volta ' +
+      'em stream, nada muda no mundo. O servidor é o da máquina do operador ' +
+      'ou da rede privada dele, declarado em OLLAMA_URL — nunca descoberto. ' +
+      'Ver a entrada dele em `Fronteira.ts` (`POST_SEM_EFEITO`).',
     [path.join('servidor', 'nucleo', 'ClienteWhatsapp.ts')]:
       'EFEITO EXTERNO — envio proativo de WhatsApp pelo desenho R2 de ' +
       '`enviar_whatsapp`/`resolver_confirmacao` (arma pendência, exige ' +

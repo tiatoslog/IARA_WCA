@@ -47,7 +47,7 @@ import { INTEGRACOES } from './integracoes';
 // que carimba a fonte da prova é o tipo de colisão que compila e mente.
 import type { Operacao, SemanticaEfeito } from './Operacao';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
-import type { DestinoCognitivo, EstagioCognitivo } from '../../../lib/estado';
+import type { DestinoCognitivo, EstagioCognitivo, OrigemRaciocinio } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
 
 /**
@@ -309,6 +309,18 @@ export class Kernel {
   /** Defeitos cognitivos observados nesta sessão, para diagnóstico e métrica. */
   get inventarioDeErros() {
     return this.erros.inventario;
+  }
+
+  /** De onde vem o raciocínio desta sessão — `nenhuma` quando o provedor
+   *  decidido não está utilizável. A `Porta` grava isto no estado. */
+  get origemRaciocinio(): OrigemRaciocinio {
+    return this.raciocinio.disponivel ? this.raciocinio.origem : 'nenhuma';
+  }
+
+  /** Sonda ativa do provedor (Ollama), para o snapshot nascer com a origem
+   *  certa na abertura da sessão. Anthropic não sonda — chave é presença. */
+  async prepararRaciocinio(): Promise<void> {
+    await this.raciocinio.preparar();
   }
 
   /** Cancelamento preemptivo. Nenhuma trava global é segurada em rede. */
@@ -1338,14 +1350,19 @@ export class Kernel {
       const texto =
         saidas.length > 0
           ? `${saidas.join('\n\n')}\n\nPara ir além disso eu precisaria da camada de raciocínio, e ela está desligada aqui.`
-          : 'Isso exige raciocínio aberto, e a camada de nuvem está desligada — falta a chave da Anthropic no ambiente. ' +
+          : 'Isso exige raciocínio aberto, e a camada de raciocínio está desligada — falta a chave da Anthropic no ambiente, ' +
+            'e não há Ollama local configurado e alcançável. ' +
             'Prefiro dizer isso a improvisar. Local eu resolvo: clima, hora, infraestrutura, histórico de incidentes e busca.';
       b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto });
       return texto;
     }
 
     await this.dep.estado.transicionar('pensando', 'raciocinio');
-    b.publicar({ tipo: 'RACIOCINIO_INICIADO', modelo: this.raciocinio.modelo });
+    b.publicar({
+      tipo: 'RACIOCINIO_INICIADO',
+      modelo: this.raciocinio.modelo,
+      origem: this.raciocinio.origem,
+    });
 
     // Histórico enriquece o prompt; a ausência dele degrada a resposta, não
     // impede. Persistência fora não pode calar o raciocínio.

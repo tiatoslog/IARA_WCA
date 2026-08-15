@@ -84,6 +84,13 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
   },
   IARA_MODELO: { natureza: 'texto', papel: 'modelo da nuvem' },
   IARA_ESFORCO: { natureza: 'texto', papel: 'esforço de raciocínio' },
+  // O provedor local é infraestrutura DECLARADA, nunca descoberta: sem
+  // OLLAMA_URL no ambiente, o motor não toca a porta 11434 — nem para sondar.
+  // A URL deve apontar para localhost ou rede privada (LAN/Tailscale); o
+  // Ollama não tem autenticação própria e jamais deve ficar exposto à internet.
+  IARA_PROVEDOR: { natureza: 'texto', papel: 'provedor de raciocínio: anthropic, ollama ou auto' },
+  OLLAMA_URL: { natureza: 'url', papel: 'endereço do servidor Ollama local' },
+  OLLAMA_MODELO: { natureza: 'texto', papel: 'modelo servido pelo Ollama' },
 
   // — o banco
   SUPABASE_URL: { natureza: 'url', papel: 'endereço do Supabase' },

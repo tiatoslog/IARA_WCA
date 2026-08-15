@@ -346,7 +346,13 @@ export function PainelConversa({
             title={conectado ? 'barramento aberto' : 'barramento fechado'}
           />
         </div>
-        {estado.nuvem_indisponivel && (
+        {estado.origem_raciocinio === 'local' && (
+          <div className="conversa-aviso">
+            Raciocínio rodando localmente via Ollama — nada sai da sua rede. Clima,
+            infraestrutura, histórico, hora e busca seguem ativos.
+          </div>
+        )}
+        {estado.origem_raciocinio === 'nenhuma' && estado.nuvem_indisponivel && (
           <div className="conversa-aviso">
             Raciocínio em nuvem desligado (sem <code>ANTHROPIC_API_KEY</code>) — clima,
             infraestrutura, histórico, hora e busca seguem ativos.

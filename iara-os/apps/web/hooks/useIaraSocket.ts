@@ -93,6 +93,7 @@ export const SNAPSHOT_INICIAL: SnapshotCognitivo = {
   telemetria: TELEMETRIA_ZERO,
   luzes: { ...LUZES_APAGADAS },
   nuvem_indisponivel: false,
+  origem_raciocinio: 'nenhuma',
   fala: null,
   cadeia: null,
 };

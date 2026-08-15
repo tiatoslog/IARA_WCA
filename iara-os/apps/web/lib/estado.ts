@@ -199,6 +199,13 @@ export const OBJETO_DA_CAPACIDADE: Record<CapacidadeAtiva, IdObjeto> = {
 // ---------------------------------------------------------------------------
 
 /**
+ * De onde vem o raciocínio profundo desta sessão. `nuvem` = Anthropic;
+ * `local` = Ollama na máquina (ou rede privada) do operador; `nenhuma` =
+ * nenhum provedor utilizável — o modo honesto que avisa em vez de improvisar.
+ */
+export type OrigemRaciocinio = 'nuvem' | 'local' | 'nenhuma';
+
+/**
  * O que o React recebe. Imutável, versionado por `seq`. Um pacote com `seq`
  * menor que o último aplicado é descartado — é assim que a reconexão não
  * teleporta o avatar.
@@ -212,8 +219,10 @@ export interface EstadoEscritorio {
   metricas: MetricasVitais;
   leitura: LeituraOperador;
   luzes: MapaLuzes;
-  /** true quando a chave da Anthropic não está configurada. */
+  /** true quando a chave da Anthropic não está configurada. Preservado com a
+   *  semântica original; a leitura fina mora em `origem_raciocinio`. */
   nuvem_indisponivel: boolean;
+  origem_raciocinio: OrigemRaciocinio;
 }
 
 export const METRICAS_INICIAIS: MetricasVitais = {
@@ -253,6 +262,7 @@ export function estadoInicial(): EstadoEscritorio {
     leitura: { ...LEITURA_INICIAL },
     luzes: { ...LUZES_APAGADAS },
     nuvem_indisponivel: false,
+    origem_raciocinio: 'nenhuma',
   };
 }
 

@@ -22,7 +22,7 @@ import path from 'node:path';
 import { CATALOGO } from '../servidor/nucleo/kernel/habilidades/index';
 import { GerenciadorHabilidades } from '../servidor/nucleo/kernel/GerenciadorHabilidades';
 import { BarramentoEventos } from '../servidor/nucleo/kernel/BarramentoEventos';
-import { PERSONA } from '../servidor/nucleo/ClienteClaude';
+import { PERSONA } from '../servidor/nucleo/Persona';
 
 function catalogoRedigido(): string {
   const g = new GerenciadorHabilidades(new BarramentoEventos('autoconhecimento'));
@@ -119,15 +119,31 @@ test('A5. a camada que fala com a nuvem não importa o catálogo — ela o RECEB
    * por transitividade, e `fronteira-interna.test.ts` derrubaria a suíte com um
    * caminho que ninguém entenderia vindo deste arquivo. Esta asserção é local e
    * explica o porquê no lugar onde a tentação aparece.
+   *
+   * Generalizada quando `ClienteClaude` deixou de ser o único provedor: TODA a
+   * camada de conversa fica sob a mesma vigilância — um provedor novo entra
+   * nesta lista no mesmo commit em que nasce, ou este teste não o cobre.
    */
-  const fonte = readFileSync(
-    path.join(process.cwd(), 'servidor/nucleo/ClienteClaude.ts'),
+  const CAMADA_DE_CONVERSA = [
+    'servidor/nucleo/ProvedorRaciocinio.ts',
+    'servidor/nucleo/ClienteClaude.ts',
+    'servidor/nucleo/ClienteOllama.ts',
+    'servidor/nucleo/FabricaRaciocinio.ts',
+    'servidor/nucleo/Persona.ts',
+  ];
+  for (const arquivo of CAMADA_DE_CONVERSA) {
+    const fonte = readFileSync(path.join(process.cwd(), arquivo), 'utf8');
+    assert.doesNotMatch(
+      fonte,
+      /from\s+['"].*habilidades/,
+      `${arquivo} passou a importar o catálogo`,
+    );
+  }
+  // O campo de injeção mora no CONTRATO agora — é ele que garante que o
+  // catálogo chega pronto a qualquer provedor.
+  const contrato = readFileSync(
+    path.join(process.cwd(), 'servidor/nucleo/ProvedorRaciocinio.ts'),
     'utf8',
   );
-  assert.doesNotMatch(
-    fonte,
-    /from\s+['"].*habilidades/,
-    'ClienteClaude passou a importar o catálogo',
-  );
-  assert.match(fonte, /capacidades\?: string/, 'o catálogo deixou de chegar por injeção');
+  assert.match(contrato, /capacidades\?: string/, 'o catálogo deixou de chegar por injeção');
 });
