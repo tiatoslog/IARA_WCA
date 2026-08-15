@@ -1,0 +1,7 @@
+{
+  "id": "UI-003",
+  "status": "PASS",
+  "observado": "gaveta viva=true; caminho manual (menciona \"barra de endereço\")=true; erros de console=0; passo1=\"1 Leve a IARA neste aparelho Sem problema — o navegador guarda a recusa por um tempo. Quando quiser instalar: procure o ícone de instalação na barra de endereço (um monitor com uma seta) ou, no menu do navegador, a opção Instalar IARA OS.\"",
+  "esperado": "dismissed → sem erro no console; gaveta viva com instrução do caminho manual",
+  "timestamp": "2026-08-15T22:26:40.572Z"
+}

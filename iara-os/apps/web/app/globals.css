@@ -1907,6 +1907,86 @@ ol.plano {
 }
 
 /* --------------------------------------------------------------------------
+ * CONVITE DE PAREAMENTO — o QR do Braço, na tela da IARA.
+ * -------------------------------------------------------------------------- */
+
+/* O recado no vidro da porta: escurece a sala sem apagá-la. É a única
+   sobreposição de tela inteira do produto, e a exceção está justificada no
+   cabeçalho do componente — pode não haver painel nenhum por baixo. */
+.convite-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(5, 6, 8, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+.convite {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(380px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--c-fundo-alto);
+  border: 1px solid var(--c-linha-forte);
+  border-radius: var(--r-g, 14px);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+/* O cartão claro é do QR, não do tema: leitor de câmera precisa de contraste
+   de verdade, e a margem clara em volta (quiet zone) faz parte do código. */
+.convite-qr {
+  align-self: center;
+  width: min(260px, 70vw);
+  border-radius: var(--r-m);
+  overflow: hidden;
+  background: #f4f6f8;
+}
+
+.convite-qr img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* A mesma grafia do campo de digitação: monoespaçada e espaçada — este código
+   vai ser lido daqui e digitado ali. */
+.convite-codigo {
+  margin: 0;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: var(--t-titulo, 1.15rem);
+  letter-spacing: 0.22em;
+  color: var(--c-tinta);
+}
+
+.convite-codigo-nota {
+  text-align: center;
+  color: var(--c-tinta-3);
+}
+
+/* --------------------------------------------------------------------------
+ * INSTALAR A IARA — o cartão de visita na saída do escritório.
+ * -------------------------------------------------------------------------- */
+
+/* A confirmação de "já instalada" fala na mesma voz do status da Automação:
+   um sinal aceso e uma frase, nunca um selo comemorativo. */
+.instalar-confirmacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--t-ui);
+  color: var(--c-tinta);
+}
+
+/* --------------------------------------------------------------------------
  * AUTOMAÇÃO — a folha de manutenção do Braço.
  * -------------------------------------------------------------------------- */
 

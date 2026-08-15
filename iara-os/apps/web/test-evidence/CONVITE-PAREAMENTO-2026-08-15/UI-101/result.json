@@ -1,0 +1,8 @@
+{
+  "id": "UI-101",
+  "status": "PASS",
+  "observado": "popover visível (role=dialog, aria-label=\"Conectar este computador\"); img src é data URL=true (data:image/png;base64,iVBORw0K…); alt=\"QR do pareamento — código H7K2-9QP4\" contém \"H7K2-9QP4\"=true; .convite-codigo=\"H7K2-9QP4\"=true; cores: cartão=rgb(20, 23, 26) (brilho 23, escuro=true), fundo=rgba(5, 6, 8, 0.78) (escuro=true), célula do QR=rgb(244, 246, 248) — o único claro é o cartão do QR",
+  "esperado": "popover visível sobre a sala; QR renderizado (img[src^=\"data:\"]); código \"H7K2-9QP4\" legível; fundo grafite (sem branco chapado fora do cartão do QR)",
+  "timestamp": "2026-08-15T22:44:55.728Z",
+  "dom": "dom.html"
+}

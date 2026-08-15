@@ -41,6 +41,29 @@ export interface PedidoDePareamento {
   readonly intervalo_s: number;
 }
 
+/**
+ * OS DOIS LINKS DO MESMO CÓDIGO, e por que são dois.
+ *
+ * `linkDoPareamento` é o que o CELULAR abre: `/?parear=` cai na gaveta
+ * Dispositivos com o código preenchido, faltando só o toque em "Autorizar".
+ * É o conteúdo do QR.
+ *
+ * `linkDoConvite` é o que o COMPUTADOR NOVO abre: `/?convite=` faz a interface
+ * da IARA mostrar o próprio QR num popover com a cara do aplicativo — em vez
+ * de um desenho ASCII num terminal ou um PNG num visualizador avulso. O
+ * popover só EXIBE; autorizar continua exigindo a sessão logada do celular.
+ *
+ * O hífen do código sai da URL nos dois: ele existe para olhos, e um `-` a
+ * menos é um caractere a menos para o QR carregar.
+ */
+export function linkDoPareamento(motor: string, codigo: string): string {
+  return `${motor.replace(/\/+$/, '')}/?parear=${codigo.replace(/-/g, '')}`;
+}
+
+export function linkDoConvite(motor: string, codigo: string): string {
+  return `${motor.replace(/\/+$/, '')}/?convite=${codigo.replace(/-/g, '')}`;
+}
+
 export class PareamentoRecusado extends Error {}
 
 async function postar(

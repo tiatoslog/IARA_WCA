@@ -1,0 +1,7 @@
+{
+  "id": "RG-002",
+  "status": "PASS",
+  "observado": "\"Meu perfil\" abriu (section[aria-label=\"Ficha do operador\"]) e fechou no ✕; \"Dispositivos\" abriu (section[aria-label=\"Computadores conectados\"]) e fechou no ✕; \"Automação\" abriu (section[aria-label=\"Automação da IARA\"]) e fechou no ✕",
+  "esperado": "gavetas Meu perfil, Dispositivos e Automação abrem e fecham normalmente",
+  "timestamp": "2026-08-15T22:39:59.295Z"
+}

@@ -251,7 +251,8 @@ export function Dispositivos({
   /** Veio do QR do braço — poupa digitar, não poupa o toque em "Autorizar". */
   codigoInicial?: string | null;
   aoPedirLista: () => boolean;
-  aoAutorizar: (codigo: string) => boolean;
+  /** `nome` é o batismo opcional da máquina — vazio, vale o hostname. */
+  aoAutorizar: (codigo: string, nome?: string) => boolean;
   aoEsquecer: (id: string) => void;
   /** Etapa 2 (14/08/2026) — "Atualizar agora". */
   aoAtualizar: (id: string) => void;
@@ -273,6 +274,14 @@ export function Dispositivos({
    */
   const [vista, setVista] = useState<'lista' | 'conectar'>(codigoInicial ? 'conectar' : 'lista');
   const [codigo, setCodigo] = useState(codigoInicial ?? '');
+  /**
+   * O BATISMO — Etapa do convite (15/08/2026). "DESKTOP-7F2A" não diz nada;
+   * "Notebook Daiane" diz tudo. O campo vive AQUI, na autorização, porque é o
+   * único momento em que a pessoa está olhando para os dois aparelhos ao mesmo
+   * tempo e sabe exatamente qual computador é este. Opcional: vazio, vale o
+   * nome que a máquina reportou — e renomear depois continua existindo.
+   */
+  const [nomeBatismo, setNomeBatismo] = useState('');
 
   /**
    * Pergunta ao abrir e a cada 15 s enquanto a gaveta está aberta.
@@ -298,6 +307,7 @@ export function Dispositivos({
   useEffect(() => {
     if (!ultimaAcao?.ok) return;
     setCodigo('');
+    setNomeBatismo('');
     setVista('lista');
   }, [ultimaAcao]);
 
@@ -321,7 +331,7 @@ export function Dispositivos({
   }, [ultimaAcao]);
 
   const autorizar = () => {
-    if (codigo.trim()) aoAutorizar(codigo);
+    if (codigo.trim()) aoAutorizar(codigo, nomeBatismo.trim() || undefined);
   };
 
   return (
@@ -424,7 +434,10 @@ export function Dispositivos({
               <span className="dispositivos-passo-numero">2</span>
               <div className="dispositivos-passo-corpo">
                 <p>Abra o Braço no computador</p>
-                <small>Ele mostra um QR e um código de oito letras e números.</small>
+                <small>
+                  A IARA abre na tela dele com um QR e um código de oito letras e
+                  números.
+                </small>
               </div>
             </li>
             <li className="dispositivos-passo">
@@ -433,18 +446,38 @@ export function Dispositivos({
                 <p>Digite o código, ou aponte a câmera para o QR</p>
                 {pareamentoDisponivel ? (
                   <>
+                    <input
+                      type="text"
+                      className="parear-codigo"
+                      value={codigo}
+                      placeholder="H7K2-9QP4"
+                      maxLength={12}
+                      autoCapitalize="characters"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      aria-label="Código que apareceu no computador"
+                      onChange={(e) => setCodigo(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          autorizar();
+                        }
+                      }}
+                    />
+                    {/*
+                      O batismo entra ANTES do botão: com o código vindo do QR
+                      já preenchido, este campo é a única coisa que sobra para
+                      a pessoa fazer — dar o nome e salvar.
+                    */}
                     <div className="parear-linha">
                       <input
                         type="text"
-                        className="parear-codigo"
-                        value={codigo}
-                        placeholder="H7K2-9QP4"
-                        maxLength={12}
-                        autoCapitalize="characters"
-                        autoCorrect="off"
-                        spellCheck={false}
-                        aria-label="Código que apareceu no computador"
-                        onChange={(e) => setCodigo(e.target.value)}
+                        className="parear-codigo parear-nome"
+                        value={nomeBatismo}
+                        placeholder="Nome (ex.: Notebook Daiane)"
+                        maxLength={80}
+                        aria-label="Nome deste computador"
+                        onChange={(e) => setNomeBatismo(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
@@ -457,12 +490,13 @@ export function Dispositivos({
                         onClick={autorizar}
                         disabled={!conectado || !codigo.trim()}
                       >
-                        Autorizar
+                        Salvar
                       </button>
                     </div>
                     <small>
-                      O QR abre esta tela com o código já preenchido; escanear poupa a
-                      digitação, não o toque em "Autorizar".
+                      O QR abre esta tela com o código já preenchido — falta só o
+                      nome. Sem nome, vale o que o computador reportar; dá para
+                      renomear depois, no quadro.
                     </small>
                   </>
                 ) : (

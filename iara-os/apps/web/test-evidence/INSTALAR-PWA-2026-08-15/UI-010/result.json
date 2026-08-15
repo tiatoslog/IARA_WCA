@@ -1,0 +1,7 @@
+{
+  "id": "UI-010",
+  "status": "PASS",
+  "observado": "✕ fechou a gaveta (section removida do DOM); fluxo da conversa voltou com as sugestões \"A sala está aberta\" visíveis",
+  "esperado": "✕ fecha a gaveta e o fluxo da conversa volta",
+  "timestamp": "2026-08-15T22:36:17.757Z"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "UI-105",
+  "status": "PASS",
+  "observado": "aviso de banco (\"sem banco configurado\")=true; botão \"+ Conectar computador\"=0 (sem banco o botão nem aparece — não há como abrir o assistente); input.parear-nome=0; input.parear-codigo=0; texto da gaveta=\"Onde a IARA tem mãos ? ✕ Nenhum computador conectado ainda. Conecte um para a IARA poder agir nele diretamente. Esta instalação da IARA está sem banco configurado, então não há onde guardar o par. Quem publicou o sistema precisa configurar o Supabase no motor.\"",
+  "esperado": "assistente Dispositivos sem banco (pareamentoDisponivel=false): aviso de banco presente; NENHUM input de nome (input.parear-nome) órfão",
+  "timestamp": "2026-08-15T22:47:48.203Z"
+}

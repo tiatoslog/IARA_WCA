@@ -1,0 +1,72 @@
+{
+  "pass": 6,
+  "fail": 7,
+  "resultados": [
+    {
+      "id": "UI-001",
+      "status": "PASS",
+      "observado": "item \"Instalar no aparelho\" presente no menu; clique abriu a gaveta section[aria-label=\"Instalar a IARA\"] com h2=\"Instalar a IARA\""
+    },
+    {
+      "id": "UI-002",
+      "status": "PASS",
+      "observado": "prompt() chamado 1x; após accepted a gaveta mostra .instalar-confirmacao=\"A IARA já está instalada neste aparelho.\""
+    },
+    {
+      "id": "UI-003",
+      "status": "PASS",
+      "observado": "gaveta viva=true; caminho manual (menciona \"barra de endereço\")=true; erros de console=0; passo1=\"1 Leve a IARA neste aparelho Sem problema — o navegador guarda a recusa por um tempo. Quando quiser instalar: procure o ícone de instalação na barra de endereço (um monitor com uma seta) ou, no menu do navegador, a opção Instalar IARA OS.\""
+    },
+    {
+      "id": "UI-004",
+      "status": "PASS",
+      "observado": "dois cliques rápidos → __qaPromptChamadas=1; durante a espera o botão dizia \"Aguardando o navegador…\" (disabled=true)"
+    },
+    {
+      "id": "UI-005",
+      "status": "FAIL",
+      "observado": "exceção: locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button.conversa-saudacao')\u001b[22m\n\u001b[2m    - locator resolved to <button aria-haspopup=\"menu\" aria-expanded=\"false\" class=\"conversa-saudacao\" title=\"Perfil, dispositivos e automação\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"faixa-aviso\">Modo local sem autenticação — a identidade vem de…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"faixa-aviso\">Modo local sem autenticação — a identidade vem de…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    57 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div class=\"faixa-aviso\">Modo local sem autenticação — a identidade vem de…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "id": "UI-006",
+      "status": "FAIL",
+      "observado": "exceção: locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button.conversa-saudacao')\u001b[22m\n\u001b[2m    - locator resolved to <button aria-haspopup=\"menu\" aria-expanded=\"false\" class=\"conversa-saudacao\" title=\"Perfil, dispositivos e automação\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"faixa-aviso\">Modo local sem autenticação — a identidade vem de…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"faixa-aviso\">Modo local sem autenticação — a identidade vem de…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    57 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div class=\"faixa-aviso\">Modo local sem autenticação — a identidade vem de…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "id": "UI-007",
+      "status": "PASS",
+      "observado": "passo1=\"1 Leve a IARA neste aparelho Neste navegador o convite fica na moldura da janela: procure o ícone de instalação na barra de endereço (um monitor com uma seta) ou, no menu do navegador, a opção Instalar IARA OS.\"; botões \"Instalar a IARA\"=0"
+    },
+    {
+      "id": "UI-008",
+      "status": "PASS",
+      "observado": ".instalar-confirmacao=\"A IARA já está instalada neste aparelho.\"; botões \"Instalar a IARA\"=0"
+    },
+    {
+      "id": "UI-009",
+      "status": "FAIL",
+      "observado": "passos=2; texto \"Ainda não há um instalador publicado\"=false; links \"Baixar o Braço\"=1; clique em \"Conectar um computador →\" abriu a gaveta Dispositivos=true (gaveta Instalar saiu=true); passo2=\"2 Dê mãos a ela nos computadores O app conversa; quem abre programa e cria pasta é o Braço, instalado em cada computador que a IARA deve alcançar. Baixar o Braço Conectar um computador →\""
+    },
+    {
+      "id": "UI-010",
+      "status": "FAIL",
+      "observado": "exceção: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3057/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3057/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+    },
+    {
+      "id": "UI-011",
+      "status": "FAIL",
+      "observado": "exceção: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3057/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3057/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+    },
+    {
+      "id": "UI-012",
+      "status": "FAIL",
+      "observado": "exceção: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3057/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3057/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+    },
+    {
+      "id": "RG-002",
+      "status": "FAIL",
+      "observado": "exceção: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3057/\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3057/\", waiting until \"domcontentloaded\"\u001b[22m\n"
+    }
+  ],
+  "timestamp": "2026-08-15T22:31:14.626Z"
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ConvitePareamento, lerConviteDaUrl } from '../components/ConvitePareamento';
 import { PainelConversa } from '../components/PainelConversa';
 import { Portaria } from '../components/Portaria';
 import { Presenca } from '../components/projecao/Presenca';
@@ -259,6 +260,18 @@ export default function Pagina() {
   const [credencial, setCredencial] = useState<Credencial | null>(null);
   const [verificando, setVerificando] = useState(comAuth);
 
+  /**
+   * O CONVITE DE PAREAMENTO vive AQUI, acima do gate de login — de propósito.
+   * O Braço abre `/?convite=` no computador NOVO, que provavelmente nunca fez
+   * login: o QR precisa aparecer sobre a Portaria, sobre a sala ou sobre o
+   * aviso de modo local, indistintamente. Lido uma vez e removido da URL, como
+   * o `?parear=` da Sala.
+   */
+  const [convite, setConvite] = useState<string | null>(null);
+  useEffect(() => {
+    setConvite(lerConviteDaUrl());
+  }, []);
+
   const lerSessao = useCallback(async () => {
     const bd = supabaseNavegador();
     if (!bd) return;
@@ -299,25 +312,46 @@ export default function Pagina() {
     return () => data.subscription.unsubscribe();
   }, [comAuth, modoLocal, lerSessao]);
 
+  /* O recado no vidro da porta: presente em TODAS as saídas desta função,
+     porque o computador novo pode estar em qualquer uma delas. */
+  const popoverConvite = convite ? (
+    <ConvitePareamento codigo={convite} aoFechar={() => setConvite(null)} />
+  ) : null;
+
   if (verificando) {
     return (
-      <main className="carregando">
-        <span>Abrindo o escritório…</span>
-      </main>
+      <>
+        {popoverConvite}
+        <main className="carregando">
+          <span>Abrindo o escritório…</span>
+        </main>
+      </>
     );
   }
 
   if (comAuth && !credencial) {
-    return <Portaria aoEntrar={() => void lerSessao()} />;
+    return (
+      <>
+        {popoverConvite}
+        <Portaria aoEntrar={() => void lerSessao()} />
+      </>
+    );
   }
 
   // Sem login e sem modo local pedido: a falta de configuração aparece.
-  if (!comAuth && !modoLocal) return <SemLogin />;
+  if (!comAuth && !modoLocal)
+    return (
+      <>
+        {popoverConvite}
+        <SemLogin />
+      </>
+    );
 
-  if (!credencial) return null;
+  if (!credencial) return popoverConvite;
 
   return (
     <>
+      {popoverConvite}
       {!comAuth && (
         <div className="faixa-aviso">
           Modo local sem autenticação — a identidade vem de um seletor, não de um login.

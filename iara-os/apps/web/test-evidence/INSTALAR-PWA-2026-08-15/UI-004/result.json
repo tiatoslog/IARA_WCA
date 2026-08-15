@@ -1,0 +1,7 @@
+{
+  "id": "UI-004",
+  "status": "PASS",
+  "observado": "dois cliques rápidos → __qaPromptChamadas=1; durante a espera o botão dizia \"Aguardando o navegador…\" (disabled=true)",
+  "esperado": "__qaPromptChamadas === 1 (botão desabilita em \"Aguardando o navegador…\")",
+  "timestamp": "2026-08-15T22:27:49.865Z"
+}

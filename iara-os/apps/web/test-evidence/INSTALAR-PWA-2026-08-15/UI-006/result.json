@@ -1,0 +1,7 @@
+{
+  "id": "UI-006",
+  "status": "PASS",
+  "observado": "passo1 menciona Safari=true, endereço localhost:3057=true; botões \"Instalar a IARA\"=0; passo1=\"1 Leve a IARA neste aparelho Este navegador não instala aplicativos no iPhone — só o Safari faz isso. Abra localhost:3057 no Safari e toque em Compartilhar → Adicionar à Tela de Início.\" [cliques via DOM por interceptação da .faixa-aviso do modo local — ver console.log]",
+  "esperado": "instrução mencionando Safari e o endereço; nenhum botão de prompt",
+  "timestamp": "2026-08-15T22:34:14.843Z"
+}

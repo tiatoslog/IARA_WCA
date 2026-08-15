@@ -31,6 +31,7 @@ import type { SnapshotCognitivo } from '../lib/snapshot';
 import { Automacao } from './Automacao';
 import { Dispositivos } from './Dispositivos';
 import { FichaOperador, fichaDoSnapshot } from './FichaOperador';
+import { InstalarIara } from './InstalarIara';
 import { MenuPerfil } from './MenuPerfil';
 
 const ROTULO_ESTAGIO: Record<EstagioCognitivo, string> = {
@@ -83,7 +84,7 @@ interface Props {
   pareamentoDisponivel?: boolean;
   acaoDispositivo?: { ok: boolean; texto: string } | null;
   onPedirDispositivos?: () => boolean;
-  onAutorizarComputador?: (codigo: string) => boolean;
+  onAutorizarComputador?: (codigo: string, nome?: string) => boolean;
   onEsquecerComputador?: (id: string) => boolean;
   /** Etapa 2 (14/08/2026) — "Atualizar agora" numa máquina desatualizada. */
   onAtualizarComputador?: (id: string) => boolean;
@@ -96,9 +97,9 @@ interface Props {
 }
 
 /** Qual gaveta está aberta sobre o fluxo da conversa. Uma de cada vez: as
- *  quatro ocupam o mesmo espaço, e "aberta" é um estado do painel, não de
- *  cada uma. `perfil` é o menu pequeno; as outras três ocupam o fluxo inteiro. */
-type Gaveta = 'nenhuma' | 'perfil' | 'ficha' | 'dispositivos' | 'automacao';
+ *  cinco ocupam o mesmo espaço, e "aberta" é um estado do painel, não de
+ *  cada uma. `perfil` é o menu pequeno; as outras quatro ocupam o fluxo inteiro. */
+type Gaveta = 'nenhuma' | 'perfil' | 'ficha' | 'dispositivos' | 'automacao' | 'instalar';
 
 export function PainelConversa({
   estado,
@@ -304,6 +305,7 @@ export function PainelConversa({
                   aoAbrirPerfil={() => setGaveta('ficha')}
                   aoAbrirDispositivos={() => setGaveta('dispositivos')}
                   aoAbrirAutomacao={() => setGaveta('automacao')}
+                  aoAbrirInstalar={() => setGaveta('instalar')}
                   aoSair={onSair ? () => onSair() : null}
                 />
               )}
@@ -407,6 +409,13 @@ export function PainelConversa({
       ) : gaveta === 'automacao' ? (
         <div className="conversa-fluxo rolagem">
           <Automacao maquinas={maquinas} aoFechar={() => setGaveta('nenhuma')} />
+        </div>
+      ) : gaveta === 'instalar' ? (
+        <div className="conversa-fluxo rolagem">
+          <InstalarIara
+            aoAbrirDispositivos={() => setGaveta('dispositivos')}
+            aoFechar={() => setGaveta('nenhuma')}
+          />
         </div>
       ) : (
       <div className="conversa-fluxo rolagem">

@@ -1,0 +1,7 @@
+{
+  "id": "UI-002",
+  "status": "PASS",
+  "observado": "prompt() chamado 1x; após accepted a gaveta mostra .instalar-confirmacao=\"A IARA já está instalada neste aparelho.\"",
+  "esperado": "botão visível; prompt() 1x; accepted → \"A IARA já está instalada neste aparelho.\"",
+  "timestamp": "2026-08-15T22:26:23.430Z"
+}

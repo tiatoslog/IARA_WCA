@@ -16,11 +16,14 @@ export function MenuPerfil({
   aoAbrirPerfil,
   aoAbrirDispositivos,
   aoAbrirAutomacao,
+  aoAbrirInstalar,
   aoSair,
 }: {
   aoAbrirPerfil: () => void;
   aoAbrirDispositivos: () => void;
   aoAbrirAutomacao: () => void;
+  /** A gaveta que leva a IARA para o aparelho (PWA) e aponta para o Braço. */
+  aoAbrirInstalar: () => void;
   /** `null` no seletor local (sem credencial real para encerrar sessão). */
   aoSair: (() => void) | null;
 }) {
@@ -34,6 +37,9 @@ export function MenuPerfil({
       </button>
       <button type="button" role="menuitem" className="menu-perfil-item" onClick={aoAbrirAutomacao}>
         Automação
+      </button>
+      <button type="button" role="menuitem" className="menu-perfil-item" onClick={aoAbrirInstalar}>
+        Instalar no aparelho
       </button>
       {aoSair && (
         <>

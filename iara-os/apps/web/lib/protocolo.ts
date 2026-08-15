@@ -109,7 +109,7 @@ export type PacoteCliente =
    * computador em nome de outra pessoa — exatamente o que o pareamento existe
    * para impedir.
    */
-  | { tipo: 'parear'; codigo: string }
+  | { tipo: 'parear'; codigo: string; nome?: string }
   /** Revoga uma credencial de computador. `id` é o `id_credencial`. */
   | { tipo: 'esquecer_dispositivo'; id: string }
   /**
@@ -204,11 +204,19 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
   if (obj.tipo === 'parear') {
     const codigo = typeof obj.codigo === 'string' ? obj.codigo.trim() : '';
     if (!codigo) return null;
+    /* O batismo é opcional e nunca invalida o pacote: nome ausente, vazio ou
+       de tipo errado vira campo ausente — e o motor usa o hostname reportado,
+       como sempre. Mesmo teto de 80 do `renomear_dispositivo`. */
+    const nome = typeof obj.nome === 'string' ? obj.nome.trim().slice(0, 80) : '';
     /* Teto generoso e ainda assim teto: o código tem 8 caracteres, e o que
        chega maior que uma linha digitada não é um código com separadores — é
        alguém sondando o parser. A validação de conteúdo mora no `Pareamento`,
        que é quem conhece o alfabeto. */
-    return { tipo: 'parear', codigo: codigo.slice(0, 40) };
+    return {
+      tipo: 'parear',
+      codigo: codigo.slice(0, 40),
+      ...(nome ? { nome } : {}),
+    };
   }
   if (obj.tipo === 'esquecer_dispositivo') {
     const id = typeof obj.id === 'string' ? obj.id.trim() : '';

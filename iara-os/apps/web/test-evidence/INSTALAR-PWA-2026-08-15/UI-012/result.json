@@ -1,0 +1,7 @@
+{
+  "id": "UI-012",
+  "status": "PASS",
+  "observado": "menu aberto com 4 itens; após clique fora (200,500) itens no DOM=0, visível=false",
+  "esperado": "menu fecha ao clicar fora (regressão do popover)",
+  "timestamp": "2026-08-15T22:37:00.729Z"
+}

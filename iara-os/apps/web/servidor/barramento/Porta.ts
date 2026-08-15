@@ -513,7 +513,7 @@ export function conectarOperador(socket: WebSocket): void {
                 : { ok: false, texto: 'Perdi a conexão com o computador bem na hora de mandar a atualização.' };
             }
           } else if (pedido.tipo === 'parear') {
-            const r = await pareamento.aprovar(pedido.codigo, dono);
+            const r = await pareamento.aprovar(pedido.codigo, dono, Date.now(), pedido.nome);
             acao = r.ok
               ? { ok: true, texto: `"${r.nome}" foi autorizado. Ele conecta sozinho em segundos.` }
               : { ok: false, texto: r.motivo };

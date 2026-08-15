@@ -1,0 +1,9 @@
+{
+  "id": "UI-102",
+  "status": "PASS",
+  "observado": "QR (480x480) decodificado com jsQR 1.4.0 → \"http://localhost:3057/?parear=H7K29QP4\"; esperado \"http://localhost:3057/?parear=H7K29QP4\"; iguais=true",
+  "esperado": "QR decodifica para http://localhost:3057/?parear=H7K29QP4",
+  "timestamp": "2026-08-15T22:45:32.742Z",
+  "qr_decodificado": "http://localhost:3057/?parear=H7K29QP4",
+  "qr_esperado": "http://localhost:3057/?parear=H7K29QP4"
+}

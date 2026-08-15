@@ -1,0 +1,9 @@
+{
+  "id": "UI-103",
+  "status": "PASS",
+  "observado": "✕ fechou o popover; menu do nome abriu depois (app utilizável); URL já limpa no primeiro render=\"http://localhost:3057/\"; após F5 popover voltou=false; URL final=\"http://localhost:3057/\"",
+  "esperado": "✕ fecha o popover; app utilizável; F5 não ressuscita o convite (URL limpa, sem ?convite)",
+  "timestamp": "2026-08-15T22:46:27.966Z",
+  "url_apos_montar": "http://localhost:3057/",
+  "url_final": "http://localhost:3057/"
+}

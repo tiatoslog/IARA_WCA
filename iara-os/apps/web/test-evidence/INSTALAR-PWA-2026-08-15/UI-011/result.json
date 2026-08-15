@@ -1,0 +1,7 @@
+{
+  "id": "UI-011",
+  "status": "PASS",
+  "observado": "após F5 com a gaveta aberta: gaveta ausente=true; estado padrão (sugestões \"A sala está aberta\")=true; erros de console (tipo error/pageerror, fora ruído dev)=0",
+  "esperado": "página recarrega no estado padrão, sem erro no console",
+  "timestamp": "2026-08-15T22:36:36.944Z"
+}

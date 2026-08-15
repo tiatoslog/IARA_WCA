@@ -1,0 +1,6 @@
+[warning] WebSocket connection to 'ws://localhost:3057/barramento' failed: WebSocket is closed before the connection is established.
+[warning] ./node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] ./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[qa] NOTA: no viewport 390x844 a .faixa-aviso ("Modo local sem autenticação…", position:fixed top:0 z-index:60, exclusiva do modo local de QA) cobre o cabeçalho e intercepta o hit-test do Playwright sobre button.conversa-saudacao. Cliques deste cenário feitos via DOM (el.click()). Artefato do ambiente, não da mudança sob teste.

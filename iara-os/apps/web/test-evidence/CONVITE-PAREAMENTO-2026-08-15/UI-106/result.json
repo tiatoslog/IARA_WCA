@@ -1,0 +1,23 @@
+{
+  "id": "UI-106",
+  "status": "PASS",
+  "observado": "cartão section.convite bbox={\"x\":20,\"y\":167.78125,\"width\":350,\"height\":508.4375} dentro do viewport=true; QR bbox={\"x\":65,\"y\":284.21875,\"width\":260,\"height\":260} dentro=true",
+  "esperado": "viewport 390×844: popover inteiro na tela; QR não cortado (bounding box dentro do viewport)",
+  "timestamp": "2026-08-15T22:47:50.869Z",
+  "bbox_cartao": {
+    "x": 20,
+    "y": 167.78125,
+    "width": 350,
+    "height": 508.4375
+  },
+  "bbox_qr": {
+    "x": 65,
+    "y": 284.21875,
+    "width": 260,
+    "height": 260
+  },
+  "viewport": {
+    "width": 390,
+    "height": 844
+  }
+}

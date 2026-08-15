@@ -54,15 +54,15 @@
 import { createHash, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { supabase } from './ClienteSupabase';
 import { LimiteVazao } from './kernel/Seguranca';
-
 /**
- * Alfabeto sem `0/O`, `1/I/L` e `U`. Não é purismo: o código é lido na tela de
- * um computador e digitado no celular, às vezes ditado em voz alta. Um zero que
- * vira letra ó gasta a única coisa que o pareamento não tem de sobra — as
- * tentativas.
+ * A grafia do código (alfabeto, normalizar, formatar) mudou para `lib/` em
+ * 15/08/2026 — o convite de pareamento é desenhado pelo cliente, e o que os
+ * dois lados precisam saber mora no contrato compartilhado. Reexportada abaixo
+ * para que nenhum consumidor do kernel precise saber da mudança.
  */
-const ALFABETO = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
-const TAMANHO_CODIGO = 8;
+import { ALFABETO_CODIGO as ALFABETO, TAMANHO_CODIGO, normalizarCodigo } from '../../lib/codigoPareamento';
+
+export { normalizarCodigo, formatarCodigo } from '../../lib/codigoPareamento';
 
 /**
  * Cinco minutos. Curto o bastante para que um código abandonado numa tela não
@@ -186,26 +186,6 @@ function iguais(a: string, b: string): boolean {
   return timingSafeEqual(x, y);
 }
 
-/**
- * `H7K29QP4` ← `h7k2-9qp4`, ` H7K2 9QP4 `. O que a pessoa digita nunca é
- * exatamente o que o sistema guardou, e normalizar aqui é o que evita o pior
- * atendimento possível: "o código está certo e não funciona".
- *
- * Só separadores e caixa são corrigidos. Caractere fora do alfabeto NÃO é
- * removido — e essa contenção é deliberada: descartá-lo encurtaria a string e
- * poderia transformar um código errado noutro código de comprimento válido.
- * Um `O` digitado no lugar de um `0` que o gerador nunca produz é um erro de
- * leitura, e o certo é dizer que não confere.
- */
-export function normalizarCodigo(bruto: string): string {
-  return bruto.toUpperCase().replace(/[\s\-_.]/g, '');
-}
-
-/** `H7K2-9QP4` — o hífen é só para a leitura; nada o guarda. */
-export function formatarCodigo(codigo: string): string {
-  return `${codigo.slice(0, 4)}-${codigo.slice(4)}`;
-}
-
 function sortearCodigo(): string {
   let s = '';
   for (let i = 0; i < TAMANHO_CODIGO; i += 1) s += ALFABETO[randomInt(ALFABETO.length)];
@@ -280,11 +260,18 @@ export class RegistroPareamento {
    *
    * Emite a credencial durável e a guarda pendurada no pedido. Ela só sai deste
    * processo pela `resgatar`, para quem apresentar a chave.
+   *
+   * `nomeEscolhido` (15/08/2026): quem autoriza pode batizar a máquina na
+   * mesma tela ("Notebook Daiane", "PC de Casa") em vez de aceitar o hostname
+   * e renomear depois. Vazio ou ausente, vale o que o braço reportou — o
+   * comportamento de sempre. É só o NOME: a identidade do dono continua vindo
+   * da sessão, nunca do pacote.
    */
   async aprovar(
     codigoBruto: string,
     quem: IdentidadeAprovadora,
     agora = Date.now(),
+    nomeEscolhido?: string,
   ): Promise<{ ok: true; nome: string } | { ok: false; motivo: string }> {
     this.limpar(agora);
 
@@ -352,10 +339,15 @@ export class RegistroPareamento {
     const token = `${PREFIXO_TOKEN}${randomBytes(32).toString('base64url')}`;
     const idCredencial = randomBytes(16).toString('hex');
 
+    /* Mesmo teto e mesma limpeza de `renomear`: o nome é da operadora, mas o
+       tamanho é do banco. */
+    const batismo = (nomeEscolhido ?? '').trim().slice(0, 80);
+    const nomeDaMaquina = batismo || pedido.nome;
+
     await this.repositorio.gravar({
       id_credencial: idCredencial,
       id_usuario: quem.id_usuario,
-      nome: pedido.nome,
+      nome: nomeDaMaquina,
       plataforma: pedido.plataforma,
       hash_token: hashDe(token),
     });
@@ -366,7 +358,7 @@ export class RegistroPareamento {
       email: quem.email,
       nome: quem.nome,
     };
-    return { ok: true, nome: pedido.nome };
+    return { ok: true, nome: nomeDaMaquina };
   }
 
   /**

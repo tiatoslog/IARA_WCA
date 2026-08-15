@@ -511,7 +511,8 @@ export function useIaraSocket(credencial: Credencial) {
     [pedirAoBarramento],
   );
   const autorizarComputador = useCallback(
-    (codigo: string) => pedirAoBarramento({ tipo: 'parear', codigo }),
+    (codigo: string, nome?: string) =>
+      pedirAoBarramento({ tipo: 'parear', codigo, ...(nome ? { nome } : {}) }),
     [pedirAoBarramento],
   );
   const esquecerComputador = useCallback(

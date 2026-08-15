@@ -1,0 +1,7 @@
+{
+  "id": "UI-005",
+  "status": "PASS",
+  "observado": "passo1 menciona Compartilhar=true, Adicionar à Tela de Início=true; botões \"Instalar a IARA\"=0; passo1=\"1 Leve a IARA neste aparelho No iPhone e no iPad quem instala é o Safari: toque em Compartilhar (o quadrado com a seta para cima) e depois em Adicionar à Tela de Início. A IARA vira um ícone e abre em tela cheia.\" [cliques via DOM por interceptação da .faixa-aviso do modo local — ver console.log]",
+  "esperado": "instrução Compartilhar → Adicionar à Tela de Início; NENHUM botão \"Instalar a IARA\"",
+  "timestamp": "2026-08-15T22:34:13.561Z"
+}

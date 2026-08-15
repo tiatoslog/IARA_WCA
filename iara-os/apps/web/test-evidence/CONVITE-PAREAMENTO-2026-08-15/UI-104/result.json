@@ -1,0 +1,7 @@
+{
+  "id": "UI-104",
+  "status": "PASS",
+  "observado": "\"%3Cscript%3E\": popover=false, scripts inline suspeitos=0, injeção no body=nada, url=\"http://localhost:3057/\"; \"ABC\": popover=false, url=\"http://localhost:3057/\"; erros de console=0",
+  "esperado": "valores fora do alfabeto (%3Cscript%3E) e curtos (ABC) → nenhum popover, nenhum HTML injetado, sem Error no console",
+  "timestamp": "2026-08-15T22:47:15.986Z"
+}

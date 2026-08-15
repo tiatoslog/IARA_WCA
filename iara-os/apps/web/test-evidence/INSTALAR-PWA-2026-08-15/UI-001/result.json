@@ -1,0 +1,7 @@
+{
+  "id": "UI-001",
+  "status": "PASS",
+  "observado": "item \"Instalar no aparelho\" presente no menu; clique abriu a gaveta section[aria-label=\"Instalar a IARA\"] com h2=\"Instalar a IARA\"",
+  "esperado": "item existe e abre a gaveta",
+  "timestamp": "2026-08-15T22:26:18.865Z"
+}

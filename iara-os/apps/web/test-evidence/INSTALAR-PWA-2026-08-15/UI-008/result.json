@@ -1,0 +1,7 @@
+{
+  "id": "UI-008",
+  "status": "PASS",
+  "observado": ".instalar-confirmacao=\"A IARA já está instalada neste aparelho.\"; botões \"Instalar a IARA\"=0",
+  "esperado": "\"A IARA já está instalada\"; nenhum botão",
+  "timestamp": "2026-08-15T22:30:14.347Z"
+}

@@ -80,10 +80,38 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+/**
+ * O CONVITE DE INSTALAÇÃO É UM EVENTO QUE SÓ PASSA UMA VEZ.
+ *
+ * O Chrome dispara `beforeinstallprompt` assim que decide que a página é
+ * instalável — em geral antes de o React hidratar. Um listener registrado
+ * dentro de um `useEffect` chega tarde e perde o evento para sempre; por isso
+ * este ouvido é inline, no HTML, executado durante o parse. Ele guarda o
+ * evento em `window.__iaraEventoInstalacao` e avisa quem montar depois
+ * (`iara:instalavel`). O `preventDefault` segura a mini-barra automática do
+ * Android: o convite passa a ser dado pela gaveta "Instalar a IARA", no
+ * momento em que a operadora pede — não por um banner do navegador.
+ *
+ * `appinstalled` limpa o guardado e avisa (`iara:instalada`): a gaveta troca o
+ * botão pela confirmação sem precisar de refresh.
+ */
+const OUVIDO_INSTALACAO = `
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  window.__iaraEventoInstalacao = e;
+  window.dispatchEvent(new Event('iara:instalavel'));
+});
+window.addEventListener('appinstalled', function () {
+  window.__iaraEventoInstalacao = null;
+  window.dispatchEvent(new Event('iara:instalada'));
+});
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={inter.variable}>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: OUVIDO_INSTALACAO }} />
         {children}
         <RegistrarPWA />
       </body>

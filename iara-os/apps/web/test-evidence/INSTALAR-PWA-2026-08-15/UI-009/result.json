@@ -1,0 +1,7 @@
+{
+  "id": "UI-009",
+  "status": "PASS",
+  "observado": "DIVERGÊNCIA DE PRÉ-CONDIÇÃO registrada: o plano assumia NEXT_PUBLIC_IARA_INSTALADOR ausente, mas ela está definida em .env.local:66 deste ambiente. Observado o ramo real: passos=2; link \"Baixar o Braço\"=1 com href=https://wmuromeegnjderebnrsd.supabase.co/storage/v1/object/public/instaladores/iara-braco.exe (igual à env=true); HTTP do instalador=200 (vivo=true, não é link morto); \"Conectar um computador →\" abriu a gaveta Dispositivos=true (gaveta Instalar saiu=true); passo2=\"2 Dê mãos a ela nos computadores O app conversa; quem abre programa e cria pasta é o Braço, instalado em cada computador que a IARA deve alcançar. Baixar o Braço Conectar um computador →\". O ramo \"Ainda não há um instalador publicado\" NÃO foi exercitado em UI neste ambiente (coberto por UN-*/código, exigiria remover a env var e reiniciar o servidor — vedado a este QA).",
+  "esperado": "passo 2 do Braço presente; NUNCA link morto — neste ambiente NEXT_PUBLIC_IARA_INSTALADOR ESTÁ definida (.env.local:66), logo o ramo correto é o link \"Baixar o Braço\" vivo (o texto \"Ainda não há um instalador publicado\" é o ramo da env var ausente, que não é a pré-condição real daqui); botão \"Conectar um computador →\" troca para a gaveta Dispositivos",
+  "timestamp": "2026-08-15T22:35:30.852Z"
+}

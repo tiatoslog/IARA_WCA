@@ -1,0 +1,7 @@
+{
+  "id": "RG-002b",
+  "status": "PASS",
+  "observado": "\"Meu perfil\" abriu (section[aria-label=\"Ficha do operador\"]) e fechou no ✕; \"Dispositivos\" abriu (section[aria-label=\"Computadores conectados\"]) e fechou no ✕; \"Automação\" abriu (section[aria-label=\"Automação da IARA\"]) e fechou no ✕; \"Instalar no aparelho\" abriu (section[aria-label=\"Instalar a IARA\"]) e fechou no ✕",
+  "esperado": "gavetas Meu perfil, Dispositivos, Automação e Instalar no aparelho abrem e fecham normalmente após as mudanças",
+  "timestamp": "2026-08-15T22:52:30.861Z"
+}

@@ -64,7 +64,13 @@ import {
   SessaoExpirada,
   wsDoMotor,
 } from './credencial';
-import { aguardarAprovacao, PareamentoRecusado, pedirCodigo } from './pareamento';
+import {
+  aguardarAprovacao,
+  linkDoConvite,
+  linkDoPareamento,
+  PareamentoRecusado,
+  pedirCodigo,
+} from './pareamento';
 
 carregarEnv({ path: '.env.local' });
 carregarEnv();
@@ -160,12 +166,12 @@ function perguntar(rotulo: string): Promise<string> {
 }
 
 /**
- * Abre um arquivo no visualizador padrão do sistema — hoje só o PNG do QR de
- * pareamento. Best-effort e silencioso de propósito: se o SO não tiver um
- * visualizador associado (servidor sem GUI, por exemplo), o operador ainda
- * tem o ASCII no terminal e o caminho impresso logo acima da chamada.
+ * Abre um caminho OU URL no aplicativo padrão do sistema — hoje, o convite de
+ * pareamento no navegador (e o PNG do QR continua sendo o reforço impresso).
+ * Best-effort e silencioso de propósito: num servidor sem GUI o operador ainda
+ * tem o ASCII no terminal, o código e o caminho do PNG.
  */
-function abrirImagem(caminho: string): void {
+function abrirNoSistema(caminho: string): void {
   try {
     const p = platform();
     const [comando, args] =
@@ -228,29 +234,34 @@ async function parearEsteComputador(): Promise<boolean> {
    * nesse caso a operadora ainda tem o código para digitar à mão.
    */
   try {
-    const linkPareamento = `${motor.replace(/\/+$/, '')}/?parear=${pedido.codigo.replace(/-/g, '')}`;
-    const qr = await QRCode.toString(linkPareamento, { type: 'terminal', small: true });
-    console.log(qr);
-    console.log('  Aponte a câmera do celular (já logado na IARA) para o QR acima,');
-    console.log('  ou digite o código abaixo na aba Dispositivos:\n');
+    const linkPareamento = linkDoPareamento(motor, pedido.codigo);
 
     /**
-     * O ASCII ACIMA DEPENDE DO CONSOLE — achado em auditoria (14/08/2026): um
-     * `conhost.exe` legado sem codepage UTF-8, ou uma fonte não-monoespaçada,
-     * transforma os blocos Unicode em ruído ilegível sem avisar ninguém, e o
-     * operador via "QR não aparece" mesmo com o código impresso do lado certo.
-     * Uma imagem PNG não depende de fonte de terminal nenhuma — é sempre
-     * nítida, sempre escaneável.
+     * O QR AGORA MORA NA INTERFACE DA IARA, não no terminal (15/08/2026, a
+     * pedido da operadora). O braço abre o navegador em `/?convite=<código>` e
+     * a própria página monta o popover com o QR — nítido, com a estética do
+     * aplicativo, em qualquer fonte de console. A história desta decisão vem
+     * em camadas: o ASCII dependia do codepage do console (auditoria de
+     * 14/08), o PNG avulso abria num visualizador que não parecia o produto
+     * (rodada 2 do mesmo dia); a página é a primeira via que é sempre nítida E
+     * sempre parece a IARA.
      *
-     * CORRIGIDO (14/08/2026, rodada 2): a versão anterior gravava o PNG e só
-     * imprimia o caminho, esperando que a operadora abrisse o Explorer/Finder
-     * sozinha — na prática, ninguém navega até uma pasta temp por um aviso de
-     * texto, e o sintoma era idêntico a "não existe QR". `spawn` já é
-     * permitido neste arquivo (`testes/fronteira-efeitos.test.ts`, `A4` — o
-     * braço se auto-atualiza com `spawn` mais abaixo); abrir a própria imagem
-     * gerada é o mesmo nível de confiança, então agora ela abre sozinha no
-     * visualizador padrão do sistema. Best-effort: se o SO não tiver um
-     * visualizador associado, o caminho impresso continua sendo o reforço.
+     * `spawn` já é permitido neste arquivo (`fronteira-efeitos.test.ts`, A4);
+     * abrir o navegador no ENDEREÇO DO PRÓPRIO MOTOR é o mesmo nível de
+     * confiança de abrir a imagem que acabamos de gerar.
+     */
+    abrirNoSistema(linkDoConvite(motor, pedido.codigo));
+    console.log('  O navegador vai abrir com o QR na tela da IARA.');
+    console.log('  Aponte a câmera do celular para ele — ou, se a janela não abrir,');
+    console.log('  use o desenho abaixo ou digite o código na aba Dispositivos:\n');
+
+    const qr = await QRCode.toString(linkPareamento, { type: 'terminal', small: true });
+    console.log(qr);
+
+    /**
+     * O PNG continua existindo como reforço IMPRESSO (não abre mais sozinho:
+     * navegador e visualizador de imagem abrindo juntos é duas janelas para o
+     * mesmo fato). Ele cobre o caso do terminal sem UTF-8 E sem navegador.
      */
     try {
       const caminhoQr = path.join(
@@ -258,13 +269,9 @@ async function parearEsteComputador(): Promise<boolean> {
         `iara-pareamento-${pedido.codigo.replace(/-/g, '')}.png`,
       );
       await QRCode.toFile(caminhoQr, linkPareamento, { width: 512, margin: 2 });
-      console.log(`  Se o desenho acima saiu ilegível no seu terminal, abra este arquivo:`);
-      console.log(`  ${caminhoQr}\n`);
-      abrirImagem(caminhoQr);
+      console.log(`  (Se nada disso aparecer legível, o QR também está em ${caminhoQr})\n`);
     } catch {
-      /* PNG é reforço, não a via principal — o ASCII acima e o código abaixo
-         já bastam sozinhos. Falha ao gravar (disco cheio, sem permissão) não
-         pode derrubar o pareamento. */
+      /* PNG é reforço do reforço — falha ao gravar não pode derrubar nada. */
     }
   } catch {
     /* Endereço não vira QR válido (ex.: motor sem esquema http/https) — o

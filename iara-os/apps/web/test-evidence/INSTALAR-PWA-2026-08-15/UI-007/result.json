@@ -1,0 +1,7 @@
+{
+  "id": "UI-007",
+  "status": "PASS",
+  "observado": "passo1=\"1 Leve a IARA neste aparelho Neste navegador o convite fica na moldura da janela: procure o ícone de instalação na barra de endereço (um monitor com uma seta) ou, no menu do navegador, a opção Instalar IARA OS.\"; botões \"Instalar a IARA\"=0",
+  "esperado": "instrução do menu do navegador (\"barra de endereço\"); nenhum botão \"Instalar a IARA\"",
+  "timestamp": "2026-08-15T22:29:42.023Z"
+}

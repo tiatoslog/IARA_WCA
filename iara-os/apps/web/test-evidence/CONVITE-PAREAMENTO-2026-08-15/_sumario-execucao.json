@@ -1,0 +1,42 @@
+{
+  "pass": 7,
+  "fail": 0,
+  "resultados": [
+    {
+      "id": "UI-101",
+      "status": "PASS",
+      "observado": "popover visível (role=dialog, aria-label=\"Conectar este computador\"); img src é data URL=true (data:image/png;base64,iVBORw0K…); alt=\"QR do pareamento — código H7K2-9QP4\" contém \"H7K2-9QP4\"=true; .convite-codigo=\"H7K2-9QP4\"=true; cores: cartão=rgb(20, 23, 26) (brilho 23, escuro=true), fundo=rgba(5, 6, 8, 0.78) (escuro=true), célula do QR=rgb(244, 246, 248) — o único claro é o cartão do QR"
+    },
+    {
+      "id": "UI-102",
+      "status": "PASS",
+      "observado": "QR (480x480) decodificado com jsQR 1.4.0 → \"http://localhost:3057/?parear=H7K29QP4\"; esperado \"http://localhost:3057/?parear=H7K29QP4\"; iguais=true"
+    },
+    {
+      "id": "UI-103",
+      "status": "PASS",
+      "observado": "✕ fechou o popover; menu do nome abriu depois (app utilizável); URL já limpa no primeiro render=\"http://localhost:3057/\"; após F5 popover voltou=false; URL final=\"http://localhost:3057/\""
+    },
+    {
+      "id": "UI-104",
+      "status": "PASS",
+      "observado": "\"%3Cscript%3E\": popover=false, scripts inline suspeitos=0, injeção no body=nada, url=\"http://localhost:3057/\"; \"ABC\": popover=false, url=\"http://localhost:3057/\"; erros de console=0"
+    },
+    {
+      "id": "UI-105",
+      "status": "PASS",
+      "observado": "aviso de banco (\"sem banco configurado\")=true; botão \"+ Conectar computador\"=0 (sem banco o botão nem aparece — não há como abrir o assistente); input.parear-nome=0; input.parear-codigo=0; texto da gaveta=\"Onde a IARA tem mãos ? ✕ Nenhum computador conectado ainda. Conecte um para a IARA poder agir nele diretamente. Esta instalação da IARA está sem banco configurado, então não há onde guardar o par. Quem publicou o sistema precisa configurar o Supabase no motor.\""
+    },
+    {
+      "id": "UI-106",
+      "status": "PASS",
+      "observado": "cartão section.convite bbox={\"x\":20,\"y\":167.78125,\"width\":350,\"height\":508.4375} dentro do viewport=true; QR bbox={\"x\":65,\"y\":284.21875,\"width\":260,\"height\":260} dentro=true"
+    },
+    {
+      "id": "RG-002b",
+      "status": "PASS",
+      "observado": "\"Meu perfil\" abriu (section[aria-label=\"Ficha do operador\"]) e fechou no ✕; \"Dispositivos\" abriu (section[aria-label=\"Computadores conectados\"]) e fechou no ✕; \"Automação\" abriu (section[aria-label=\"Automação da IARA\"]) e fechou no ✕; \"Instalar no aparelho\" abriu (section[aria-label=\"Instalar a IARA\"]) e fechou no ✕"
+    }
+  ],
+  "timestamp": "2026-08-15T22:52:34.114Z"
+}
