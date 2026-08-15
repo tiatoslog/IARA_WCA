@@ -25,7 +25,7 @@
 | [x] | RLY-004 | `railway.toml` deixa de descrever a separação de 12/08 como decisão vigente | Comentário atualizado com a supersessão de 15/08 | comentário reescrito, `IARA_MODO=headless` removido da lista de variáveis a configurar | LOW — VERIFIED |
 | [x] | RLY-005 | Regressão: suíte automatizada continua verde | Mesma contagem de testes que antes da mudança, zero falha nova | `npm test`: 862/863 antes E depois da mudança (`git stash` comparativo) — a 1 falha (`A2. nenhum fetch a provedor externo...`) é PRÉ-EXISTENTE, não causada por esta mudança | MEDIUM — VERIFIED |
 | [x] | RLY-006 | Regressão: build de produção continua funcionando sem `vercel.json` | `npm run build` conclui sem erro | ver saída anexada abaixo | MEDIUM — VERIFIED |
-| [ ] | RLY-007 | Produção ao vivo continua servindo normalmente após o push | `iara.up.railway.app` responde 200 com o app funcionando, sem regressão visível | a verificar após o push desta sessão | MEDIUM — pendente de deploy |
+| [x] | RLY-007 | Produção ao vivo continua servindo normalmente após o push | `iara.up.railway.app` responde 200 com o app funcionando, sem regressão visível | Railway já rebuildou com as 3 variáveis do instalador (aplicadas pela operadora) + ARG do Dockerfile: gaveta "Onde a IARA tem mãos" trocou o aviso de fallback pelo botão "Baixar o programa", `href` real confirmado via JS: `https://wmuromeegnjderebnrsd.supabase.co/storage/v1/object/public/instaladores/iara-braco.exe` | MEDIUM — VERIFIED |
 
 ## Evidência
 
