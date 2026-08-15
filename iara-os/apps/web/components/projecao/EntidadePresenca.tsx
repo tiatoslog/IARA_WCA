@@ -815,17 +815,32 @@ function ReguladorDesempenho() {
   return null;
 }
 
-/** Janela oculta não paga GPU: `never` na bandeja, `always` visível. */
+/**
+ * Janela oculta não paga GPU: `never` na bandeja, `always` visível.
+ *
+ * `document.visibilityState` só cobre a aba inteira sumir (minimizar, trocar
+ * de app). Desde 14/08/2026 a gema também some no celular por CSS puro
+ * (`.presenca { display: none }` — ver globals.css), e display:none em um
+ * ancestral zera o tamanho medido do Canvas sem disparar visibilitychange
+ * nenhum: sem este segundo gatilho, o loop continuava rodando useFrame a
+ * 60 Hz — câmera, respiração procedural, lipsync — para um canvas 0×0, o
+ * tempo todo em que a conversa está aberta no celular (que hoje é o único
+ * estado alcançável lá). `size` vem do próprio R3F, que já observa o
+ * container por ResizeObserver; zero largura/altura é o mesmo sinal.
+ */
 function RegenciaVisibilidade() {
   const setFrameloop = useThree((e) => e.setFrameloop);
+  const largura = useThree((e) => e.size.width);
+  const altura = useThree((e) => e.size.height);
   useEffect(() => {
     const aoMudar = () => {
-      setFrameloop(document.visibilityState === 'visible' ? 'always' : 'never');
+      const visivel = document.visibilityState === 'visible' && largura > 0 && altura > 0;
+      setFrameloop(visivel ? 'always' : 'never');
     };
     aoMudar();
     document.addEventListener('visibilitychange', aoMudar);
     return () => document.removeEventListener('visibilitychange', aoMudar);
-  }, [setFrameloop]);
+  }, [setFrameloop, largura, altura]);
   return null;
 }
 

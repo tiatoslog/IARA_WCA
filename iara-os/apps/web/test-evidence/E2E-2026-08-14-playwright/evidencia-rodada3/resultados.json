@@ -1,0 +1,16 @@
+[
+  {
+    "id": "R07a-clima-pede-cidade",
+    "mensagem": "Como está o clima?",
+    "resposta": "Não sei de qual lugar responder: você não concedeu acesso à localização e este ambiente não tem coordenadas declaradas (IARA_LATITUDE e IARA_LONGITUDE). Me diga a cidade — pode ser só o nome, tipo \"Valinhos\" — que eu consulto na hora.",
+    "painel": null,
+    "ms": 8720
+  },
+  {
+    "id": "R07b-valinhos-pendencia",
+    "mensagem": "Valinhos",
+    "resposta": "Agora em Valinhos, São Paulo: 19.1 °C, predominantemente limpo, umidade em 88%. Não choveu na última hora.",
+    "painel": null,
+    "ms": 16549
+  }
+]

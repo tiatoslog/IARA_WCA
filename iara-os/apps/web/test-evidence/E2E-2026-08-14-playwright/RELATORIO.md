@@ -91,16 +91,32 @@ coordenadas, sem geolocalização). Na prática os dois caminhos convergem: a
 resposta curta com nome de cidade também resolve pela rota cognitiva, como
 R03b provou ao vivo.
 
+## Rodada 3 — o último caminho: pendência multiturno pela interface
+
+Geolocalização REVOGADA no perfil do navegador de teste (o usuário que nega
+localização) + coordenadas de escritório em branco — o cenário exato da
+produção. Evidência em `evidencia-rodada3/`.
+
+| Teste | Entrada | Resultado real | Status |
+|---|---|---|---|
+| R07a | "Como está o clima?" | `consultar_clima` executou, não resolveu e PEDIU: "Me diga a cidade — pode ser só o nome…" (pendência armada) | 🟢 |
+| R07b | "Valinhos" | **"Agora em Valinhos, São Paulo: 19.1 °C, predominantemente limpo, umidade em 88%"** — a resposta curta preencheu o parâmetro e a MESMA habilidade re-executou | 🟢 |
+
+O ciclo `pergunta → falta parâmetro → IARA pergunta → resposta curta →
+execução` está fechado ao vivo, de ponta a ponta, pela interface.
+
 ## Veredito
 
-🟡 **APROVADO COM DÉBITOS** — o pipeline
-`pergunta → intenção → habilidade → executor → dado real → resposta` está
-comprovado pela interface, com efeito verificado por fora (disco) e dado real
-(planilha LUFT). Débitos remanescentes, todos nomeados: escopo Mail.Read no
-app do Azure AD (infra), `resolver_confirmacao{confirmo}` de energia nunca
-testado até o fim (por desenho), pendência multiturno provada por teste de
-kernel mas não pela interface (convergência com a rota cognitiva demonstrada
-ao vivo).
+🟢 **APROVADO** — as três rodadas (28 turnos) provaram pela interface, com
+zero erros de comportamento:
+`pergunta → intenção → habilidade → executor → dado real → resposta`,
+incluindo pergunta implícita (descoberta por catálogo), multiturno com
+pendência de parâmetro, efeito físico verificado por processo externo
+(pastas em disco) e dado real da planilha LUFT. Falhas restantes são
+honestas e de INFRA, não de código: escopo Mail.Read ausente no app do
+Azure AD (nomeado pela própria IARA na resposta), e
+`resolver_confirmacao{confirmo}` de energia permanece não testado até o fim
+por desenho de segurança.
 
 ## Limitações honestas
 
