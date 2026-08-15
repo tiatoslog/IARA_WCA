@@ -157,6 +157,7 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         onAtualizarComputador={atualizarComputador}
         onRenomearComputador={renomearComputador}
         codigoDePareamentoUrl={codigoDePareamentoUrl}
+        onSair={aoSair}
       />
 
       {/* Política de mídia do navegador exige um gesto antes de tocar som.

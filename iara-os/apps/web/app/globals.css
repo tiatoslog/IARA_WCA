@@ -1103,6 +1103,62 @@ ol.plano {
   }
 }
 
+/* O ANCORADOURO do menu — só existe para o dropdown ter uma referência de
+   posição. Não tem estilo próprio nenhum, só `position: relative`. */
+.conversa-perfil {
+  position: relative;
+}
+
+/* O MENU DA PORTA — popover pequeno, nunca gaveta. Ancorado embaixo do nome,
+   flutua SOBRE o painel porque é ação transitória (escolher um destino), não
+   conteúdo — a única exceção deliberada à regra "nada flutua sobre o fluxo",
+   que vale para painéis de CONTEÚDO (Ficha, Dispositivos, Automação). */
+.menu-perfil {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 168px;
+  padding: 6px;
+  gap: 1px;
+  background: var(--c-vidro-alto);
+  backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid var(--c-linha);
+  border-radius: var(--r-m);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  animation: surgir 140ms cubic-bezier(0.3, 0.9, 0.4, 1);
+}
+
+.menu-perfil-item {
+  font-family: inherit;
+  font-size: var(--t-ui);
+  text-align: left;
+  color: var(--c-tinta-2);
+  background: none;
+  border: none;
+  border-radius: var(--r-p);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease;
+}
+
+.menu-perfil-item:hover {
+  color: var(--c-tinta);
+  background: var(--c-superficie);
+}
+
+.menu-perfil-item.sair {
+  color: var(--c-alerta);
+}
+
+.menu-perfil-separador {
+  margin: 4px 2px;
+  border: none;
+  border-top: 1px solid var(--c-linha);
+}
+
 .conversa-enlace {
   margin-left: auto;
   width: 7px;
@@ -1726,6 +1782,145 @@ ol.plano {
   align-self: flex-start;
   text-decoration: none;
   display: inline-block;
+}
+
+/* O "?" DE AJUDA — a explicação de sempre ("a IARA pensa na nuvem...") deixou
+   de ficar sempre visível (15/08/2026): vira tooltip nativo, sob demanda. Um
+   círculo do tamanho de um dedo, não um ícone novo — a biblioteca de ícones
+   do projeto é deliberadamente pequena (ver `Icones.tsx`). */
+.ficha-ajuda {
+  font-family: inherit;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  line-height: 1;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-tinta-3);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+  border-radius: 50%;
+  cursor: help;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.ficha-ajuda:hover {
+  color: var(--c-tinta-2);
+  border-color: var(--c-linha-forte);
+}
+
+/* + CONECTAR COMPUTADOR — a porta do assistente, mesma linguagem visual do
+   botão de sugestão da sala vazia: convite discreto, não ênfase de ação
+   primária (a ação primária da gaveta é olhar o quadro de chaves). */
+.dispositivos-conectar-novo {
+  font-family: inherit;
+  font-size: var(--t-ui);
+  text-align: left;
+  color: var(--c-tinta-2);
+  background: var(--c-superficie);
+  border: 1px dashed var(--c-linha-forte);
+  border-radius: var(--r-m);
+  padding: 9px 13px;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.dispositivos-conectar-novo:hover:not(:disabled) {
+  color: var(--c-tinta);
+  background: var(--c-vidro-alto);
+  border-color: var(--c-tinta-3);
+}
+
+.dispositivos-conectar-novo:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dispositivos-assistente {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dispositivos-voltar {
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: var(--t-rotulo);
+  color: var(--c-tinta-3);
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.dispositivos-voltar:hover {
+  color: var(--c-tinta-2);
+}
+
+.dispositivos-passos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dispositivos-passo {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.dispositivos-passo-numero {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--t-micro);
+  font-weight: 700;
+  color: var(--c-tinta-2);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+  border-radius: 50%;
+}
+
+.dispositivos-passo-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dispositivos-passo-corpo > p {
+  margin: 0;
+  font-size: var(--t-ui);
+  font-weight: 600;
+  color: var(--c-tinta);
+}
+
+/* --------------------------------------------------------------------------
+ * AUTOMAÇÃO — a folha de manutenção do Braço.
+ * -------------------------------------------------------------------------- */
+
+.automacao-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--t-ui);
+  color: var(--c-tinta-2);
+}
+
+.automacao-status.ativo {
+  color: var(--c-tinta);
 }
 
 /* Faixa do modo ligação. */

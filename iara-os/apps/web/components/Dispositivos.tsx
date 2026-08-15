@@ -25,27 +25,11 @@
  */
 
 import { useEffect, useState } from 'react';
-import type { MaquinaDoOperador } from '../lib/execucao';
+import { lerManifestoBraco, type MaquinaDoOperador } from '../lib/execucao';
 
-/**
- * O endereço do instalador. Vazio quando ninguém publicou um — e nesse caso a
- * gaveta explica o que fazer em vez de oferecer um botão que baixa 404.
- *
- * É uma variável de BUILD (`NEXT_PUBLIC_`), como as do Supabase: ela é escrita
- * dentro do bundle. Num deploy por Docker precisa estar declarada como `ARG`,
- * que é a pegadinha que já derrubou o primeiro deploy real deste produto.
- */
-const INSTALADOR = process.env.NEXT_PUBLIC_IARA_INSTALADOR ?? '';
-
-/**
- * O resumo "para leigos" do que mudou na versão atual — Etapa 3 (14/08/2026).
- *
- * Texto livre, decidido por quem publica a versão (a mesma variável que
- * `NEXT_PUBLIC_IARA_INSTALADOR`, preenchida junto). Vazio é um estado
- * normal — ninguém é obrigado a escrever notas — e nesse caso a gaveta só
- * não mostra a linha, em vez de mostrar um espaço em branco.
- */
-const NOTAS_VERSAO = process.env.NEXT_PUBLIC_IARA_INSTALADOR_NOTAS ?? '';
+/** Lida uma vez por módulo — as três variáveis são estáticas de build, não
+ *  mudam durante a vida do processo do navegador. */
+const MANIFESTO = lerManifestoBraco();
 
 /**
  * "há 3 minutos", e não "13/08/2026 14:32:07".
@@ -196,11 +180,11 @@ function Maquina({
             {maquina.desatualizada && (
               <span className="maquina-detalhe maquina-desatualizada">
                 versão do programa desatualizada
-                {NOTAS_VERSAO && <span className="maquina-notas-versao"> — {NOTAS_VERSAO}</span>}
-                {!maquina.conectada && INSTALADOR && (
+                {MANIFESTO.notas && <span className="maquina-notas-versao"> — {MANIFESTO.notas}</span>}
+                {!maquina.conectada && MANIFESTO.url && (
                   <>
                     {' — '}
-                    <a href={INSTALADOR} download>
+                    <a href={MANIFESTO.url} download>
                       baixe a versão nova
                     </a>
                   </>
@@ -275,6 +259,19 @@ export function Dispositivos({
   aoRenomear: (id: string, nome: string) => void;
   aoFechar: () => void;
 }) {
+  /**
+   * DUAS VISTAS, NUNCA MISTURADAS — achado em auditoria de UX (15/08/2026): a
+   * versão anterior despejava lista + código + instalação + explicação no
+   * mesmo golpe de vista, e uma pessoa nova não sabia o que olhar primeiro.
+   *
+   * `lista` é o quadro de chaves (o que já está ligado); `conectar` é o
+   * assistente de ligar uma máquina nova. Uma pessoa só está fazendo UMA
+   * dessas coisas por vez — a tela agora diz isso.
+   *
+   * Chega direto em `conectar` quando veio código do QR do braço: poupar o
+   * "abrir a gaveta certa" é o ponto inteiro do atalho.
+   */
+  const [vista, setVista] = useState<'lista' | 'conectar'>(codigoInicial ? 'conectar' : 'lista');
   const [codigo, setCodigo] = useState(codigoInicial ?? '');
 
   /**
@@ -293,11 +290,15 @@ export function Dispositivos({
     return () => clearInterval(t);
   }, [conectado, aoPedirLista]);
 
-  /* Autorizou com sucesso: o campo se esvazia sozinho. Deixar o código na
-     caixa convida ao segundo clique, e o segundo clique num código já usado
-     responde "não confere" — um erro que a própria tela produziu. */
+  /* Autorizou com sucesso: o campo se esvazia sozinho e o assistente devolve
+     a pessoa para o quadro de chaves, onde a máquina nova já aparece. Deixar
+     o código na caixa convida ao segundo clique, e o segundo clique num
+     código já usado responde "não confere" — um erro que a própria tela
+     produziu. */
   useEffect(() => {
-    if (ultimaAcao?.ok) setCodigo('');
+    if (!ultimaAcao?.ok) return;
+    setCodigo('');
+    setVista('lista');
   }, [ultimaAcao]);
 
   /**
@@ -326,126 +327,162 @@ export function Dispositivos({
   return (
     <section className="ficha" aria-label="Computadores conectados">
       <header className="ficha-cabecalho">
-        <h2>Onde a IARA tem mãos</h2>
+        <h2>{vista === 'conectar' ? 'Conectar computador' : 'Onde a IARA tem mãos'}</h2>
+        {vista === 'lista' && (
+          <button
+            type="button"
+            className="ficha-ajuda"
+            aria-label="O que é isto"
+            title="A IARA pensa na nuvem, mas quem abre um programa ou cria uma pasta é o computador que você ligou a ela."
+          >
+            ?
+          </button>
+        )}
         <button className="ficha-fechar" onClick={aoFechar} aria-label="Fechar">
           ✕
         </button>
       </header>
 
-      <p className="ficha-nota">
-        A IARA pensa na nuvem, mas quem abre um programa ou cria uma pasta é o
-        computador que você ligou a ela. Aqui estão os que estão ligados.
-      </p>
+      {vista === 'lista' ? (
+        <>
+          {maquinas === null ? (
+            <p className="maquina-vazio">Perguntando…</p>
+          ) : maquinas.length === 0 ? (
+            <p className="maquina-vazio">
+              Nenhum computador conectado ainda. Conecte um para a IARA poder
+              agir nele diretamente.
+            </p>
+          ) : (
+            <ul className="maquinas">
+              {maquinas.map((m) => (
+                <Maquina
+                  key={m.id}
+                  maquina={m}
+                  podeAgir={conectado}
+                  aoEsquecer={aoEsquecer}
+                  aoAtualizar={aoAtualizar}
+                  aoRenomear={aoRenomear}
+                />
+              ))}
+            </ul>
+          )}
 
-      {maquinas === null ? (
-        <p className="maquina-vazio">Perguntando…</p>
-      ) : maquinas.length === 0 ? (
-        <p className="maquina-vazio">
-          Nenhum computador ligado ainda. Enquanto for assim, a IARA conversa
-          normalmente e avisa que não tem mãos quando você pedir algo no
-          computador.
-        </p>
+          {pareamentoDisponivel ? (
+            <button
+              type="button"
+              className="dispositivos-conectar-novo"
+              onClick={() => setVista('conectar')}
+              disabled={!conectado}
+            >
+              + Conectar computador
+            </button>
+          ) : (
+            <small>
+              Esta instalação da IARA está sem banco configurado, então não há onde
+              guardar o par. Quem publicou o sistema precisa configurar o Supabase
+              no motor.
+            </small>
+          )}
+
+          {recadoLocal && (
+            <small className={recadoLocal.ok ? 'parear-recado ok' : 'parear-recado erro'} role="status">
+              {recadoLocal.texto}
+            </small>
+          )}
+        </>
       ) : (
-        <ul className="maquinas">
-          {maquinas.map((m) => (
-            <Maquina
-              key={m.id}
-              maquina={m}
-              podeAgir={conectado}
-              aoEsquecer={aoEsquecer}
-              aoAtualizar={aoAtualizar}
-              aoRenomear={aoRenomear}
-            />
-          ))}
-        </ul>
+        <div className="dispositivos-assistente">
+          <button type="button" className="dispositivos-voltar" onClick={() => setVista('lista')}>
+            ← Voltar
+          </button>
+
+          <p className="ficha-nota">
+            A IARA precisa de uma "mão" nesse computador para executar tarefas
+            nele.
+          </p>
+
+          <ol className="dispositivos-passos">
+            <li className="dispositivos-passo">
+              <span className="dispositivos-passo-numero">1</span>
+              <div className="dispositivos-passo-corpo">
+                <p>Instale o Braço</p>
+                {MANIFESTO.url ? (
+                  <a className="ficha-salvar instalar" href={MANIFESTO.url} download>
+                    Baixar o programa
+                  </a>
+                ) : (
+                  <small>
+                    Ainda não há um instalador publicado nesta instalação. Quem
+                    cuida do sistema gera o programa com{' '}
+                    <code>npm run empacotar:braco</code> e publica o endereço dele
+                    em <code>NEXT_PUBLIC_IARA_INSTALADOR</code>.
+                  </small>
+                )}
+              </div>
+            </li>
+            <li className="dispositivos-passo">
+              <span className="dispositivos-passo-numero">2</span>
+              <div className="dispositivos-passo-corpo">
+                <p>Abra o Braço no computador</p>
+                <small>Ele mostra um QR e um código de oito letras e números.</small>
+              </div>
+            </li>
+            <li className="dispositivos-passo">
+              <span className="dispositivos-passo-numero">3</span>
+              <div className="dispositivos-passo-corpo">
+                <p>Digite o código, ou aponte a câmera para o QR</p>
+                {pareamentoDisponivel ? (
+                  <>
+                    <div className="parear-linha">
+                      <input
+                        type="text"
+                        className="parear-codigo"
+                        value={codigo}
+                        placeholder="H7K2-9QP4"
+                        maxLength={12}
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        aria-label="Código que apareceu no computador"
+                        onChange={(e) => setCodigo(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            autorizar();
+                          }
+                        }}
+                      />
+                      <button
+                        className="ficha-salvar"
+                        onClick={autorizar}
+                        disabled={!conectado || !codigo.trim()}
+                      >
+                        Autorizar
+                      </button>
+                    </div>
+                    <small>
+                      O QR abre esta tela com o código já preenchido; escanear poupa a
+                      digitação, não o toque em "Autorizar".
+                    </small>
+                  </>
+                ) : (
+                  <small>
+                    Esta instalação da IARA está sem banco configurado, então não há
+                    onde guardar o par. Quem publicou o sistema precisa configurar o
+                    Supabase no motor.
+                  </small>
+                )}
+              </div>
+            </li>
+          </ol>
+
+          {recadoLocal && (
+            <small className={recadoLocal.ok ? 'parear-recado ok' : 'parear-recado erro'} role="status">
+              {recadoLocal.texto}
+            </small>
+          )}
+        </div>
       )}
-
-      <div className="ficha-campo">
-        <span>Ligar um computador</span>
-        {pareamentoDisponivel ? (
-          <>
-            <div className="parear-linha">
-              <input
-                type="text"
-                className="parear-codigo"
-                value={codigo}
-                placeholder="H7K2-9QP4"
-                maxLength={12}
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
-                aria-label="Código que apareceu no computador"
-                onChange={(e) => setCodigo(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    autorizar();
-                  }
-                }}
-              />
-              <button
-                className="ficha-salvar"
-                onClick={autorizar}
-                disabled={!conectado || !codigo.trim()}
-              >
-                Autorizar
-              </button>
-            </div>
-            <small>
-              Abra o programa da IARA no computador. Ele mostra um QR e um código
-              de oito letras e números — aponte a câmera do celular para o QR
-              (abre esta gaveta com o código já preenchido), ou digite o código
-              aqui à mão.
-            </small>
-          </>
-        ) : (
-          <small>
-            Esta instalação da IARA está sem banco configurado, então não há onde
-            guardar o par. Quem publicou o sistema precisa configurar o Supabase
-            no motor.
-          </small>
-        )}
-
-        {recadoLocal && (
-          <small className={recadoLocal.ok ? 'parear-recado ok' : 'parear-recado erro'} role="status">
-            {recadoLocal.texto}
-          </small>
-        )}
-      </div>
-
-      <div className="ficha-campo">
-        {/*
-          Achado em auditoria (14/08/2026): o rótulo e a explicação eram os
-          mesmos com zero ou três computadores já ligados — quem já tinha
-          instalado e pareado via a mesma chamada de "instalar", como se nada
-          tivesse funcionado. O botão continua aqui (adicionar uma SEGUNDA
-          máquina é legítimo), só o texto muda de "instalar" para "ligar mais
-          um" quando já existe pelo menos um computador na lista.
-        */}
-        <span>
-          {maquinas && maquinas.length > 0
-            ? 'Ligar outro computador'
-            : 'Instalar a automação num computador'}
-        </span>
-        {INSTALADOR ? (
-          <>
-            <a className="ficha-salvar instalar" href={INSTALADOR} download>
-              Baixar o programa
-            </a>
-            <small>
-              {maquinas && maquinas.length > 0
-                ? 'Baixe no computador novo, abra o arquivo e volte aqui com o código que ele mostrar.'
-                : 'Baixe no computador que você quer usar, abra o arquivo e volte aqui com o código que ele mostrar. Só precisa ser feito uma vez por máquina.'}
-            </small>
-          </>
-        ) : (
-          <small>
-            Ainda não há um instalador publicado nesta instalação. Quem cuida do
-            sistema gera o programa com <code>npm run empacotar:braco</code> e
-            publica o endereço dele em <code>NEXT_PUBLIC_IARA_INSTALADOR</code>.
-          </small>
-        )}
-      </div>
     </section>
   );
 }

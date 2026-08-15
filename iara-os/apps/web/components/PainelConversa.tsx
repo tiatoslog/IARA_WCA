@@ -28,8 +28,10 @@ import type { EstagioCognitivo } from '../lib/estado';
 import type { MaquinaDoOperador } from '../lib/execucao';
 import type { PreferenciasOperador } from '../lib/perfil';
 import type { SnapshotCognitivo } from '../lib/snapshot';
+import { Automacao } from './Automacao';
 import { Dispositivos } from './Dispositivos';
 import { FichaOperador, fichaDoSnapshot } from './FichaOperador';
+import { MenuPerfil } from './MenuPerfil';
 
 const ROTULO_ESTAGIO: Record<EstagioCognitivo, string> = {
   ocioso: 'à disposição',
@@ -89,11 +91,14 @@ interface Props {
   onRenomearComputador?: (id: string, nome: string) => boolean;
   /** Código lido do QR do braço (`?parear=`). `null` fora desse caminho. */
   codigoDePareamentoUrl?: string | null;
+  /** Encerra a sessão. `null` no seletor local — não há sessão real para sair. */
+  onSair?: (() => void) | null;
 }
 
-/** Qual gaveta está aberta sobre o fluxo da conversa. Uma de cada vez: as duas
- *  ocupam o mesmo espaço, e "aberta" é um estado do painel, não de cada uma. */
-type Gaveta = 'nenhuma' | 'ficha' | 'dispositivos';
+/** Qual gaveta está aberta sobre o fluxo da conversa. Uma de cada vez: as
+ *  quatro ocupam o mesmo espaço, e "aberta" é um estado do painel, não de
+ *  cada uma. `perfil` é o menu pequeno; as outras três ocupam o fluxo inteiro. */
+type Gaveta = 'nenhuma' | 'perfil' | 'ficha' | 'dispositivos' | 'automacao';
 
 export function PainelConversa({
   estado,
@@ -121,6 +126,7 @@ export function PainelConversa({
   onAtualizarComputador,
   onRenomearComputador,
   codigoDePareamentoUrl = null,
+  onSair = null,
 }: Props) {
   const [rascunho, setRascunho] = useState('');
   const [gaveta, setGaveta] = useState<Gaveta>('nenhuma');
@@ -130,6 +136,23 @@ export function PainelConversa({
     if (codigoDePareamentoUrl) setGaveta('dispositivos');
   }, [codigoDePareamentoUrl]);
   const fim = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * O menu fecha ao clicar fora — é um popover, não uma gaveta: some com
+   * qualquer clique que não seja nele mesmo ou no botão que o abriu, do
+   * mesmo jeito que um menu de sistema se comporta.
+   */
+  const menuPerfilRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (gaveta !== 'perfil') return;
+    const aoClicarFora = (e: MouseEvent) => {
+      if (menuPerfilRef.current && !menuPerfilRef.current.contains(e.target as Node)) {
+        setGaveta('nenhuma');
+      }
+    };
+    document.addEventListener('mousedown', aoClicarFora);
+    return () => document.removeEventListener('mousedown', aoClicarFora);
+  }, [gaveta]);
 
   /**
    * Rolagem por quadro, não por atualização: durante o streaming `falas` muda
@@ -257,22 +280,34 @@ export function PainelConversa({
         <div className="conversa-cabecalho-linha">
           <span className="conversa-titulo">IARA</span>
           {/*
-            A porta da ficha continua sendo o NOME de quem está na sala — não
-            uma engrenagem de configurações. Preferência sobre como ser tratado
+            A porta continua sendo o NOME de quem está na sala — não uma
+            engrenagem de configurações. Preferência sobre como ser tratado
             não é ajuste de sistema; é sobre a pessoa, e o lugar dela é onde a
-            pessoa aparece. O que mudou é a moldura: em repouso o nome vem
-            dentro de uma saudação, e é ela que abre a ficha.
+            pessoa aparece. O que mudou (15/08/2026) é o destino: o nome não
+            leva mais direto à Ficha — abre um menu pequeno, ancorado nele
+            mesmo, com Ficha como um dos destinos possíveis.
           */}
           {saudando && onSalvarPreferencias ? (
-            <button
-              className={gaveta === 'ficha' ? 'conversa-saudacao aberto' : 'conversa-saudacao'}
-              onClick={() => setGaveta((g) => (g === 'ficha' ? 'nenhuma' : 'ficha'))}
-              title="Como a IARA deve chamar e atender você"
-              aria-expanded={gaveta === 'ficha'}
-            >
-              <span className="saudacao-cortesia">Boas-vindas,</span>{' '}
-              <span className="saudacao-nome">{nomeExibido}</span>
-            </button>
+            <div className="conversa-perfil" ref={menuPerfilRef}>
+              <button
+                className={gaveta === 'perfil' ? 'conversa-saudacao aberto' : 'conversa-saudacao'}
+                onClick={() => setGaveta((g) => (g === 'perfil' ? 'nenhuma' : 'perfil'))}
+                title="Perfil, dispositivos e automação"
+                aria-haspopup="menu"
+                aria-expanded={gaveta === 'perfil'}
+              >
+                <span className="saudacao-cortesia">Boas-vindas,</span>{' '}
+                <span className="saudacao-nome">{nomeExibido}</span>
+              </button>
+              {gaveta === 'perfil' && (
+                <MenuPerfil
+                  aoAbrirPerfil={() => setGaveta('ficha')}
+                  aoAbrirDispositivos={() => setGaveta('dispositivos')}
+                  aoAbrirAutomacao={() => setGaveta('automacao')}
+                  aoSair={onSair ? () => onSair() : null}
+                />
+              )}
+            </div>
           ) : (
             <span className="conversa-estagio">
               {conexao === 'conectado'
@@ -362,6 +397,10 @@ export function PainelConversa({
             aoRenomear={(id, nome) => onRenomearComputador?.(id, nome) ?? false}
             aoFechar={() => setGaveta('nenhuma')}
           />
+        </div>
+      ) : gaveta === 'automacao' ? (
+        <div className="conversa-fluxo rolagem">
+          <Automacao maquinas={maquinas} aoFechar={() => setGaveta('nenhuma')} />
         </div>
       ) : (
       <div className="conversa-fluxo rolagem">
