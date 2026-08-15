@@ -1,0 +1,19 @@
+[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[warning] WebSocket connection to 'ws://localhost:3058/barramento' failed: WebSocket is closed before the connection is established.
+[warning] ./node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] ./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] [.WebGL-0x755c0479cc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x755c0479cc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x755c0479cc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x755c0479cc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+[info] [voz] metadados: 8050 ms desde o pedido do áudio
+[info] [voz] som saindo: 8050 ms desde o pedido do áudio
+[info] [voz] baixado: 8050 ms desde o pedido do áudio
+[info] [voz] metadados: 9116 ms desde o pedido do áudio
+[info] [voz] som saindo: 9117 ms desde o pedido do áudio
+[info] [voz] baixado: 9117 ms desde o pedido do áudio
+[info] [voz] metadados: 8130 ms desde o pedido do áudio
+[info] [voz] som saindo: 8131 ms desde o pedido do áudio
+[info] [voz] baixado: 8131 ms desde o pedido do áudio

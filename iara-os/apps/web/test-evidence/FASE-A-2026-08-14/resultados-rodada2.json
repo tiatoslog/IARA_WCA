@@ -1,0 +1,25 @@
+[
+  {
+    "id": "L1-horas-extras",
+    "mensagem": "Quantas horas extras os motoristas fizeram este mês?",
+    "resposta": "Não tenho esse dado, Daiane. O que eu alcanço da operação LUFT é carga: quantidade, valor, motorista, rota, status. Jornada, ponto e hora extra não estão lá — isso vive no RH ou no sistema de jornada, e nenhum dos dois está ligado em mim.\n\nSe existir uma planilha de jornada em algum lugar que eu consiga ler, me aponta onde e eu vejo o que dá para extrair.",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nResponder quantas horas extras os motoristas fizeram no mês corrente (emergente, 1 passo)\nRESPOSTA\nvia plano_cognitivo (8778 ms)",
+    "ms": 30533
+  },
+  {
+    "id": "L1-horas-extras-auditoria",
+    "mensagem": "Faça uma auditoria do sistema",
+    "resposta": "Auditoria do que eu consigo observar:\n\n  · [capacidade] \"Consulta ao banco operacional\" está no catálogo mas desligada: Supabase não configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n  · [capacidade] \"Envio de WhatsApp\" está no catálogo mas desligada: falta WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID no ambiente\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n\nO que me pediram e eu não sei fazer (fila de evolução do catálogo):\n  · \"quantas horas extras os motoristas fizeram este mes?\" — 1 vez, a última em 2026-08-15T02:51:19.644Z\n      conduta: as mais pedidas são as melhores candidatas a virar habilidade nova\n\nO que eu NÃO auditei, porque não tenho o dado: sua rotina administrativa, seus\nprocessos de trabalho, prazos de tarefa e gargalos de fluxo. Nada disso está\ncadastrado em lugar nenhum que eu alcance, e eu não vou escrever um relatório\nsobre isso a partir de suposição.\n\nMinha autonomia está em \"plano\" (escada: conversa → comando → plano → sugestao → rotina).",
+    "cadeia": "INTENÇÃO\nauditoria do que a IARA observa de si (texto, confiança 0.92)\nCAPACIDADE\nrota plano_local · Âncoras reconhecidas (auditoria) → plano determinístico.\nPLANO\nAuditar o que a IARA consegue observar de si mesma (deterministico, 1 passo)\nEXECUÇÃO\nauditar_sistema — auditar_sistema: 2 achado(s), 1 lacuna(s) de capacidade, autonomia plano (840 ms)\nRESPOSTA\nvia plano_local (1852 ms)",
+    "ms": 23553
+  },
+  {
+    "id": "LACUNA",
+    "encontrada": true,
+    "detalhe": {
+      "id": "L1-horas-extras",
+      "frase": "Quantas horas extras os motoristas fizeram este mês?",
+      "audit": "Auditoria do que eu consigo observar:\n\n  · [capacidade] \"Consulta ao banco operacional\" está no catálogo mas desligada: Supabase não configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n  · [capacidade] \"Envio de WhatsApp\" está no catálogo mas desligada: falta WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID no ambiente\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n\nO que me pediram e eu não sei fazer (fila de evolução do catálogo):\n  · \"quantas horas extras os motoristas fizeram este mes?\" — 1 vez, a última em 2026-08-15T02:51:19.644Z\n      conduta: as mais pedidas são as melhores candidatas a virar habilidade nova\n\nO que eu NÃO auditei, porque não tenho o dado: sua rotina administrativa, seus\nprocessos de trabalho, prazos de tarefa e gargalos de fluxo. Nada disso está\ncadastrado em lugar nenhum que eu alcance, e eu não vou escrever um relatório\nsobre isso a partir de suposição.\n\nMinha autonomia está em \"plano\" (escada: conversa → comando → plano → sugestao → rotina)."
+    }
+  }
+]

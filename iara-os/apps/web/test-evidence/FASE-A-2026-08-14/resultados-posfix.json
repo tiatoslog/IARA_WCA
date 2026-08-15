@@ -1,0 +1,25 @@
+[
+  {
+    "id": "PF1-desabafo",
+    "mensagem": "estou cansada, esse relatório me destruiu hoje",
+    "resposta": "Dia longo. Fecha o relatório e para — ele não vai ficar melhor às onze da noite, e você já viu tudo que tinha para ver nele.\n\nSe sobrou alguma parte para amanhã, me diz qual que eu já deixo o levantamento pronto.",
+    "ms": 32499
+  },
+  {
+    "id": "PF2-horas-extras",
+    "mensagem": "Quantas horas extras os motoristas fizeram este mês?",
+    "resposta": "Não tenho isso, Daiane. Jornada e horas extras ficam em folha/ponto, e nada disso está ao meu alcance — o que eu enxergo dos motoristas é carga: quantas, para onde, valor, status.\n\nSe ajudar como aproximação, consigo levantar quantas cargas cada motorista fez no mês. Não é hora extra, mas mostra quem está carregado demais.",
+    "ms": 44635
+  },
+  {
+    "id": "PF3-auditoria",
+    "mensagem": "Faça uma auditoria do sistema",
+    "resposta": "Auditoria do que eu consigo observar:\n\n  · [capacidade] \"Consulta ao banco operacional\" está no catálogo mas desligada: Supabase não configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n  · [capacidade] \"Envio de WhatsApp\" está no catálogo mas desligada: falta WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID no ambiente\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n\nO que eu NÃO auditei, porque não tenho o dado: sua rotina administrativa, seus\nprocessos de trabalho, prazos de tarefa e gargalos de fluxo. Nada disso está\ncadastrado em lugar nenhum que eu alcance, e eu não vou escrever um relatório\nsobre isso a partir de suposição.\n\nMinha autonomia está em \"plano\" (escada: conversa → comando → plano → sugestao → rotina).",
+    "ms": 25831
+  },
+  {
+    "id": "VEREDITO",
+    "temLacuna": false,
+    "vazouDesabafo": false
+  }
+]

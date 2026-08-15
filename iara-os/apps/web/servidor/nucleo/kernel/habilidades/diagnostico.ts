@@ -46,6 +46,12 @@ export const diagnosticarSistema: Habilidade = {
       'Relata o estado real de cada parte da IARA: motor, banco, computador do operador, executor, ' +
       'catálogo de ferramentas e serviços externos — mais as últimas execuções e onde cada uma parou. ' +
       'Use para "faça um diagnóstico", "você está funcionando?", "por que não abriu?".',
+    exemplos: [
+      'Faça um diagnóstico do sistema',
+      'Você está funcionando direito?',
+      'Por que não abriu o aplicativo?',
+    ],
+    capacidades: ['estado real de cada componente', 'últimas execuções e onde pararam'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],

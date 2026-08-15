@@ -59,6 +59,13 @@ export const consultarCargasLuft: Habilidade = {
       'operação LUFT. O parâmetro "periodo" recebe a EXPRESSÃO como foi dita ("hoje", "amanhã", ' +
       '"essa semana", "17/08") — não calcule a data, quem interpreta é o motor. Use para "quantas ' +
       'cargas vamos coletar hoje/amanhã", "o que temos essa semana", "cargas do dia 17/08".',
+    exemplos: [
+      'Quantas cargas foram coletadas hoje?',
+      'Quantas coletas temos amanhã na LUFT?',
+      'O que temos de carga essa semana?',
+      'Me mostra as cargas do dia 17/08',
+    ],
+    capacidades: ['contar cargas por período', 'listar coletas marcadas'],
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['rede', 'banco'],
@@ -130,6 +137,19 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       'status_normalizado (agrupa FINALIZADO/finalizado/FINALIZADA juntos), nenhum. "metrica" é um de: ' +
       'contagem, valor_total, valor_medio. Use para "qual motorista fez mais cargas", "faturamento por ' +
       'rota", "quantas cargas por status", "valor total das cargas desta semana".',
+    exemplos: [
+      'Qual motorista tem mais cargas?',
+      'Motoristas disponíveis agora?',
+      'Qual rota teve maior faturamento?',
+      'Qual o total faturado essa semana?',
+      'Quantas cargas estão finalizadas?',
+    ],
+    capacidades: [
+      'ranking de motoristas',
+      'faturamento por rota',
+      'valor total e médio das cargas',
+      'cargas por status',
+    ],
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['rede', 'banco'],

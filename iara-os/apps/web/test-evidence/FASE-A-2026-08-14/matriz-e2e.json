@@ -1,0 +1,130 @@
+[
+  {
+    "id": "M01-oi",
+    "mensagem": "Oi",
+    "resposta": "Oi, Daiane. O que precisa?",
+    "rota": "raciocinio_direto",
+    "cadeia": "INTENÇÃO\nabertura de conversa (saudacao, confiança 0.85)\nCAPACIDADE\nrota raciocinio_direto · Pedido de escopo único → raciocínio direto, sem custo de planejamento.\nPLANO\nabertura de conversa (emergente, 1 passo)\nRESPOSTA\nvia raciocinio_direto (1706 ms)",
+    "ms": 27038
+  },
+  {
+    "id": "M02-chuva",
+    "mensagem": "Vai chover hoje?",
+    "resposta": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu predominantemente limpo, entre 21.9 °C e 37.2 °C. É previsão de modelo numérico, não medição.",
+    "rota": "plano_local",
+    "cadeia": "INTENÇÃO\ncondição externa (texto, confiança 0.92)\nCAPACIDADE\nrota plano_local · Âncoras reconhecidas (clima) → plano determinístico.\nPLANO\nInformar a previsão do tempo para hoje (deterministico, 1 passo)\nEXECUÇÃO\nconsultar_clima — Open-Meteo em 797ms (799 ms)\nRESPOSTA\nvia plano_local (806 ms)",
+    "ms": 24475
+  },
+  {
+    "id": "M03-chuva-valinhos",
+    "mensagem": "Vai chover em Valinhos hoje?",
+    "resposta": "Talvez — a chance de chuva hoje é intermediária em Valinhos, São Paulo: 53% de probabilidade, 0.9 mm previstos, céu garoa moderada, entre 16.3 °C e 27.9 °C. É previsão de modelo numérico, não medição.",
+    "rota": "plano_local",
+    "cadeia": "INTENÇÃO\ncondição externa (texto, confiança 0.92)\nCAPACIDADE\nrota plano_local · Âncoras reconhecidas (clima) → plano determinístico.\nPLANO\nInformar a previsão do tempo para hoje (deterministico, 1 passo)\nEXECUÇÃO\nconsultar_clima — Open-Meteo em 2126ms (2128 ms)\nRESPOSTA\nvia plano_local (2134 ms)",
+    "ms": 28848
+  },
+  {
+    "id": "M04a-clima",
+    "mensagem": "Como está o clima?",
+    "resposta": "Agora em Cuiabá (padrão do escritório — ainda não sei onde você está): 28.2 °C, céu limpo, umidade em 32%. Não choveu na última hora.",
+    "rota": "plano_local",
+    "cadeia": "INTENÇÃO\ncondição externa (texto, confiança 0.92)\nCAPACIDADE\nrota plano_local · Âncoras reconhecidas (clima) → plano determinístico.\nPLANO\nInformar a condição externa corrente do perímetro operacional (deterministico, 1 passo)\nEXECUÇÃO\nconsultar_clima — Open-Meteo em 982ms (983 ms)\nRESPOSTA\nvia plano_local (1898 ms)",
+    "ms": 26816
+  },
+  {
+    "id": "M04b-cidade",
+    "mensagem": "Valinhos",
+    "resposta": "Agora em Valinhos, São Paulo: 18.5 °C, predominantemente limpo, umidade em 92%. Não choveu na última hora.",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nResponder sobre Valinhos — provavelmente o clima na cidade (emergente, 1 passo)\nEXECUÇÃO\nconsultar_clima — Open-Meteo em 2086ms (2087 ms)\nRESPOSTA\nvia plano_cognitivo (4797 ms)",
+    "ms": 29513
+  },
+  {
+    "id": "M05-cargas-hoje",
+    "mensagem": "Quantas cargas foram coletadas hoje na operação LUFT?",
+    "resposta": "hoje (14/08): 6 cargas:\n• OCI 210368 — ARARANGUA/SC → VACARIA/SC, CARLOS ANEVTON - QHI4C04  (CONECTCAR)\n• OCI 209406 — IPORA/GO → RIO VERDE/GO, SERGIO - SEM PARAR (FINALIZADO)\n• OCI 210816 — PONTES E LACERDA/MT → MIRASSOL DOESTE/MT, ADEVAIR\n• OCI 211628 — BAMBUI/MG → SAO SEBASTIAO DO PARAISO/MG, CLAUDINEI\n• OCI 211703 — CRISTALINA/GO → LUZIANIA/GO, HELIO\n• OCI 211708 — VERA/MT → SORRISO/MT, LAUDIR",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nSaber quantas cargas da operação LUFT têm coleta marcada para hoje (emergente, 1 passo)\nEXECUÇÃO\nconsultar_cargas_luft — planilha LUFT, período 2026-08-14..2026-08-14 (6 carga(s)) (3524 ms)\nVERIFICAÇÃO\nconsultar_cargas_luft: confirmado — a planilha da operação LUFT respondeu à consulta\nRESPOSTA\nvia plano_cognitivo (5756 ms)",
+    "ms": 30453
+  },
+  {
+    "id": "M06-motorista-mais",
+    "mensagem": "Qual motorista tem mais cargas?",
+    "resposta": "LINO, com 209 cargas. Depois LAUDIR (196) e MOLINA (177).\n\nUm detalhe que vale registrar: 106 cargas estão sem motorista atribuído — o que colocaria esse \"vazio\" em décimo lugar na lista. Se essas cargas tiverem dono na vida real e só não no cadastro, o ranking inteiro muda um pouco.",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nIdentificar o motorista com maior número de cargas na operação LUFT (emergente, 2 passos)\nEXECUÇÃO\nconsultar_estatisticas_cargas_luft — fonte=2026 universo=todasAsCargas registros_lidos=2649 registros_usados=2649 cache=false idade_s=0 deterministico=true operacao=GROUP_BY agrupamento=motorista grupos=75 (4677 ms)\nVERIFICAÇÃO\nconsultar_estatisticas_cargas_luft: confirmado — a planilha da operação LUFT respondeu à consulta\nRESPOSTA\nvia plano_cognitivo (11582 ms)",
+    "ms": 36397
+  },
+  {
+    "id": "M07-rota-faturamento",
+    "mensagem": "Qual rota teve maior faturamento?",
+    "resposta": "todas as cargas cadastradas, por rota:\n1. TRES PONTAS → POUSO ALEGRE — R$ 336.351,00 (192 cargas)\n2. BOA ESPERANCA DO NORTE → SORRISO — R$ 241.300,00 (127 cargas)\n3. CATALAO → MORRINHOS — R$ 226.180,00 (86 cargas)\n4. PONTES E LACERDA → MIRASSOL DOESTE — R$ 212.680,00 (111 cargas)\n5. NOVA UBIRATA → SORRISO — R$ 186.000,00 (124 cargas)\n6. SERTAOZINHO → ARARAQUARA — R$ 161.974,00 (112 cargas)\n7. CRISTALINA → LUZIANIA — R$ 158.903,00 (131 cargas)\n8. RIO PARANAIBA → PATROCINIO — R$ 154.440,00 (68 cargas)\n9. ARARANGUA → VACARIA — R$ 153.700,00 (53 cargas)\n10. VERA → SORRISO — R$ 139.100,00 (107 cargas)\n11. IPORA → RIO VERDE — R$ 131.098,00 (61 cargas)\n12. PARACATU → UNAI — R$ 126.924,00 (88 cargas)\n13. XANXERE - CARRETA → TANGARA — R$ 104.400,00 (36 cargas)\n14. FRUTAL → UBERABA — R$ 100.512,00 (49 cargas)\n15. IPIRANGA DO NORTE → SORRISO — R$ 93.600,00 (72 cargas)\n… e mais 73 grupo(s).",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nIdentificar a rota com maior faturamento na operação LUFT (emergente, 1 passo)\nEXECUÇÃO\nconsultar_estatisticas_cargas_luft — fonte=2026 universo=todasAsCargas registros_lidos=2649 registros_usados=2649 cache=true idade_s=59 deterministico=true operacao=GROUP_BY agrupamento=rota grupos=88 (9 ms)\nVERIFICAÇÃO\nconsultar_estatisticas_cargas_luft: confirmado — a planilha da operação LUFT respondeu à consulta\nRESPOSTA\nvia plano_cognitivo (4480 ms)",
+    "ms": 30106
+  },
+  {
+    "id": "M08-total-faturado",
+    "mensagem": "Qual o total faturado?",
+    "resposta": "todas as cargas cadastradas: R$ 4.573.249,52 (2649 cargas).",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nObter o valor total faturado das cargas da operação LUFT (emergente, 1 passo)\nEXECUÇÃO\nconsultar_estatisticas_cargas_luft — fonte=2026 universo=todasAsCargas registros_lidos=2649 registros_usados=2649 cache=true idade_s=107 deterministico=true operacao=VALOR_TOTAL agrupamento=nenhum (2 ms)\nVERIFICAÇÃO\nconsultar_estatisticas_cargas_luft: confirmado — a planilha da operação LUFT respondeu à consulta\nRESPOSTA\nvia plano_cognitivo (2873 ms)",
+    "ms": 25338
+  },
+  {
+    "id": "M09-motoristas-disponiveis",
+    "mensagem": "Motoristas disponíveis agora?",
+    "resposta": "Não consigo responder isso, Daiane — não tenho status de motorista, só o histórico de cargas. E hoje (15/08) não há nenhuma carga registrada, então nem por dedução dá para dizer quem está livre.\n\nO que consigo fazer é o inverso: listar quem está com carga marcada num período que você definir. Quem não aparecer, provavelmente está livre — mas isso é inferência, não disponibilidade confirmada.",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nIdentificar motoristas disponíveis no momento na operação LUFT (emergente, 3 passos)\nEXECUÇÃO\nconsultar_estatisticas_cargas_luft — fonte=2026 universo=todasAsCargas registros_lidos=2649 registros_usados=0 cache=true idade_s=161 deterministico=true operacao=GROUP_BY agrupamento=motorista grupos=0 (1 ms)\nEXECUÇÃO\nconsultar_estatisticas_cargas_luft — fonte=2026 universo=todasAsCargas registros_lidos=2649 registros_usados=0 cache=true idade_s=161 deterministico=true operacao=GROUP_BY agrupamento=status_normalizado grupos=0 (1 ms)\nVERIFICAÇÃO\nconsultar_estatisticas_cargas_luft: confirmado — a planilha da operação LUFT respondeu à consulta\nVERIFICAÇÃO\nconsultar_estatisticas_cargas_luft: confirmado — a planilha da operação LUFT respondeu à consulta\nRESPOSTA\nvia plano_cognitivo (9604 ms)",
+    "ms": 32518
+  },
+  {
+    "id": "M10-emails",
+    "mensagem": "Leia meus emails recentes",
+    "resposta": "Microsoft Graph respondeu HTTP 400: /me request is only valid with delegated authentication flow..",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nexecução de ação (comando, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nLer os e-mails recentes da caixa corporativa do operador (emergente, 1 passo)\nEXECUÇÃO\nler_emails — Microsoft Graph: recentes — não confirmado (desconhecido) (251 ms)\nVERIFICAÇÃO\nler_emails: não confirmado — Microsoft Graph respondeu HTTP 400: /me request is only valid with delegated authentication flow..\nRESPOSTA\nvia plano_cognitivo (2919 ms)",
+    "ms": 27682
+  },
+  {
+    "id": "M11-pasta",
+    "mensagem": "Crie uma pasta chamada TesteIARA",
+    "resposta": "Pronto, criei a pasta \"TesteIARA\" na Área de Trabalho.",
+    "rota": "plano_local",
+    "cadeia": "INTENÇÃO\norganização de arquivos (texto, confiança 0.92)\nCAPACIDADE\nrota plano_local · Âncoras reconhecidas (pasta) → plano determinístico.\nPLANO\nCriar pasta no computador (deterministico, 1 passo)\nEXECUÇÃO\ncriar_pasta — criar_pasta em area_de_trabalho [IARA-20260815-7b97-000004] sucesso (15 ms)\nVERIFICAÇÃO\ncriar_pasta: confirmado — diretório existe em C:\\Users\\daian\\Desktop\\TesteIARA\nRESPOSTA\nvia plano_local (35 ms)",
+    "ms": 26902
+  },
+  {
+    "id": "M12-diagnostico",
+    "mensagem": "Faça um diagnóstico do sistema",
+    "resposta": "Diagnóstico da IARA:\n\n● Motor          ONLINE       processo vivo, respondendo a esta conversa (win32)\n● Barramento     ONLINE       esta resposta atravessou o WebSocket para chegar até você\n◐ Banco          DEGRADADO    persistência em uso: arquivos locais (dados/)\n○ Computador     OFFLINE      nenhum braço conectado a este operador\n◐ Executor       DEGRADADO    sem braço; ações correm na máquina onde o motor está — que pode não ser a sua\n◐ Ferramentas    DEGRADADO    30 no catálogo; sem credencial: Consulta ao banco operacional, Envio de WhatsApp\n● Raciocínio     ONLINE       chave da nuvem válida\n\nÚltimas execuções no seu computador:\n  IARA-20260815-7b97-000004  criar_pasta → executando (0 ms, alvo: motor)\n  IARA-20260815-7b97-000004  criar_pasta → sucesso (6 ms, alvo: motor)\n  IARA-20260815-7b97-000005  medir_desempenho → recebida (0 ms, alvo: motor)\n  IARA-20260815-7b97-000005  medir_desempenho → validando (4 ms, alvo: motor)\n  IARA-20260815-7b97-000005  medir_desempenho → executando (4 ms, alvo: motor)\n  IARA-20260815-7b97-000005  medir_desempenho → sucesso (12360 ms, alvo: motor)",
+    "rota": "plano_local",
+    "cadeia": "INTENÇÃO\nautodiagnóstico do sistema (texto, confiança 0.92)\nCAPACIDADE\nrota plano_local · Âncoras reconhecidas (diagnostico) → plano determinístico.\nPLANO\nRelatar o estado real de cada elo da cadeia (deterministico, 1 passo)\nEXECUÇÃO\ndiagnosticar_sistema — diagnostico: 0 dispositivo(s), executor DEGRADADO (4 ms)\nRESPOSTA\nvia plano_local (10 ms)",
+    "ms": 25686
+  },
+  {
+    "id": "M13-sem-capability",
+    "mensagem": "Qual é o sentido da vida?",
+    "resposta": "Quarenta e dois, se você confia em Douglas Adams. Fora isso: não existe uma resposta única, e as tentativas sérias se dividem em duas. Ou o sentido é dado de fora — por Deus, pelo cosmos, por um propósito maior — ou é construído por você, no que escolhe fazer e em quem escolhe cuidar. A segunda dá mais trabalho e é a que mais gente acaba adotando na prática, mesmo quando diz acreditar na primeira.\n\nSe serve de opinião: gente que passa a vida procurando o sentido costuma encontrar menos do que gente que passa a vida fazendo algo que importa para ela.",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nResponder a uma pergunta filosófica aberta, sem uso de ferramentas (emergente, 1 passo)\nRESPOSTA\nvia plano_cognitivo (9211 ms)",
+    "ms": 34336
+  },
+  {
+    "id": "M14-confirmacao",
+    "mensagem": "Desligue o computador",
+    "resposta": "Entendido: você quer desligar o computador. Isso interrompe tudo que estiver aberto, então preciso da sua confirmação explícita. Responda \"confirmo desligar\" — ou só \"confirmo\" — em até 1 minuto. \"cancela\" desiste.",
+    "rota": "plano_local",
+    "cadeia": "INTENÇÃO\ncontrole de energia da máquina (texto, confiança 0.92)\nCAPACIDADE\nrota plano_local · Âncoras reconhecidas (energia) → plano determinístico.\nPLANO\nPreparar ação de energia com confirmação (deterministico, 1 passo)\nEXECUÇÃO\nacionar_energia — energia:desligar pendente de confirmação (99d4a953-83a3-45b2-b31c-c2d8d19ae3c3) (5 ms)\nVERIFICAÇÃO\nacionar_energia: confirmado — pendência registrada e dentro da janela de 60s\nRESPOSTA\nvia plano_local (17 ms)",
+    "ms": 25346
+  },
+  {
+    "id": "M15-cancela",
+    "mensagem": "Não, cancele.",
+    "resposta": "Cancelado. Nada foi desligado.",
+    "rota": "raciocinio_direto",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota raciocinio_direto · Pedido de escopo único → raciocínio direto, sem custo de planejamento.\nPLANO\nAtender o pedido do operador (emergente, 1 passo)\nRESPOSTA\nvia raciocinio_direto (2599 ms)",
+    "ms": 26256
+  }
+]

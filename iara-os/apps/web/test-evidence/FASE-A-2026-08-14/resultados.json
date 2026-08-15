@@ -1,0 +1,42 @@
+[
+  {
+    "id": "E2E-000",
+    "observacao": "estado vazio da cadeia",
+    "semTurno": true
+  },
+  {
+    "id": "E2E-001-exemplo-luft",
+    "mensagem": "Qual o total faturado essa semana?",
+    "resposta": "essa semana (10/08 a 14/08): R$ 119.015,00 (66 cargas).",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nApurar o valor total faturado nas cargas LUFT desta semana (emergente, 1 passo)\nEXECUÇÃO\nconsultar_estatisticas_cargas_luft — fonte=2026 universo=todasAsCargas registros_lidos=2649 registros_usados=66 cache=false idade_s=0 deterministico=true operacao=VALOR_TOTAL agrupamento=nenhum (4608 ms)\nVERIFICAÇÃO\nconsultar_estatisticas_cargas_luft: confirmado — a planilha da operação LUFT respondeu à consulta\nRESPOSTA\nvia plano_cognitivo (7522 ms)",
+    "ms": 32556
+  },
+  {
+    "id": "E2E-003",
+    "observacao": "cadeia do turno 1 visível",
+    "cadeiaOk": true,
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nApurar o valor total faturado nas cargas LUFT desta semana (emergente, 1 passo)\nEXECUÇÃO\nconsultar_estatisticas_cargas_luft — fonte=2026 universo=todasAsCargas registros_lidos=2649 registros_usados=66 cache=false idade_s=0 deterministico=true operacao=VALOR_TOTAL agrupamento=nenhum (4608 ms)\nVERIFICAÇÃO\nconsultar_estatisticas_cargas_luft: confirmado — a planilha da operação LUFT respondeu à consulta\nRESPOSTA\nvia plano_cognitivo (7522 ms)"
+  },
+  {
+    "id": "E2E-002a-sem-capacidade",
+    "mensagem": "Qual o custo de pedágio das rotas essa semana?",
+    "resposta": "Daiane, esses números não são pedágio — é o valor faturado agrupado por rota. Pedágio como custo separado não está na base que eu consigo consultar.\n\nSe ajudar, dá para eu te entregar o ranking de rotas por faturamento (Araranguá → Vacaria lidera com R$ 8.700 em 3 cargas, depois Pontes e Lacerda → Mirassol D'Oeste com R$ 8.180). Mas custo de pedágio mesmo, só se existir uma planilha ou campo que eu ainda não conheço — se souber onde fica, me diz que eu procuro.",
+    "rota": "plano_cognitivo",
+    "cadeia": "INTENÇÃO\nindeterminado (texto, confiança 0.35)\nCAPACIDADE\nrota plano_cognitivo · Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.\nPLANO\nLevantar o custo de pedágio das rotas da semana (emergente, 3 passos)\nEXECUÇÃO\nconsultar_estatisticas_cargas_luft — fonte=2026 universo=todasAsCargas registros_lidos=2649 registros_usados=66 cache=true idade_s=52 deterministico=true operacao=GROUP_BY agrupamento=rota grupos=34 (6 ms)\nEXECUÇÃO\nconsultar_memoria_corporativa — 2 seções, similaridade máxima 0.17 (5 ms)\nVERIFICAÇÃO\nconsultar_estatisticas_cargas_luft: confirmado — a planilha da operação LUFT respondeu à consulta\nRESPOSTA\nvia plano_cognitivo (10807 ms)",
+    "ms": 34856
+  },
+  {
+    "id": "E2E-004",
+    "observacao": "cadeia substituída no turno novo",
+    "cadeiaTrocou": true
+  },
+  {
+    "id": "E2E-002b-auditoria",
+    "mensagem": "Faça uma auditoria do sistema",
+    "resposta": "Auditoria do que eu consigo observar:\n\n  · [capacidade] \"Consulta ao banco operacional\" está no catálogo mas desligada: Supabase não configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n  · [capacidade] \"Envio de WhatsApp\" está no catálogo mas desligada: falta WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID no ambiente\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n\nO que eu NÃO auditei, porque não tenho o dado: sua rotina administrativa, seus\nprocessos de trabalho, prazos de tarefa e gargalos de fluxo. Nada disso está\ncadastrado em lugar nenhum que eu alcance, e eu não vou escrever um relatório\nsobre isso a partir de suposição.\n\nMinha autonomia está em \"plano\" (escada: conversa → comando → plano → sugestao → rotina).",
+    "rota": "plano_local",
+    "cadeia": "INTENÇÃO\nauditoria do que a IARA observa de si (texto, confiança 0.92)\nCAPACIDADE\nrota plano_local · Âncoras reconhecidas (auditoria) → plano determinístico.\nPLANO\nAuditar o que a IARA consegue observar de si mesma (deterministico, 1 passo)\nEXECUÇÃO\nauditar_sistema — auditar_sistema: 2 achado(s), 0 lacuna(s) de capacidade, autonomia plano (4 ms)\nRESPOSTA\nvia plano_local (10 ms)",
+    "ms": 25773
+  }
+]

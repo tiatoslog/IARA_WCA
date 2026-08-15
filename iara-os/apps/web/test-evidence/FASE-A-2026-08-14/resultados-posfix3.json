@@ -1,0 +1,25 @@
+[
+  {
+    "id": "PF7-cnh",
+    "mensagem": "Quais motoristas estão com a CNH vencida?",
+    "resposta": "Continua fora do meu alcance, Daiane. Validade de CNH está em cadastro de documentação, e eu não leio isso — da LUFT eu só enxergo carga: motorista, rota, status, valor.\n\nSe você tiver a planilha ou o PDF de habilitações, me passa que eu leio e cruzo com quem está rodando. É o único caminho que dá resposta confiável aqui.",
+    "ms": 30849
+  },
+  {
+    "id": "PF8-vale",
+    "mensagem": "Quanto foi pago de vale-pedágio aos motoristas essa semana?",
+    "resposta": "Segue sem estar ao meu alcance. Vale-pedágio está no financeiro ou no extrato das tags (Sem Parar, ConectCar) — a planilha da LUFT me dá frete, rota e status, nunca pedágio.\n\nMe manda o extrato ou o relatório do financeiro e eu tiro o número de lá. Sem isso não tem como responder sem inventar.",
+    "ms": 32500
+  },
+  {
+    "id": "PF9-auditoria",
+    "mensagem": "Faça uma auditoria do sistema",
+    "resposta": "Auditoria do que eu consigo observar:\n\n  · [capacidade] \"Consulta ao banco operacional\" está no catálogo mas desligada: Supabase não configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n  · [capacidade] \"Envio de WhatsApp\" está no catálogo mas desligada: falta WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID no ambiente\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n\nO que me pediram e eu não sei fazer (fila de evolução do catálogo):\n  · \"quanto foi pago de vale-pedagio aos motoristas essa semana?\" — 1 vez, a última em 2026-08-15T03:22:21.516Z\n  · \"quais motoristas estao com a cnh vencida?\" — 1 vez, a última em 2026-08-15T03:21:39.089Z\n      conduta: as mais pedidas são as melhores candidatas a virar habilidade nova\n\nO que eu NÃO auditei, porque não tenho o dado: sua rotina administrativa, seus\nprocessos de trabalho, prazos de tarefa e gargalos de fluxo. Nada disso está\ncadastrado em lugar nenhum que eu alcance, e eu não vou escrever um relatório\nsobre isso a partir de suposição.\n\nMinha autonomia está em \"plano\" (escada: conversa → comando → plano → sugestao → rotina).",
+    "ms": 22042
+  },
+  {
+    "id": "VEREDITO",
+    "temLacuna": true,
+    "vazouDesabafo": false
+  }
+]

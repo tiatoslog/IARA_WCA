@@ -32,6 +32,8 @@ import type { Habilidade } from '../Habilidade';
 import { memoriaDeSolucoes, taxaDe } from '../MemoriaDeSolucoes';
 import { estadoDaChave } from '../Prova';
 import { nivelAtual, ESCADA } from '../Autonomia';
+import { lacunasCapacidade, type LacunaCapacidade } from '../LacunasCapacidade';
+import { contar } from '../../texto';
 
 /** A partir de quantas repetições um erro deixa de ser acidente. */
 const REPETICOES_PARA_ACHADO = 2;
@@ -125,7 +127,10 @@ export function auditar(entrada: {
   return achados.sort((a, b) => peso[a.gravidade] - peso[b.gravidade]);
 }
 
-export function redigirAuditoria(achados: readonly Achado[]): string {
+export function redigirAuditoria(
+  achados: readonly Achado[],
+  lacunas: readonly LacunaCapacidade[] = [],
+): string {
   const linhas = ['Auditoria do que eu consigo observar:', ''];
 
   if (achados.length === 0) {
@@ -135,6 +140,30 @@ export function redigirAuditoria(achados: readonly Achado[]): string {
       linhas.push(`  ${SIMBOLO[a.gravidade]} [${a.area}] ${a.descricao}`);
       if (a.conduta) linhas.push(`      conduta: ${a.conduta}`);
     }
+  }
+
+  /**
+   * A FILA DE EVOLUÇÃO — FASE A (14/08/2026): o que me pediram e eu não sei
+   * fazer. Cada linha é uma lacuna medida pelo kernel (pedido operacional que
+   * a rota cognitiva devolveu sem habilidade), agrupada por assinatura e
+   * ordenada por contagem. Só aparece quando HÁ lacunas: inventar a seção
+   * vazia seria relatar cobertura de um medidor que não mediu nada.
+   *
+   * As lacunas mostradas são AS DO OPERADOR QUE PEDIU a auditoria — quem
+   * chama passa `inventarioDe(ctx.id_usuario)`. A assinatura é a frase dele
+   * mesmo (normalizada, números e e-mails mascarados); frase de outro
+   * operador nunca entra aqui. Ver o contrato em `LacunasCapacidade.ts`.
+   */
+  if (lacunas.length > 0) {
+    linhas.push('', 'O que me pediram e eu não sei fazer (fila de evolução do catálogo):');
+    for (const l of lacunas) {
+      linhas.push(
+        `  · "${l.assinatura}" — ${contar(l.contagem, 'vez', 'vezes')}, a última em ${l.ultima_ocorrencia}`,
+      );
+    }
+    linhas.push(
+      '      conduta: as mais pedidas são as melhores candidatas a virar habilidade nova',
+    );
   }
 
   /**
@@ -161,7 +190,14 @@ export const auditarSistema: Habilidade = {
       'Audita as quatro áreas que a IARA consegue observar de si mesma: capacidades desligadas por ' +
       'falta de credencial, erros cognitivos que se repetiram, planos que foram tentados e nunca ' +
       'resolveram, e a integridade da prova do jornal. Declara explicitamente o que NÃO auditou. ' +
+      'Também relata o que pediram e ela ainda não sabe fazer (lacunas de capacidade). ' +
       'Use para "faça uma auditoria", "o que está errado por aqui", "o que precisa de atenção".',
+    exemplos: [
+      'Faça uma auditoria do sistema',
+      'O que está errado por aqui?',
+      'O que te pediram que você não soube fazer?',
+    ],
+    capacidades: ['auditar capacidades e erros repetidos', 'fila de lacunas de capacidade'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],
@@ -219,11 +255,12 @@ export const auditarSistema: Habilidade = {
     });
 
     const nivel = nivelAtual();
+    const lacunas = lacunasCapacidade.inventarioDe(ctx.id_usuario);
     return {
       texto:
-        `${redigirAuditoria(achados)}\n\n` +
+        `${redigirAuditoria(achados, lacunas)}\n\n` +
         `Minha autonomia está em "${nivel}" (escada: ${ESCADA.join(' → ')}).`,
-      detalhe: `auditar_sistema: ${achados.length} achado(s), autonomia ${nivel}`,
+      detalhe: `auditar_sistema: ${achados.length} achado(s), ${lacunas.length} lacuna(s) de capacidade, autonomia ${nivel}`,
       resolveu: true,
     };
   },

@@ -94,6 +94,7 @@ export const SNAPSHOT_INICIAL: SnapshotCognitivo = {
   luzes: { ...LUZES_APAGADAS },
   nuvem_indisponivel: false,
   fala: null,
+  cadeia: null,
 };
 
 export function useIaraSocket(credencial: Credencial) {

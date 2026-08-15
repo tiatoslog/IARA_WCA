@@ -64,6 +64,12 @@ export const investigarLentidaoHabilidade: Habilidade = {
       'e esforço. NÃO executa nenhum plano — devolve a proposta e pede autorização. Quando já houve ' +
       'uma investigação antes, compara e diz se a ação anterior resolveu. Use para "por que meu ' +
       'computador está lento", "investigue a lentidão", "veja se resolveu", "meça de novo".',
+    exemplos: [
+      'Por que meu computador está lento?',
+      'Investiga essa lentidão aqui',
+      'Mede de novo e vê se resolveu',
+    ],
+    capacidades: ['medir desempenho da máquina', 'hipóteses de lentidão com evidência'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],
@@ -239,6 +245,8 @@ export const assumirPlano: Habilidade = {
       'Registra que o operador autorizou um dos planos que a IARA propôs na investigação e anuncia ' +
       'o que vai acontecer. Não executa o plano: os passos de efeito vêm em seguida, cada um pelas ' +
       'portas de sempre. Sem proposta viva, diz isso em vez de assumir qualquer coisa.',
+    exemplos: ['Pode executar o plano A', 'Autorizo o plano recomendado'],
+    capacidades: ['registrar autorização de plano proposto'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],

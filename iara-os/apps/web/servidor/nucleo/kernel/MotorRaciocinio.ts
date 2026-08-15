@@ -89,7 +89,22 @@ export class MotorRaciocinio {
       (m) => m.custo === 'zero' && m.id !== 'sigilo' && this.porteiro.planejavel(m.risco),
     );
     const lista = disponiveis
-      .map((m) => `- ${m.id}: ${m.descricao} | parâmetros: ${Object.keys(m.esquema).join(', ') || 'nenhum'}`)
+      .map((m) => {
+        /**
+         * Os exemplos entram no prompt DEPOIS da descrição, limitados a três
+         * POR HABILIDADE: frase real de operador é o que melhor ancora a
+         * escolha da LLM ("Motoristas disponíveis agora?" parece conversa até
+         * se ver que é o exemplo gravado de uma consulta). O custo é linear
+         * no catálogo — medido em 14/08: ~830 tokens para 30 habilidades
+         * (+38% na lista), pagos a cada chamada de planejamento. Sem teto
+         * global de propósito NESTE tamanho; se o catálogo passar de ~50,
+         * este é o primeiro lugar a ganhar um orçamento de caracteres.
+         */
+        const exemplos = m.exemplos?.length
+          ? ` | exemplos: ${m.exemplos.slice(0, 3).map((e) => `"${e}"`).join('; ')}`
+          : '';
+        return `- ${m.id}: ${m.descricao} | parâmetros: ${Object.keys(m.esquema).join(', ') || 'nenhum'}${exemplos}`;
+      })
       .join('\n');
 
     /**
@@ -129,7 +144,20 @@ export class MotorRaciocinio {
       `Responda APENAS com JSON, sem cerca de código, neste formato:\n` +
       `{"objetivo":"...","passos":[{"descricao":"...","habilidade":"id ou null","parametros":{}}]}\n\n` +
       `Use "habilidade": null quando o passo for raciocínio puro seu.\n` +
-      `Se o pedido se resolve em um único raciocínio, devolva um passo só.\n\n` +
+      `Se o pedido se resolve em um único raciocínio, devolva um passo só.\n` +
+      /**
+       * A INSTRUÇÃO DA LACUNA — achado E2E de 14/08: para "Quais motoristas
+       * estão com a CNH vencida?" a LLM enfileirava memória corporativa e
+       * estatísticas de cargas como "contexto", nenhuma respondia CNH, e a
+       * síntese dizia honestamente "não tenho esse dado" — mas o plano
+       * acolchoado escondia a lacuna do detector determinístico do Kernel
+       * (que exige plano SÓ-raciocínio). Plano vazio quando não há ferramenta
+       * é o que faz a fila de evolução do catálogo medir de verdade.
+       */
+      `Se NENHUMA habilidade responde o que o pedido realmente pergunta, devolva um único ` +
+      `passo de raciocínio (habilidade: null) — não enfileire consultas de contexto que não ` +
+      `respondem a pergunta: dizer "não tenho esse dado" com o plano vazio vale mais que ` +
+      `parecer ocupado.\n\n` +
       corpoDoPedido;
 
     let bruto = '';

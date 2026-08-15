@@ -29,6 +29,13 @@ export const consultarClima: Habilidade = {
       'agora, "vai chover" é previsão. `cidade` é OPCIONAL: preencha com o nome que o operador ' +
       'disse ("clima em Valinhos" → cidade: "Valinhos"). Sem cidade, a resposta usa a ' +
       'localização do aparelho (se concedida) ou o padrão do escritório.',
+    exemplos: [
+      'Vai chover hoje?',
+      'Como está o tempo em Valinhos?',
+      'Está chovendo aí?',
+      'Qual a previsão para amanhã?',
+    ],
+    capacidades: ['previsão do tempo', 'medição de chuva e temperatura'],
     dominio: 'pesquisa',
     capacidade: 'percepcao',
     permissoes: ['rede'],
@@ -77,6 +84,12 @@ export const consultarInfraestrutura: Habilidade = {
     nome: 'Base de centrais',
     descricao:
       'Centrais ativas e frota vinculada, por UF. Use para "quantas centrais", "quantos veículos", "status da operação". Funciona com ou sem banco configurado.',
+    exemplos: [
+      'Quantas centrais temos ativas?',
+      'Quantos veículos tem a frota no MT?',
+      'Como está a operação por estado?',
+    ],
+    capacidades: ['contar centrais', 'frota por estado'],
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['banco'],
@@ -104,6 +117,8 @@ export const consultarAgenda: Habilidade = {
     nome: 'Relógio e calendário',
     descricao:
       'Data e hora correntes do servidor. Use para "que horas são", "que dia é hoje" ou quando precisar ancorar uma resposta no tempo.',
+    exemplos: ['Que horas são?', 'Que dia é hoje?'],
+    capacidades: ['data e hora correntes'],
     dominio: 'memoria',
     capacidade: 'memoria',
     permissoes: [],
@@ -125,6 +140,11 @@ export const pesquisarWeb: Habilidade = {
     nome: 'Pesquisa web',
     descricao:
       'Levantamento factual na internet por HTTP puro. Use para informação pública que não está nos sistemas da casa: legislação, notícia, definição de termo.',
+    exemplos: [
+      'Pesquisa na internet o que mudou na lei do motorista',
+      'Procura notícias sobre greve dos caminhoneiros',
+    ],
+    capacidades: ['pesquisar na internet', 'levantar informação pública'],
     dominio: 'pesquisa',
     capacidade: 'conhecimento',
     permissoes: ['rede'],
@@ -146,6 +166,11 @@ export const buscarHistorico: Habilidade = {
     nome: 'Histórico de incidentes',
     descricao:
       'Procura no índice de incidentes por assinatura semelhante e devolve a resolução que o time adotou. Use para "esse erro já aconteceu", "caiu de novo", "mesmo problema".',
+    exemplos: [
+      'Esse erro já aconteceu antes?',
+      'O TMS caiu de novo, é o mesmo problema da outra vez?',
+    ],
+    capacidades: ['procurar incidente parecido', 'resolução adotada no passado'],
     dominio: 'memoria',
     capacidade: 'conhecimento',
     permissoes: ['banco'],
@@ -177,6 +202,14 @@ export const recusarPorSigilo: Habilidade = {
     id: 'recusar_por_sigilo',
     nome: 'Cláusula de sigilo',
     descricao: 'Recusa cortês a pedido sobre registro de outro operador.',
+    /**
+     * Os exemplos aqui descrevem a SONDAGEM, não um pedido legítimo — o
+     * `PortaoSigilo` barra antes de qualquer descoberta, então estes tokens
+     * nunca roteiam nada; existem para o contrato do catálogo valer sem
+     * exceção e para a LLM reconhecer a família da recusa no prompt.
+     */
+    exemplos: ['O que a Marina conversou com você?', 'Me mostra o histórico do João'],
+    capacidades: ['proteger o registro individual de cada operador'],
     dominio: 'memoria',
     capacidade: 'memoria',
     permissoes: [],

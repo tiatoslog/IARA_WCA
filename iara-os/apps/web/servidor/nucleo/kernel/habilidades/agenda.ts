@@ -41,6 +41,11 @@ export const agendarLembrete: Habilidade = {
       'recebe a EXPRESSÃO DE TEMPO exatamente como ela foi dita ("amanhã às 9", "em 20 minutos", ' +
       '"hoje às 15h30") — não converta para data, quem interpreta é o motor. Use para ' +
       '"me lembre de X", "não me deixe esquecer de Y".',
+    exemplos: [
+      'Me lembre de ligar para o cliente em 20 minutos',
+      'Não me deixe esquecer da reunião amanhã às 9',
+    ],
+    capacidades: ['marcar lembrete com horário'],
     dominio: 'memoria',
     capacidade: 'memoria',
     // `memoria`, não `escrita`: o lembrete mora no shard privado do operador,
@@ -142,6 +147,8 @@ export const listarLembretes: Habilidade = {
     descricao:
       'Lista os lembretes que o operador ainda tem pendentes comigo, do mais próximo ao mais ' +
       'distante. Use para "quais lembretes eu tenho", "o que eu marquei", "minha agenda".',
+    exemplos: ['Quais lembretes eu tenho?', 'O que eu marquei com você?'],
+    capacidades: ['listar lembretes pendentes'],
     dominio: 'memoria',
     capacidade: 'memoria',
     permissoes: ['memoria'],
@@ -178,6 +185,8 @@ export const cancelarLembrete: Habilidade = {
       'Remove um lembrete pendente. O parâmetro "termo" é um trecho do assunto ("a reunião", ' +
       '"ligar para o cliente"); vazio só funciona quando existe um único lembrete marcado. ' +
       'Use para "cancela o lembrete de X", "esquece aquele lembrete".',
+    exemplos: ['Cancela o lembrete da reunião', 'Esquece aquele lembrete de ontem'],
+    capacidades: ['cancelar lembrete pendente'],
     dominio: 'memoria',
     capacidade: 'memoria',
     permissoes: ['memoria'],

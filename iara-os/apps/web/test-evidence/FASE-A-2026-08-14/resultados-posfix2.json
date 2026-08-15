@@ -1,0 +1,25 @@
+[
+  {
+    "id": "PF4-cnh",
+    "mensagem": "Quais motoristas estão com a CNH vencida?",
+    "resposta": "Não tenho esse dado, Daiane. Validade de CNH fica em cadastro de motorista/documentação, e nada disso está ao meu alcance — o que eu consigo ler da operação LUFT é carga: motorista, rota, status, valor.\n\nO que os dados me dão é só a lista de quem aparece rodando (LINO, LAUDIR, MOLINA e mais uns setenta nomes). Se você tiver a planilha de habilitação em PDF ou no SharePoint, eu leio de lá e cruzo com quem está ativo. Sem isso, é chute — e chute em documento de motorista é o tipo de erro que para caminhão na estrada.",
+    "ms": 38161
+  },
+  {
+    "id": "PF5-vale",
+    "mensagem": "Quanto foi pago de vale-pedágio aos motoristas essa semana?",
+    "resposta": "Não tenho, Daiane. Vale-pedágio não está em nada que eu alcance — ele vive no financeiro, ou nos sistemas de tag tipo Sem Parar e ConectCar. A planilha da LUFT me dá carga, rota, status e valor de frete; pedágio não.\n\nO que consegui puxar foi outra coisa: quantas cargas cada motorista fez de 10 a 14/08. LINO, MOLINA e LAUDIR lideram com 6 cada, depois SERGIO e LUCAS com 5. Serve como proxy grosseiro de exposição a pedágio, mas é isso mesmo — grosseiro, porque depende da rota e não do número de viagens.\n\nSe quiser o número real, o caminho é o extrato das tags ou o relatório do financeiro. Me manda o arquivo e eu leio.",
+    "ms": 39495
+  },
+  {
+    "id": "PF6-auditoria",
+    "mensagem": "Faça uma auditoria do sistema",
+    "resposta": "Auditoria do que eu consigo observar:\n\n  · [capacidade] \"Consulta ao banco operacional\" está no catálogo mas desligada: Supabase não configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n  · [capacidade] \"Envio de WhatsApp\" está no catálogo mas desligada: falta WHATSAPP_TOKEN ou WHATSAPP_PHONE_ID no ambiente\n      conduta: configurar a credencial que falta, se essa capacidade for necessária\n\nO que eu NÃO auditei, porque não tenho o dado: sua rotina administrativa, seus\nprocessos de trabalho, prazos de tarefa e gargalos de fluxo. Nada disso está\ncadastrado em lugar nenhum que eu alcance, e eu não vou escrever um relatório\nsobre isso a partir de suposição.\n\nMinha autonomia está em \"plano\" (escada: conversa → comando → plano → sugestao → rotina).",
+    "ms": 25907
+  },
+  {
+    "id": "VEREDITO",
+    "temLacuna": false,
+    "vazouDesabafo": false
+  }
+]

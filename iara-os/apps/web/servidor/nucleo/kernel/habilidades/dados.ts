@@ -27,6 +27,11 @@ export const executarConsultaSql: Habilidade = {
     descricao:
       `Executa uma consulta PRÉ-APROVADA no banco. Você escolhe pelo nome; não escreve SQL. ` +
       `Consultas disponíveis: ${listarConsultas()}`,
+    exemplos: [
+      'Consulta no banco as centrais do Mato Grosso',
+      'Puxa do banco os veículos vinculados',
+    ],
+    capacidades: ['consulta nomeada ao banco operacional'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['banco'],
@@ -155,6 +160,11 @@ export const consultarMemoriaCorporativa: Habilidade = {
     nome: 'Memória corporativa',
     descricao:
       'Consulta procedimentos, políticas e vocabulário interno da Atos Log. Use quando a pergunta depende de como A CASA faz algo, não de conhecimento geral.',
+    exemplos: [
+      'Como a gente faz a baixa de CT-e aqui?',
+      'Qual o procedimento interno para reembolso?',
+    ],
+    capacidades: ['procedimentos e políticas internas'],
     dominio: 'memoria',
     capacidade: 'conhecimento',
     permissoes: ['banco'],
@@ -260,6 +270,11 @@ export const extrairTextoDocumento: Habilidade = {
     nome: 'Extração de texto de documento',
     descricao:
       'Lê a camada de texto de um PDF gerado digitalmente (CT-e, DACTE, nota fiscal, contrato). NÃO faz OCR de documento escaneado. O caminho é relativo a dados/documentos/.',
+    exemplos: [
+      'Lê o PDF da nota fiscal e me diz o valor',
+      'Extrai o texto do DACTE que subi',
+    ],
+    capacidades: ['extrair texto de PDF digital'],
     dominio: 'automacao',
     capacidade: 'percepcao',
     permissoes: ['banco'],

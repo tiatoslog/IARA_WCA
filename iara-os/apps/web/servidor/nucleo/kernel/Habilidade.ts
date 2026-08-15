@@ -72,6 +72,29 @@ export interface ManifestoHabilidade {
    * mais fácil de negligenciar.
    */
   readonly descricao: string;
+  /**
+   * FRASES REAIS DE OPERADOR que devem alcançar esta habilidade — como foram
+   * ditas, não como um manual as escreveria ("Quantas cargas vamos coletar
+   * amanhã?", "Motoristas disponíveis agora?").
+   *
+   * Dois consumidores, e nenhum deles é documentação:
+   *   · `DescobertaCapacidades` indexa os tokens — e token de exemplo é SINAL
+   *     FORTE: um exemplo é evidência direta de que uma frase daquela família
+   *     pertence a esta habilidade, coisa que a descrição só sugere.
+   *   · `MotorRaciocinio.planejar()` mostra os exemplos à LLM junto com a
+   *     descrição, para a escolha de habilidade ancorar em frase real.
+   *
+   * OPCIONAL NO TIPO, OBRIGATÓRIO NO CATÁLOGO: o teste de contrato
+   * (`testes/habilidades.test.ts`) recusa habilidade de catálogo sem exemplos.
+   * O tipo fica opcional para não quebrar habilidade injetada de teste.
+   */
+  readonly exemplos?: readonly string[];
+  /**
+   * Verbos de domínio que esta habilidade cobre ("contar cargas", "ranking de
+   * motoristas"). Vocabulário de CAPACIDADE, não frase de operador — completa
+   * o índice da descoberta onde a descrição é prosa demais.
+   */
+  readonly capacidades?: readonly string[];
   /** Família a que pertence. Define o agrupamento no manifesto e na projeção. */
   readonly dominio: Dominio;
   /** Qual objeto da sala acende enquanto esta habilidade roda. */

@@ -61,14 +61,42 @@ export class DescobertaCapacidades {
   private readonly frequencia = new Map<string, number>();
   /** token → ids das habilidades cujo manifesto o contém. */
   private readonly porToken = new Map<string, Set<string>>();
+  /**
+   * token → ids das habilidades em cujos EXEMPLOS ele aparece.
+   *
+   * Índice separado porque exemplo é evidência de outra natureza: a descrição
+   * DESCREVE o que a habilidade faz; o exemplo É uma frase de operador que já
+   * pediu isso. Um token que aparece nos exemplos de poucas habilidades liga a
+   * frase nova àquela família com força que a prosa da descrição não tem.
+   */
+  private readonly porTokenExemplo = new Map<string, Set<string>>();
 
   constructor(manifestos: readonly ManifestoHabilidade[]) {
     for (const m of manifestos) {
-      const doManifesto = new Set(tokens(`${m.id.replace(/_/g, ' ')} ${m.nome} ${m.descricao}`));
+      /**
+       * As três fontes do manifesto rico entram no MESMO índice: id/nome/
+       * descrição (como sempre), `capacidades` (verbos de domínio) e
+       * `exemplos` (frases reais). Exemplos também alimentam o índice próprio,
+       * acima — a frequência de documento conta todas as fontes juntas, para
+       * que a régua de stopword enxergue o vocabulário inteiro.
+       */
+      const doManifesto = new Set(
+        tokens(
+          `${m.id.replace(/_/g, ' ')} ${m.nome} ${m.descricao} ${(m.capacidades ?? []).join(' ')}`,
+        ),
+      );
+      const dosExemplos = new Set((m.exemplos ?? []).flatMap((e) => tokens(e)));
+      for (const t of dosExemplos) doManifesto.add(t);
+
       for (const t of doManifesto) {
         this.frequencia.set(t, (this.frequencia.get(t) ?? 0) + 1);
         let ids = this.porToken.get(t);
         if (!ids) this.porToken.set(t, (ids = new Set()));
+        ids.add(m.id);
+      }
+      for (const t of dosExemplos) {
+        let ids = this.porTokenExemplo.get(t);
+        if (!ids) this.porTokenExemplo.set(t, (ids = new Set()));
         ids.add(m.id);
       }
     }
@@ -77,12 +105,17 @@ export class DescobertaCapacidades {
      * "consulta", "operador", "computador" estão em toda parte. Vira ruído e
      * sai do índice. É o mesmo papel de uma lista de stopwords, só que
      * calculado do dado real: cresce o catálogo, a régua acompanha.
+     *
+     * A régua vale também para o índice de exemplos: "sinal forte" é o token
+     * de exemplo ESPECÍFICO, não qualquer palavra que os exemplos repitam em
+     * todo o catálogo.
      */
     const teto = Math.max(2, Math.ceil(manifestos.length / 3));
     for (const [t, f] of this.frequencia) {
       if (f >= teto) {
         this.frequencia.delete(t);
         this.porToken.delete(t);
+        this.porTokenExemplo.delete(t);
       }
     }
   }
@@ -90,11 +123,14 @@ export class DescobertaCapacidades {
   /**
    * A frase compartilha assunto com alguma habilidade?
    *
-   * Dois jeitos de dizer sim, e os dois pedem ESPECIFICIDADE:
+   * Três jeitos de dizer sim, e os três pedem ESPECIFICIDADE:
    *   · dois tokens distintos da mesma habilidade — coincidência dupla não é
    *     acaso ("cargas" + "coletadas", "faturamento" + "rota");
    *   · um token quase-exclusivo (aparece em ≤2 habilidades) — "motorista",
-   *     "email", "whatsapp" bastam sozinhos, porque não são de ninguém mais.
+   *     "email", "whatsapp" bastam sozinhos, porque não são de ninguém mais;
+   *   · um token que aparece nos EXEMPLOS de ≤2 habilidades — sinal forte por
+   *     definição: alguém já pediu exatamente isso com essa palavra, e o
+   *     manifesto gravou a frase.
    */
   pareceOperacional(bruto: string): boolean {
     const daFrase = new Set(tokens(bruto));
@@ -103,6 +139,8 @@ export class DescobertaCapacidades {
       const ids = this.porToken.get(t);
       if (!ids) continue;
       if (ids.size <= 2) return true;
+      const deExemplo = this.porTokenExemplo.get(t);
+      if (deExemplo && deExemplo.size <= 2) return true;
       for (const id of ids) {
         const acertos = (acertosPorHabilidade.get(id) ?? 0) + 1;
         if (acertos >= 2) return true;

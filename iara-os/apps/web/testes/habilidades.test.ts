@@ -51,6 +51,47 @@ test('esquema exige campo obrigatório e respeita lista fechada', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Contrato do manifesto rico — FASE A (Capability Intelligence)
+// ---------------------------------------------------------------------------
+
+/**
+ * `exemplos` e `capacidades` são OPCIONAIS no tipo (habilidade dublê de teste
+ * não precisa deles) e OBRIGATÓRIOS no catálogo real: são o que alimenta a
+ * `DescobertaCapacidades` e o prompt do planejador. Habilidade de catálogo sem
+ * exemplos é exatamente o buraco de 14/08 de volta — a frase real do operador
+ * sem caminho até a habilidade.
+ */
+test('contrato: toda habilidade do catálogo declara exemplos reais de operador', () => {
+  for (const h of CATALOGO) {
+    const m = h.manifesto;
+    assert.ok(
+      Array.isArray(m.exemplos) && m.exemplos.length > 0,
+      `"${m.id}" está no catálogo sem exemplos — a descoberta e o planejador ficam cegos para ela`,
+    );
+    for (const e of m.exemplos ?? []) {
+      assert.ok(e.trim().length > 0, `"${m.id}" tem exemplo vazio`);
+      assert.ok(
+        e.length <= 140,
+        `"${m.id}" tem exemplo com ${e.length} caracteres — exemplo é frase de operador, não parágrafo`,
+      );
+    }
+  }
+});
+
+test('contrato: toda habilidade do catálogo declara capacidades (verbos de domínio)', () => {
+  for (const h of CATALOGO) {
+    const m = h.manifesto;
+    assert.ok(
+      Array.isArray(m.capacidades) && m.capacidades.length > 0,
+      `"${m.id}" está no catálogo sem capacidades declaradas`,
+    );
+    for (const c of m.capacidades ?? []) {
+      assert.ok(c.trim().length > 0, `"${m.id}" tem capacidade vazia`);
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Gerenciador — as quatro portas
 // ---------------------------------------------------------------------------
 

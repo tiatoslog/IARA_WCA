@@ -64,6 +64,11 @@ export const criarPasta: Habilidade = {
     descricao:
       'Cria uma pasta em um local autorizado da máquina (Área de Trabalho, Documentos ou Downloads). ' +
       'Não aceita caminho livre — só um desses três locais nomeados. Use para "crie uma pasta chamada X".',
+    exemplos: [
+      'Crie uma pasta chamada Relatórios',
+      'Cria uma pasta Notas Fiscais nos Downloads',
+    ],
+    capacidades: ['criar pasta em local autorizado'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],
@@ -131,6 +136,8 @@ export const abrirAplicativo: Habilidade = {
       'Explorador de Arquivos, Chrome, Edge). Não executa comando arbitrário. Para Chrome/Edge, ' +
       'aceita opcionalmente um "site" (endereço http:// ou https:// completo) para abrir já ' +
       'naquela página — outros aplicativos da lista não têm o que fazer com um endereço.',
+    exemplos: ['Abre o bloco de notas', 'Abre o Chrome no site da LUFT'],
+    capacidades: ['abrir aplicativo da lista autorizada'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],
@@ -218,6 +225,8 @@ export const fecharAplicativo: Habilidade = {
       'Fecha um aplicativo da lista autorizada no computador do operador, pedindo educadamente ao ' +
       'Windows (nunca forçando). Se houver trabalho não salvo, o programa recusa e a IARA diz isso. ' +
       'Use para "feche o bloco de notas", "pode fechar o Chrome".',
+    exemplos: ['Fecha o bloco de notas', 'Pode fechar o Chrome'],
+    capacidades: ['fechar aplicativo sem forçar'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],
@@ -272,6 +281,8 @@ export const listarArquivos: Habilidade = {
       'Lista pastas e arquivos de um local autorizado do computador do operador (Área de Trabalho, ' +
       'Documentos ou Downloads). Não aceita caminho livre. Use para "o que tem na minha área de ' +
       'trabalho", "liste os arquivos de Downloads".',
+    exemplos: ['O que tem na minha área de trabalho?', 'Lista os arquivos de Downloads'],
+    capacidades: ['listar arquivos de local autorizado'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],
@@ -319,6 +330,8 @@ export const informacoesSistema: Habilidade = {
       'interfaces de rede. Use para "quanto de memória meu computador está usando", "meu computador ' +
       'está conectado", "como está o PC". SÍNCRONA: o resultado sai nesta mesma resposta, em poucos ' +
       'segundos — nunca diga que vai avisar depois, porque não há um "depois" aqui.',
+    exemplos: ['Quanto de memória meu computador está usando?', 'Como está o PC agora?'],
+    capacidades: ['memória, processador e rede da máquina'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],
@@ -373,6 +386,8 @@ export const capturarTela: Habilidade = {
       '(Área de Trabalho, Documentos ou Downloads). Devolve o caminho e o tamanho do arquivo — ' +
       'NUNCA o conteúdo da imagem, que não é lido nem transmitido. Use para "tira um print", ' +
       '"captura a tela", "salva uma foto do que está aberto".',
+    exemplos: ['Tira um print da tela', 'Captura a tela e salva nos Documentos'],
+    capacidades: ['capturar tela em PNG local'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],
@@ -445,6 +460,8 @@ export const acionarEnergia: Habilidade = {
     descricao:
       'Prepara desligar, reiniciar ou suspender a máquina. NUNCA executa direto: registra uma ' +
       'pendência e pede confirmação explícita do operador.',
+    exemplos: ['Desliga o computador', 'Reinicia a máquina para mim'],
+    capacidades: ['desligar, reiniciar ou suspender com confirmação'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],
@@ -582,6 +599,8 @@ export const resolverConfirmacao: Habilidade = {
     descricao:
       'Fecha o ciclo de uma ação que ficou aguardando confirmação: executa se o operador confirmou, ' +
       'aborta se cancelou. Sem pendência válida, diz isso em vez de executar qualquer coisa.',
+    exemplos: ['confirmo', 'não, cancela'],
+    capacidades: ['executar ou abortar ação pendente de confirmação'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],
@@ -842,6 +861,8 @@ export const atualizarRepositorio: Habilidade = {
       'O alvo é o APELIDO de um repositório declarado, nunca um caminho. ' +
       'Recusa se houver trabalho não salvo e nunca resolve conflito. ' +
       'Use para "atualize o repositório X" ou "puxa as novidades do X".',
+    exemplos: ['Atualiza o repositório da IARA', 'Puxa as novidades do repositório'],
+    capacidades: ['git pull em repositório autorizado'],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],

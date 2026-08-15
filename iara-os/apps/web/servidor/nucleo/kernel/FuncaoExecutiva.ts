@@ -95,6 +95,20 @@ const CONFIANCA_SUFICIENTE = 0.85;
  * "como"/"quando"/"onde"/"por que" tendem a abrir espaço de opinião ou de
  * conversa ("como você está"), e ficam de fora para não pagar planejamento
  * por bate-papo.
+ *
+ * TENTATIVA DE APOSENTADORIA (FASE A, 14/08/2026): com os manifestos ricos, a
+ * `DescobertaCapacidades` passou a cobrir a maioria destes casos pelo ASSUNTO
+ * — e a hipótese era que este regex tinha virado redundância. A regressão
+ * disse que não: sem ele, uma pergunta de fato cujo VOCABULÁRIO ainda não está
+ * em nenhum manifesto ("Qual o prazo daquela entrega?" antes de existir
+ * habilidade de entregas) cai em `raciocinio_direto` e morre sem catálogo —
+ * exatamente o buraco original, só que para a habilidade que ainda não nasceu.
+ * Os dois sinais são complementares: a descoberta olha o ASSUNTO (que vem do
+ * catálogo de hoje), este regex olha a FORMA (que não depende de catálogo
+ * nenhum). E é a forma que alimenta o registro de lacunas: pergunta de fato
+ * sem habilidade correspondente chega a `plano_cognitivo`, volta só-raciocínio
+ * e vira `LacunaCapacidade` — se ela morresse em conversa, a fila de evolução
+ * nunca a veria. Fica.
  */
 const PERGUNTA_DE_FATO = /\b(quantos?|quantas?|qual|quais)\b/i;
 

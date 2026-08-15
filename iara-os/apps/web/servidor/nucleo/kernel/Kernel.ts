@@ -22,6 +22,7 @@ import { MemoriaTrabalho } from './MemoriaTrabalho';
 import { Planejador } from './Planejador';
 import { FuncaoExecutiva, type Decisao } from './FuncaoExecutiva';
 import { DescobertaCapacidades } from './DescobertaCapacidades';
+import { lacunasCapacidade } from './LacunasCapacidade';
 import { GerenciadorHabilidades } from './GerenciadorHabilidades';
 import { MotorRaciocinio } from './MotorRaciocinio';
 import { CATALOGO } from './habilidades';
@@ -249,6 +250,15 @@ export class Kernel {
     parametro: string;
   } | null = null;
 
+  /**
+   * O índice de assunto do catálogo. Campo — e não variável local do
+   * construtor — porque DOIS consumidores o leem: a Função Executiva (portão
+   * de rota) e o registro de lacunas (o mesmo "parece operacional" que abre a
+   * rota é o que qualifica a lacuna quando a rota volta de mãos vazias).
+   * Duas instâncias seriam duas réguas que um dia divergem.
+   */
+  private readonly descoberta: DescobertaCapacidades;
+
   constructor(private readonly dep: DependenciasKernel) {
     this.papel = dep.papel ?? 'operador';
     this.raciocinio = dep.raciocinio ?? new MotorRaciocinio();
@@ -264,20 +274,21 @@ export class Kernel {
     this.habilidades = new GerenciadorHabilidades(dep.barramento);
     this.habilidades.registrarTodas(CATALOGO);
     if (dep.habilidadesExtras) this.habilidades.registrarTodas(dep.habilidadesExtras);
+    /**
+     * O índice de assunto nasce dos MESMOS manifestos registrados acima —
+     * habilidade nova entra no portão de rota no mesmo commit em que entra
+     * no catálogo, sem tocar em nenhuma âncora. Manifestos são dados puros:
+     * a Função Executiva continua sem alcançar executor nenhum.
+     */
+    this.descoberta = new DescobertaCapacidades(
+      [...CATALOGO, ...(dep.habilidadesExtras ?? [])].map((h) => h.manifesto),
+    );
     this.executiva = new FuncaoExecutiva(
       this.planejador,
       this.trabalho,
       dep.outrosOperadores,
       () => this.raciocinio.disponivel,
-      /**
-       * O índice de assunto nasce dos MESMOS manifestos registrados acima —
-       * habilidade nova entra no portão de rota no mesmo commit em que entra
-       * no catálogo, sem tocar em nenhuma âncora. Manifestos são dados puros:
-       * a Função Executiva continua sem alcançar executor nenhum.
-       */
-      new DescobertaCapacidades(
-        [...CATALOGO, ...(dep.habilidadesExtras ?? [])].map((h) => h.manifesto),
-      ),
+      this.descoberta,
     );
   }
 
@@ -460,6 +471,43 @@ export class Kernel {
 
       this.trabalho.iniciarTarefa(p, plano);
       b.publicar({ tipo: 'PLANO_CRIADO', plano });
+
+      /**
+       * LACUNA DE CAPACIDADE — FASE A (14/08/2026).
+       *
+       * A frase parecia operacional (o mesmo índice que abriu a rota diz
+       * isso), o catálogo inteiro foi oferecido à LLM, e o plano voltou sem
+       * UMA habilidade sequer: só raciocínio. O sistema reconheceu o terreno
+       * e não tinha ferramenta — é exatamente o que a fila de evolução do
+       * catálogo precisa medir. "Motoristas disponíveis agora?" aconteceu 3×
+       * ao vivo antes de existir onde cair; agora cai aqui.
+       *
+       * DOIS filtros além do plano vazio, e cada um barra uma mentira:
+       *
+       *   · assunto (`pareceOperacional`) — pergunta filosófica com "qual"
+       *     não é lacuna; é conversa que pagou planejamento pelo lado seguro;
+       *   · FORMA DE PEDIDO (comando, ou frase interrogada) — achado da
+       *     auditoria adversarial de 14/08: os exemplos do manifesto rico
+       *     alargaram o índice de assunto o bastante para um desabafo com
+       *     vocabulário de trabalho ("esse relatório me destruiu hoje")
+       *     parecer operacional. Desabafo não é pedido, e uma fila de
+       *     evolução com desabafo dentro vira exatamente o log de conversa
+       *     que o contrato proíbe. O custo declarado: pedido digitado sem
+       *     "?" e sem imperativo fica de fora — subcontar é o lado certo de
+       *     errar num registro que alguém vai reler.
+       *
+       * A lacuna pertence AO OPERADOR que a pediu (partição em
+       * `LacunasCapacidade`), e nada além da assinatura sintática é guardado.
+       */
+      const formaDePedido = p.tipo === 'comando' || /\?\s*$/.test(p.bruto.trim());
+      if (
+        decisao.rota === 'plano_cognitivo' &&
+        formaDePedido &&
+        plano.passos.every((x) => !x.habilidade || x.habilidade === 'raciocinio') &&
+        this.descoberta.pareceOperacional(p.bruto)
+      ) {
+        lacunasCapacidade.registrar(p.bruto, this.dep.idUsuario);
+      }
 
       // --- 4. Execução ------------------------------------------------------
       const execucao = await this.executarPlano(plano, p.bruto, controle);

@@ -94,6 +94,59 @@ export const EXPRESSAO_NEUTRA: Expressao = {
 };
 
 // ---------------------------------------------------------------------------
+// Cadeia cognitiva — o último turno, elo a elo
+// ---------------------------------------------------------------------------
+
+/**
+ * INTENÇÃO → CAPACIDADE → PLANO → EXECUÇÃO → VERIFICAÇÃO → RESPOSTA, projetada
+ * dos eventos que o barramento JÁ publica (FASE A, 14/08/2026). Nenhum campo
+ * aqui nasce de cálculo da UI: cada elo é a cópia direta de um evento do
+ * turno — `PERCEPCAO_CONCLUIDA`, `DECISAO_TOMADA`, `PLANO_CRIADO`,
+ * `PASSO_CONCLUIDO`, `HABILIDADE_VERIFICADA`, `TAREFA_CONCLUIDA`. Elo ausente
+ * é elo que o turno não teve (turno de conversa não tem plano), nunca elo
+ * inventado.
+ */
+export interface PassoCadeia {
+  readonly indice: number;
+  /** `raciocinio` quando o passo foi da LLM, senão o id da habilidade. */
+  readonly habilidade: string;
+  readonly descricao: string;
+  /** Uma linha do que aconteceu — o `resumo` de `PASSO_CONCLUIDO`. */
+  readonly resumo: string;
+  readonly ms: number;
+}
+
+export interface VerificacaoCadeia {
+  readonly habilidade: string;
+  readonly confirmado: boolean;
+  readonly evidencia: string;
+}
+
+export interface CadeiaCognitiva {
+  /** O que a percepção entendeu: tipo da entrada, objetivo provável, confiança. */
+  readonly intencao: {
+    readonly tipo: string;
+    readonly objetivo: string;
+    readonly confianca: number;
+  } | null;
+  /** A decisão executiva — a porta de capacidade: qual rota e por quê. */
+  readonly decisao: {
+    readonly rota: string;
+    readonly justificativa: string;
+    readonly custo: 'zero' | 'tokens';
+  } | null;
+  readonly plano: {
+    readonly objetivo: string;
+    readonly origem: 'deterministico' | 'emergente';
+    readonly total_passos: number;
+  } | null;
+  readonly execucao: readonly PassoCadeia[];
+  readonly verificacao: readonly VerificacaoCadeia[];
+  /** Preenchido quando `TAREFA_CONCLUIDA` fecha o turno. */
+  readonly resposta: { readonly rota: string; readonly latencia_ms: number } | null;
+}
+
+// ---------------------------------------------------------------------------
 // Telemetria
 // ---------------------------------------------------------------------------
 
@@ -183,6 +236,13 @@ export interface SnapshotCognitivo {
 
   /** `null` quando a IARA não está falando nem acabou de falar. */
   readonly fala: FalaProjetada | null;
+
+  /**
+   * A cadeia cognitiva do turno corrente (ou do último concluído). `null`
+   * antes do primeiro turno da sessão — o painel mostra "nenhum turno ainda"
+   * em vez de uma cadeia vazia com cara de turno que não aconteceu.
+   */
+  readonly cadeia: CadeiaCognitiva | null;
 
   /**
    * `true` na ÚNICA tela eleita para reproduzir voz. A sessão aceita até

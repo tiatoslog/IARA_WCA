@@ -18,12 +18,15 @@ import {
   ESPACO_VAZIO,
   EXPRESSAO_NEUTRA,
   TELEMETRIA_ZERO,
+  type CadeiaCognitiva,
   type EspacoCognitivo,
   type Expressao,
   type FalaProjetada,
+  type PassoCadeia,
   type PlanoProjetado,
   type SnapshotCognitivo,
   type TelemetriaSnapshot,
+  type VerificacaoCadeia,
 } from '../../../lib/snapshot';
 import {
   LUZES_APAGADAS,
@@ -37,6 +40,21 @@ import {
 /** Quanto uma capacidade decai por compilação quando nada a reforça. */
 const DECAIMENTO = 0.12;
 
+/**
+ * Tetos da cadeia projetada. O snapshot viaja aglutinado pelo barramento a
+ * cada atualização; uma cadeia sem teto crescria com o plano mais longo e
+ * seria retransmitida inteira a cada trecho de fala.
+ */
+const MAX_ELOS_EXECUCAO = 12;
+const MAX_LINHA_CADEIA = 200;
+
+const umaLinha = (texto: string): string => {
+  // Uma linha DE VERDADE: quebra vira espaço antes do teto de comprimento —
+  // um `resumo` multilinha viajaria com `\n` para dentro de um elo da cadeia.
+  const plano = texto.replace(/\s+/g, ' ').trim();
+  return plano.length > MAX_LINHA_CADEIA ? `${plano.slice(0, MAX_LINHA_CADEIA - 1)}…` : plano;
+};
+
 export class CompiladorSnapshot {
   private capacidades: EspacoCognitivo = { ...ESPACO_VAZIO };
   private telemetria: TelemetriaSnapshot = { ...TELEMETRIA_ZERO };
@@ -45,6 +63,21 @@ export class CompiladorSnapshot {
   private falhou = new Set<number>();
   private textoEmCurso = '';
   private fala: FalaProjetada | null = null;
+  /**
+   * A cadeia cognitiva do turno — FASE A (14/08/2026). Acumulada dos MESMOS
+   * eventos que o resto deste arquivo já absorvia; nenhum evento novo, nenhuma
+   * pergunta ao kernel. Zerada quando `MENSAGEM_RECEBIDA` abre o turno
+   * seguinte — a cadeia mostrada é sempre a do turno corrente ou do último
+   * concluído, nunca uma mistura dos dois.
+   */
+  private cadeia: {
+    intencao: CadeiaCognitiva['intencao'];
+    decisao: CadeiaCognitiva['decisao'];
+    plano: CadeiaCognitiva['plano'];
+    execucao: PassoCadeia[];
+    verificacao: VerificacaoCadeia[];
+    resposta: CadeiaCognitiva['resposta'];
+  } | null = null;
   private desassinar: () => void;
 
   constructor(
@@ -68,19 +101,50 @@ export class CompiladorSnapshot {
         this.passoCorrente = -1;
         this.textoEmCurso = '';
         this.telemetria = { ...TELEMETRIA_ZERO };
+        // Turno novo, cadeia nova: os elos nascem vazios e cada evento
+        // preenche o seu. Nada do turno anterior sobrevive aqui.
+        this.cadeia = {
+          intencao: null,
+          decisao: null,
+          plano: null,
+          execucao: [],
+          verificacao: [],
+          resposta: null,
+        };
         break;
 
       case 'PERCEPCAO_CONCLUIDA':
         // Perceber É usar percepção. O evento é o fato; a luz é a consequência.
         this.acender('percepcao', 0.55);
+        if (this.cadeia) {
+          this.cadeia.intencao = {
+            tipo: e.percepcao.tipo,
+            objetivo: umaLinha(e.percepcao.objetivo_provavel),
+            confianca: e.percepcao.confianca,
+          };
+        }
         break;
 
       case 'DECISAO_TOMADA':
         this.telemetria = { ...this.telemetria, rota: e.rota, custo: e.custo_estimado };
+        if (this.cadeia) {
+          this.cadeia.decisao = {
+            rota: e.rota,
+            justificativa: umaLinha(e.justificativa),
+            custo: e.custo_estimado,
+          };
+        }
         break;
 
       case 'PLANO_CRIADO':
         this.acender('raciocinio', e.plano.origem === 'emergente' ? 0.8 : 0.25);
+        if (this.cadeia) {
+          this.cadeia.plano = {
+            objetivo: umaLinha(e.plano.objetivo),
+            origem: e.plano.origem,
+            total_passos: e.plano.passos.length,
+          };
+        }
         break;
 
       case 'PASSO_INICIADO':
@@ -89,6 +153,25 @@ export class CompiladorSnapshot {
 
       case 'PASSO_CONCLUIDO':
         this.passosConcluidos.add(e.passo.indice);
+        if (this.cadeia && this.cadeia.execucao.length < MAX_ELOS_EXECUCAO) {
+          this.cadeia.execucao.push({
+            indice: e.passo.indice,
+            habilidade: e.passo.habilidade ?? 'raciocinio',
+            descricao: umaLinha(e.passo.descricao),
+            resumo: umaLinha(e.resumo),
+            ms: e.ms,
+          });
+        }
+        break;
+
+      case 'HABILIDADE_VERIFICADA':
+        if (this.cadeia && this.cadeia.verificacao.length < MAX_ELOS_EXECUCAO) {
+          this.cadeia.verificacao.push({
+            habilidade: e.habilidade,
+            confirmado: e.confirmado,
+            evidencia: umaLinha(e.evidencia),
+          });
+        }
         break;
 
       case 'HABILIDADE_INICIADA':
@@ -129,6 +212,23 @@ export class CompiladorSnapshot {
 
       case 'TAREFA_CONCLUIDA':
         this.telemetria = { ...this.telemetria, latencia_ms: e.ms };
+        /**
+         * A RESPOSTA FECHA A CADEIA UMA VEZ — achado da auditoria adversarial
+         * de 14/08: lembrete vencido e aviso do vigia publicam
+         * `TAREFA_CONCLUIDA` direto no barramento, SEM `MENSAGEM_RECEBIDA`
+         * antes (ver `Porta.ts` — é deliberado, recado precisa virar fala). O
+         * último-que-escreve sobrescrevia o elo de resposta de um turno já
+         * concluído com `via sistema_local (0 ms)` — a cadeia mostrava a
+         * pergunta de um turno com a resposta de recado nenhum. Primeiro-que-
+         * fecha é o certo aqui: o turno do operador fecha a própria cadeia, e
+         * recado autônomo que chegue depois não a toca. O resíduo declarado:
+         * um recado que dispare NO MEIO de um turno em voo ocupa o elo por
+         * alguns segundos, até o fechamento real do turno — raro, visível e
+         * menos errado que o inverso.
+         */
+        if (this.cadeia && this.cadeia.resposta === null) {
+          this.cadeia.resposta = { rota: e.rota, latencia_ms: e.ms };
+        }
         this.textoEmCurso = '';
         this.fala = {
           id: e.id_mensagem,
@@ -210,6 +310,16 @@ export class CompiladorSnapshot {
       luzes: this.projetarLuzes(base),
       nuvem_indisponivel: base.nuvem_indisponivel,
       fala: this.fala,
+      // Cópia com arrays congelados por spread: o acumulador continua mutável
+      // aqui dentro, mas o que sai pela fronteira é dado morto, como todo o
+      // resto do snapshot.
+      cadeia: this.cadeia
+        ? {
+            ...this.cadeia,
+            execucao: [...this.cadeia.execucao],
+            verificacao: [...this.cadeia.verificacao],
+          }
+        : null,
     };
 
     this.esfriar();

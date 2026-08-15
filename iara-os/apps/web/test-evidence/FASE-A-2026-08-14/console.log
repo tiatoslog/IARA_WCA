@@ -1,0 +1,35 @@
+[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[warning] WebSocket connection to 'ws://localhost:3058/barramento' failed: WebSocket is closed before the connection is established.
+[warning] ./node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] ./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] [.WebGL-0x7a44001abc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x7a44001abc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x7a44001abc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x7a44001abc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+[info] [voz] metadados: 8492 ms desde o pedido do áudio
+[info] [voz] som saindo: 8493 ms desde o pedido do áudio
+[info] [voz] baixado: 8493 ms desde o pedido do áudio
+[info] [voz] metadados: 8656 ms desde o pedido do áudio
+[info] [voz] som saindo: 8657 ms desde o pedido do áudio
+[info] [voz] baixado: 8657 ms desde o pedido do áudio
+[info] [voz] metadados: 8529 ms desde o pedido do áudio
+[info] [voz] som saindo: 8529 ms desde o pedido do áudio
+[info] [voz] baixado: 8529 ms desde o pedido do áudio
+[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[warning] WebSocket connection to 'ws://localhost:3058/barramento' failed: WebSocket is closed before the connection is established.
+[warning] ./node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] ./node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] [.WebGL-0x765403c85200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x765403c85200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x765403c85200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x765403c85200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+[info] [voz] metadados: 8558 ms desde o pedido do áudio
+[info] [voz] som saindo: 8558 ms desde o pedido do áudio
+[info] [voz] baixado: 8558 ms desde o pedido do áudio
+[info] [voz] metadados: 8568 ms desde o pedido do áudio
+[info] [voz] som saindo: 8568 ms desde o pedido do áudio
+[info] [voz] baixado: 8569 ms desde o pedido do áudio

@@ -42,6 +42,12 @@ export const lerEmails: Habilidade = {
     nome: 'Caixa de entrada',
     descricao:
       'Lê e-mails recentes da caixa corporativa do operador, filtrando por remetente ou assunto.',
+    exemplos: [
+      'Leia meus emails recentes',
+      'Chegou algum email da LUFT hoje?',
+      'Tem email novo sobre a fatura?',
+    ],
+    capacidades: ['ler e-mails recentes', 'filtrar e-mail por remetente ou assunto'],
     dominio: 'comunicacao',
     capacidade: 'conhecimento',
     permissoes: ['rede', 'memoria'],
@@ -92,6 +98,11 @@ export const enviarWhatsapp: Habilidade = {
     descricao:
       'Envia mensagem de WhatsApp para um contato da operação. NUNCA executa direto: registra uma ' +
       'pendência e pede confirmação explícita do operador.',
+    exemplos: [
+      'Manda um whatsapp para o João avisando do atraso',
+      'Avisa a Marina no zap que a coleta foi remarcada',
+    ],
+    capacidades: ['enviar mensagem de WhatsApp com confirmação'],
     dominio: 'comunicacao',
     capacidade: 'automacao',
     // `externo`, não `escrita`: chega em OUTRA PESSOA. Mensagem enviada ao
@@ -178,6 +189,11 @@ export const buscarDocumentoSharepoint: Habilidade = {
     nome: 'Busca no SharePoint',
     descricao:
       'Localiza documentos no SharePoint corporativo por título ou conteúdo e devolve o link e um resumo.',
+    exemplos: [
+      'Acha no SharePoint a planilha de fechamento',
+      'Procura o documento do contrato da LUFT',
+    ],
+    capacidades: ['localizar documento corporativo'],
     dominio: 'operacoes',
     capacidade: 'conhecimento',
     permissoes: ['rede', 'banco'],
