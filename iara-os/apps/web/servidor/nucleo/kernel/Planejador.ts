@@ -65,6 +65,7 @@ export interface ContextoPlanejamento {
 const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) => Plano> = {
   clima: (p) => {
     const horizonte = extrairHorizonteClima(p.bruto);
+    const cidade = extrairCidadeClima(p.bruto);
     return {
       objetivo:
         horizonte === 'agora'
@@ -81,7 +82,7 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
             ? 'Ler a estação meteorológica (condição corrente)'
             : 'Ler a previsão do modelo meteorológico',
           'consultar_clima',
-          { horizonte },
+          cidade ? { horizonte, cidade } : { horizonte },
         ),
       ],
     };
@@ -638,6 +639,58 @@ export function extrairHorizonteClima(bruto: string): 'agora' | 'hoje' | 'amanha
   if (AMANHA.test(t)) return 'amanha';
   if (HOJE.test(t) || FUTURO.test(t)) return 'hoje';
   return 'agora';
+}
+
+/** Palavras que "em X" costuma trazer sem X ser um lugar. */
+const CLIMA_NAO_CIDADE = /^(hoje|amanha|amanhã|agora|breve|instantes|dias|pouco|casa|geral)$/i;
+
+/**
+ * "vai chover EM VALINHOS hoje?", "clima em São Paulo" → o nome depois de
+ * "em", parando antes de um marcador de tempo, pontuação ou fim de frase.
+ *
+ * Sobre `p.bruto` (texto original, não `normalizarLocal`): o nome segue para
+ * `geocodificarCidade`, que faz sua própria busca — preservar acento e caixa
+ * ajuda o serviço a casar, e não atrapalha se ele não precisar.
+ *
+ * DUAS CORREÇÕES ACHADAS EM VERIFICAÇÃO INDEPENDENTE (14/08/2026), antes de
+ * qualquer uso em produção:
+ *
+ * 1. EXIGE MAIÚSCULA NO PRIMEIRO CARACTERE. Sem isto, "estou em reunião até
+ *    de tarde", "estou em rota pra SP", "estou em dúvida se levo casaco" —
+ *    frases comuns numa mensagem que também menciona clima — extraíam
+ *    "reunião", "rota pra SP", "dúvida se levo casaco" como CIDADE, e como o
+ *    nome dito no texto GANHA da localização do aparelho, isso regredia uma
+ *    consulta que antes funcionava (caía certo no aparelho) para uma recusa
+ *    de geocodificação sobre lixo. Nome próprio em português quase sempre
+ *    vem maiúsculo mesmo em mensagem informal; exigir isso é o lado seguro —
+ *    perde uma cidade digitada tudo minúsculo, nunca quebra uma pergunta que
+ *    já funcionava. `CLIMA_NAO_CIDADE` continua casando sem diferenciar caixa
+ *    (`Hoje`, por exemplo, ainda é descartado).
+ *
+ * 2. FRONTEIRA DE "amanhã" NÃO USA `\b` DEPOIS DO ACENTO. `\b` do regex é
+ *    ASCII — `\w` não inclui `ã` — então `\bamanh[ãa]\b` nunca casava a
+ *    forma acentuada em nenhuma posição, e "vai chover em Foz do Iguaçu
+ *    amanhã?" extraía "Foz do Iguaçu amanhã" (a palavra de tempo virava parte
+ *    do nome da cidade, e a geocodificação falhava por um motivo que não
+ *    tinha nada a ver com a cidade). Troca por `(?![a-zà-ÿ])`: nega "mais uma
+ *    letra minúscula depois", que não depende de `\b` reconhecer `ã` como
+ *    parte de palavra.
+ *
+ * Heurística, não gramática: não tenta reconhecer todo jeito de nomear uma
+ * cidade (não cobre "aqui em Valinhos" sem preposição redundante, por
+ * exemplo, nem cidade digitada tudo minúsculo). Cobre o padrão observado ao
+ * vivo — achado real, ver auditoria de 14/08/2026 — e devolve `undefined` sem
+ * tentar adivinhar quando não casa; quem chama já sabe cair para o
+ * aparelho/escritório nesse caso.
+ */
+export function extrairCidadeClima(bruto: string): string | undefined {
+  const m = bruto.match(
+    /\bem\s+([A-ZÀ-Ý][\wà-ÿÀ-Ÿ'’\- ]{1,50}?)(?=\s+(?:hoje|amanh[ãa]|agora)(?![a-zà-ÿ])|[?.,!;]|$)/,
+  );
+  if (!m) return undefined;
+  const cidade = m[1].trim().replace(/\s{2,}/g, ' ');
+  if (cidade.length < 2 || CLIMA_NAO_CIDADE.test(cidade)) return undefined;
+  return cidade;
 }
 
 const UFS: Record<string, string> = {

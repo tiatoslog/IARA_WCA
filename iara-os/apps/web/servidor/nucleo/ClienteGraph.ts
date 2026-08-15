@@ -238,8 +238,21 @@ export async function buscarEmails(
     params.set('$orderby', 'receivedDateTime desc');
   }
 
+  /**
+   * `/me` SÓ EXISTE NO FLUXO DELEGADO — e o token deste sistema é de
+   * APLICATIVO (client credentials, ver cabeçalho). Achado em teste E2E real
+   * (14/08/2026): "Leia meus emails" chegava até aqui e a Graph respondia
+   * HTTP 400 "/me request is only valid with delegated authentication flow",
+   * sempre. Com `MS_GRAPH_CAIXA` (o e-mail da caixa a ler), a rota vira
+   * `/users/{caixa}` — a forma que o fluxo de aplicativo aceita. Sem a
+   * variável, mantém `/me`: um token delegado colado à mão continua
+   * funcionando como antes.
+   */
+  const caixa = process.env.MS_GRAPH_CAIXA?.trim();
+  const raizCaixa = caixa ? `${BASE}/users/${encodeURIComponent(caixa)}` : `${BASE}/me`;
+
   try {
-    const resposta = await fetch(`${BASE}/me/messages?${params.toString()}`, {
+    const resposta = await fetch(`${raizCaixa}/messages?${params.toString()}`, {
       headers: cabecalhos,
       signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
     });

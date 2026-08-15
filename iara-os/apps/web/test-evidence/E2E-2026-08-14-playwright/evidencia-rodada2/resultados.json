@@ -1,0 +1,71 @@
+[
+  {
+    "id": "R01-luft",
+    "mensagem": "Quantas cargas foram coletadas hoje na operação LUFT?",
+    "resposta": "hoje (14/08): 6 cargas:\n• OCI 210368 — ARARANGUA/SC → VACARIA/SC, CARLOS ANEVTON - QHI4C04  (CONECTCAR)\n• OCI 209406 — IPORA/GO → RIO VERDE/GO, SERGIO - SEM PARAR (FINALIZADO)\n• OCI 210816 — PONTES E LACERDA/MT → MIRASSOL DOESTE/MT, ADEVAIR\n• OCI 211628 — BAMBUI/MG → SAO SEBASTIAO DO PARAISO/MG, CLAUDINEI\n• OCI 211703 — CRISTALINA/GO → LUZIANIA/GO, HELIO\n• OCI 211708 — VERA/MT → SORRISO/MT, LAUDIR",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "7535 ms",
+      "eventos": "11"
+    },
+    "ms": 15012
+  },
+  {
+    "id": "R02-implicita",
+    "mensagem": "Motoristas disponíveis agora?",
+    "resposta": "Continuo sem disponibilidade, Daiane — esse campo não existe em lugar nenhum que eu alcance.\n\nO que o levantamento me dá é o inverso: quem está comprometido hoje. Seis motoristas com uma carga cada — Carlos Anevton, Sergio, Adevair, Claudinei, Helio e Laudir. Todo o resto da frota não aparece na agenda de hoje, o que não é o mesmo que estar livre. Pode estar em viagem de ontem, em descanso, em manutenção.\n\nSe a operação controla escala em algum lugar, é lá que a resposta está. Aqui eu só consigo dizer quem não está.",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "16057 ms",
+      "eventos": "18"
+    },
+    "ms": 24396
+  },
+  {
+    "id": "R03a-clima",
+    "mensagem": "Como está o clima?",
+    "resposta": "Agora em Região Metropolitana de Campinas, SP: 19.6 °C, predominantemente limpo, umidade em 87%. Não choveu na última hora.",
+    "painel": {
+      "rota": "plano_local",
+      "latencia": "5719 ms",
+      "eventos": "10"
+    },
+    "ms": 13076
+  },
+  {
+    "id": "R03b-cidade",
+    "mensagem": "Valinhos",
+    "resposta": "Valinhos: 19,1 °C, céu praticamente limpo, umidade em 88%. Sem chuva na última hora — praticamente o mesmo cenário de Campinas.",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "10323 ms",
+      "eventos": "14"
+    },
+    "ms": 17322
+  },
+  {
+    "id": "R04-pasta",
+    "mensagem": "Crie uma pasta chamada TestePlaywright2.",
+    "resposta": "Pronto, criei a pasta \"TestePlaywright2\" na Área de Trabalho.",
+    "painel": {
+      "rota": "plano_local",
+      "latencia": "1009 ms",
+      "eventos": "11"
+    },
+    "ms": 8686
+  },
+  {
+    "id": "R05-conversa",
+    "mensagem": "O que você acha sobre logística?",
+    "resposta": "Já dei minha opinião sobre isso alguns turnos atrás — não vou refazer o discurso.\n\nMas tem um ângulo que eu não mencionei: o que me chama atenção na logística é o quanto ela depende de gente que nunca aparece no relatório. O motorista que decide sair meia hora antes porque conhece a estrada. O conferente que percebe que a carga não bate antes de alguém assinar. Isso não vira dado em lugar nenhum — e é onde boa parte da operação se salva.\n\nAliás, foi exatamente o que apareceu na sua pergunta sobre motoristas disponíveis. O sistema sabe quem está comprometido; quem está realmente livre, só alguém que está lá sabe.",
+    "painel": null,
+    "ms": 19795
+  },
+  {
+    "id": "R06-email",
+    "mensagem": "Leia meus emails recentes.",
+    "resposta": "Não consegui ler. O token do Microsoft Graph está válido, mas o app registrado não tem o escopo necessário para acessar a caixa — permissão de leitura de e-mail (Mail.Read) faltando no registro.\n\nIsso é ajuste no Azure AD, não coisa que eu resolva daqui. Quem administra o app precisa adicionar o escopo e dar o consentimento; depois disso eu leio normalmente.",
+    "painel": null,
+    "ms": 17448
+  }
+]

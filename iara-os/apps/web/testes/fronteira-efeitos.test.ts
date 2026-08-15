@@ -134,6 +134,13 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       'efeito real — trocar o executável — está isolado no `spawn` do ' +
       'script de religamento, já justificado na entrada deste mesmo arquivo ' +
       'em `A4`.',
+    [path.join('servidor', 'nucleo', 'ClientePlanilhaOcis.ts')]:
+      'LEITURA — a planilha de OCIs da operação LUFT, via Microsoft Graph ' +
+      '(`/driveItem` e `/range`, só GET). Nasceu em 14/08/2026 sem esta ' +
+      'declaração e a suíte acusou — que é exatamente o funcionamento ' +
+      'desejado deste teste. Nenhuma escrita: a habilidade correspondente ' +
+      'tem `idempotencia: leitura` e o cliente não conhece verbo de POST ' +
+      'sobre a planilha.',
   };
 
   const comFetch = fontes(path.join(RAIZ, 'servidor'))

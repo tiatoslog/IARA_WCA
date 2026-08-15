@@ -29,6 +29,12 @@ export interface ResultadoAcao {
    * mediu. Quem sabe se a ação deu certo é quem a executou, e é aqui.
    */
   ok: boolean;
+  /**
+   * Nome do parâmetro que faltou para resolver — quando a própria resposta o
+   * pede ao operador. Sobe até `ResultadoHabilidade.pendencia`; ver o contrato
+   * lá. Só o ramo que PERGUNTA preenche isto: falha de rede não é pendência.
+   */
+  pendencia?: string;
 }
 
 interface Central {
@@ -103,7 +109,7 @@ export class OrquestradorAcoes {
     parametros: Record<string, unknown>,
   ): Promise<ResultadoAcao> {
     const inicio = Date.now();
-    let saida: { texto: string; ok: boolean };
+    let saida: { texto: string; ok: boolean; pendencia?: string };
     let capacidade: ResultadoAcao['capacidade'] = 'automacao';
 
     switch (modulo) {
@@ -111,6 +117,7 @@ export class OrquestradorAcoes {
         saida = await this.consultarClima(
           horizonteValido(parametros.horizonte),
           String(parametros.id_usuario ?? ''),
+          typeof parametros.cidade === 'string' && parametros.cidade.trim() ? parametros.cidade.trim() : undefined,
         );
         capacidade = 'percepcao';
         break;
@@ -158,7 +165,35 @@ export class OrquestradorAcoes {
   private async consultarClima(
     horizonte: Horizonte,
     idUsuario: string,
-  ): Promise<{ texto: string; ok: boolean }> {
+    cidadeMencionada?: string,
+  ): Promise<{ texto: string; ok: boolean; pendencia?: string }> {
+    /**
+     * A CIDADE QUE O OPERADOR DISSE GANHA DE TUDO.
+     *
+     * Achado ao vivo (14/08/2026): "vai chover em Valinhos hoje?" executava a
+     * habilidade de verdade (rota determinística, evento publicado) e ainda
+     * assim devolvia "não sei sua localização" — o esquema da habilidade nem
+     * tinha campo para cidade, e esta função só sabia ler geolocalização do
+     * aparelho ou `IARA_LATITUDE`/`IARA_LONGITUDE`. Uma cidade dita em texto
+     * não é dado de aparelho nem configuração do escritório — é o próprio
+     * pedido, então não se aplica a decisão de privacidade "usar e descartar"
+     * de `LocalOperador` (esse texto já está na conversa, que a IARA já
+     * guarda). Falha de geocodificação aqui é honesta, não um chute: se o
+     * nome não resolve, a resposta diz isso — nunca cai para Cuiabá/aparelho
+     * em silêncio, porque o operador nomeou um lugar específico de propósito.
+     */
+    if (cidadeMencionada) {
+      const geo = await this.geocodificarCidade(cidadeMencionada);
+      if (!geo) {
+        return {
+          ok: false,
+          texto:
+            `Não encontrei "${cidadeMencionada}" no serviço de geocodificação. Confira o nome ` +
+            '(cidade, ou "cidade, UF") e tente de novo.',
+        };
+      }
+      return this.buscarPrevisao(horizonte, String(geo.lat), String(geo.lon), geo.nome, false);
+    }
     /**
      * AS TRÊS VARIÁVEIS VIAJAM JUNTAS, e não ter padrão é a correção.
      *
@@ -217,15 +252,78 @@ export class OrquestradorAcoes {
     const ehPadraoDoEscritorio = !doAparelho;
 
     if (!lat || !lon) {
+      /**
+       * A RECUSA VIROU PERGUNTA — e a pergunta arma a retomada.
+       *
+       * Achado ao vivo (14/08/2026, produção): esta resposta dizia só o que
+       * faltava, e quando a operadora respondia "Valinhos" no turno seguinte,
+       * a mensagem era tratada como pedido novo — não casava âncora nenhuma e
+       * morria em conversa. A própria IARA chegou a orientar "manda a frase
+       * inteira", conselho que na época nem funcionava. Agora `pendencia:
+       * 'cidade'` sobe ao Kernel, que guarda a intenção por um turno: a
+       * resposta curta seguinte vira o parâmetro e ESTA habilidade roda de
+       * novo, pelo caminho normal.
+       */
       return {
         ok: false,
+        pendencia: 'cidade',
+        // A frase serve DOIS leitores: a pergunta é para quem opera; o nome
+        // das variáveis é para quem configura o servidor (há teste travando).
         texto:
           'Não sei de qual lugar responder: você não concedeu acesso à localização e este ' +
-          'ambiente não tem coordenadas declaradas (IARA_LATITUDE e IARA_LONGITUDE). Prefiro ' +
-          'dizer isso a dar a previsão de uma cidade que talvez não seja a sua.',
+          'ambiente não tem coordenadas declaradas (IARA_LATITUDE e IARA_LONGITUDE). ' +
+          'Me diga a cidade — pode ser só o nome, tipo "Valinhos" — que eu consulto na hora.',
       };
     }
 
+    return this.buscarPrevisao(horizonte, lat, lon, cidade, ehPadraoDoEscritorio);
+  }
+
+  /**
+   * Nome de cidade dito em texto livre → coordenada.
+   *
+   * Só chamado quando o OPERADOR nomeou o lugar na própria frase — mesmo
+   * provedor da previsão (Open-Meteo), gratuito e sem chave, para não somar
+   * uma segunda credencial só para resolver um nome. `count=1` porque a
+   * habilidade só precisa do candidato mais provável — desambiguar entre duas
+   * cidades homônimas não é o problema que esta função resolve.
+   */
+  private async geocodificarCidade(
+    nome: string,
+  ): Promise<{ lat: number; lon: number; nome: string } | null> {
+    const url =
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nome)}` +
+      `&count=1&language=pt&format=json`;
+    try {
+      const resposta = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+      const dados = (await resposta.json()) as {
+        results?: Array<{
+          name: string;
+          latitude: number;
+          longitude: number;
+          admin1?: string;
+          country_code?: string;
+        }>;
+      };
+      const r = dados.results?.[0];
+      if (!r) return null;
+      const completo = r.admin1 && r.country_code === 'BR' ? `${r.name}, ${r.admin1}` : r.name;
+      return { lat: r.latitude, lon: r.longitude, nome: completo };
+    } catch {
+      return null;
+    }
+  }
+
+  /** A chamada de fato ao modelo numérico — compartilhada pelo caminho com
+   *  cidade dita em texto e pelo caminho de aparelho/escritório. */
+  private async buscarPrevisao(
+    horizonte: Horizonte,
+    lat: string,
+    lon: string,
+    cidade: string,
+    ehPadraoDoEscritorio: boolean,
+  ): Promise<{ texto: string; ok: boolean }> {
     // Endpoint correto da API. `open-meteo.com` (sem o `api.`) devolve o site
     // institucional em HTML e quebra o JSON.parse — erro clássico.
     const url =

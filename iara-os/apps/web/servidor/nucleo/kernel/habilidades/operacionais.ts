@@ -22,10 +22,13 @@ export const consultarClima: Habilidade = {
     id: 'consultar_clima',
     nome: 'Radar meteorológico',
     descricao:
-      'Tempo no perímetro operacional. `horizonte: agora` devolve a MEDIÇÃO corrente ' +
-      '(temperatura, umidade, precipitação da última hora); `hoje` e `amanha` devolvem a ' +
-      'PREVISÃO do dia (probabilidade de chuva, acumulado, máxima e mínima). ' +
-      'Escolha pelo tempo verbal da pergunta: "está chovendo" é agora, "vai chover" é previsão.',
+      'Tempo no perímetro operacional, ou numa cidade que o operador nomeie. ' +
+      '`horizonte: agora` devolve a MEDIÇÃO corrente (temperatura, umidade, precipitação da ' +
+      'última hora); `hoje` e `amanha` devolvem a PREVISÃO do dia (probabilidade de chuva, ' +
+      'acumulado, máxima e mínima). Escolha pelo tempo verbal da pergunta: "está chovendo" é ' +
+      'agora, "vai chover" é previsão. `cidade` é OPCIONAL: preencha com o nome que o operador ' +
+      'disse ("clima em Valinhos" → cidade: "Valinhos"). Sem cidade, a resposta usa a ' +
+      'localização do aparelho (se concedida) ou o padrão do escritório.',
     dominio: 'pesquisa',
     capacidade: 'percepcao',
     permissoes: ['rede'],
@@ -35,16 +38,25 @@ export const consultarClima: Habilidade = {
     idempotencia: 'leitura',
     esquema: {
       horizonte: { tipo: 'texto', padrao: 'agora', dentre: ['agora', 'hoje', 'amanha'] },
+      cidade: { tipo: 'texto', max: 80 },
     },
   },
   async executar(ctx) {
+    const cidade = typeof ctx.parametros.cidade === 'string' ? ctx.parametros.cidade : undefined;
     const r = await acoes.executar('clima', {
       horizonte: ctx.parametros.horizonte,
       id_usuario: ctx.id_usuario,
+      cidade,
     });
     // `resolveu` é o que a fonte disse, não uma constante. Ver ResultadoAcao.ok:
     // com `true` fixo, uma falha de rede subia ao Kernel como passo cumprido.
-    return { texto: r.texto, detalhe: `Open-Meteo em ${r.latencia_ms}ms`, resolveu: r.ok };
+    return {
+      texto: r.texto,
+      detalhe: `Open-Meteo em ${r.latencia_ms}ms`,
+      resolveu: r.ok,
+      // A resposta pediu um parâmetro? O Kernel arma a retomada de um turno.
+      ...(r.pendencia ? { pendencia: { parametro: r.pendencia } } : {}),
+    };
   },
 };
 

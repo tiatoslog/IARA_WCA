@@ -19,7 +19,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { MotorPercepcao } from '../servidor/nucleo/kernel/Percepcao';
-import { Planejador, extrairHorizonteClima } from '../servidor/nucleo/kernel/Planejador';
+import { Planejador, extrairHorizonteClima, extrairCidadeClima } from '../servidor/nucleo/kernel/Planejador';
 import { horizonteValido } from '../servidor/nucleo/OrquestradorAcoes';
 import { consultarClima } from '../servidor/nucleo/kernel/habilidades/operacionais';
 import { esquecerLocal, registrarLocal } from '../servidor/nucleo/LocalOperador';
@@ -77,6 +77,66 @@ test('o passo do plano não promete radar — a fonte é modelo numérico', () =
       `"${frase}" ainda anuncia radar: "${descricao}". Open-Meteo é modelo, não radar.`,
     );
   }
+});
+
+// ---------------------------------------------------------------------------
+// 1b. COGNIÇÃO — a cidade dita na mesma frase não pode ser descartada
+//
+// Achado ao vivo em produção (14/08/2026): "vai chover em Valinhos hoje?"
+// executava `consultar_clima` de verdade e devolvia a MESMA recusa genérica
+// de "não sei sua localização" — o esquema não tinha campo para cidade, então
+// o nome dito na frase nunca chegava ao executor. `extrairCidadeClima` é a
+// metade determinística da correção: o texto livre vira parâmetro.
+// ---------------------------------------------------------------------------
+
+test('"vai chover em Valinhos hoje?" extrai a cidade e passa ao plano', () => {
+  assert.equal(extrairCidadeClima('vai chover em Valinhos hoje?'), 'Valinhos');
+  const plano = planoDe('vai chover em Valinhos hoje?');
+  assert.equal(plano.passos[0].parametros.cidade, 'Valinhos');
+  assert.equal(plano.passos[0].parametros.horizonte, 'hoje');
+});
+
+test('"clima em São Paulo" extrai a cidade sem o advérbio de dia', () => {
+  assert.equal(extrairCidadeClima('clima em São Paulo'), 'São Paulo');
+});
+
+test('sem cidade na frase, o parâmetro não aparece no plano (fallback intacto)', () => {
+  assert.equal(extrairCidadeClima('vai chover hoje?'), undefined);
+  const plano = planoDe('vai chover hoje?');
+  assert.equal(
+    'cidade' in plano.passos[0].parametros,
+    false,
+    'sem cidade dita, o passo não deve inventar o parâmetro — o executor cai para aparelho/escritório',
+  );
+});
+
+test('"em" seguido de palavra que não é lugar não vira cidade', () => {
+  // "daqui a pouco", "vai chover em breve" — "em" aparece sem nomear um lugar.
+  assert.equal(extrairCidadeClima('vai chover em breve?'), undefined);
+  assert.equal(extrairCidadeClima('o que vai acontecer em casa?'), undefined);
+});
+
+// Achados por verificação independente (14/08/2026) — corrigidos antes de
+// qualquer uso em produção. Ver comentário de `extrairCidadeClima`.
+
+test('"em X" minúsculo não vira cidade — regressão que quebrava o fallback do aparelho', () => {
+  // Frases reais: o clima é só parte da mensagem, e "em reunião"/"em rota"/
+  // "em dúvida" não são lugar nenhum. Sem a exigência de maiúscula, isso
+  // extraía a frase inteira como "cidade" e SOBRESCREVIA uma localização de
+  // aparelho que já respondia certo — regressão pior que a falta do recurso.
+  assert.equal(extrairCidadeClima('Tem previsão de chuva? Estou em reunião até de tarde.'), undefined);
+  assert.equal(extrairCidadeClima('Vai chover? Preciso saber, estou em rota pra SP.'), undefined);
+  assert.equal(extrairCidadeClima('Qual a temperatura, estou em dúvida se levo casaco'), undefined);
+});
+
+test('"amanhã" acentuado não gruda no nome da cidade', () => {
+  // `\b` de regex é ASCII e não reconhece `ã` como letra — sem a correção,
+  // "Foz do Iguaçu amanhã" saía inteiro como nome de cidade e a
+  // geocodificação falhava por um motivo que não tinha nada a ver com a
+  // cidade em si.
+  assert.equal(extrairCidadeClima('vai chover em Foz do Iguaçu amanhã?'), 'Foz do Iguaçu');
+  assert.equal(extrairCidadeClima('clima em Campinas amanhã'), 'Campinas');
+  assert.equal(extrairCidadeClima('previsão de chuva em Recife amanhã?'), 'Recife');
 });
 
 test('a regressão de "quanto tempo" continua fechada', () => {

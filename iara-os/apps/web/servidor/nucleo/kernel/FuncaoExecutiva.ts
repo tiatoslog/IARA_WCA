@@ -15,6 +15,7 @@
 import type { Percepcao } from './Evento';
 import type { Planejador } from './Planejador';
 import type { MemoriaTrabalho } from './MemoriaTrabalho';
+import type { DescobertaCapacidades } from './DescobertaCapacidades';
 import { PortaoSigilo } from './Sigilo';
 import {
   DetectorAmbiguidade,
@@ -88,6 +89,15 @@ const ACAO_DA_ANCORA: Record<string, AcaoCognitiva> = {
  */
 const CONFIANCA_SUFICIENTE = 0.85;
 
+/**
+ * A frase pede um FATO ESPECÍFICO — quantidade ou identidade — não conversa.
+ * Ver `mereceDecomposicao`. Fechado de propósito a quatro interrogativos:
+ * "como"/"quando"/"onde"/"por que" tendem a abrir espaço de opinião ou de
+ * conversa ("como você está"), e ficam de fora para não pagar planejamento
+ * por bate-papo.
+ */
+const PERGUNTA_DE_FATO = /\b(quantos?|quantas?|qual|quais)\b/i;
+
 export class FuncaoExecutiva {
   private readonly sigilo: PortaoSigilo;
   private readonly ambiguidade = new DetectorAmbiguidade();
@@ -98,6 +108,12 @@ export class FuncaoExecutiva {
     outrosOperadores: readonly string[],
     /** A nuvem está configurada? Sem ela, não adianta cogitar plano cognitivo. */
     private readonly nuvemDisponivel: () => boolean,
+    /**
+     * O índice de assunto do catálogo — ver `DescobertaCapacidades`. OPCIONAL
+     * para os testes que provam as outras etapas isoladamente; o Kernel sempre
+     * o injeta. Sem ele, o portão volta a depender só da forma da frase.
+     */
+    private readonly descoberta: DescobertaCapacidades | null = null,
   ) {
     this.sigilo = new PortaoSigilo(outrosOperadores);
   }
@@ -164,8 +180,13 @@ export class FuncaoExecutiva {
     }
 
     // 5. Pedido curto e de baixa complexidade não merece uma chamada só para
-    //    planejar. Duas chamadas onde uma resolve é desperdício puro.
-    if (!this.mereceDecomposicao(percepcao)) {
+    //    planejar. Duas chamadas onde uma resolve é desperdício puro — MAS a
+    //    frase que compartilha ASSUNTO com o catálogo ganha o benefício da
+    //    dúvida: "Motoristas disponíveis agora?" não tem forma de comando nem
+    //    interrogativo de fato, e ainda assim fala do que a operação faz. Ver
+    //    `DescobertaCapacidades` — a decisão de qual habilidade (ou nenhuma)
+    //    continua sendo da LLM com o catálogo à frente, nunca daqui.
+    if (!this.mereceDecomposicao(percepcao) && !this.descoberta?.pareceOperacional(percepcao.bruto)) {
       return {
         rota: 'raciocinio_direto',
         acao: 'responder',
@@ -186,12 +207,51 @@ export class FuncaoExecutiva {
   /**
    * Heurística de composição. Um pedido merece plano quando tem mais de um
    * verbo de ação, ou menciona documento, ou é longo o bastante para conter
-   * várias exigências.
+   * várias exigências — ou É UM COMANDO, ou PEDE UM FATO ESPECÍFICO.
+   *
+   * ACHADO AO VIVO (14/08/2026): esta função nasceu para responder "vale a
+   * pena pagar uma chamada de planejamento?", e por isso só olhava para
+   * COMPLEXIDADE (múltiplos verbos, frase longa). Ela nunca perguntava "existe
+   * uma habilidade que só o raciocínio emergente alcança e que esta frase
+   * pede?" — e por isso "Quantas cargas foram coletadas hoje na operação
+   * LUFT?" (um verbo, 54 caracteres) caía direto em `raciocinio_direto`, que
+   * NUNCA recebe o catálogo (`MotorRaciocinio.responder()` não lista
+   * habilidades — só `planejar()` lista, e só `plano_cognitivo` chama
+   * `planejar()`). A LLM respondia em texto porque a opção de chamar
+   * `consultar_estatisticas_cargas_luft` nunca chegou a existir para ela.
+   *
+   * O mesmo vale para `executar_consulta_sql`, `consultar_memoria_corporativa`,
+   * `ler_emails`, `enviar_whatsapp` — todas sem âncora determinística em
+   * `Percepcao`/`Planejador`, e cuja forma natural de pedido é curta e direta.
+   *
+   * A CORREÇÃO NÃO ENUMERA HABILIDADE NENHUMA (isso duplicaria o catálogo, que
+   * é exatamente o que `habilidades/index.ts` proíbe). Em vez disso, reconhece
+   * duas FORMAS DE FRASE que indicam pedido operacional, não bate-papo:
+   *
+   *   1. `p.tipo === 'comando'` — a `Percepcao` já classifica isso pelo verbo
+   *      no imperativo (ler `COMANDO` em `Percepcao.ts`); um comando nunca é
+   *      conversa social.
+   *   2. `PERGUNTA_DE_FATO` — a frase pergunta por uma QUANTIDADE ou uma
+   *      IDENTIDADE específica ("quantas", "quantos", "qual", "quais"). Só
+   *      estes quatro interrogativos, não "como"/"quando"/"onde"/"por que":
+   *      aqueles pedem um fato pontual (o padrão de "quantas cargas", "qual
+   *      motorista", "qual o total"); estes tendem a abrir espaço de conversa
+   *      ("como você está", "por que isso aconteceu") e continuam em
+   *      `raciocinio_direto` — ver `testes/decisao.test.ts`, "conversa casual
+   *      não vira tarefa".
+   *
+   * O CUSTO desta mudança é real e deliberado: uma pergunta tipo "qual o
+   * sentido disso?" (filosófica, sem habilidade correspondente) agora paga uma
+   * chamada de planejamento a mais, que volta com um passo de raciocínio puro
+   * (`habilidade: null` → `interpretarPlano` aceita) — mais lenta, nunca
+   * errada. Errar por excesso de verificação é o lado seguro: um pedido real
+   * de operação nunca mais silenciosamente vira só texto.
    */
   private mereceDecomposicao(p: Percepcao): boolean {
     if (p.confianca >= CONFIANCA_SUFICIENTE) return false;
     if (p.tipo === 'saudacao') return false;
     if (p.tipo === 'documento') return true;
+    if (p.tipo === 'comando') return true;
 
     const conectivos = (p.bruto.match(/\b(e|depois|então|em seguida|e me|e então)\b/gi) ?? []).length;
     const verbos = (
@@ -199,7 +259,10 @@ export class FuncaoExecutiva {
         /\b(analis\w+|resum\w+|compar\w+|extrai\w*|extrair|gera\w*|gerar|list\w+|calcul\w+|verific\w+|revis\w+)\b/gi,
       ) ?? []
     ).length;
+    const perguntaDeFato = PERGUNTA_DE_FATO.test(p.bruto);
 
-    return verbos >= 2 || (verbos >= 1 && conectivos >= 1) || p.bruto.length > 220;
+    return (
+      verbos >= 2 || (verbos >= 1 && conectivos >= 1) || p.bruto.length > 220 || perguntaDeFato
+    );
   }
 }

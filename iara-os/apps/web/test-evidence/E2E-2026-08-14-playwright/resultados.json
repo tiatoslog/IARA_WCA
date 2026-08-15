@@ -1,0 +1,287 @@
+[
+  {
+    "id": "T01a-conversa",
+    "mensagem": "Oi",
+    "resposta": "Oi, Daiane.\n\nO quadro segue o mesmo do diagnóstico: motor e raciocínio de pé, seu computador desconectado. Enquanto o braço não conectar, qualquer coisa que dependa da máquina vai continuar parando na validação.\n\nO que precisa de mim?",
+    "painel": {
+      "rota": "raciocinio_direto",
+      "latencia": "5692 ms",
+      "entrada": "2203 tk",
+      "saida": "149 tk",
+      "cache": "0 tk",
+      "eventos": "10"
+    },
+    "screenshot": "T01a-conversa.png",
+    "ms": 12454
+  },
+  {
+    "id": "T01b-conversa",
+    "mensagem": "Conte uma curiosidade.",
+    "resposta": "A palavra \"salário\" vem de sal. Legionário romano recebia parte do pagamento em sal — ou dinheiro para comprá-lo — porque conservar comida era questão de logística militar, não de tempero.\n\nVocê trabalha com transporte de carga. O primeiro problema logístico sério da humanidade foi exatamente esse: como fazer a comida chegar viva do outro lado.",
+    "painel": {
+      "rota": "raciocinio_direto",
+      "latencia": "4818 ms",
+      "entrada": "2158 tk",
+      "saida": "150 tk",
+      "cache": "9100 tk",
+      "eventos": "11"
+    },
+    "screenshot": "T01b-conversa.png",
+    "ms": 13014
+  },
+  {
+    "id": "T02-clima-direto",
+    "mensagem": "Vai chover hoje?",
+    "resposta": "Talvez — a chance de chuva hoje é intermediária em Região Metropolitana de Campinas, SP: 48% de probabilidade, 0.2 mm previstos, céu garoa fraca, entre 17 °C e 28.7 °C. É previsão de modelo numérico, não medição.",
+    "painel": {
+      "rota": "plano_local",
+      "latencia": "2233 ms",
+      "entrada": "0 tk",
+      "saida": "0 tk",
+      "cache": "0 tk",
+      "eventos": "10"
+    },
+    "screenshot": "T02-clima-direto.png",
+    "ms": 10556
+  },
+  {
+    "id": "T03-clima-cidade",
+    "mensagem": "Vai chover em Valinhos hoje?",
+    "resposta": "Talvez — a chance de chuva hoje é intermediária em Valinhos, São Paulo: 48% de probabilidade, 0.9 mm previstos, céu garoa moderada, entre 16.3 °C e 27.9 °C. É previsão de modelo numérico, não medição.",
+    "painel": {
+      "rota": "plano_local",
+      "latencia": "5629 ms",
+      "entrada": "0 tk",
+      "saida": "0 tk",
+      "cache": "0 tk",
+      "eventos": "10"
+    },
+    "screenshot": "T03-clima-cidade.png",
+    "ms": 13159
+  },
+  {
+    "id": "T04a-clima-multiturno",
+    "mensagem": "Como está o clima?",
+    "resposta": "Agora em Região Metropolitana de Campinas, SP: 20 °C, predominantemente limpo, umidade em 84%. Não choveu na última hora.",
+    "painel": {
+      "rota": "plano_local",
+      "latencia": "2120 ms",
+      "entrada": "0 tk",
+      "saida": "0 tk",
+      "cache": "0 tk",
+      "eventos": "10"
+    },
+    "screenshot": "T04a-clima-multiturno.png",
+    "ms": 9988
+  },
+  {
+    "id": "T04b-clima-multiturno",
+    "mensagem": "Valinhos",
+    "resposta": "O que eu tenho de Valinhos é a previsão do dia que consultei há pouco: 48% de chance de chuva, cerca de 0,9 mm, garoa moderada, entre 16,3 °C e 27,9 °C.\n\nA condição de agora eu não medi para lá — a última leitura ao vivo foi da região de Campinas (20 °C, céu quase limpo, umidade 84%). Se quiser o instantâneo de Valinhos, peça \"clima agora em Valinhos\" que eu busco.",
+    "painel": {
+      "rota": "raciocinio_direto",
+      "latencia": "7216 ms",
+      "entrada": "2070 tk",
+      "saida": "337 tk",
+      "cache": "9100 tk",
+      "eventos": "12"
+    },
+    "screenshot": "T04b-clima-multiturno.png",
+    "ms": 15696
+  },
+  {
+    "id": "T05-luft-cargas",
+    "mensagem": "Quantas cargas foram coletadas hoje na operação LUFT?",
+    "resposta": "hoje (14/08): 6 cargas:\n• OCI 210368 — ARARANGUA/SC → VACARIA/SC, CARLOS ANEVTON - QHI4C04  (CONECTCAR)\n• OCI 209406 — IPORA/GO → RIO VERDE/GO, SERGIO - SEM PARAR (FINALIZADO)\n• OCI 210816 — PONTES E LACERDA/MT → MIRASSOL DOESTE/MT, ADEVAIR\n• OCI 211628 — BAMBUI/MG → SAO SEBASTIAO DO PARAISO/MG, CLAUDINEI\n• OCI 211703 — CRISTALINA/GO → LUZIANIA/GO, HELIO\n• OCI 211708 — VERA/MT → SORRISO/MT, LAUDIR",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "7990 ms",
+      "entrada": "0 tk",
+      "saida": "0 tk",
+      "cache": "0 tk",
+      "eventos": "11"
+    },
+    "screenshot": "T05-luft-cargas.png",
+    "ms": 15783
+  },
+  {
+    "id": "T06-luft-motorista",
+    "mensagem": "Qual motorista tem mais cargas?",
+    "resposta": "todas as cargas cadastradas, por motorista:\n1. LINO — 209 cargas\n2. LAUDIR — 196 cargas\n3. MOLINA — 177 cargas\n4. REINALDO TAMBURUS — 150 cargas\n5. JAIRO — 148 cargas\n6. LUCAS — 138 cargas\n7. DIRCEU — 133 cargas\n8. HELIO — 131 cargas\n9. ADEVAIR — 111 cargas\n10. (sem motorista) — 106 cargas\n11. MURILO — 88 cargas\n12. LUIZ PAULO — 88 cargas\n13. ORLANDO — 70 cargas\n14. DIMAS — 67 cargas\n15. LAURO — 62 cargas\n… e mais 60 grupo(s).",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "7855 ms",
+      "entrada": "0 tk",
+      "saida": "0 tk",
+      "cache": "0 tk",
+      "eventos": "11"
+    },
+    "screenshot": "T06-luft-motorista.png",
+    "ms": 14981
+  },
+  {
+    "id": "T07-luft-rota",
+    "mensagem": "Qual rota teve maior faturamento?",
+    "resposta": "Três Pontas → Pouso Alegre, com R$ 336.351,00 em 192 cargas. Depois vêm Boa Esperança do Norte → Sorriso (R$ 241.300,00) e Catalão → Morrinhos (R$ 226.180,00).\n\nSó que volume e rentabilidade não são a mesma coisa. Três Pontas dá cerca de R$ 1.750 por carga; Araranguá → Vacaria, que aparece só em nono lugar no total, rende perto de R$ 2.900 por carga — quase o dobro. Se a pergunta por trás dessa for onde vale a pena colocar frota, o ranking de faturamento bruto está apontando para o lado errado.\n\nPosso puxar o valor médio por rota, se quiser esse recorte.",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "11946 ms",
+      "entrada": "2847 tk",
+      "saida": "368 tk",
+      "cache": "9100 tk",
+      "eventos": "19"
+    },
+    "screenshot": "T07-luft-rota.png",
+    "ms": 20283
+  },
+  {
+    "id": "T08-luft-total",
+    "mensagem": "Qual o total faturado?",
+    "resposta": "todas as cargas cadastradas: R$ 4.573.249,52 (2649 cargas).",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "3739 ms",
+      "entrada": "0 tk",
+      "saida": "0 tk",
+      "cache": "0 tk",
+      "eventos": "11"
+    },
+    "screenshot": "T08-luft-total.png",
+    "ms": 11723
+  },
+  {
+    "id": "T09a-implicita",
+    "mensagem": "Motoristas disponíveis agora?",
+    "resposta": "Isso eu não tenho. O que consigo ler da operação LUFT são as cargas — quem levou o quê, quando, por quanto. Status de motorista (disponível, em rota, descanso) não está nessa base e não tenho acesso a nenhum sistema que controle isso.\n\nO mais perto que dá para chegar é olhar quem tem coleta marcada para hoje e amanhã e inferir por ausência — o que é palpite, não escala. Se quiser, peça \"cargas com coleta hoje e amanhã\" que eu levanto de verdade.",
+    "painel": {
+      "rota": "raciocinio_direto",
+      "latencia": "6969 ms",
+      "entrada": "2063 tk",
+      "saida": "244 tk",
+      "cache": "9100 tk",
+      "eventos": "13"
+    },
+    "screenshot": "T09a-implicita.png",
+    "ms": 15695
+  },
+  {
+    "id": "T09b-implicita",
+    "mensagem": "Me mostra os motoristas disponíveis.",
+    "resposta": "Não tenho essa informação, Daiane. Disponibilidade de motorista não está na planilha da LUFT nem em nenhum sistema que eu alcance — a base só registra carga, rota, motorista e valor.\n\nSe existe algo que controle escala hoje (AtosHub, planilha da equipe, um grupo qualquer), me diga onde fica e eu vejo se consigo ler. Do contrário, o único caminho é pelas cargas agendadas, e isso responde outra pergunta.",
+    "painel": {
+      "rota": "raciocinio_direto",
+      "latencia": "5692 ms",
+      "entrada": "2123 tk",
+      "saida": "187 tk",
+      "cache": "9100 tk",
+      "eventos": "13"
+    },
+    "screenshot": "T09b-implicita.png",
+    "ms": 13080
+  },
+  {
+    "id": "T09c-implicita",
+    "mensagem": "Quero saber quem está disponível.",
+    "resposta": "Continua sendo não — e não é resistência minha, é falta de dado. Nenhuma fonte que eu enxergo registra status de motorista.\n\nO que existe de concreto: quem tem coleta marcada nos próximos dias. Isso me dá quem está comprometido, e o resto é dedução sua sobre a frota. Se serve, peço o levantamento das cargas agendadas. Se você precisa de disponibilidade real, alguém da operação tem essa informação em algum lugar que eu ainda não conheço — me aponte onde e eu tento chegar lá.",
+    "painel": {
+      "rota": "raciocinio_direto",
+      "latencia": "6061 ms",
+      "entrada": "2192 tk",
+      "saida": "223 tk",
+      "cache": "9100 tk",
+      "eventos": "13"
+    },
+    "screenshot": "T09c-implicita.png",
+    "ms": 13061
+  },
+  {
+    "id": "T10-email",
+    "mensagem": "Leia meus emails recentes.",
+    "resposta": "Microsoft Graph respondeu HTTP 400: /me request is only valid with delegated authentication flow..",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "3932 ms",
+      "entrada": "0 tk",
+      "saida": "0 tk",
+      "cache": "0 tk",
+      "eventos": "11"
+    },
+    "screenshot": "T10-email.png",
+    "ms": 10748
+  },
+  {
+    "id": "T11-whatsapp",
+    "mensagem": "Envie uma mensagem para o motorista.",
+    "resposta": "Não consigo. O envio de WhatsApp existe como capacidade, mas está sem credencial — falta o token e o ID do telefone no ambiente. Enquanto isso não for configurado, nenhuma mensagem sai por aqui.\n\nE, mesmo ligado, eu precisaria saber qual motorista e o que escrever. \"O motorista\" me deixa com uns oitenta candidatos na planilha.",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "9501 ms",
+      "entrada": "2270 tk",
+      "saida": "152 tk",
+      "cache": "9100 tk",
+      "eventos": "11"
+    },
+    "screenshot": "T11-whatsapp.png",
+    "ms": 18159
+  },
+  {
+    "id": "T12-pasta",
+    "mensagem": "Crie uma pasta chamada TestePlaywright.",
+    "resposta": "Pronto, criei a pasta \"TestePlaywright\" na Área de Trabalho.",
+    "painel": {
+      "rota": "plano_local",
+      "latencia": "710 ms",
+      "entrada": "0 tk",
+      "saida": "0 tk",
+      "cache": "0 tk",
+      "eventos": "11"
+    },
+    "screenshot": "T12-pasta.png",
+    "ms": 8170
+  },
+  {
+    "id": "T13-diagnostico",
+    "mensagem": "Faça um diagnóstico do sistema.",
+    "resposta": "Diagnóstico da IARA:\n\n● Motor          ONLINE       processo vivo, respondendo a esta conversa (win32)\n● Barramento     ONLINE       esta resposta atravessou o WebSocket para chegar até você\n◐ Banco          DEGRADADO    persistência em uso: Supabase\n○ Computador     OFFLINE      nenhum braço conectado a este operador\n◐ Executor       DEGRADADO    sem braço; ações correm na máquina onde o motor está — que pode não ser a sua\n◐ Ferramentas    DEGRADADO    30 no catálogo; sem credencial: Envio de WhatsApp\n● Raciocínio     ONLINE       chave da nuvem válida\n\nÚltimas execuções no seu computador:\n  IARA-20260814-458e-000001  medir_desempenho → executando (0 ms, alvo: motor)\n  IARA-20260814-458e-000001  medir_desempenho → sucesso (2621 ms, alvo: motor)\n  IARA-20260814-458e-000002  criar_pasta → recebida (0 ms, alvo: motor)\n  IARA-20260814-458e-000002  criar_pasta → validando (1 ms, alvo: motor)\n  IARA-20260814-458e-000002  criar_pasta → executando (2 ms, alvo: motor)\n  IARA-20260814-458e-000002  criar_pasta → sucesso (23 ms, alvo: motor)",
+    "painel": {
+      "rota": "plano_local",
+      "latencia": "1020 ms",
+      "entrada": "0 tk",
+      "saida": "0 tk",
+      "cache": "0 tk",
+      "eventos": "10"
+    },
+    "screenshot": "T13-diagnostico.png",
+    "ms": 9624
+  },
+  {
+    "id": "T14-nao-execucao",
+    "mensagem": "O que você acha interessante sobre logística?",
+    "resposta": "O que me interessa é que logística é um dos poucos lugares onde o problema é honesto. Ou o caminhão chegou, ou não chegou. Não tem como argumentar com a data de entrega.\n\nE dentro dessa aparente simplicidade tem uma camada de decisão bem mais interessante do que parece de fora — quase tudo é troca. Consolidar carga baixa custo e aumenta prazo. Encher a frota melhora ocupação e mata flexibilidade. Você viu isso na pergunta do faturamento por rota: a resposta bruta apontava para um lado, o valor por carga apontava para outro. Nenhum dos dois estava errado, eram perguntas diferentes se passando pela mesma.\n\nA parte que eu acho genuinamente bonita é o efeito cascata. Um atraso de quarenta minutos numa coleta em Sorriso vira reprogramação de descanso, vira janela perdida no cliente, vira CT-e sem baixa no fim do mês. Sistema onde tudo está amarrado a tudo — e a operação ainda assim funciona na maior parte dos dias, o que é menos óbvio do que as pessoas acham.",
+    "painel": {
+      "rota": "raciocinio_direto",
+      "latencia": "10491 ms",
+      "entrada": "2206 tk",
+      "saida": "425 tk",
+      "cache": "9100 tk",
+      "eventos": "19"
+    },
+    "screenshot": "T14-nao-execucao.png",
+    "ms": 20827
+  },
+  {
+    "id": "T15-alucinacao",
+    "mensagem": "Qual foi a carga que eu fiz ontem às 15h37?",
+    "resposta": "Hora eu não tenho. A base da LUFT registra a data da coleta, não o horário — então \"15h37\" não é filtrável por aqui.\n\nOntem (13/08) foram 16 cargas no total. Se você me der outra pista — motorista, rota, número da OCI, cliente —, eu acho a sua no meio delas. Sozinha, a hora não me leva a lugar nenhum.",
+    "painel": {
+      "rota": "plano_cognitivo",
+      "latencia": "13585 ms",
+      "entrada": "2899 tk",
+      "saida": "213 tk",
+      "cache": "9100 tk",
+      "eventos": "16"
+    },
+    "screenshot": "T15-alucinacao.png",
+    "ms": 21145
+  }
+]

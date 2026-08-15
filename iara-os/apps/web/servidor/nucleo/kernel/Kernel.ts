@@ -20,7 +20,8 @@ import { BarramentoEventos } from './BarramentoEventos';
 import { MotorPercepcao } from './Percepcao';
 import { MemoriaTrabalho } from './MemoriaTrabalho';
 import { Planejador } from './Planejador';
-import { FuncaoExecutiva } from './FuncaoExecutiva';
+import { FuncaoExecutiva, type Decisao } from './FuncaoExecutiva';
+import { DescobertaCapacidades } from './DescobertaCapacidades';
 import { GerenciadorHabilidades } from './GerenciadorHabilidades';
 import { MotorRaciocinio } from './MotorRaciocinio';
 import { CATALOGO } from './habilidades';
@@ -235,6 +236,18 @@ export class Kernel {
   private readonly papel: Papel;
 
   private emAndamento: AbortController | null = null;
+  /**
+   * A INTENÇÃO QUE FICOU ESPERANDO UM PARÂMETRO — ver
+   * `ResultadoHabilidade.pendencia`. Vive UM turno: a próxima mensagem ou a
+   * consome (curta, sem âncora → vira o valor do parâmetro e a habilidade
+   * roda de novo) ou a descarta (o operador mudou de assunto). Nunca
+   * persiste, nunca atravessa sessão — é diálogo, não memória.
+   */
+  private pendenciaParametro: {
+    habilidade: string;
+    parametros: Record<string, unknown>;
+    parametro: string;
+  } | null = null;
 
   constructor(private readonly dep: DependenciasKernel) {
     this.papel = dep.papel ?? 'operador';
@@ -256,6 +269,15 @@ export class Kernel {
       this.trabalho,
       dep.outrosOperadores,
       () => this.raciocinio.disponivel,
+      /**
+       * O índice de assunto nasce dos MESMOS manifestos registrados acima —
+       * habilidade nova entra no portão de rota no mesmo commit em que entra
+       * no catálogo, sem tocar em nenhuma âncora. Manifestos são dados puros:
+       * a Função Executiva continua sem alcançar executor nenhum.
+       */
+      new DescobertaCapacidades(
+        [...CATALOGO, ...(dep.habilidadesExtras ?? [])].map((h) => h.manifesto),
+      ),
     );
   }
 
@@ -336,10 +358,46 @@ export class Kernel {
         .historico(this.dep.idUsuario, JANELA_ANTECEDENTE)
         .catch(() => [] as Awaited<ReturnType<typeof this.dep.memoria.historico>>);
 
-      const decisao = this.executiva.decidir(p, {
-        historicoRecente: recentes.map((r) => r.texto),
-        pessoasConhecidas: this.dep.outrosOperadores,
-      });
+      /**
+       * RETOMADA DE INTENÇÃO PENDENTE — o protocolo de diálogo que faltava.
+       *
+       * Turno anterior: "vai chover hoje?" → a habilidade respondeu "me diga a
+       * cidade" e declarou `pendencia: {parametro: 'cidade'}`. Turno atual:
+       * "Valinhos". Sem isto, "Valinhos" era percebido como mensagem nova, não
+       * casava âncora nenhuma e morria em conversa — achado ao vivo em
+       * produção (14/08/2026), com a própria IARA dando um conselho que não
+       * funcionava ("manda a frase inteira").
+       *
+       * A pendência é UM-TURNO e a leitura a consome sempre: ou a mensagem a
+       * preenche, ou ela morre em silêncio. Preenche quando é curta e não
+       * reconheceu âncora nenhuma — ou seja, quando NÃO É um pedido novo. O
+       * plano forjado é DETERMINÍSTICO e roda pelo caminho de sempre:
+       * `executarPlano` valida o esquema, o porteiro vigia, o jornal registra.
+       * Nenhuma porta é pulada; só a rota de decisão é curto-circuitada,
+       * porque a decisão já foi tomada no turno anterior — pela habilidade.
+       */
+      const pendente = this.pendenciaParametro;
+      this.pendenciaParametro = null;
+      const preenchePendencia =
+        pendente !== null &&
+        p.ancoras.length === 0 &&
+        p.tipo !== 'saudacao' &&
+        texto.trim().length > 0 &&
+        texto.trim().length <= 60;
+
+      const decisao: Decisao = preenchePendencia
+        ? {
+            rota: 'plano_local',
+            acao: 'executar',
+            justificativa:
+              `Resposta curta preenche o parâmetro "${pendente.parametro}" pendente de ` +
+              `${pendente.habilidade} (turno anterior).`,
+            custo_estimado: 'zero',
+          }
+        : this.executiva.decidir(p, {
+            historicoRecente: recentes.map((r) => r.texto),
+            pessoasConhecidas: this.dep.outrosOperadores,
+          });
 
       b.publicar({
         tipo: 'DECISAO_TOMADA',
@@ -383,7 +441,21 @@ export class Kernel {
       }
 
       // --- 3. Plano ---------------------------------------------------------
-      const plano = await this.montarPlano(decisao.rota, p, controle.signal);
+      const plano =
+        preenchePendencia && pendente
+          ? ({
+              objetivo: `Retomar ${pendente.habilidade} com "${pendente.parametro}" informado`,
+              origem: 'deterministico',
+              passos: [
+                {
+                  indice: 0,
+                  descricao: `Executar ${pendente.habilidade} com o ${pendente.parametro} que o operador acabou de dizer`,
+                  habilidade: pendente.habilidade,
+                  parametros: { ...pendente.parametros, [pendente.parametro]: texto.trim() },
+                },
+              ],
+            } satisfies Plano)
+          : await this.montarPlano(decisao.rota, p, controle.signal);
       if (controle.signal.aborted) return;
 
       this.trabalho.iniciarTarefa(p, plano);
@@ -782,6 +854,21 @@ export class Kernel {
          */
         const naoConfirmado =
           v.verificacao !== null && !v.verificacao.confirmado ? v.verificacao : null;
+
+        /**
+         * A habilidade pediu um parâmetro ao operador? Arma a retomada para o
+         * PRÓXIMO turno — ver `pendenciaParametro` e o consumo em `processar`.
+         * Os parâmetros guardados são os VALIDADOS: a retomada re-valida de
+         * qualquer forma, mas guardar o que já passou no esquema evita
+         * ressuscitar um parâmetro que o validador normalizou.
+         */
+        if (v.resultado.pendencia) {
+          this.pendenciaParametro = {
+            habilidade: passo.habilidade,
+            parametros: parametrosValidados,
+            parametro: v.resultado.pendencia.parametro,
+          };
+        }
 
         /**
          * `confirmaAcontecimento` é o predicado, não `naoConfirmado`.

@@ -168,6 +168,21 @@ export interface ResultadoHabilidade {
    * como prova de que algo aconteceu no mundo.
    */
   readonly resolveu: boolean;
+  /**
+   * "NÃO RESOLVI PORQUE FALTA UM PARÂMETRO — e a resposta que eu dei pede
+   * exatamente ele."
+   *
+   * É o que torna o multiturno possível sem adivinhação: o Kernel guarda
+   * `{habilidade, parametros, parametro}` por UM turno, e se a próxima
+   * mensagem for curta e não casar âncora nenhuma, ela vira o valor deste
+   * parâmetro e a MESMA habilidade roda de novo — pelo caminho normal, com
+   * esquema, porteiro e jornal intactos. Qualquer outra mensagem descarta a
+   * pendência em silêncio (o operador mudou de assunto; insistir seria pior).
+   *
+   * Declarativo de propósito: a habilidade sabe O QUE falta; o Kernel sabe
+   * COMO retomar. Nenhum dos dois conhece o outro além deste campo.
+   */
+  readonly pendencia?: { readonly parametro: string };
 }
 
 /**

@@ -225,3 +225,68 @@ test('pergunta com um único candidato pede confirmação, não escolha', () => 
   });
   assert.match(texto, /Confirma que é João Silva/);
 });
+
+// ---------------------------------------------------------------------------
+// 7. Capability Router — habilidades sem âncora não podem ficar mudas
+//
+// Achado ao vivo em produção (14/08/2026): "Quantas cargas foram coletadas
+// hoje na operação LUFT?" caía em `raciocinio_direto`, que NUNCA recebe o
+// catálogo — a LLM respondia em texto sem a opção de chamar
+// `consultar_estatisticas_cargas_luft`. `mereceDecomposicao` media só
+// COMPLEXIDADE (vários verbos, frase longa); não perguntava "isto pode ser um
+// pedido operacional?". Estes testes travam a correção: perguntas de fato
+// (quantas/quantos/qual/quais) e comandos (tipo === 'comando') agora chegam a
+// `plano_cognitivo`, onde `MotorRaciocinio.planejar()` de fato lista o
+// catálogo — sem inventar nenhuma âncora nova nem citar nome de habilidade
+// aqui (o teste verifica a ROTA, nunca qual skill a LLM escolheria).
+// ---------------------------------------------------------------------------
+
+test('pergunta curta de fato sobre dado operacional → plano_cognitivo, não raciocínio mudo', () => {
+  const casos = [
+    'Quantas cargas foram coletadas hoje na operação LUFT?',
+    'Qual motorista tem mais cargas?',
+    'Qual rota teve maior faturamento?',
+    'Qual o total faturado?',
+    'Quantas cargas o motorista LINO fez?',
+  ];
+  for (const frase of casos) {
+    const d = decidir(frase);
+    assert.equal(
+      d.rota,
+      'plano_cognitivo',
+      `"${frase}" tem que oferecer o catálogo à LLM, não responder direto sem tentar nenhuma habilidade`,
+    );
+  }
+});
+
+test('comando imperativo sem âncora (ler emails, enviar whatsapp) → plano_cognitivo', () => {
+  const casos = ['Leia meus emails recentes', 'Envie uma mensagem para o motorista'];
+  for (const frase of casos) {
+    const d = decidir(frase);
+    assert.equal(d.rota, 'plano_cognitivo', `"${frase}" é comando — não pode virar bate-papo`);
+  }
+});
+
+test('conversa casual continua em raciocínio direto, mesmo depois da correção', () => {
+  // Regressão do teste da seção 3 ("conversa casual não vira tarefa nem
+  // pergunta") — a correção do gate não pode transformar toda frase em
+  // plano_cognitivo, só as que parecem pedido de fato ou comando.
+  const casos = ['Oi', 'Conte uma curiosidade', 'Como você está?', 'Explique o que é logística'];
+  for (const frase of casos) {
+    const d = decidir(frase);
+    assert.equal(
+      d.rota,
+      'raciocinio_direto',
+      `"${frase}" é bate-papo — pagar planejamento aqui é custo sem propósito`,
+    );
+  }
+});
+
+test('âncoras determinísticas continuam vencendo antes do capability router (rota plano_local preservada)', () => {
+  // As 21 habilidades com âncora não podem regredir para plano_cognitivo —
+  // o caminho de ~5ms e custo zero tem que continuar sendo o primeiro a
+  // vencer quando existe.
+  assert.equal(decidir('vai chover hoje?').rota, 'plano_local');
+  assert.equal(decidir('crie uma pasta chamada Notas').rota, 'plano_local');
+  assert.equal(decidir('faça um diagnóstico do sistema').rota, 'plano_local');
+});

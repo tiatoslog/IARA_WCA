@@ -23,8 +23,15 @@ import {
 const URGENTE =
   /\b(urgente|urgencia|agora|imediato|parou|caiu|travou|fora do ar|critico|emergencia|prejuizo)\b/;
 const SAUDACAO = /^(oi|ola|bom dia|boa tarde|boa noite|e ai|opa|tudo bem)\b/;
+/**
+ * `leia`/`envie` entraram em 14/08/2026: sem eles, "leia meus emails" e "envie
+ * uma mensagem" classificavam como `tipo: 'texto'` — a mesma forma de conversa
+ * casual — e a `FuncaoExecutiva` nunca oferecia o catálogo à LLM para essas
+ * frases (ver `mereceDecomposicao`). O verbo já existia como infinitivo
+ * (`enviar`); faltava a forma imperativa que uma pessoa realmente digita.
+ */
 const COMANDO =
-  /^(abre|abrir|roda|rodar|executa|executar|lista|listar|mostra|mostrar|gera|gerar|cria|criar|manda|enviar)\b/;
+  /^(abre|abrir|roda|rodar|executa|executar|lista|listar|mostra|mostrar|gera|gerar|cria|criar|manda|enviar|envie|leia|ler)\b/;
 const DOCUMENTO = /\b(pdf|planilha|xlsx|csv|documento|contrato|anexo|arquivo|nota fiscal|cte|ct-e)\b/;
 
 /**
