@@ -1,0 +1,107 @@
+{
+  "fase": "depois",
+  "url": "http://127.0.0.1:3077",
+  "raiz": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-jHCu6h\\casa",
+  "marca": "fix",
+  "decorrido_ms": 40073,
+  "rodadas": [
+    {
+      "n": 1,
+      "marca": "fixr1",
+      "envio_a": 1786879119754,
+      "envio_b": 1786879119780,
+      "desalinhamento_ms": 26,
+      "fala_de_a_concluida_em": 1786879123827,
+      "houve_corrida": true
+    }
+  ],
+  "corrida": {
+    "n": 1,
+    "marca": "fixr1",
+    "envio_a": 1786879119754,
+    "envio_b": 1786879119780,
+    "desalinhamento_ms": 26,
+    "fala_de_a_concluida_em": 1786879123827,
+    "houve_corrida": true,
+    "alfa": "Alfa fixr1",
+    "beta": "Beta fixr1"
+  },
+  "pastas": {
+    "alfa": "Alfa fixr1",
+    "beta": "Beta fixr1"
+  },
+  "conversa": {
+    "A": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa fixr1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Alfa fixr1\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta fixr1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta fixr1\" em Documentos."
+      }
+    ],
+    "B": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta fixr1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta fixr1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa fixr1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Alfa fixr1\" na Área de Trabalho."
+      }
+    ]
+  },
+  "disco": {
+    "alfa": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-jHCu6h\\casa\\Desktop\\Alfa fixr1",
+    "beta": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-jHCu6h\\casa\\Documents\\Beta fixr1"
+  },
+  "snapshots_recebidos": {
+    "A": 17,
+    "B": 15
+  },
+  "checks": [
+    {
+      "id": "CT-00",
+      "ok": true,
+      "detalhe": "corrida observada na rodada 1 (desalinhamento 26 ms)"
+    },
+    {
+      "id": "CT-01",
+      "ok": true,
+      "detalhe": "o espelho A recebeu resposta sobre o próprio pedido"
+    },
+    {
+      "id": "CT-02",
+      "ok": true,
+      "detalhe": "a pergunta do espelho A continua visível na tela do espelho A"
+    },
+    {
+      "id": "CT-03",
+      "ok": true,
+      "detalhe": "disco: Alfa fixr1=C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-jHCu6h\\casa\\Desktop\\Alfa fixr1 | Beta fixr1=C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-jHCu6h\\casa\\Documents\\Beta fixr1"
+    },
+    {
+      "id": "CT-07",
+      "ok": true,
+      "detalhe": "18 fala(s) concluída(s): 18 endereçada(s), 0 com endereço órfão, 0 sem campo \"responde_a\""
+    }
+  ],
+  "veredito": "PASS"
+}

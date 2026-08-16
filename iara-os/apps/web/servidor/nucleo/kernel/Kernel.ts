@@ -122,6 +122,34 @@ const desconhecidosDe = (e: ExecucaoPlano): string[] =>
     .filter((p) => p.estado === 'desconhecido')
     .map((p) => `${p.descricao}: ${p.evidencia}`);
 
+/** Um pedido que chegou de outra tela enquanto esta sessão já trabalhava. */
+interface PedidoNaFila {
+  readonly texto: string;
+  readonly idLocal?: string;
+  readonly origem: string;
+}
+
+/**
+ * Quantos pedidos podem esperar a vez.
+ *
+ * Casado por construção com o teto de telas de `Porta.ts`, sem importá-lo: o
+ * Kernel não conhece o transporte, e não vai passar a conhecer por causa de um
+ * número. Como cada espelho ocupa no máximo uma vaga (o segundo pedido dele
+ * substitui o primeiro), quatro é o teto que a topologia já impõe — o valor
+ * aqui é a rede de segurança para o dia em que ela mudar sem ninguém avisar.
+ */
+const TETO_DA_FILA = 4;
+
+/**
+ * A origem de quem não tem tela: WhatsApp, ciclo autônomo, teste.
+ *
+ * Todos compartilham este rótulo de propósito. O que o campo precisa distinguir
+ * é "veio da MESMA tela que já está sendo atendida" — e nenhum destes veio de
+ * tela nenhuma, então nenhum deles preempta o turno de um operador que está
+ * olhando para a resposta.
+ */
+export const ORIGEM_SEM_TELA = 'sem-tela';
+
 export interface DependenciasKernel {
   sessao: string;
   idUsuario: string;
@@ -238,6 +266,19 @@ export class Kernel {
 
   private emAndamento: AbortController | null = null;
   /**
+   * DE QUAL ESPELHO é o turno em voo. `null` quando não há turno.
+   *
+   * É este campo que separa as duas preempções que o Kernel confundia. Ver
+   * `processar`.
+   */
+  private origemEmAndamento: string | null = null;
+  /**
+   * Pedidos de OUTROS espelhos esperando a vez. No máximo um por espelho: o
+   * segundo pedido da mesma tela substitui o primeiro, porque quem reescreve na
+   * própria tela está corrigindo o que pediu, não pedindo duas coisas.
+   */
+  private readonly fila: PedidoNaFila[] = [];
+  /**
    * A INTENÇÃO QUE FICOU ESPERANDO UM PARÂMETRO — ver
    * `ResultadoHabilidade.pendencia`. Vive UM turno: a próxima mensagem ou a
    * consome (curta, sem âncora → vira o valor do parâmetro e a habilidade
@@ -328,7 +369,39 @@ export class Kernel {
     if (!this.emAndamento) return;
     this.emAndamento.abort(new Error(motivo));
     this.emAndamento = null;
+    this.origemEmAndamento = null;
     this.dep.barramento.publicar({ tipo: 'TAREFA_CANCELADA', motivo });
+  }
+
+  /** Quantos pedidos de outras telas estão esperando. Leitura, para teste e
+   *  diagnóstico — ninguém enfileira por fora de `processar`. */
+  get pedidosNaFila(): number {
+    return this.fila.length;
+  }
+
+  /**
+   * Chama o próximo da fila, se houver. Roda no `finally` do turno que acabou,
+   * e é `await`ado ali de propósito: assim a promessa devolvida por `processar`
+   * só resolve quando a fila inteira drenou, e quem espera o fim do turno
+   * (`Porta.ts` religa o ciclo autônomo) espera o fim de verdade.
+   */
+  private async drenarFila(): Promise<void> {
+    // Preempção legítima já abriu outro turno: a fila espera mais um pouco.
+    if (this.emAndamento) return;
+    const proximo = this.fila.shift();
+    if (!proximo) return;
+    try {
+      await this.processar(proximo.texto, proximo.idLocal, proximo.origem);
+    } catch (erro) {
+      /* `processar` já trata as próprias falhas; o que chega aqui é o que
+         escapou do `finally` dele. Deixar subir mataria a drenagem e os
+         pedidos seguintes morreriam calados — que é o defeito original. */
+      this.dep.barramento.publicar({
+        tipo: 'FALHA',
+        modulo: 'fila_de_espelhos',
+        mensagem: `Pedido da fila não pôde ser atendido: ${(erro as Error).message}`,
+      });
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -340,7 +413,52 @@ export class Kernel {
    * ciclo autônomo, teste), o turno ganha um id próprio: a pergunta precisa de
    * identidade nos espelhos mesmo quando não nasceu numa tela.
    */
-  async processar(texto: string, idLocal?: string): Promise<void> {
+  async processar(texto: string, idLocal?: string, origem: string = ORIGEM_SEM_TELA): Promise<void> {
+    /**
+     * DUAS PREEMPÇÕES QUE ERAM UMA SÓ — o CC-01 (16/08/2026).
+     *
+     * "Chegou mensagem nova, cancele o turno" está certo quando quem manda é a
+     * MESMA tela: a pessoa reescreveu, mudou de ideia, corrigiu o pedido. A
+     * resposta do turno velho não interessa mais a ninguém.
+     *
+     * Está errado quando quem manda é OUTRA tela. Uma sessão tem um kernel e
+     * até quatro espelhos; o operador no computador e no celular são a mesma
+     * pessoa, mas não são o mesmo pedido. O turno morria calado e a fala do
+     * turno vencedor ia para a sessão inteira — a tela que perdeu a corrida
+     * exibia "Pronto, criei a pasta Beta em Documentos" como resposta a um
+     * pedido de criar Alfa na Área de Trabalho. Medido no navegador, com duas
+     * abas e 42 ms de desalinhamento: o efeito de Alfa ACONTECEU no disco, e
+     * foi só a resposta dele que se perdeu. Mentira operacional das piores,
+     * porque o mundo dava razão à IARA e a tela não.
+     *
+     * Agora o pedido de outra tela ESPERA A VEZ. Serializar é o que torna
+     * verdadeira a frase que já estava escrita mais abaixo — "o turno cancelado
+     * não fala; quem fala é o turno novo" — porque agora ela só vale para
+     * turnos que a mesma tela substituiu.
+     */
+    if (this.emAndamento && this.origemEmAndamento !== origem) {
+      const jaEspera = this.fila.findIndex((x) => x.origem === origem);
+      if (jaEspera >= 0) {
+        this.fila[jaEspera] = { texto, idLocal, origem };
+        return;
+      }
+      if (this.fila.length >= TETO_DA_FILA) {
+        /* Recusa EXPLÍCITA. Descartar em silêncio sob pressão seria trocar o
+           defeito de lugar: em vez de responder a pergunta errada, não
+           responder e não contar. Mesmo canal do limite de vazão logo abaixo. */
+        this.dep.barramento.publicar({
+          tipo: 'FALHA',
+          modulo: 'fila_de_espelhos',
+          mensagem:
+            'Já há pedidos demais esperando nesta sessão. Este NÃO entrou na fila — ' +
+            'nada foi feito com ele. Mande de novo daqui a pouco.',
+        });
+        return;
+      }
+      this.fila.push({ texto, idLocal, origem });
+      return;
+    }
+
     this.cancelar('nova mensagem do operador');
 
     if (!this.vazao.permitir()) {
@@ -354,21 +472,28 @@ export class Kernel {
 
     const controle = new AbortController();
     this.emAndamento = controle;
+    this.origemEmAndamento = origem;
     const b = this.dep.barramento;
     b.novoTraco();
     const inicio = Date.now();
 
+    /**
+     * O prefixo `op:` é o que garante que um id vindo da rede nunca colida com
+     * o `randomUUID` das falas da IARA. Sem ele, um cliente que mandasse como
+     * `id_local` o id de uma resposta em curso faria a própria bolha e a fala
+     * da IARA disputarem a mesma linha da lista.
+     *
+     * Guardado em variável porque agora ele tem um SEGUNDO consumidor: toda
+     * fala deste turno viaja carimbada com ele em `responde_a`. É o que permite
+     * a um espelho recusar-se a apresentar como sua a resposta de outro pedido.
+     */
+    const idDaPergunta = idLocal ? `op:${idLocal}` : `op:${randomUUID()}`;
+
     try {
-      /**
-       * O prefixo `op:` é o que garante que um id vindo da rede nunca colida com
-       * o `randomUUID` das falas da IARA. Sem ele, um cliente que mandasse como
-       * `id_local` o id de uma resposta em curso faria a própria bolha e a fala
-       * da IARA disputarem a mesma linha da lista.
-       */
       b.publicar({
         tipo: 'MENSAGEM_RECEBIDA',
         texto,
-        id_mensagem: idLocal ? `op:${idLocal}` : `op:${randomUUID()}`,
+        id_mensagem: idDaPergunta,
       });
 
       // --- 1. Percepção -----------------------------------------------------
@@ -467,14 +592,24 @@ export class Kernel {
        * resolver adivinhar em vez de perguntar.
        */
       if (decisao.rota === 'esclarecer' && decisao.pergunta) {
-        const idPergunta = randomUUID();
-        b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idPergunta, texto: decisao.pergunta });
+        /* `idDaFala`, não `idPergunta`: o que nasce aqui é o id da FALA da IARA
+           — que por acaso é uma pergunta. A pergunta do operador é
+           `idDaPergunta`, e confundir as duas é o que este turno inteiro está
+           consertando. */
+        const idDaFala = randomUUID();
+        b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: idDaFala,
+          texto: decisao.pergunta,
+          responde_a: idDaPergunta,
+        });
         b.publicar({
           tipo: 'TAREFA_CONCLUIDA',
-          id_mensagem: idPergunta,
+          id_mensagem: idDaFala,
           texto: decisao.pergunta,
           rota: 'esclarecer',
           ms: Date.now() - inicio,
+          responde_a: idDaPergunta,
         });
         await this.registrarSemQuebrar('iara', decisao.pergunta, 'sistema_local');
         return;
@@ -572,7 +707,14 @@ export class Kernel {
 
       // --- 5. Resposta ------------------------------------------------------
       const idMensagem = randomUUID();
-      const texto_final = await this.comporResposta(plano, execucao, p, idMensagem, controle);
+      const texto_final = await this.comporResposta(
+        plano,
+        execucao,
+        p,
+        idMensagem,
+        idDaPergunta,
+        controle,
+      );
       if (controle.signal.aborted) return;
 
       b.publicar({
@@ -581,6 +723,7 @@ export class Kernel {
         texto: texto_final,
         rota: decisao.rota,
         ms: Date.now() - inicio,
+        responde_a: idDaPergunta,
       });
 
       await this.registrarSemQuebrar('iara', texto_final, this.destinoDe(decisao.rota));
@@ -609,11 +752,18 @@ export class Kernel {
         texto: this.mensagemHumanaDeFalha(mensagem),
         rota: 'falha',
         ms: Date.now() - inicio,
+        responde_a: idDaPergunta,
       });
     } finally {
-      if (this.emAndamento === controle) this.emAndamento = null;
+      if (this.emAndamento === controle) {
+        this.emAndamento = null;
+        this.origemEmAndamento = null;
+      }
       this.trabalho.encerrarTarefa();
       await this.dep.estado.transicionar('ocioso', null);
+      /* A vez do próximo espelho. Depois de `ocioso`, para que o turno da fila
+         não comece em cima do estágio do turno que acabou. */
+      await this.drenarFila();
     }
   }
 
@@ -1338,6 +1488,10 @@ export class Kernel {
     execucao: ExecucaoPlano,
     percepcao: ReturnType<MotorPercepcao['perceber']>,
     idMensagem: string,
+    /** O `op:` da pergunta deste turno — carimbo de `responde_a` em cada
+     *  trecho. Parâmetro, e não campo lido na hora de publicar: campo lido na
+     *  hora é exatamente o acoplamento implícito que produziu o CC-01. */
+    respondeA: string,
     controle: AbortController,
   ): Promise<string> {
     const b = this.dep.barramento;
@@ -1372,7 +1526,7 @@ export class Kernel {
       ]
         .filter(Boolean)
         .join('\n\n');
-      b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto });
+      b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto, responde_a: respondeA });
       return texto;
     }
 
@@ -1399,7 +1553,7 @@ export class Kernel {
         : falhas.length > 0
           ? `Não executei isso. ${falhas.join('; ')}. Nada foi alterado na máquina.`
           : 'Não consegui executar esse pedido e não tenho resultado para mostrar. Nada foi alterado.';
-      b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto });
+      b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto, responde_a: respondeA });
       return texto;
     }
 
@@ -1410,7 +1564,7 @@ export class Kernel {
           : 'Isso exige raciocínio aberto, e a camada de raciocínio está desligada — falta a chave da Anthropic no ambiente, ' +
             'e não há Ollama local configurado e alcançável. ' +
             'Prefiro dizer isso a improvisar. Local eu resolvo: clima, hora, infraestrutura, histórico de incidentes e busca.';
-      b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto });
+      b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto, responde_a: respondeA });
       return texto;
     }
 
@@ -1542,7 +1696,7 @@ export class Kernel {
           abriu = true;
           void this.dep.estado.transicionar('falando', 'raciocinio');
         }
-        b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto: acumulado });
+        b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto: acumulado, responde_a: respondeA });
       },
     });
 

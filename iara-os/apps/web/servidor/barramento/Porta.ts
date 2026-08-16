@@ -325,6 +325,11 @@ export function conectarOperador(socket: WebSocket): void {
                   texto,
                   rota: 'sistema_local',
                   ms: 0,
+                  /* Recado, não resposta: ninguém perguntou nada. `null` aqui é
+                     a afirmação honesta — e é o que impede a tela de encostar
+                     um lembrete embaixo de uma pergunta qualquer como se fosse
+                     a resposta dela. */
+                  responde_a: null,
                 });
                 /**
                  * Gravar no shard é o que faz o lembrete existir para a IARA
@@ -368,6 +373,8 @@ export function conectarOperador(socket: WebSocket): void {
                   texto: aviso.texto,
                   rota: 'sistema_local',
                   ms: 0,
+                  /* Mesma razão do lembrete: o vigia fala por conta própria. */
+                  responde_a: null,
                 });
                 void memoria
                   .registrar(dono.id_usuario, 'iara', aviso.texto, 'sistema_local')
@@ -603,7 +610,12 @@ export function conectarOperador(socket: WebSocket): void {
       if (minhaSessao) residente.ponte?.dirigirVozPara(minhaSessao);
       const kernel = residente.kernel;
       const r = residente;
-      void kernel.processar(pacote.texto, pacote.id_local).finally(() => {
+      /**
+       * A TELA DE ORIGEM viaja junto. É o que permite ao Kernel preemptar o
+       * turno de quem reescreveu e ENFILEIRAR o de quem é outra tela, em vez de
+       * matar os dois casos com a mesma regra — ver o CC-01 em `Kernel.processar`.
+       */
+      void kernel.processar(pacote.texto, pacote.id_local, minhaSessao?.id).finally(() => {
         /**
          * Religa APENAS o ciclo que ainda é o do residente. Se a última tela
          * fechou durante o turno, o close já fez `ciclo = null` — religar a

@@ -1,0 +1,99 @@
+{
+  "fase": "antes",
+  "url": "http://127.0.0.1:3077",
+  "raiz": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-94cAZe\\casa",
+  "marca": "ref3",
+  "decorrido_ms": 46003,
+  "rodadas": [
+    {
+      "n": 1,
+      "marca": "ref3r1",
+      "envio_a": 1786879009048,
+      "envio_b": 1786879009140,
+      "desalinhamento_ms": 92,
+      "fala_de_a_concluida_em": null,
+      "houve_corrida": true
+    }
+  ],
+  "corrida": {
+    "n": 1,
+    "marca": "ref3r1",
+    "envio_a": 1786879009048,
+    "envio_b": 1786879009140,
+    "desalinhamento_ms": 92,
+    "fala_de_a_concluida_em": null,
+    "houve_corrida": true,
+    "alfa": "Alfa ref3r1",
+    "beta": "Beta ref3r1"
+  },
+  "pastas": {
+    "alfa": "Alfa ref3r1",
+    "beta": "Beta ref3r1"
+  },
+  "conversa": {
+    "A": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa ref3r1 na área de trabalho"
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta ref3r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta ref3r1\" em Documentos."
+      }
+    ],
+    "B": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta ref3r1 nos Documentos"
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa ref3r1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta ref3r1\" em Documentos."
+      }
+    ]
+  },
+  "disco": {
+    "alfa": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-94cAZe\\casa\\Desktop\\Alfa ref3r1",
+    "beta": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-94cAZe\\casa\\Documents\\Beta ref3r1"
+  },
+  "snapshots_recebidos": {
+    "A": 14,
+    "B": 13
+  },
+  "checks": [
+    {
+      "id": "CT-00",
+      "ok": true,
+      "detalhe": "corrida observada na rodada 1 (desalinhamento 92 ms)"
+    },
+    {
+      "id": "CT-01",
+      "ok": false,
+      "detalhe": "o espelho A pediu \"Alfa ref3r1\", não recebeu resposta sobre ele, e a última fala da IARA na tela dele é \"Pronto, criei a pasta \"Beta ref3r1\" em Documentos.\""
+    },
+    {
+      "id": "CT-02",
+      "ok": true,
+      "detalhe": "a pergunta do espelho A continua visível na tela do espelho A"
+    },
+    {
+      "id": "CT-03",
+      "ok": true,
+      "detalhe": "disco: Alfa ref3r1=C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-94cAZe\\casa\\Desktop\\Alfa ref3r1 | Beta ref3r1=C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-94cAZe\\casa\\Documents\\Beta ref3r1"
+    },
+    {
+      "id": "CT-07",
+      "ok": false,
+      "detalhe": "12 fala(s) concluída(s): 0 endereçada(s), 0 com endereço órfão, 12 sem campo \"responde_a\""
+    }
+  ],
+  "veredito": "FAIL"
+}

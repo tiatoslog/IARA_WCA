@@ -188,6 +188,21 @@ export interface FalaProjetada {
   readonly id: string;
   readonly texto: string;
   readonly concluida: boolean;
+  /**
+   * O ID DA PERGUNTA QUE ESTA FALA RESPONDE — o mesmo `op:` de
+   * `PerguntaProjetada.id`.
+   *
+   * Existe porque uma sessão tem UM kernel e até quatro telas, e o snapshot vai
+   * para todas. Sem este campo, cada espelho encostava a fala corrente no fim da
+   * própria lista, e a tela que tinha perdido a corrida exibia a confirmação do
+   * pedido alheio como se fosse a resposta do seu (CC-01, 16/08/2026 — ver
+   * `docs/prd/test-plan-cross-talk-espelhos.md`).
+   *
+   * `null` quando a fala não responde a ninguém: recado espontâneo, insight
+   * noturno, aviso do ciclo autônomo. Ausente em servidor antigo — o cliente
+   * degrada para o comportamento de antes, que é acrescentar no fim.
+   */
+  readonly responde_a?: string | null;
   readonly destino: string | null;
   readonly latencia_ms: number | null;
   readonly cache_lido: number;

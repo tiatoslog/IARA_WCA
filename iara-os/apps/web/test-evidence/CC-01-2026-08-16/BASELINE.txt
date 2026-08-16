@@ -1,0 +1,10 @@
+﻿BASELINE_ID: CC-01-2026-08-16
+branch: main
+commit: 6aa2d3f850c2f6e91567fb250728492339dcae26
+node: v22.17.0
+playwright: Version 1.62.1
+ram_livre_gb: 1.5
+working tree:
+ M iara-os/apps/web/tsconfig.json
+?? iara-os/apps/web/test-evidence/CAMPANHA-2026-08-16-0300/
+?? iara-os/apps/web/test-evidence/campanha-noturna-20260816-0300.log

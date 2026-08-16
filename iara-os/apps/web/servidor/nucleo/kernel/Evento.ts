@@ -144,13 +144,32 @@ export type EventoKernel =
       cache_lido: number;
       ms: number;
     })
-  | (EventoBase & { tipo: 'RESPOSTA_TRECHO'; id_mensagem: string; texto: string })
+  /**
+   * `responde_a` — a QUAL pergunta esta fala responde.
+   *
+   * Nasceu do CC-01 (16/08/2026): um kernel por operador, várias telas, e uma
+   * fala que saía para a sessão inteira sem dizer de quem era a pergunta. A
+   * tela que perdeu a corrida colava a confirmação alheia embaixo do próprio
+   * balão e apresentava aquilo como a resposta do que ELA tinha pedido.
+   *
+   * É o `id_mensagem` do `MENSAGEM_RECEBIDA` que abriu o turno — o mesmo `op:`
+   * que a projeção usa para a tela reconhecer a própria bolha. `null` quando a
+   * fala não responde a pergunta nenhuma (recado que a IARA dá por conta
+   * própria); nunca o id de uma pergunta que a sessão não viu.
+   */
+  | (EventoBase & {
+      tipo: 'RESPOSTA_TRECHO';
+      id_mensagem: string;
+      texto: string;
+      responde_a: string | null;
+    })
   | (EventoBase & {
       tipo: 'TAREFA_CONCLUIDA';
       id_mensagem: string;
       texto: string;
       rota: string;
       ms: number;
+      responde_a: string | null;
     })
   | (EventoBase & { tipo: 'TAREFA_CANCELADA'; motivo: string })
   | (EventoBase & { tipo: 'FALHA'; modulo: string; mensagem: string });

@@ -15,6 +15,7 @@
  * da `PonteProjecao` e transmite.
  */
 
+import { randomUUID } from 'node:crypto';
 import type { WebSocket } from 'ws';
 import type { MaquinaDoOperador } from '../../lib/execucao';
 import type { NivelLog, PacoteServidor } from '../../lib/protocolo';
@@ -29,6 +30,14 @@ export class SessaoOperador {
   private seq = 0;
   private timer: NodeJS.Timeout | null = null;
   private fechada = false;
+
+  /**
+   * A IDENTIDADE DESTA TELA. Não sai para o cliente e não identifica a pessoa:
+   * identifica o ESPELHO, para o Kernel poder distinguir "a mesma tela mandou de
+   * novo" de "outra tela mandou" — a distinção que faltava no CC-01. Vive o
+   * tempo do socket; reconexão é uma tela nova, e é isso mesmo que se quer.
+   */
+  readonly id = randomUUID();
 
   constructor(private readonly socket: WebSocket) {}
 

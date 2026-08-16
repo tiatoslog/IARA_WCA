@@ -83,6 +83,7 @@ test('um turno completo projeta todos os elos, cada um vindo do seu evento', () 
     texto: 'Hoje: 4 cargas.',
     rota: 'plano_cognitivo',
     ms: 900,
+    responde_a: 'op:teste',
   });
 
   const cadeia = compilador.compilar(estado.instantaneo(), 's-cadeia', 0).cadeia;
@@ -127,6 +128,7 @@ test('turno de conversa mostra só os elos que teve — sem plano e sem execuç�
     texto: 'Bom dia!',
     rota: 'raciocinio_direto',
     ms: 300,
+    responde_a: 'op:teste',
   });
 
   const cadeia = compilador.compilar(estado.instantaneo(), 's-cadeia', 0).cadeia;
@@ -158,6 +160,7 @@ test('recado autônomo (lembrete/vigia) não sobrescreve a resposta de um turno 
     texto: 'São 10:55.',
     rota: 'plano_local',
     ms: 40,
+    responde_a: 'op:teste',
   });
 
   // O recado chega DEPOIS, sem turno novo — exatamente como Porta.ts publica.
@@ -167,6 +170,8 @@ test('recado autônomo (lembrete/vigia) não sobrescreve a resposta de um turno 
     texto: 'Lembrete: reunião.',
     rota: 'sistema_local',
     ms: 0,
+    // Recado espontaneo: nao responde a pergunta nenhuma.
+    responde_a: null,
   });
 
   const cadeia = compilador.compilar(estado.instantaneo(), 's-cadeia', 0).cadeia;

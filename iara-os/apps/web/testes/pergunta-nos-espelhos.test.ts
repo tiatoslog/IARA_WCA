@@ -69,11 +69,13 @@ test('a pergunta sobrevive ao turno: quem conecta depois vê o par, não a respo
     texto: 'São 22h10.',
     rota: 'local',
     ms: 12,
+    responde_a: 'op:um',
   });
 
   const s = compilador.compilar(estado.instantaneo(), 's-espelho', 0);
   assert.equal(s.fala?.texto, 'São 22h10.');
   assert.equal(s.pergunta?.texto, 'que horas são?');
+  assert.equal(s.fala?.responde_a, 'op:um');
 });
 
 test('turno novo substitui a pergunta — nunca se veem duas perguntas ao mesmo tempo', () => {

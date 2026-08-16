@@ -29,6 +29,12 @@ export interface Fala {
   papel: 'operador' | 'iara';
   texto: string;
   concluida: boolean;
+  /**
+   * Para falas da IARA: o id da bolha do operador que esta resposta responde.
+   * É o que decide ONDE ela entra na lista — ver `absorverFala`. Ausente em
+   * bolhas do operador e em recado que a IARA dá sem ninguém ter perguntado.
+   */
+  responde_a?: string | null;
   destino?: string;
   latencia_ms?: number;
   cache_lido?: number;
@@ -201,6 +207,7 @@ export function useIaraSocket(credencial: Credencial) {
         papel: 'iara',
         texto: f.texto,
         concluida: f.concluida,
+        responde_a: f.responde_a ?? null,
         destino: f.destino ?? undefined,
         latencia_ms: f.latencia_ms ?? undefined,
         cache_lido: f.cache_lido,
@@ -214,7 +221,29 @@ export function useIaraSocket(credencial: Credencial) {
         iniciada_em: i < 0 ? performance.now() : antes[i].iniciada_em,
       };
       if (i < 0) {
-        const proximo = [...antes, nova];
+        /**
+         * A RESPOSTA ENTRA JUNTO DA PERGUNTA QUE ELA RESPONDE — não no fim.
+         *
+         * Uma sessão tem até quatro espelhos e um kernel só. Quando duas telas
+         * pedem quase ao mesmo tempo, a bolha local desta tela já está na lista
+         * e a pergunta ECOADA da outra chega em seguida; encostar toda fala no
+         * fim faria a resposta da pergunta de cima aparecer embaixo da pergunta
+         * de baixo — que é como esta tela acabava exibindo a confirmação de um
+         * pedido que ninguém aqui fez (CC-01, 16/08/2026).
+         *
+         * Sem `responde_a` (servidor antigo, ou recado espontâneo) o
+         * comportamento é o de sempre: vai para o fim.
+         */
+        const alvo = nova.responde_a ? antes.findIndex((x) => x.id === nova.responde_a) : -1;
+        if (alvo < 0) {
+          const proximo = [...antes, nova];
+          return proximo.length > MAX_FALAS ? proximo.slice(-MAX_FALAS) : proximo;
+        }
+        // Depois da pergunta E das falas que já responderam a ela: um turno
+        // pode falar mais de uma vez, e a ordem entre elas é a de chegada.
+        let pos = alvo + 1;
+        while (pos < antes.length && antes[pos].responde_a === nova.responde_a) pos += 1;
+        const proximo = [...antes.slice(0, pos), nova, ...antes.slice(pos)];
         return proximo.length > MAX_FALAS ? proximo.slice(-MAX_FALAS) : proximo;
       }
       // `voz` entra na comparação porque ela chega DEPOIS, num snapshot em que

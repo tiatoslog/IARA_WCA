@@ -209,6 +209,11 @@ export class CompiladorSnapshot {
           id: e.id_mensagem,
           texto: e.texto,
           concluida: false,
+          /* Copiado do evento, nunca lido de `this.pergunta`: o campo existe
+             justamente porque "a pergunta corrente do compilador" e "a pergunta
+             que este turno está respondendo" podem ser duas coisas diferentes
+             quando duas telas falam. Ver o CC-01 em `Evento.ts`. */
+          responde_a: e.responde_a,
           destino: this.telemetria.rota,
           latencia_ms: null,
           cache_lido: this.telemetria.cache_lido,
@@ -242,6 +247,7 @@ export class CompiladorSnapshot {
           id: e.id_mensagem,
           texto: e.texto,
           concluida: true,
+          responde_a: e.responde_a,
           destino: e.rota,
           latencia_ms: e.ms,
           cache_lido: this.telemetria.cache_lido,
