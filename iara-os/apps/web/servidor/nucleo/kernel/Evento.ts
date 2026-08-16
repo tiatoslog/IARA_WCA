@@ -97,7 +97,12 @@ export interface Plano {
 // ---------------------------------------------------------------------------
 
 export type EventoKernel =
-  | (EventoBase & { tipo: 'MENSAGEM_RECEBIDA'; texto: string })
+  /**
+   * `id_mensagem` identifica a FRASE DO OPERADOR, do mesmo jeito que os eventos
+   * de resposta identificam a frase da IARA. É o que o compilador projeta em
+   * `SnapshotCognitivo.pergunta` para os espelhos que não digitaram nada.
+   */
+  | (EventoBase & { tipo: 'MENSAGEM_RECEBIDA'; texto: string; id_mensagem: string })
   | (EventoBase & { tipo: 'PERCEPCAO_CONCLUIDA'; percepcao: Percepcao })
   | (EventoBase & {
       tipo: 'DECISAO_TOMADA';

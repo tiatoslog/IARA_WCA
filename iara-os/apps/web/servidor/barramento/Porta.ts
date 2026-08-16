@@ -603,7 +603,7 @@ export function conectarOperador(socket: WebSocket): void {
       if (minhaSessao) residente.ponte?.dirigirVozPara(minhaSessao);
       const kernel = residente.kernel;
       const r = residente;
-      void kernel.processar(pacote.texto).finally(() => {
+      void kernel.processar(pacote.texto, pacote.id_local).finally(() => {
         /**
          * Religa APENAS o ciclo que ainda é o do residente. Se a última tela
          * fechou durante o turno, o close já fez `ciclo = null` — religar a

@@ -160,6 +160,37 @@ export function useIaraSocket(credencial: Credencial) {
    * A fala vem SUBSTITUÍDA a cada snapshot, nunca concatenada. Por isso um
    * pacote perdido não corrompe o texto: o próximo já traz o acumulado.
    */
+  /**
+   * A PERGUNTA VINDA DO SERVIDOR — o que faz a conversa existir nos espelhos.
+   *
+   * Idempotente por id: na tela que digitou, a bolha já está na lista com o
+   * mesmo `op:<id_local>` e nada acontece; nas outras, ela entra. É por isso que
+   * o id vem do cliente e não do servidor — comparar TEXTO falharia justamente
+   * quando alguém manda a mesma frase duas vezes seguidas, que é o que a pessoa
+   * faz quando acha que a primeira não chegou.
+   *
+   * Nunca ATUALIZA uma bolha existente: a frase do operador não muda depois de
+   * enviada. Só acrescenta o que ainda não está lá.
+   */
+  const absorverPergunta = useCallback((s: SnapshotCognitivo) => {
+    const p = s.pergunta;
+    if (!p) return;
+    setFalas((antes) => {
+      if (antes.some((x) => x.id === p.id)) return antes;
+      const proximo: Fala[] = [
+        ...antes,
+        {
+          id: p.id,
+          papel: 'operador',
+          texto: p.texto,
+          concluida: true,
+          iniciada_em: performance.now(),
+        },
+      ];
+      return proximo.length > MAX_FALAS ? proximo.slice(-MAX_FALAS) : proximo;
+    });
+  }, []);
+
   const absorverFala = useCallback((s: SnapshotCognitivo) => {
     if (!s.fala) return;
     const f = s.fala;
@@ -250,12 +281,16 @@ export function useIaraSocket(credencial: Credencial) {
           const b = JSON.stringify({ ...pacote.snapshot, seq: 0, instante: 0 });
           return a === b ? antes : pacote.snapshot;
         });
+        // A pergunta ANTES da fala: as duas podem chegar no mesmo snapshot
+        // aglutinado, e invertida a ordem a resposta apareceria acima da
+        // pergunta que a provocou.
+        absorverPergunta(pacote.snapshot);
         absorverFala(pacote.snapshot);
         return;
       }
       registrarLog(pacote.nivel, pacote.texto);
     },
-    [registrarLog, absorverFala],
+    [registrarLog, absorverPergunta, absorverFala],
   );
 
   useEffect(() => {
@@ -395,11 +430,19 @@ export function useIaraSocket(credencial: Credencial) {
         setConexao((c) => (c === 'conectado' ? 'reconectando' : c));
         return false;
       }
+      /**
+       * O id é gerado AQUI e mandado junto. O servidor o devolve em
+       * `snapshot.pergunta` prefixado por `op:` — é assim que esta tela
+       * reconhece a própria bolha quando ela volta projetada, e as OUTRAS telas
+       * do mesmo operador a acrescentam. Sem o id, o eco voltaria como uma
+       * segunda bolha idêntica logo abaixo da primeira.
+       */
+      const idLocal = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       setFalas((antes) => {
         const proximo: Fala[] = [
           ...antes,
           {
-            id: `op-${Date.now()}`,
+            id: `op:${idLocal}`,
             papel: 'operador',
             texto: limpo,
             concluida: true,
@@ -408,7 +451,7 @@ export function useIaraSocket(credencial: Credencial) {
         ];
         return proximo.length > MAX_FALAS ? proximo.slice(-MAX_FALAS) : proximo;
       });
-      socket.send(JSON.stringify({ tipo: 'mensagem', texto: limpo }));
+      socket.send(JSON.stringify({ tipo: 'mensagem', texto: limpo, id_local: idLocal }));
       return true;
     },
     [registrarLog],

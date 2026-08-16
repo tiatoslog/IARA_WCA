@@ -22,6 +22,7 @@ import {
   type EspacoCognitivo,
   type Expressao,
   type FalaProjetada,
+  type PerguntaProjetada,
   type PassoCadeia,
   type PlanoProjetado,
   type SnapshotCognitivo,
@@ -64,6 +65,12 @@ export class CompiladorSnapshot {
   private textoEmCurso = '';
   private fala: FalaProjetada | null = null;
   /**
+   * A pergunta do turno corrente. Sobrevive ao fim do turno de propósito: um
+   * espelho que conecta DEPOIS da resposta precisa ver o par pergunta/resposta,
+   * não uma resposta órfã. Zerada só quando o turno seguinte a substitui.
+   */
+  private pergunta: PerguntaProjetada | null = null;
+  /**
    * A cadeia cognitiva do turno — FASE A (14/08/2026). Acumulada dos MESMOS
    * eventos que o resto deste arquivo já absorvia; nenhum evento novo, nenhuma
    * pergunta ao kernel. Zerada quando `MENSAGEM_RECEBIDA` abre o turno
@@ -96,6 +103,7 @@ export class CompiladorSnapshot {
   private absorver(e: EventoKernel): void {
     switch (e.tipo) {
       case 'MENSAGEM_RECEBIDA':
+        this.pergunta = { id: e.id_mensagem, texto: e.texto };
         this.passosConcluidos.clear();
         this.falhou.clear();
         this.passoCorrente = -1;
@@ -311,6 +319,7 @@ export class CompiladorSnapshot {
       nuvem_indisponivel: base.nuvem_indisponivel,
       origem_raciocinio: base.origem_raciocinio,
       fala: this.fala,
+      pergunta: this.pergunta,
       // Cópia com arrays congelados por spread: o acumulador continua mutável
       // aqui dentro, mas o que sai pela fronteira é dado morto, como todo o
       // resto do snapshot.

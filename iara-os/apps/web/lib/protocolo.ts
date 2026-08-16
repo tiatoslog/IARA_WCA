@@ -73,7 +73,13 @@ export type PacoteCliente =
    * de desenvolvimento e são ignorados pelo servidor.
    */
   | { tipo: 'ola'; id_usuario: string; nome: string; token?: string }
-  | { tipo: 'mensagem'; texto: string }
+  /**
+   * `id_local` é o identificador que o CLIENTE deu à própria bolha antes de
+   * mandar. O servidor o devolve em `SnapshotCognitivo.pergunta` para que o
+   * aparelho que digitou reconheça a si mesmo e os outros espelhos acrescentem
+   * a frase. Opcional: cliente antigo não manda, e o servidor gera um id.
+   */
+  | { tipo: 'mensagem'; texto: string; id_local?: string }
   | { tipo: 'interromper' }
   /**
    * A ficha do operador. Não carrega `id_usuario`: o shard de destino é
@@ -183,7 +189,20 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
   if (obj.tipo === 'mensagem') {
     const texto = typeof obj.texto === 'string' ? obj.texto : '';
     if (!texto.trim()) return null;
-    return { tipo: 'mensagem', texto: texto.slice(0, 8000) };
+    /**
+     * O id do cliente é ACEITO, nunca confiado: ele volta para as telas do
+     * mesmo operador e para lugar nenhum além disso. Limitado no tamanho e
+     * restrito a caracteres inertes porque um id é chave de lista em React —
+     * e o que atravessa a fronteira sem forma declarada acaba encontrando um
+     * lugar onde a forma importava.
+     */
+    const bruto = typeof obj.id_local === 'string' ? obj.id_local.trim() : '';
+    const idLocal = /^[A-Za-z0-9_-]{1,64}$/.test(bruto) ? bruto : undefined;
+    return {
+      tipo: 'mensagem',
+      texto: texto.slice(0, 8000),
+      ...(idLocal ? { id_local: idLocal } : {}),
+    };
   }
   if (obj.tipo === 'interromper') {
     return { tipo: 'interromper' };

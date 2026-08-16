@@ -213,6 +213,36 @@ export interface FalaProjetada {
   readonly voz_prevista?: boolean;
 }
 
+/**
+ * A PERGUNTA CORRENTE DO OPERADOR — o outro lado de `FalaProjetada`.
+ *
+ * Ela existe por causa de um defeito relatado em 16/08/2026: uma mensagem
+ * mandada do celular não aparecia no computador. A causa não estava na rede.
+ * O snapshot projetava a fala da IARA para todos os espelhos, mas a frase do
+ * OPERADOR nunca saía do aparelho que a digitou — `useIaraSocket.enviar`
+ * acrescentava a bolha na lista local e mandava só o texto pelo socket.
+ *
+ * O resultado era uma tela que via a resposta sem a pergunta: no computador a
+ * IARA respondia sozinha, sobre um assunto que ninguém ali tinha levantado. Pior
+ * que feio — enganoso, porque um espelho que perde metade do diálogo mostra um
+ * diálogo que não aconteceu.
+ *
+ * Vive DENTRO do snapshot pela mesma razão que `fala`: um segundo canal para a
+ * tela transformaria "só existe o snapshot" em ficção. É a pergunta corrente, não
+ * o histórico — quem quiser transcrição passada lê a `MemoriaOperacional`, que é
+ * onde ela mora e é durável.
+ */
+export interface PerguntaProjetada {
+  /**
+   * Ecoa o `id_local` que o cliente mandou, prefixado por `op:`. É o que permite
+   * ao aparelho que digitou reconhecer a PRÓPRIA bolha em vez de duplicá-la, sem
+   * comparar texto — comparação de texto erraria em duas mensagens iguais
+   * seguidas, que é exatamente o caso de quem reenvia por achar que não chegou.
+   */
+  readonly id: string;
+  readonly texto: string;
+}
+
 export interface SnapshotCognitivo {
   readonly sessao: string;
   readonly seq: number;
@@ -238,6 +268,13 @@ export interface SnapshotCognitivo {
 
   /** `null` quando a IARA não está falando nem acabou de falar. */
   readonly fala: FalaProjetada | null;
+
+  /**
+   * A última frase do operador nesta sessão, para os espelhos que não a
+   * digitaram. `null` antes do primeiro turno — e ausente em servidor antigo,
+   * onde o cliente simplesmente continua mostrando só a própria bolha local.
+   */
+  readonly pergunta?: PerguntaProjetada | null;
 
   /**
    * A cadeia cognitiva do turno corrente (ou do último concluído). `null`

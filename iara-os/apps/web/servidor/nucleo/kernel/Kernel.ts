@@ -333,7 +333,14 @@ export class Kernel {
 
   // -------------------------------------------------------------------------
 
-  async processar(texto: string): Promise<void> {
+  /**
+   * `idLocal` é o identificador que a tela deu à própria bolha, quando veio de
+   * uma. Ele só serve para a frase voltar projetada e o aparelho de origem se
+   * reconhecer — nada aqui decide coisa alguma com base nele. Ausente (WhatsApp,
+   * ciclo autônomo, teste), o turno ganha um id próprio: a pergunta precisa de
+   * identidade nos espelhos mesmo quando não nasceu numa tela.
+   */
+  async processar(texto: string, idLocal?: string): Promise<void> {
     this.cancelar('nova mensagem do operador');
 
     if (!this.vazao.permitir()) {
@@ -352,7 +359,17 @@ export class Kernel {
     const inicio = Date.now();
 
     try {
-      b.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto });
+      /**
+       * O prefixo `op:` é o que garante que um id vindo da rede nunca colida com
+       * o `randomUUID` das falas da IARA. Sem ele, um cliente que mandasse como
+       * `id_local` o id de uma resposta em curso faria a própria bolha e a fala
+       * da IARA disputarem a mesma linha da lista.
+       */
+      b.publicar({
+        tipo: 'MENSAGEM_RECEBIDA',
+        texto,
+        id_mensagem: idLocal ? `op:${idLocal}` : `op:${randomUUID()}`,
+      });
 
       // --- 1. Percepção -----------------------------------------------------
       const p = this.percepcao.perceber(texto);

@@ -52,7 +52,7 @@ test('um turno completo projeta todos os elos, cada um vindo do seu evento', () 
     ],
   };
 
-  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'Quantas cargas hoje?' });
+  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'Quantas cargas hoje?', id_mensagem: 'op:teste' });
   barramento.publicar({
     tipo: 'PERCEPCAO_CONCLUIDA',
     percepcao: percepcao.perceber('Quantas cargas foram coletadas hoje?'),
@@ -113,7 +113,7 @@ test('turno de conversa mostra só os elos que teve — sem plano e sem execuç�
   const { barramento, compilador, estado } = montar();
   barramento.novoTraco();
 
-  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'bom dia' });
+  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'bom dia', id_mensagem: 'op:teste' });
   barramento.publicar({ tipo: 'PERCEPCAO_CONCLUIDA', percepcao: percepcao.perceber('bom dia') });
   barramento.publicar({
     tipo: 'DECISAO_TOMADA',
@@ -150,7 +150,7 @@ test('recado autônomo (lembrete/vigia) não sobrescreve a resposta de um turno 
   const { barramento, compilador, estado } = montar();
   barramento.novoTraco();
 
-  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'que horas são?' });
+  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'que horas são?', id_mensagem: 'op:teste' });
   barramento.publicar({ tipo: 'PERCEPCAO_CONCLUIDA', percepcao: percepcao.perceber('que horas são?') });
   barramento.publicar({
     tipo: 'TAREFA_CONCLUIDA',
@@ -183,13 +183,13 @@ test('turno novo substitui a cadeia — nada do turno anterior vaza', () => {
     origem: 'deterministico',
     passos: [{ indice: 0, descricao: 'ler o relógio', habilidade: 'consultar_agenda', parametros: {} }],
   };
-  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'que horas são?' });
+  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'que horas são?', id_mensagem: 'op:teste' });
   barramento.publicar({ tipo: 'PLANO_CRIADO', plano });
   barramento.publicar({ tipo: 'PASSO_CONCLUIDO', passo: plano.passos[0], resumo: 'relógio local', ms: 2 });
   compilador.compilar(estado.instantaneo(), 's-cadeia', 0);
 
   barramento.novoTraco();
-  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'bom dia' });
+  barramento.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'bom dia', id_mensagem: 'op:teste' });
   barramento.publicar({ tipo: 'PERCEPCAO_CONCLUIDA', percepcao: percepcao.perceber('bom dia') });
 
   const cadeia = compilador.compilar(estado.instantaneo(), 's-cadeia', 0).cadeia;

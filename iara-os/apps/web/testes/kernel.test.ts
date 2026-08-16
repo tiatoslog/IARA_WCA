@@ -39,7 +39,7 @@ test('barramento entrega só a quem assinou o tipo', () => {
 
 test('barramento carimba seq de sessão e traço em todo evento', () => {
   const b = new BarramentoEventos('sessao-7');
-  const e = b.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'oi' });
+  const e = b.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'oi', id_mensagem: 'op:teste' });
 
   assert.equal(e.sessao, 'sessao-7');
   assert.equal(e.traco, b.tracoAtual);
@@ -62,11 +62,11 @@ test('assinante que lança não derruba o publicador', () => {
 
 test('novoTraco isola a trilha entre turnos', () => {
   const b = new BarramentoEventos('s1');
-  b.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'primeiro' });
+  b.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'primeiro', id_mensagem: 'op:teste' });
   const t1 = b.tracoAtual;
 
   b.novoTraco();
-  b.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'segundo' });
+  b.publicar({ tipo: 'MENSAGEM_RECEBIDA', texto: 'segundo', id_mensagem: 'op:teste' });
 
   assert.notEqual(b.tracoAtual, t1);
   assert.equal(b.trilhaAtual().length, 1);
