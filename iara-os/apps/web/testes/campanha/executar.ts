@@ -590,7 +590,11 @@ async function faseConcorrencia(motor: MotorVivo, marca: string): Promise<Result
  * Cada pedido roda com operador próprio para que uma recusa não contamine o
  * contexto da sondagem seguinte. Nada aqui vira desfecho: vira lista.
  */
-async function faseSondagem(motor: MotorVivo, notas: string[]): Promise<Lacuna[]> {
+async function faseSondagem(
+  motor: MotorVivo,
+  notas: string[],
+  fimDoOrcamento: number,
+): Promise<Lacuna[]> {
   const achadas: Lacuna[] = [];
   /* `--sondagens N` corta o levantamento — usado ao validar o próprio corredor,
      onde o que se quer provar é a mecânica, não a fila de evolução. O corte é
@@ -601,6 +605,19 @@ async function faseSondagem(motor: MotorVivo, notas: string[]): Promise<Lacuna[]
   }
   for (const [i, pedido] of SONDAGENS.slice(0, quantas).entries()) {
     const id = `SD-${String(i + 1).padStart(2, '0')}`;
+    /**
+     * O ORÇAMENTO VALE AQUI TAMBÉM, e a primeira versão esquecia disto.
+     *
+     * A sondagem roda DEPOIS do catálogo, e sem esta guarda ela somava o
+     * próprio tempo por cima de um orçamento já gasto — estourando o teto de
+     * quatro horas do Agendador de Tarefas. Nesse caso o sistema operacional
+     * mata o processo, e o relatório, que só é escrito no fim, nunca chega ao
+     * disco: uma noite inteira de medição vira nada, sem ninguém saber por quê.
+     */
+    if (Date.now() >= fimDoOrcamento) {
+      NAO_EXECUTADAS.push(`${id} (sondagem)`);
+      continue;
+    }
     const cliente = new ClienteBarramento({
       url: motor.url_ws,
       id_usuario: `${PREFIXO_ID}-sondagem${i}`,
@@ -885,7 +902,7 @@ async function principal(): Promise<number> {
     }
 
     anotar('sondagem de capacidades...');
-    LACUNAS.push(...(await faseSondagem(motor, notas)));
+    LACUNAS.push(...(await faseSondagem(motor, notas, fimDoOrcamento)));
 
     recolherJornais(motor, notas);
   } catch (erro) {
