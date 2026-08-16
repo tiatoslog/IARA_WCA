@@ -412,6 +412,88 @@ test('4b. a dedup por CHAVE, isolada: mesma origem de pedido colide sozinha', ()
   );
 });
 
+/**
+ * 4c. A DEDUP FUNCIONAVA E A IARA MENTIA SOBRE ELA.
+ *
+ * Os testes 4 e 4b provam o MECANISMO — a segunda reserva vira `duplicada`.
+ * Nenhum deles pergunta o que o operador OUVE quando isso acontece, e era ali
+ * que estava o defeito. Medido ao vivo na auditoria de 16/08/2026, pedindo
+ * "abra o Bloco de Notas" duas vezes seguidas:
+ *
+ *     "Não consegui executar esse pedido e não tenho resultado para mostrar.
+ *      Nada foi alterado."
+ *
+ * As duas frases eram falsas. A IARA tinha conseguido — o aplicativo estava
+ * aberto na tela — e o registro guardava a frase certa. O passo deduplicado era
+ * empilhado com `texto` vazio e estado `verificado`, e um passo assim não entra
+ * em NENHUMA das três listas que montam a resposta: nem saídas, nem falhas, nem
+ * desconhecidos. Caía no ramo de "plano que não produziu nada", que é outra
+ * coisa.
+ *
+ * "Nada foi alterado" era a parte cara: afirmação sobre o mundo, contradita
+ * pelo mundo. Um operador que a lê pede de novo, ou vai conferir à mão.
+ *
+ * Este caso trava a FALA, que é o que faltava. Se ele cair, a dedup voltou a
+ * ser silenciosa.
+ */
+test('4c. dedup é DITA ao operador, e nunca como "não consegui"', async () => {
+  const { registro } = jornal();
+  const mundo = new Mundo();
+  /**
+   * `escrita_nao_idempotente` de propósito, e a escolha é a reprodução fiel: a
+   * dedup que apareceu ao vivo foi a da JANELA DE DUPLO CLIQUE, não a da chave
+   * de idempotência — dois turnos distintos têm traços distintos e, por
+   * contrato, produzem chaves distintas (ver o teste 5, logo abaixo). É a
+   * semântica que `abrir_aplicativo` declara, pela razão que o manifesto dele
+   * dá: abrir duas vezes abre duas janelas.
+   */
+  const h = habilidadeDeLaboratorio({
+    id: 'lab_dedup_fala',
+    marca: 'd',
+    mundo,
+    executor: 'SUCESSO',
+    verificador: 'CONFERE_O_MUNDO',
+    semantica: 'escrita_nao_idempotente',
+  });
+
+  const primeiro = kernelDeEscrita({
+    habilidade: h,
+    usuario: 'u-dedup-fala',
+    sessao: 's-dedup-fala',
+    registro,
+  });
+  await primeiro.kernel.processar(PEDIDO);
+
+  /* Mesmo usuário, mesma sessão, mesmo registro: a segunda passagem colide na
+     chave de idempotência exatamente como o segundo "abra o Bloco de Notas". */
+  const segundo = kernelDeEscrita({
+    habilidade: h,
+    usuario: 'u-dedup-fala',
+    sessao: 's-dedup-fala',
+    registro,
+  });
+  await segundo.kernel.processar(PEDIDO);
+
+  const fala = segundo.falas.join('\n');
+
+  assert.ok(fala.length > 0, 'o turno deduplicado não falou nada');
+  assert.doesNotMatch(
+    fala,
+    /não tenho resultado para mostrar/i,
+    'a dedup voltou a ser reportada como "plano que não produziu nada"',
+  );
+  assert.doesNotMatch(
+    fala,
+    /nada foi alterado/i,
+    'afirmou que nada mudou no mundo — e o efeito da primeira passagem existe',
+  );
+  assert.match(fala, /já estava feito/i, 'não disse ao operador que o efeito já existia');
+  /* E a frase é para gente: o id da habilidade e o nome interno do estado
+     ficam na evidência, não na fala. */
+  assert.doesNotMatch(fala, /lab_dedup_fala/, 'vazou o id interno da habilidade na fala');
+  assert.doesNotMatch(fala, /\(verificada\)/, 'vazou o vocabulário do ciclo de vida na fala');
+});
+
 test('5. Caso C: duas INTENÇÕES com conteúdo igual são duas operações', () => {
   const { registro } = jornal();
   const base = {

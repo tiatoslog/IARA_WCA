@@ -874,11 +874,51 @@ export class Kernel {
       );
       if (!abertura.ok) {
         this.trabalho.registrarErro();
+        /**
+         * DEDUPLICAÇÃO CONTRA EFEITO JÁ VERIFICADO É UM RESULTADO, NÃO SILÊNCIO.
+         *
+         * Medido na auditoria de 16/08/2026, pedindo "abra o Bloco de Notas"
+         * duas vezes seguidas. O segundo pedido voltou em 17 ms com:
+         *
+         *   "Não consegui executar esse pedido e não tenho resultado para
+         *    mostrar. Nada foi alterado."
+         *
+         * As duas frases são falsas. A IARA CONSEGUIU — o aplicativo está
+         * aberto — e o registro tinha a frase certa guardada: `não repeti
+         * "abrir_aplicativo": <motivo>`. Ela nunca chegava ao operador porque
+         * o passo era empilhado com `texto` vazio, e um passo sem texto e com
+         * estado `verificado` não entra em NENHUMA das três listas que montam
+         * a resposta — nem saídas, nem falhas, nem desconhecidos. Sobrava o
+         * ramo de "plano que não produziu nada", que é outra coisa.
+         *
+         * "Nada foi alterado" era a parte cara: é afirmação sobre o mundo, e o
+         * mundo dizia o contrário. O comentário logo acima, em `abrirOperacao`,
+         * já tinha raciocinado exatamente sobre esse risco para `desconhecida`
+         * — o caso `verificada` escapou por não ter para onde ir.
+         *
+         * `verificado` é o único estado que precisa disto. `falhou` e
+         * `aguardando_confirmacao` já são contados por `falhasDe`, e
+         * `desconhecido` por `desconhecidosDe`.
+         */
+        /**
+         * A FRASE VAI EM PORTUGUÊS DE GENTE, o motivo cru fica na evidência.
+         *
+         * A primeira versão desta correção mandava `abertura.motivo` direto
+         * para a fala e o operador lia: `não repeti "abrir_aplicativo": efeito
+         * idêntico pedido há instantes (verificada)` — verdadeiro, e com o id
+         * da habilidade e o nome interno do estado no meio. Trocar uma frase
+         * falsa por um despejo de vocabulário do kernel é meio conserto: a
+         * `evidencia` existe exatamente para guardar isso, e é ela que o
+         * console técnico e o jornal mostram.
+         */
+        const jaAconteceu = abertura.estado === 'verificado';
         passos.push({
           descricao: passo.descricao,
           habilidade: passo.habilidade,
           estado: abertura.estado,
-          texto: '',
+          texto: jaAconteceu
+            ? `Isso já estava feito — ${passo.descricao.toLowerCase()}. Não repeti para não duplicar o efeito.`
+            : '',
           evidencia: abertura.motivo,
         });
         this.auditoria.registrar({
