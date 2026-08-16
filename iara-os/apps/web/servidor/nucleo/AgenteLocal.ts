@@ -43,6 +43,12 @@ import {
   type ProcessoMedido,
 } from './SondasDesempenho';
 import { enviarWhatsapp as enviarWhatsappGraph } from './ClienteWhatsapp';
+import { repositoriosDisponiveis, resolverRepositorio } from './RepositoriosAutorizados';
+import {
+  caminhoDoTranscript,
+  julgarSessao,
+  type VereditoSessao,
+} from './SessoesAgenteCodigo';
 
 /**
  * O que uma ação das mãos devolve.
@@ -433,6 +439,117 @@ type Pendencia = PendenciaEnergia | PendenciaWhatsapp;
 /** Assinatura compatível com `child_process.spawn` — injetável nos testes
  *  para que "confirmar desligamento" seja testável sem desligar nada. */
 export type Executor = (comando: string, argumentos: string[]) => void;
+
+// ---------------------------------------------------------------------------
+// Sessões de agente de código
+// ---------------------------------------------------------------------------
+
+/**
+ * Quanto se espera por uma falha de PARTIDA antes de responder ao operador.
+ *
+ * Não é tempo de trabalho: é tempo de manifestação de erro. Medido com o
+ * binário real (Claude Code 2.1.233) em 16/08/2026: o caso "não logado" sai em
+ * ~300 ms. Doze segundos cobrem uma máquina fria com folga e ainda cabem no
+ * teto da habilidade.
+ *
+ * `IARA_JANELA_AGENTE_MS` encurta a espera. Existe para a suíte: os casos de
+ * "processo que não sai" pagariam doze segundos CADA, e uma suíte lenta é uma
+ * suíte que alguém deixa de rodar. Não é para produção — lá o padrão é o certo.
+ */
+function janelaVeredito(): number {
+  const declarado = Number(process.env.IARA_JANELA_AGENTE_MS);
+  return Number.isFinite(declarado) && declarado > 0 ? declarado : 12_000;
+}
+
+/** Teto do registro de sessões. Sessão viva nunca é descartada. */
+const MAX_SESSOES_AGENTE = 20;
+
+/** O processo do agente, visto de fora. Estreito para poder ser dublê. */
+export interface ProcessoAgente {
+  readonly pid: number | null;
+  matar(): void;
+}
+
+/**
+ * Lança o agente e avisa quando ele sai. Injetável — é o que permite testar o
+ * ciclo inteiro sem depender de um binário instalado na máquina de quem roda a
+ * suíte.
+ */
+export type LancadorAgente = (
+  argumentos: string[],
+  diretorio: string,
+  aoSair: (codigo: number | null, saida: string, erro: string) => void,
+) => ProcessoAgente;
+
+/**
+ * O COMANDO nunca vem de parâmetro de habilidade — só do ambiente, e é a
+ * diferença entre configuração e injeção. `shell: false` fecha o resto: a
+ * instrução do operador viaja como UM argumento do array, e nem aspas nem `&&`
+ * nem `|` a transformam em outra coisa.
+ *
+ * POR QUE `claude.exe` NO WINDOWS, E NÃO `claude.cmd`. Descoberto pelo E2E com
+ * o binário real em 16/08/2026: `spawn('claude.cmd')` devolve **EINVAL**. Desde
+ * a CVE-2024-27980 o Node recusa executar `.cmd`/`.bat` sem `shell: true` — e
+ * `shell: true` aqui seria trocar um erro por uma vulnerabilidade, porque a
+ * instrução do operador passaria a ser interpretada pelo `cmd.exe`.
+ *
+ * O atalho que o npm instala (`claude.cmd`) só chama
+ * `node_modules/@anthropic-ai/claude-code/bin/claude.exe`. É esse executável
+ * nativo que se lança: sem shell, sem interpretação, sem EINVAL.
+ *
+ * Ele NÃO está no PATH (só o atalho está), então quem usa esta capacidade no
+ * Windows declara `IARA_COMANDO_AGENTE` com o caminho do `.exe`. Nada é
+ * adivinhado — a mesma disciplina de `OLLAMA_URL` e de todo o resto: sem
+ * declaração, a IARA falha dizendo exatamente o que falta.
+ */
+function comandoDoAgente(): string {
+  const declarado = (process.env.IARA_COMANDO_AGENTE ?? '').trim();
+  if (declarado) return declarado;
+  return process.platform === 'win32' ? 'claude.exe' : 'claude';
+}
+
+const lancadorAgenteReal: LancadorAgente = (argumentos, diretorio, aoSair) => {
+  const filho = spawn(comandoDoAgente(), argumentos, {
+    cwd: diretorio,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+    /* `shell: false` explícito: o padrão já é esse, e escrevê-lo impede que
+       alguém o "conserte" para true no dia em que o PATH der trabalho. */
+    shell: false,
+  });
+
+  let saida = '';
+  let erro = '';
+  filho.stdout?.on('data', (b: Buffer) => {
+    saida += b.toString();
+  });
+  filho.stderr?.on('data', (b: Buffer) => {
+    erro += b.toString();
+  });
+  /* ENOENT chega por evento, não por exceção — a mesma lição do `executorReal`.
+     Sem este ouvinte, um `claude` ausente derruba o processo inteiro. */
+  filho.on('error', (e: Error) => {
+    erro += e.message;
+    aoSair(-1, saida, erro);
+  });
+  filho.on('close', (codigo) => aoSair(codigo, saida, erro));
+
+  return { pid: filho.pid ?? null, matar: () => filho.kill() };
+};
+
+/** Uma sessão viva no registro deste processo. */
+interface SessaoAgenteViva {
+  readonly id: string;
+  readonly repositorio: string;
+  readonly caminho: string;
+  readonly idUsuario: string;
+  readonly iniciada_em: number;
+  saida: string;
+  erro: string;
+  codigoSaida: number | null;
+  encerradaPorMim: boolean;
+  processo: ProcessoAgente | null;
+}
 
 /**
  * O OUVINTE DE `error` NÃO É ZELO — é o que separa uma recusa de uma queda.
@@ -837,7 +954,36 @@ export class AgenteLocal {
      * verdade para o número de teste de ninguém.
      */
     private readonly enviadorWhatsapp: EnviadorWhatsapp = enviarWhatsappReal,
+    /**
+     * O lançador do agente de código. Injetável pela razão mais forte da lista:
+     * o binário `claude` pode não existir na máquina que roda a suíte, e o
+     * ciclo inteiro — abrir, mandar, acompanhar, encerrar — precisa ser
+     * provável mesmo assim. O caminho REAL é exercitado por um E2E à parte,
+     * contra o binário de verdade.
+     */
+    private readonly lancadorAgente: LancadorAgente = lancadorAgenteReal,
   ) {}
+
+  /** As sessões de agente de código deste processo, por id. */
+  private readonly sessoesAgente = new Map<string, SessaoAgenteViva>();
+
+  /**
+   * Construção NOMEADA para teste.
+   *
+   * O construtor tem dez dependências posicionais, e um teste que escreve nove
+   * `undefined` para alcançar a décima fica preso à ORDEM delas: basta alguém
+   * inserir uma injeção no meio da lista para que o dublê passe a substituir a
+   * dependência errada — em silêncio, com a suíte verde. O risco não é
+   * hipotético: aconteceu enquanto este arquivo era escrito, com duas frentes
+   * mexendo no mesmo construtor.
+   */
+  static paraTeste(opcoes: { lancadorAgente?: LancadorAgente }): AgenteLocal {
+    const agente = new AgenteLocal();
+    if (opcoes.lancadorAgente) {
+      (agente as unknown as { lancadorAgente: LancadorAgente }).lancadorAgente = opcoes.lancadorAgente;
+    }
+    return agente;
+  }
 
   private auditar(idUsuario: string, acao: string, permitido: boolean, detalhe: string): void {
     console.log(
@@ -1871,6 +2017,337 @@ export class AgenteLocal {
       `${pendencia.id}: ${resultado.texto}`,
     );
     return { texto: resultado.texto, sucesso: resultado.ok };
+  }
+
+  // -------------------------------------------------------------------------
+  // Sessões de agente de código (Claude Code)
+  // -------------------------------------------------------------------------
+
+  /**
+   * ABRE uma sessão e manda a primeira instrução.
+   *
+   * A IARA GERA o `--session-id` antes de lançar. Isso não é detalhe: significa
+   * que a identidade da sessão é conhecida ANTES de o processo existir, então
+   * qualquer relato que volte pode ser conferido contra ela. Extrair o id da
+   * saída faria o contrário — acreditar no processo sobre quem ele é.
+   *
+   * NÃO espera o agente terminar. Uma auditoria de código leva minutos e a
+   * habilidade tem teto de segundos; o que se espera é a JANELA DE VEREDITO
+   * ANTECIPADO — tempo suficiente para uma falha de partida (binário ausente,
+   * não logado, repositório recusado) aparecer. Passada a janela sem saída, o
+   * estado honesto é `trabalhando`, nunca "pronto".
+   */
+  async abrirSessaoAgente(
+    idUsuario: string,
+    pedidoRepositorio: string,
+    instrucao: string,
+  ): Promise<RelatoAcao> {
+    const repo = resolverRepositorio(pedidoRepositorio);
+    if (!repo) {
+      this.auditar(idUsuario, 'abrir_sessao_agente', false, `repo recusado: ${pedidoRepositorio.slice(0, 60)}`);
+      return {
+        ok: false,
+        texto:
+          `Não abro sessão em "${pedidoRepositorio.slice(0, 80)}": não é um repositório autorizado. ` +
+          `Hoje eu conheço: ${repositoriosDisponiveis()}.`,
+        prova: {
+          confirmado: false,
+          evidencia: 'fora da allowlist de repositórios; nenhum processo foi lançado',
+          motivo: 'nao_encontrado',
+        },
+        codigo_erro: 'PERMISSAO_NEGADA',
+      };
+    }
+
+    const id = randomUUID();
+    const sessao: SessaoAgenteViva = {
+      id,
+      repositorio: repo.apelido,
+      caminho: repo.caminho,
+      idUsuario,
+      iniciada_em: Date.now(),
+      saida: '',
+      erro: '',
+      codigoSaida: null,
+      encerradaPorMim: false,
+      processo: null,
+    };
+    this.sessoesAgente.set(id, sessao);
+    this.podarSessoesAgente();
+
+    const argumentos = [
+      '-p',
+      instrucao,
+      '--session-id',
+      id,
+      '--output-format',
+      'json',
+      /* Modo de permissão CONSERVADOR e explícito. O agente delegado não herda
+         autoridade nenhuma da IARA — ele é outro processo, com as próprias
+         travas, e quem o lança não pode afrouxá-las por conveniência. */
+      '--permission-mode',
+      'acceptEdits',
+    ];
+
+    try {
+      sessao.processo = this.lancadorAgente(argumentos, repo.caminho, (codigo, saida, erro) => {
+        sessao.codigoSaida = codigo;
+        sessao.saida += saida;
+        sessao.erro += erro;
+        sessao.processo = null;
+      });
+    } catch (erro) {
+      sessao.codigoSaida = -1;
+      sessao.erro = (erro as Error).message;
+    }
+
+    await this.esperarVereditoAntecipado(sessao);
+    return this.relatarSessao(sessao, 'abrir_sessao_agente');
+  }
+
+  /**
+   * MANDA outra instrução para uma sessão que já existe, com `--resume`.
+   *
+   * Recusa sessão de outro operador antes de qualquer coisa: o id é um UUID e
+   * não se adivinha, mas "difícil de adivinhar" nunca foi controle de acesso.
+   */
+  async enviarParaSessaoAgente(
+    idUsuario: string,
+    idSessao: string,
+    instrucao: string,
+  ): Promise<RelatoAcao> {
+    const sessao = this.sessaoAgenteDe(idUsuario, idSessao);
+    if (!sessao) return this.sessaoAgenteDesconhecida(idUsuario, idSessao);
+
+    if (sessao.processo) {
+      return {
+        ok: false,
+        texto:
+          `A sessão ${sessao.id} ainda está trabalhando no repositório ${sessao.repositorio}. ` +
+          'Espere ela terminar, ou me peça para encerrar.',
+        prova: {
+          confirmado: false,
+          evidencia: `processo ainda vivo (pid ${sessao.processo.pid ?? 'desconhecido'}); nada foi enviado`,
+          motivo: 'sem_meio_de_verificar',
+        },
+        codigo_erro: null,
+      };
+    }
+
+    sessao.saida = '';
+    sessao.erro = '';
+    sessao.codigoSaida = null;
+    sessao.encerradaPorMim = false;
+
+    const argumentos = [
+      '-p',
+      instrucao,
+      '--resume',
+      sessao.id,
+      '--output-format',
+      'json',
+      '--permission-mode',
+      'acceptEdits',
+    ];
+
+    try {
+      sessao.processo = this.lancadorAgente(argumentos, sessao.caminho, (codigo, saida, erro) => {
+        sessao.codigoSaida = codigo;
+        sessao.saida += saida;
+        sessao.erro += erro;
+        sessao.processo = null;
+      });
+    } catch (erro) {
+      sessao.codigoSaida = -1;
+      sessao.erro = (erro as Error).message;
+    }
+
+    await this.esperarVereditoAntecipado(sessao);
+    return this.relatarSessao(sessao, 'enviar_para_sessao_agente');
+  }
+
+  /** CONSULTA o estado — sem tocar em nada. É leitura, e a prova é o veredito. */
+  consultarSessaoAgente(idUsuario: string, idSessao?: string): RelatoAcao {
+    if (idSessao) {
+      const sessao = this.sessaoAgenteDe(idUsuario, idSessao);
+      if (!sessao) return this.sessaoAgenteDesconhecida(idUsuario, idSessao);
+      return this.relatarSessao(sessao, 'consultar_sessao_agente');
+    }
+
+    const minhas = [...this.sessoesAgente.values()].filter((s) => s.idUsuario === idUsuario);
+    if (minhas.length === 0) {
+      return {
+        ok: true,
+        texto: 'Não abri nenhuma sessão de agente de código nesta conversa.',
+        prova: { confirmado: true, evidencia: 'registro de sessões vazio para este operador' },
+        codigo_erro: null,
+      };
+    }
+    const linhas = minhas.map((s) => {
+      const v = this.julgar(s);
+      return `  ${s.id}  ${s.repositorio}  ${v.estado}`;
+    });
+    return {
+      ok: true,
+      texto: ['Sessões de agente de código:', ...linhas].join('\n'),
+      prova: { confirmado: true, evidencia: `${minhas.length} sessão(ões) no registro deste processo` },
+      codigo_erro: null,
+    };
+  }
+
+  /**
+   * ENCERRA. Matar o processo é um efeito, e o relato diz o que foi observado —
+   * nunca "encerrei" por ter chamado `kill`.
+   */
+  encerrarSessaoAgente(idUsuario: string, idSessao: string): RelatoAcao {
+    const sessao = this.sessaoAgenteDe(idUsuario, idSessao);
+    if (!sessao) return this.sessaoAgenteDesconhecida(idUsuario, idSessao);
+
+    if (!sessao.processo) {
+      return {
+        ok: true,
+        texto: `A sessão ${sessao.id} já não estava rodando. Não mexi em nada.`,
+        prova: { confirmado: true, evidencia: 'nenhum processo vivo para esta sessão antes do pedido' },
+        codigo_erro: null,
+      };
+    }
+
+    sessao.encerradaPorMim = true;
+    sessao.processo.matar();
+    this.auditar(idUsuario, 'encerrar_sessao_agente', true, sessao.id);
+    return {
+      ok: true,
+      texto: `Mandei encerrar a sessão ${sessao.id} no repositório ${sessao.repositorio}.`,
+      prova: {
+        confirmado: false,
+        evidencia: 'sinal de encerramento enviado ao processo; a saída dele ainda não foi observada',
+        motivo: 'sem_meio_de_verificar',
+      },
+      codigo_erro: null,
+    };
+  }
+
+  // --- apoio das sessões de agente ------------------------------------------
+
+  private sessaoAgenteDe(idUsuario: string, idSessao: string): SessaoAgenteViva | null {
+    const s = this.sessoesAgente.get((idSessao ?? '').trim());
+    /* Dono errado responde igual a inexistente: confirmar a existência de uma
+       sessão alheia já é vazamento. */
+    return s && s.idUsuario === idUsuario ? s : null;
+  }
+
+  private sessaoAgenteDesconhecida(idUsuario: string, idSessao: string): RelatoAcao {
+    this.auditar(idUsuario, 'sessao_agente', false, `desconhecida: ${String(idSessao).slice(0, 40)}`);
+    return {
+      ok: false,
+      texto: 'Não encontro essa sessão de agente de código nesta conversa.',
+      prova: {
+        confirmado: false,
+        evidencia: 'id não está no registro deste processo para este operador',
+        motivo: 'nao_encontrado',
+      },
+      codigo_erro: 'PARAMETRO_INVALIDO',
+    };
+  }
+
+  /**
+   * A JANELA DE VEREDITO ANTECIPADO. Curta de propósito: ela não existe para
+   * esperar o agente trabalhar, e sim para deixar uma falha de PARTIDA se
+   * manifestar antes de a IARA abrir a boca. Medido com o binário real: o caso
+   * "não logado" morre em ~300 ms.
+   */
+  private async esperarVereditoAntecipado(sessao: SessaoAgenteViva): Promise<void> {
+    const limite = Date.now() + janelaVeredito();
+    while (sessao.codigoSaida === null && Date.now() < limite) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+
+  private julgar(sessao: SessaoAgenteViva): VereditoSessao {
+    if (sessao.encerradaPorMim && sessao.codigoSaida !== null) {
+      return {
+        estado: 'desconhecida',
+        evidencia: 'eu encerrei esta sessão; não dá para saber o que ela teria concluído',
+        resultado: null,
+      };
+    }
+    return julgarSessao({
+      codigoSaida: sessao.codigoSaida,
+      saidaBruta: sessao.saida,
+      erroBruto: sessao.erro,
+      idEsperado: sessao.id,
+      transcriptExiste: existsSync(caminhoDoTranscript(homedir(), sessao.caminho, sessao.id)),
+    });
+  }
+
+  /**
+   * O RELATO. É aqui que o veredito vira frase, e a regra é a de `Verdade.ts`:
+   * só `concluida` autoriza afirmar que o trabalho aconteceu.
+   */
+  private relatarSessao(sessao: SessaoAgenteViva, acao: string): RelatoAcao {
+    const v = this.julgar(sessao);
+    this.auditar(sessao.idUsuario, acao, v.estado !== 'falhou', `${sessao.id}: ${v.estado}`);
+
+    if (v.estado === 'concluida') {
+      return {
+        ok: true,
+        texto:
+          `O Claude Code terminou no repositório ${sessao.repositorio}.\n\n${v.resultado}\n\n` +
+          `Sessão ${sessao.id}.`,
+        prova: { confirmado: true, evidencia: v.evidencia },
+        codigo_erro: null,
+      };
+    }
+
+    if (v.estado === 'trabalhando') {
+      return {
+        ok: true,
+        texto:
+          `A sessão ${sessao.id} está aberta e trabalhando no repositório ${sessao.repositorio}. ` +
+          'Ainda não terminou — me pergunte de novo daqui a pouco e eu confiro.',
+        prova: { confirmado: false, evidencia: v.evidencia, motivo: 'sem_meio_de_verificar' },
+        codigo_erro: null,
+      };
+    }
+
+    if (v.estado === 'falhou') {
+      /**
+       * A FALHA DE PARTIDA tem conserto e dono, e por isso ganha frase própria.
+       * `ENOENT`/`EINVAL` não são "o agente falhou": são "o programa não foi
+       * encontrado do jeito que dá para executá-lo nesta máquina" — e a pessoa
+       * que lê precisa saber que o conserto é declarar `IARA_COMANDO_AGENTE`,
+       * não tentar de novo. Ver `comandoDoAgente` para o porquê do `.exe`.
+       */
+      const naoLancou = /ENOENT|EINVAL|spawn/i.test(v.evidencia);
+      return {
+        ok: false,
+        texto: naoLancou
+          ? 'Não consegui iniciar o Claude Code neste computador: o programa não foi encontrado. ' +
+            'Instale com `npm install -g @anthropic-ai/claude-code` e, no Windows, declare ' +
+            '`IARA_COMANDO_AGENTE` com o caminho do `claude.exe` — o atalho `.cmd` não é executável direto.'
+          : `Não consegui trabalhar no repositório ${sessao.repositorio}: ${v.resultado ?? 'o agente falhou ao iniciar'}.`,
+        prova: { confirmado: false, evidencia: v.evidencia, motivo: 'divergente' },
+        codigo_erro: 'FALHA_NA_EXECUCAO',
+      };
+    }
+
+    return {
+      ok: false,
+      texto:
+        `Mandei o pedido para o Claude Code no repositório ${sessao.repositorio} e não consigo provar o que aconteceu. ` +
+        'Não vou dizer que deu certo sem ter como confirmar.',
+      prova: { confirmado: false, evidencia: v.evidencia, motivo: 'sem_meio_de_verificar' },
+      codigo_erro: null,
+    };
+  }
+
+  /** Teto do registro. Sessão velha e já encerrada sai; viva nunca sai. */
+  private podarSessoesAgente(): void {
+    if (this.sessoesAgente.size <= MAX_SESSOES_AGENTE) return;
+    for (const [id, s] of this.sessoesAgente) {
+      if (this.sessoesAgente.size <= MAX_SESSOES_AGENTE) break;
+      if (!s.processo) this.sessoesAgente.delete(id);
+    }
   }
 }
 

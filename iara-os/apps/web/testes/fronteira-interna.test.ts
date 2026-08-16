@@ -265,6 +265,22 @@ test('G3. o EFEITO EXTERNO só é alcançado a partir do portal ou do catálogo'
      * `habilidades/agenteLocal.ts` — já porteiro.
      */
     'servidor/nucleo/kernel/habilidades/integracoes.ts',
+    /**
+     * A DELEGAÇÃO A UM AGENTE DE CÓDIGO. Catálogo, como as duas acima: só
+     * alcançável por `Kernel.abrirOperacao`.
+     *
+     * Importa `AgenteLocal` porque é lá que mora o `spawn` do processo do
+     * Claude Code — a mesma razão de `habilidades/agenteLocal.ts`. O que este
+     * arquivo acrescenta ao risco: o processo lançado é AUTÔNOMO e edita
+     * arquivos. Por isso os dois verbos que fazem trabalho declaram
+     * `risco: 'alto'`, e risco alto exige `operador` como fonte de autorização
+     * no `PorteiroAutorizacao` — um plano emitido pela LLM não abre sessão.
+     *
+     * O diretório de trabalho nunca vem de parâmetro: é resolvido por APELIDO
+     * contra `RepositoriosAutorizados`, que é LEITURA INTERNA e não alcança o
+     * mundo. Ver `testes/repositorios-autorizados.test.ts`.
+     */
+    'servidor/nucleo/kernel/habilidades/agenteCodigo.ts',
     'servidor/canais/PortaWhatsapp.ts', // usa o portal; não importa o cliente
     'servidor/barramento/Porta.ts',
     'servidor/principal.ts',

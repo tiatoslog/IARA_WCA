@@ -17,6 +17,7 @@ import { HABILIDADES_OPERACIONAIS, prepararOperacionais } from './operacionais';
 import { HABILIDADES_DADOS } from './dados';
 import { HABILIDADES_INTEGRACAO } from './integracoes';
 import { HABILIDADES_AGENTE_LOCAL } from './agenteLocal';
+import { HABILIDADES_AGENTE_CODIGO } from './agenteCodigo';
 import { HABILIDADES_AGENDA } from './agenda';
 import { HABILIDADES_DIAGNOSTICO } from './diagnostico';
 import { HABILIDADES_INVESTIGACAO } from './investigacao';
@@ -28,6 +29,7 @@ export const CATALOGO: readonly Habilidade[] = [
   ...HABILIDADES_DADOS,
   ...HABILIDADES_INTEGRACAO,
   ...HABILIDADES_AGENTE_LOCAL,
+  ...HABILIDADES_AGENTE_CODIGO,
   ...HABILIDADES_AGENDA,
   ...HABILIDADES_DIAGNOSTICO,
   ...HABILIDADES_INVESTIGACAO,

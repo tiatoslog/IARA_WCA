@@ -225,6 +225,18 @@ export const LEITURA_EXTERNA: readonly string[] = [
 export const LEITURA_INTERNA: readonly string[] = [
   'servidor/nucleo/RagHistorico.ts', // lê o histórico de incidentes
   'servidor/nucleo/kernel/habilidades/dados.ts', // lê documentos
+  /**
+   * A allowlist de repositórios onde um agente de código pode trabalhar. Toca o
+   * disco só para VALIDAR o que a configuração declara: a pasta existe, é pasta,
+   * e tem `.git`. Nunca escreve, nunca lista diretório, e nunca descobre
+   * repositório sozinha — a lista vem de `IARA_REPOS_AGENTE` e nada mais.
+   *
+   * A validação é no disco de propósito: um apelido apontando para pasta
+   * inexistente ou para algo que não é repositório precisa ser recusado na
+   * LEITURA da configuração, alto e claro, e não descoberto quando o agente já
+   * estiver rodando no lugar errado.
+   */
+  'servidor/nucleo/RepositoriosAutorizados.ts',
 ];
 
 /**
@@ -259,6 +271,19 @@ export const CATALOGO: readonly string[] = [
    * passa. Ver `PodeFechar` em `MotorAnalise.ts`.
    */
   'servidor/nucleo/kernel/habilidades/investigacao.ts',
+  /**
+   * A delegação a um agente de código (Claude Code). Alcança o `AgenteLocal`
+   * pelo mesmo motivo que `agenteLocal.ts`: é ele quem tem as mãos, e o `spawn`
+   * do processo do agente mora lá, não aqui.
+   *
+   * O que ESTE arquivo acrescenta ao risco já coberto: o processo lançado é
+   * autônomo e edita arquivos. Por isso os dois verbos que fazem trabalho são
+   * `risco: 'alto'` — e risco alto exige `operador` como fonte de autorização no
+   * `PorteiroAutorizacao`, o que significa que um plano emitido pela LLM não
+   * abre sessão sozinho. O diretório de trabalho nunca vem de parâmetro: é
+   * resolvido por apelido contra `RepositoriosAutorizados`.
+   */
+  'servidor/nucleo/kernel/habilidades/agenteCodigo.ts',
 ];
 
 /**
