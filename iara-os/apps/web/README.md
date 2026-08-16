@@ -26,12 +26,20 @@ das perguntas operacionais nunca chegam ao modelo.
 
 | Camada | Onde decide | Latência medida | Custo |
 |---|---|---|---|
-| **1. Roteador semântico** | `nucleo/RoteadorIntencoes.ts` | microssegundos | zero |
+| **1. Percepção + porta de capacidade** | `kernel/Percepcao.ts` → `kernel/FuncaoExecutiva.ts` | microssegundos | zero |
 | **2. Ações nativas** | `nucleo/OrquestradorAcoes.ts` | 1–8 ms local, ~1,1 s com rede | zero |
 | **2b. RAG schema-only** | `nucleo/RagHistorico.ts` | ~4 ms | zero |
-| **3. Raciocínio (Claude)** | `nucleo/ClienteClaude.ts` | streaming | tokens |
+| **3. Raciocínio (cadeia de provedores)** | `nucleo/CadeiaDeRaciocinio.ts` | streaming | tokens |
 
-Números acima são de execução real, não estimativa.
+Números acima são de execução real, não estimativa — reconfirmados na auditoria
+de 15/08/2026 (`docs/auditoria/2026-08-15-auditoria-final-iara.md`): status do
+computador em 14 ms, inventário de pasta em 2 ms, RAG histórico em 4 ms.
+
+> A camada 1 já se chamou `nucleo/RoteadorIntencoes.ts`. Aquele módulo foi
+> dissolvido em 11/08/2026: ele calculava uma rota completa da qual o kernel só
+> lia o campo de sigilo, duplicando o reconhecimento que a `Percepcao` já fazia.
+> A parte com autoridade real sobreviveu como `kernel/Sigilo.ts`. A tabela
+> apontou para o arquivo inexistente até a auditoria de 15/08.
 
 ### Transparência espacial
 
@@ -228,6 +236,17 @@ Verificado em execução real: rotas local/RAG/clima/sigilo, Teoria da Mente
 motor sem recarregar a página, `tsc --noEmit` limpo, `next build` limpo, zero
 404 de sprite, zero erro no console do navegador.
 
-Não exercitado por falta de chave: o caminho de streaming do Claude
-(`ClienteClaude.ts`). O código está tipado e integrado; assim que a
-`ANTHROPIC_API_KEY` entrar no `.env.local`, ele é o próximo a validar.
+Atualizado pela auditoria de 15/08/2026 — relatório completo, com a medição de
+cada afirmação, em `docs/auditoria/2026-08-15-auditoria-final-iara.md`.
+
+O caminho de streaming da nuvem **foi** exercitado com chave real: a cadeia
+`anthropic → groq → gemini` troca de elo de verdade quando um provedor recusa.
+Também verificados em execução: abrir/fechar aplicativo com prova por contagem
+de processo, criar e reler arquivo, lembrete com data correta, pedido de
+desligamento exigindo confirmação explícita, e duas tentativas de prompt
+injection que não alcançaram a decisão.
+
+**Não verificados por falta de ambiente**, e portanto sem garantia: o pipeline
+de voz (exige aparelho e gesto do usuário), a cadeia celular → servidor → Braço
+(exige um braço pareado) e o Ollama (a máquina de teste não completou uma
+inferência em 150 s).
