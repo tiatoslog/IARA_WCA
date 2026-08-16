@@ -487,6 +487,18 @@ async function subir(): Promise<void> {
            * host, e healthcheck lento é deploy marcado como doente.
            */
           raciocinio: provedoresDeclarados(),
+          /**
+           * E como a IARA se autentica no Graph — pelo mesmo motivo das mãos e
+           * do cérebro. Em 15/08/2026 a planilha da operação parou com
+           * "Lifetime validation failed, the token is expired", e de fora o
+           * deploy parecia perfeito: o `MS_GRAPH_TOKEN` colado à mão vence em
+           * cerca de uma hora e ninguém o renova, enquanto a credencial de app
+           * (CLIENT_ID/TENANT_ID/SECRET) renova sozinha para sempre. Esta
+           * linha é a diferença entre as duas, visível sem login e sem
+           * segredo: é a frase que a própria função de renovação já devolvia
+           * para o log de subida.
+           */
+          graph: statusRenovacaoGraph,
         }),
       );
       return;
