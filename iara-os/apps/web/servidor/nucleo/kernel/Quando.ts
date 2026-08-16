@@ -18,11 +18,10 @@
  * "amanhã às 09:00" — porque o único jeito de o operador corrigir uma leitura
  * errada é ouvi-la antes da hora.
  *
- * LIMITE DECLARADO: dias da semana ("na segunda", "sexta que vem") não são
- * interpretados. Não é esquecimento — "segunda" é ambíguo entre a próxima e a
- * seguinte quando hoje É segunda, e resolver isso por convenção silenciosa
- * produziria exatamente o lembrete de hora inventada que o parágrafo acima
- * proíbe. Cai em `null`, e a IARA pergunta.
+ * DIAS DA SEMANA são interpretados desde 15/08/2026, com regra explícita —
+ * ver `diaDaSemana`. Antes disso eles caíam no chão em silêncio, e o resultado
+ * não era a pergunta que se pretendia: era um lembrete marcado para o dia
+ * errado, porque o "às 8h" da mesma frase continuava sendo lido.
  */
 
 /** Sem acento, minúsculo, espaços colapsados. */
@@ -166,11 +165,73 @@ function comoRelogio(t: string): Relogio | null {
 // 3. Dia — "hoje", "amanhã", "depois de amanhã"
 // ---------------------------------------------------------------------------
 
-function deslocamentoDeDia(t: string): { dias: number; nome: string } | null {
+/**
+ * Os dias da semana, na ordem de `Date.getDay()` (0 = domingo).
+ *
+ * O nome com hífen é o que a IARA DIZ de volta; as grafias aceitas incluem a
+ * forma curta ("segunda") e a com sufixo ("segunda-feira", "segunda feira").
+ * "terça" aparece sem acento porque o texto chega normalizado.
+ */
+const DIAS_DA_SEMANA: ReadonlyArray<{ nome: string; padrao: RegExp }> = [
+  { nome: 'domingo', padrao: /\bdomingo\b/ },
+  { nome: 'segunda-feira', padrao: /\bsegunda(-| )?(feira)?\b/ },
+  { nome: 'terça-feira', padrao: /\bterca(-| )?(feira)?\b/ },
+  { nome: 'quarta-feira', padrao: /\bquarta(-| )?(feira)?\b/ },
+  { nome: 'quinta-feira', padrao: /\bquinta(-| )?(feira)?\b/ },
+  { nome: 'sexta-feira', padrao: /\bsexta(-| )?(feira)?\b/ },
+  { nome: 'sabado', padrao: /\bsabado\b/ },
+];
+
+/**
+ * DIA DA SEMANA — "na segunda às 8h", "sexta que vem às 14h".
+ *
+ * ESTE BLOCO FECHA UM DEFEITO REAL (15/08/2026), e a história importa porque o
+ * comportamento anterior era o oposto do que o cabeçalho deste arquivo promete.
+ * Dias da semana não eram interpretados — a intenção era cair em `null` e
+ * deixar a IARA perguntar. Só que a frase "segunda-feira às 8h" tem um relógio
+ * DENTRO dela: o "às 8h" era lido, o "segunda-feira" caía no chão em silêncio,
+ * e o lembrete era marcado para amanhã. Num sábado, "sexta que vem às 14h"
+ * virava "amanhã às 14:00". Não era ausência de resposta: era hora inventada
+ * com cara de precisão — exatamente o que o parágrafo de abertura proíbe.
+ *
+ * A ambiguidade que motivou a omissão é real e tem UMA regra explícita aqui:
+ * o alvo é a PRÓXIMA ocorrência daquele dia, estritamente no futuro. Se hoje é
+ * segunda e alguém diz "segunda", são sete dias — quem quis dizer hoje diria
+ * "hoje".
+ *
+ * "QUE VEM" NÃO SOMA UMA SEMANA, e isso foi medido antes de virar código:
+ * numa sexta-feira, "sexta que vem" com +7 daria QUATORZE dias, que ninguém
+ * quer dizer; num sábado, "sexta que vem" daria 28/08 quando o natural é a
+ * sexta seguinte, 21/08. Em português falado a expressão quase sempre é só
+ * ênfase na próxima ocorrência — e é ela que a regra devolve.
+ *
+ * O rótulo devolve o dia E a data ("segunda-feira, 17/08"), porque é a única
+ * chance de o operador discordar antes da hora — e a data é o que desfaz
+ * qualquer dúvida sobre qual segunda.
+ */
+function diaDaSemana(t: string, agora: Date): { dias: number; nome: string } | null {
+  const alvo = DIAS_DA_SEMANA.findIndex((d) => d.padrao.test(t));
+  if (alvo < 0) return null;
+
+  let dias = (alvo - agora.getDay() + 7) % 7;
+  /* Mesmo dia da semana = a próxima, não hoje. */
+  if (dias === 0) dias = 7;
+
+  const data = new Date(agora);
+  data.setDate(data.getDate() + dias);
+  const dd = String(data.getDate()).padStart(2, '0');
+  const mm = String(data.getMonth() + 1).padStart(2, '0');
+
+  return { dias, nome: `${DIAS_DA_SEMANA[alvo].nome}, ${dd}/${mm},` };
+}
+
+function deslocamentoDeDia(t: string, agora: Date): { dias: number; nome: string } | null {
   if (/\bdepois de amanha\b/.test(t)) return { dias: 2, nome: 'depois de amanhã' };
   if (/\bamanha\b/.test(t)) return { dias: 1, nome: 'amanhã' };
   if (/\bhoje\b|\bainda hoje\b/.test(t)) return { dias: 0, nome: 'hoje' };
-  return null;
+  /* Depois dos relativos: "hoje" e "amanhã" são mais específicos que o nome do
+     dia, e uma frase que traga os dois ("amanhã, segunda") quis dizer amanhã. */
+  return diaDaSemana(t, agora);
 }
 
 // ---------------------------------------------------------------------------
@@ -187,7 +248,7 @@ export function interpretarQuando(bruto: string, agora = new Date()): Instante |
   const duracao = comoDuracao(t, agora);
   if (duracao) return duracao;
 
-  const dia = deslocamentoDeDia(t);
+  const dia = deslocamentoDeDia(t, agora);
   const hora = comoRelogio(t);
 
   /**

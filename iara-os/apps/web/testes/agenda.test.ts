@@ -388,3 +388,77 @@ test('"me lembro" e "isso me lembra o incidente" não marcam nada', () => {
   assert.ok(!p.perceber('isso me lembra o incidente de março').ancoras.includes('lembrete'));
   assert.ok(p.perceber('me lembre de ligar amanhã').ancoras.includes('lembrete'));
 });
+
+// ---------------------------------------------------------------------------
+// DIAS DA SEMANA — o defeito de 15/08/2026, e por que ele era pior que um
+// "não entendi".
+//
+// A operadora, num SÁBADO à noite, pediu: "me avisa na segunda-feira às 8h".
+// O interpretador não conhecia dias da semana — a intenção era cair em `null`
+// e a IARA perguntar. Só que o "às 8h" da MESMA frase continuava sendo lido, e
+// o "segunda-feira" caía no chão em silêncio: o lembrete foi marcado para
+// AMANHÃ (domingo). Hora certa, dia errado, com cara de precisão — o cenário
+// que o cabeçalho de `Quando.ts` existe para proibir.
+// ---------------------------------------------------------------------------
+
+/** Sábado, 15/08/2026, 21h. O mesmo instante do incidente. */
+const SABADO_NOITE = new Date(2026, 7, 15, 21, 0, 0);
+
+test('REGRESSÃO: "segunda-feira às 8h" num sábado marca a SEGUNDA, não amanhã', () => {
+  const r = interpretarQuando('me avisa na segunda-feira às 8h', SABADO_NOITE);
+  assert.ok(r, 'a frase precisa ser entendida');
+  assert.equal(r!.quando.getDate(), 17, 'dia 17 — a segunda-feira seguinte');
+  assert.equal(r!.quando.getMonth(), 7);
+  assert.equal(r!.quando.getHours(), 8);
+  assert.equal(r!.quando.getDay(), 1, 'e precisa ser mesmo uma segunda-feira');
+  // O rótulo carrega a data: é a chance de a operadora discordar antes da hora.
+  assert.match(r!.rotulo, /segunda-feira, 17\/08/);
+});
+
+test('as sete grafias, cada uma no próximo dia certo', () => {
+  const esperado: Array<[string, number, number]> = [
+    // frase, dia do mês, getDay()
+    ['domingo às 9h', 16, 0],
+    ['na segunda às 8h', 17, 1],
+    ['terça-feira às 8h', 18, 2],
+    ['quarta feira às 8h', 19, 3],
+    ['quinta às 8h', 20, 4],
+    ['sexta às 14h', 21, 5],
+    ['sábado às 10h', 22, 6],
+  ];
+  for (const [frase, dia, diaDaSemana] of esperado) {
+    const r = interpretarQuando(`me lembre ${frase} de ligar`, SABADO_NOITE);
+    assert.ok(r, `não entendeu: ${frase}`);
+    assert.equal(r!.quando.getDate(), dia, frase);
+    assert.equal(r!.quando.getDay(), diaDaSemana, frase);
+  }
+});
+
+test('o mesmo dia da semana significa a PRÓXIMA, nunca hoje', () => {
+  // Sábado pedindo "sábado": sete dias, não hoje — quem quis hoje diz "hoje".
+  const r = interpretarQuando('me lembre sábado às 10h', SABADO_NOITE);
+  assert.equal(r?.quando.getDate(), 22);
+});
+
+test('"que vem" não soma uma semana extra — medido antes de virar regra', () => {
+  // Num sábado, "sexta que vem" é a sexta seguinte (21), não a de 28.
+  const sabado = interpretarQuando('me lembre sexta que vem às 14h', SABADO_NOITE);
+  assert.equal(sabado?.quando.getDate(), 21);
+
+  // E numa SEXTA, "sexta que vem" são sete dias — nunca quatorze.
+  const sexta = new Date(2026, 7, 21, 10, 0, 0);
+  const r = interpretarQuando('me lembre sexta que vem às 14h', sexta);
+  assert.equal(r?.quando.getDate(), 28);
+});
+
+test('"hoje" e "amanhã" continuam vencendo o nome do dia na mesma frase', () => {
+  const r = interpretarQuando('me lembre amanhã às 8h', SABADO_NOITE);
+  assert.match(r!.rotulo, /amanhã/);
+  assert.equal(r?.quando.getDate(), 16);
+});
+
+test('sem relógio, o dia da semana sozinho continua sendo pergunta, não palpite', () => {
+  // A regra de ouro do módulo: sem hora, `null` — a IARA pergunta em vez de
+  // inventar um horário para a segunda-feira.
+  assert.equal(interpretarQuando('me lembre na segunda de ligar', SABADO_NOITE), null);
+});

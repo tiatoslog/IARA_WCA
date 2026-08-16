@@ -118,7 +118,16 @@ export const GEMINI: PerfilProvedorAberto = {
   base: 'https://generativelanguage.googleapis.com/v1beta/openai',
   variavelChave: 'GEMINI_API_KEY',
   variavelModelo: 'GEMINI_MODELO',
-  modeloPadrao: 'gemini-3-flash',
+  /**
+   * O ALIAS, não a versão — e a lição é de 15/08/2026, com a chave real na
+   * mão: o padrão era `gemini-3-flash`, nome que EU supus a partir do que se
+   * lê por aí, e a API respondeu 404 (`is not found for API version`). O
+   * catálogo real usa `gemini-2.5-flash`, `gemini-3.5-flash`… e o alias
+   * `gemini-flash-latest`, que sempre aponta para o Flash corrente. Fixar uma
+   * versão é assinar uma data de validade que ninguém vai lembrar de renovar;
+   * `GEMINI_MODELO` continua existindo para quem precisar fixar de propósito.
+   */
+  modeloPadrao: 'gemini-flash-latest',
 };
 
 export class ClienteCompativelOpenAI implements ProvedorRaciocinio {
