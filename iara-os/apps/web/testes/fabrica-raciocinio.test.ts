@@ -10,7 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { criarProvedorRaciocinio } from '../servidor/nucleo/FabricaRaciocinio';
+import { criarProvedorRaciocinio, provedoresDeclarados } from '../servidor/nucleo/FabricaRaciocinio';
 import { ClienteClaude } from '../servidor/nucleo/ClienteClaude';
 import { ClienteOllama } from '../servidor/nucleo/ClienteOllama';
 import { CadeiaDeRaciocinio } from '../servidor/nucleo/CadeiaDeRaciocinio';
@@ -196,4 +196,29 @@ test('UN-213. sem chave nenhuma: nada de cadeia, e o modo honesto continua de p�
       assert.equal(provedor.disponivel, false);
     },
   );
+});
+
+test('provedoresDeclarados: a lista que o /saude mostra, em ordem e sem segredo', async () => {
+  await comProcessEnv({ IARA_PROVEDOR: undefined }, () => {
+    assert.deepEqual(
+      provedoresDeclarados({
+        ANTHROPIC_API_KEY: CHAVE_VALIDA,
+        GROQ_API_KEY: CHAVE_GROQ,
+        GEMINI_API_KEY: CHAVE_GEMINI,
+        OLLAMA_URL: 'http://127.0.0.1:11434',
+      }),
+      ['anthropic', 'groq', 'gemini', 'ollama'],
+    );
+
+    /* O caso que o endpoint existe para tornar visível: nenhum cérebro
+       declarado — a IARA conversa mas não pensa, e de fora isso era
+       indistinguível de um deploy saudável. */
+    assert.deepEqual(provedoresDeclarados({}), []);
+
+    /* Provedor forçado: só ele, como na fábrica. */
+    assert.deepEqual(
+      provedoresDeclarados({ IARA_PROVEDOR: 'groq', ANTHROPIC_API_KEY: CHAVE_VALIDA }),
+      ['groq'],
+    );
+  });
 });

@@ -111,6 +111,56 @@ function tauriIcon(): Promise<void> {
   });
 }
 
+/**
+ * O `.ico` MULTIRRESOLUÇÃO — e por que ele não podia continuar faltando.
+ *
+ * Achado em 15/08/2026, com o PWA instalado no Windows: a janela e a barra de
+ * tarefas mostravam o ícone genérico do navegador em vez do rosto cromado, e
+ * `/favicon.ico` respondia 404 em toda carga da página. O manifesto e as tags
+ * `<link rel="icon">` apontam PNG — que serve para a aba e para o atalho do
+ * PWA —, mas o Windows tira o ícone da janela do favicon clássico, e um 404
+ * ali é o navegador caindo no ícone dele.
+ *
+ * O ICO é um contêiner: cabeçalho de 6 bytes, uma entrada de 16 por tamanho, e
+ * os PNGs inteiros logo depois. Não há dependência nova para isso — `sharp` já
+ * produz os PNGs, e o resto é aritmética de buffer. Quatro tamanhos porque o
+ * Windows escolhe conforme o lugar: 16 na barra de título, 32 na de tarefas,
+ * 48 no Explorer, 256 no atalho grande.
+ */
+async function montarIco(tamanhos: readonly number[]): Promise<Buffer> {
+  const imagens: Buffer[] = [];
+  for (const lado of tamanhos) {
+    imagens.push(await quadro(lado, 0, true));
+  }
+
+  const CABECALHO = 6;
+  const ENTRADA = 16;
+  const cabecalho = Buffer.alloc(CABECALHO);
+  cabecalho.writeUInt16LE(0, 0); // reservado
+  cabecalho.writeUInt16LE(1, 2); // 1 = ícone
+  cabecalho.writeUInt16LE(tamanhos.length, 4);
+
+  const entradas: Buffer[] = [];
+  let deslocamento = CABECALHO + ENTRADA * tamanhos.length;
+
+  tamanhos.forEach((lado, i) => {
+    const entrada = Buffer.alloc(ENTRADA);
+    /* 0 significa 256 no formato — um byte não guarda 256. */
+    entrada.writeUInt8(lado >= 256 ? 0 : lado, 0);
+    entrada.writeUInt8(lado >= 256 ? 0 : lado, 1);
+    entrada.writeUInt8(0, 2); // paleta: nenhuma
+    entrada.writeUInt8(0, 3); // reservado
+    entrada.writeUInt16LE(1, 4); // planos
+    entrada.writeUInt16LE(32, 6); // bits por pixel
+    entrada.writeUInt32LE(imagens[i].length, 8);
+    entrada.writeUInt32LE(deslocamento, 12);
+    deslocamento += imagens[i].length;
+    entradas.push(entrada);
+  });
+
+  return Buffer.concat([cabecalho, ...entradas, ...imagens]);
+}
+
 async function principal(): Promise<void> {
   try {
     await readFile(origem);
@@ -133,6 +183,11 @@ async function principal(): Promise<void> {
     await writeFile(path.join(icones, nome), await quadro(lado, margem, canto));
     console.log(`public/icones/${nome} (${lado}×${lado})${canto ? ' — canto 22%' : ''}`);
   }
+
+  /* O favicon clássico, na RAIZ — é lá que o navegador o procura sozinho, sem
+     nenhuma tag. Ver `montarIco` para o defeito que ele fecha. */
+  await writeFile(path.join(raiz, 'public', 'favicon.ico'), await montarIco([16, 32, 48, 256]));
+  console.log('public/favicon.ico (16, 32, 48, 256)');
 
   // A chapa que alimenta o `tauri icon` sai arredondada: o Windows desenha o
   // bitmap como recebe, então o canto tem de vir daqui.

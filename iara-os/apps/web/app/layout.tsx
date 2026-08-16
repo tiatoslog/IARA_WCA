@@ -36,7 +36,16 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
   },
   icons: {
+    /**
+     * O `.ico` VEM PRIMEIRO — achado com o PWA instalado no Windows
+     * (15/08/2026): a janela e a barra de tarefas mostravam o ícone genérico
+     * do navegador, e `/favicon.ico` respondia 404. Os PNG servem a aba e o
+     * atalho do PWA; o Windows tira o ícone da janela do favicon clássico, e
+     * um 404 ali é o navegador caindo no ícone dele. Ver `montarIco` em
+     * `scripts/gerar-icones.ts`, que agora gera os quatro tamanhos.
+     */
     icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48 256x256', type: 'image/x-icon' },
       { url: '/icones/icone-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icones/icone-512.png', sizes: '512x512', type: 'image/png' },
     ],

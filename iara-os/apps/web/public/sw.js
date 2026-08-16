@@ -19,9 +19,12 @@
  * todo mundo. Subiu a marca? Sobe a versão.
  *
  * v2 — 11/08/2026: a marca passou a ser a fotografia de cromo.
+ * v4 — 15/08/2026: nasceu o `/favicon.ico`. Quem instalou o PWA antes dele
+ *      ficou com o ícone genérico do navegador na janela e na barra de
+ *      tarefas do Windows; sem subir esta chave, continuaria assim.
  */
-const VERSAO = 'iara-v3';
-const CASCA = ['/', '/icones/icone-192.png', '/icones/icone-512.png'];
+const VERSAO = 'iara-v4';
+const CASCA = ['/', '/favicon.ico', '/icones/icone-192.png', '/icones/icone-512.png'];
 
 self.addEventListener('install', (evento) => {
   evento.waitUntil(

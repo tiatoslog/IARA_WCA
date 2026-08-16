@@ -70,6 +70,32 @@ export function criarProvedorRaciocinio(ambiente: Ambiente = process.env): Prove
   return new CadeiaDeRaciocinio(elos);
 }
 
+/**
+ * QUAIS CÉREBROS ESTE PROCESSO TEM, em ordem — para o `/saude`.
+ *
+ * Síncrona, barata e sem segredo: lê o ambiente, devolve apelidos. Nada de
+ * instanciar cliente nem sondar rede, porque quem chama é o healthcheck do
+ * host e um `/saude` lento vira um deploy marcado como doente.
+ *
+ * EXISTE POR CAUSA DE UM INCIDENTE (15/08/2026): a cota da Anthropic acabou, a
+ * IARA ficou inútil, e o `/saude` continuou respondendo `ok: true` — porque
+ * ele não conhecia a camada de raciocínio. É exatamente o argumento que o
+ * comentário de `dispositivos` já fazia ali: um deploy sem mãos é
+ * indistinguível de um saudável até alguém pedir alguma coisa. Sem cérebro,
+ * idem.
+ */
+export function provedoresDeclarados(ambiente: Ambiente = process.env): string[] {
+  const escolha = escolhaDeclarada(ambiente);
+  if (escolha !== 'auto') return [escolha];
+
+  const nomes: string[] = [];
+  if (configUtilizavel('ANTHROPIC_API_KEY', ambiente)) nomes.push('anthropic');
+  if (configUtilizavel(GROQ.variavelChave, ambiente)) nomes.push(GROQ.apelido);
+  if (configUtilizavel(GEMINI.variavelChave, ambiente)) nomes.push(GEMINI.apelido);
+  if (configUtilizavel('OLLAMA_URL', ambiente)) nomes.push('ollama');
+  return nomes;
+}
+
 /** O retrato que o `diagnosticar` mostra — espelha a decisão da fábrica. */
 export interface EstadoRaciocinio {
   origem: OrigemRaciocinio;

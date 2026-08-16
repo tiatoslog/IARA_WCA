@@ -38,6 +38,7 @@ import {
   transcricaoDisponivel,
 } from './nucleo/Transcricao';
 import { formatarCodigo, pareamento } from './nucleo/Pareamento';
+import { provedoresDeclarados } from './nucleo/FabricaRaciocinio';
 import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
 import { diagnosticoWhatsapp } from './canais/WhatsApp';
 import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
@@ -473,6 +474,19 @@ async function subir(): Promise<void> {
            */
           dispositivos: ponteDispositivos.total(),
           maos_no_motor: motorTemMaos(),
+          /**
+           * E onde está o CÉREBRO. Mesmo argumento das mãos, aprendido do jeito
+           * caro em 15/08/2026: a cota da Anthropic acabou, a IARA passou a
+           * responder "não consegui" a tudo, e este endpoint continuou dizendo
+           * `ok: true` — porque não conhecia a camada de raciocínio. Lista
+           * vazia aqui significa uma IARA que conversa mas não pensa, e isso
+           * precisa ser visível de fora, sem login.
+           *
+           * São APELIDOS de provedor, nunca chave: a leitura é do ambiente e
+           * não instancia nem sonda nada — este endpoint é o healthcheck do
+           * host, e healthcheck lento é deploy marcado como doente.
+           */
+          raciocinio: provedoresDeclarados(),
         }),
       );
       return;
