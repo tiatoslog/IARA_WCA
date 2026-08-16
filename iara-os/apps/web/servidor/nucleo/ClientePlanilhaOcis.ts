@@ -34,6 +34,20 @@
  */
 
 import XLSX from 'xlsx';
+import { classificarExcecaoGraph, classificarStatusGraph } from './ClienteGraph';
+
+/**
+ * O COMPLEMENTO de cada frase de erro — o que se estava TENTANDO fazer.
+ *
+ * Ele só aparece na frase quando é honesto (recurso ausente, permissão negada,
+ * serviço fora). Numa credencial expirada, `classificarStatusGraph` o descarta
+ * de propósito: o token venceu independentemente do que se queria com ele, e
+ * subordinar o fato à intenção de quem perguntou é o que produzia
+ * "não consegui localizar a planilha" para um 401.
+ */
+const LOCALIZAR = 'localizar a planilha de cargas';
+const LER_ABA = (aba: string): string => `ler a aba "${aba}" da planilha de cargas`;
+const BAIXAR = 'baixar o arquivo da planilha de cargas';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const TEMPO_LIMITE_MS = 15_000;
@@ -130,17 +144,23 @@ async function resolverItem(t: string): Promise<{ ok: true; loc: LocalizacaoItem
       { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) },
     );
     if (!resposta.ok) {
-      const corpo = await resposta.text().catch(() => '');
-      return { ok: false, motivo: `Graph recusou localizar a planilha (HTTP ${resposta.status}): ${corpo.slice(0, 200)}` };
+      /**
+       * A CATEGORIA DO ERRO SOBREVIVE. A versão anterior devolvia
+       * `Graph recusou localizar a planilha (HTTP 401): {"error":{...}}` — o
+       * JSON cru na bolha de chat, e um token expirado descrito como problema
+       * de localizar arquivo. Quem lê "não localizei" vai procurar a planilha
+       * no SharePoint; o arquivo está lá, o que venceu foi a credencial.
+       */
+      return { ok: false, motivo: classificarStatusGraph(resposta.status, LOCALIZAR).frase };
     }
     const dados = (await resposta.json()) as { id?: string; parentReference?: { driveId?: string } };
     if (!dados.id || !dados.parentReference?.driveId) {
-      return { ok: false, motivo: 'a Graph respondeu sem id/driveId da planilha' };
+      return { ok: false, motivo: 'A Graph respondeu sem o id da planilha — resposta inesperada, não é falta de acesso.' };
     }
     localizacaoCache = { driveId: dados.parentReference.driveId, itemId: dados.id };
     return { ok: true, loc: localizacaoCache };
   } catch (erro) {
-    return { ok: false, motivo: (erro as Error).message };
+    return { ok: false, motivo: classificarExcecaoGraph(erro, LOCALIZAR).frase };
   }
 }
 
@@ -159,8 +179,7 @@ async function lerRange(
       signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
     });
     if (!resposta.ok) {
-      const corpo = await resposta.text().catch(() => '');
-      return { ok: false, motivo: `Graph recusou ler a aba "${aba}" (HTTP ${resposta.status}): ${corpo.slice(0, 200)}` };
+      return { ok: false, motivo: classificarStatusGraph(resposta.status, LER_ABA(aba)).frase };
     }
     const dados = (await resposta.json()) as { values?: unknown[][] };
     return { ok: true, valores: dados.values ?? [] };
@@ -190,7 +209,7 @@ async function baixarEParsearArquivo(
       { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) },
     );
     if (!resposta.ok) {
-      return { ok: false, motivo: `Graph recusou o download do arquivo (HTTP ${resposta.status})` };
+      return { ok: false, motivo: classificarStatusGraph(resposta.status, BAIXAR).frase };
     }
     const buffer = Buffer.from(await resposta.arrayBuffer());
     const pasta = XLSX.read(buffer, { type: 'buffer' });
@@ -329,7 +348,10 @@ export async function cargasNoPeriodo(
   }
 
   const loc = await resolverItem(t);
-  if (!loc.ok) return { ok: false, texto: `Não consegui localizar a planilha: ${loc.motivo}`, cargas: [] };
+  /* O motivo JÁ é uma frase completa e com o sujeito certo — prefixar aqui com
+     "não consegui localizar a planilha" era o que transformava um token expirado
+     em problema de arquivo sumido. Ver `classificarStatusGraph`. */
+  if (!loc.ok) return { ok: false, texto: loc.motivo, cargas: [] };
 
   const resultado = await buscarLinhasReais(t, loc.loc);
   if (!resultado.ok) return { ok: false, texto: resultado.motivo, cargas: [] };
@@ -538,7 +560,7 @@ export async function todasAsCargas(): Promise<ResultadoTodasAsCargas> {
   }
 
   const loc = await resolverItem(t);
-  if (!loc.ok) return falhaNaLeitura(`Não consegui localizar a planilha: ${loc.motivo}.`);
+  if (!loc.ok) return falhaNaLeitura(loc.motivo);
 
   const resultado = await buscarLinhasReais(t, loc.loc);
   if (!resultado.ok) return falhaNaLeitura(`${resultado.motivo}.`);

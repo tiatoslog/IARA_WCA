@@ -127,14 +127,32 @@ export async function renovarTokenGraph(): Promise<
  * Idempotente: uma segunda chamada para o cronômetro anterior antes de
  * agendar de novo, então religar não duplica o laço.
  */
+/**
+ * COMO esta instalação se autentica na Graph, em uma frase.
+ *
+ * Extraída de dentro de `iniciarRenovacaoAutomaticaGraph` porque o 401 precisa
+ * dela: "a credencial expirou" tem consertos OPOSTOS nos dois modos. No
+ * automático é um problema de verdade (as credenciais de app pararam de
+ * funcionar); no manual é o comportamento esperado de um token de ~1h que
+ * ninguém renovou, e o conserto é configurar `MS_GRAPH_CLIENT_ID`,
+ * `MS_GRAPH_TENANT_ID` e `MS_GRAPH_CLIENT_SECRET` no host. Uma mensagem de erro
+ * que não distingue os dois manda a pessoa colar outro token que também vai
+ * vencer em uma hora.
+ */
+export function modoDeAutenticacaoGraph(): string {
+  if (!credenciaisApp()) {
+    return process.env.MS_GRAPH_TOKEN?.trim()
+      ? 'MS_GRAPH_TOKEN manual (sem credencial de app — renove à mão quando expirar, ou configure ' +
+          'MS_GRAPH_CLIENT_ID, MS_GRAPH_TENANT_ID e MS_GRAPH_CLIENT_SECRET para renovar sozinho)'
+      : 'desligado (sem MS_GRAPH_TOKEN nem credencial de app)';
+  }
+  return 'automático (client credentials — renova sozinho minutos antes de cada expiração)';
+}
+
 export function iniciarRenovacaoAutomaticaGraph(): string {
   pararRenovacaoAutomaticaGraph();
 
-  if (!credenciaisApp()) {
-    return process.env.MS_GRAPH_TOKEN?.trim()
-      ? 'MS_GRAPH_TOKEN manual (sem credencial de app — renove à mão quando expirar)'
-      : 'desligado (sem MS_GRAPH_TOKEN nem credencial de app)';
-  }
+  if (!credenciaisApp()) return modoDeAutenticacaoGraph();
 
   const agendar = async (): Promise<void> => {
     const r = await renovarTokenGraph();
@@ -155,7 +173,7 @@ export function iniciarRenovacaoAutomaticaGraph(): string {
   };
 
   void agendar();
-  return 'automático (client credentials — renova sozinho minutos antes de cada expiração)';
+  return modoDeAutenticacaoGraph();
 }
 
 /** Desliga o relógio, se estiver ligado. Chamado no encerramento do processo e entre testes. */
@@ -164,6 +182,110 @@ export function pararRenovacaoAutomaticaGraph(): void {
     clearTimeout(cronometroRenovacao);
     cronometroRenovacao = null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Classificação de falha — a categoria do erro sobrevive à tradução
+// ---------------------------------------------------------------------------
+
+/**
+ * POR QUE O GRAPH RECUSOU. Uma escala só, e ela mora aqui porque este é o
+ * módulo que conhece a semântica da Graph — a mesma razão de
+ * `classificarFalhaProvedor` morar na cadeia de raciocínio.
+ *
+ * O DEFEITO QUE ISTO FECHA (16/08/2026). A operadora pediu a planilha e leu:
+ *
+ *   "Não consegui localizar a planilha: Graph recusou localizar a planilha
+ *    (HTTP 401): {"error":{"code":"InvalidAuthenticationToken","message":
+ *    "Lifetime validation failed, the token is expired." ...
+ *
+ * Duas coisas erradas numa frase só. A primeira é a CATEGORIA: um token
+ * expirado virou "não localizei o arquivo". São problemas diferentes, com
+ * consertos diferentes e donos diferentes — quem lê "não localizei" vai
+ * procurar a planilha no SharePoint, mexer em permissão de pasta, perguntar
+ * para a equipe se alguém moveu o arquivo. O arquivo está lá; o que venceu foi
+ * a credencial.
+ *
+ * A segunda é o JSON CRU indo para a bolha de chat, contra o que o cabeçalho
+ * deste arquivo promete em voz alta: "o texto que chega ao operador é sempre
+ * REDIGIDO por este módulo — nunca o JSON cru da Graph". A promessa era
+ * verdadeira aqui e falsa no `ClientePlanilhaOcis`, que montava a própria
+ * mensagem sem passar por aqui. Contrato que vale num módulo e não vale no
+ * vizinho não é contrato.
+ */
+export type ClasseFalhaGraph =
+  /** A credencial venceu ou é inválida. Ninguém procura arquivo por causa disto. */
+  | 'credencial'
+  /** A credencial é válida e não alcança este recurso. */
+  | 'permissao'
+  /** A Graph respondeu, e o recurso não existe (ou não é visível a esta conta). */
+  | 'nao_encontrado'
+  /** A Graph respondeu com erro dela. Não é nosso, e tentar de novo pode servir. */
+  | 'servico'
+  /** Não houve resposta: rede, DNS, tempo esgotado. */
+  | 'rede';
+
+export interface FalhaGraph {
+  readonly classe: ClasseFalhaGraph;
+  /** Uma linha, em português, já sem corpo de JSON. */
+  readonly frase: string;
+}
+
+/**
+ * A frase que descreve a falha, com o SUJEITO certo.
+ *
+ * `oQueSeQueria` é o complemento honesto e só é usado onde ele é verdadeiro —
+ * em `nao_encontrado`. Nas outras classes ele não aparece, porque dizer "não
+ * consegui ler a planilha" quando a credencial venceu é subordinar o fato à
+ * intenção de quem perguntou.
+ */
+export function classificarStatusGraph(status: number, oQueSeQueria: string): FalhaGraph {
+  if (status === 401) {
+    return {
+      classe: 'credencial',
+      frase:
+        'A credencial do Microsoft 365 expirou (HTTP 401) — não é a planilha, é o acesso. ' +
+        `Como esta instalação se autentica: ${modoDeAutenticacaoGraph()}.`,
+    };
+  }
+  if (status === 403) {
+    return {
+      classe: 'permissao',
+      frase:
+        `A credencial do Microsoft 365 é válida mas não tem permissão para ${oQueSeQueria} ` +
+        '(HTTP 403) — falta escopo no app registrado no Azure.',
+    };
+  }
+  if (status === 404) {
+    return { classe: 'nao_encontrado', frase: `Não localizei ${oQueSeQueria} (HTTP 404).` };
+  }
+  if (status === 429) {
+    return {
+      classe: 'servico',
+      frase: 'O Microsoft 365 pediu para eu ir mais devagar (HTTP 429). Tente daqui a pouco.',
+    };
+  }
+  return {
+    classe: 'servico',
+    frase: `O Microsoft 365 respondeu com erro (HTTP ${status}) ao ${oQueSeQueria}.`,
+  };
+}
+
+/** Falha sem resposta HTTP: nunca é "não localizei" — não houve conversa. */
+export function classificarExcecaoGraph(erro: unknown, oQueSeQueria: string): FalhaGraph {
+  const bruto = erro instanceof Error ? erro.message : String(erro);
+  const tempoEsgotado = /timeout|abort|ETIMEDOUT/i.test(bruto);
+  return {
+    classe: 'rede',
+    frase: tempoEsgotado
+      ? `O Microsoft 365 não respondeu a tempo ao ${oQueSeQueria}.`
+      : `Não consegui falar com o Microsoft 365 para ${oQueSeQueria}: ${umaLinhaGraph(bruto)}.`,
+  };
+}
+
+/** Sem corpo de resposta, sem quebra de linha, com teto. */
+function umaLinhaGraph(bruto: string): string {
+  return bruto.replace(/\s+/g, ' ').trim().slice(0, 120);
 }
 
 interface RespostaGraphErro {
