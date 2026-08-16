@@ -197,6 +197,18 @@ interface AplicativoAutorizado {
  * commit revisado. As chaves são o que o reconhecedor procura na frase.
  */
 const APLICATIVOS: Record<string, AplicativoAutorizado> = {
+  /**
+   * SEM `moderno`, e a ausência é medida, não esquecimento. No Windows 11 o
+   * Bloco de Notas virou app da Store — a auditoria de 15/08/2026 observou um
+   * único pedido de abertura criar 2 processos e o fechamento educado ser
+   * ignorado, assinatura de UWP. No Windows 10 ele continua sendo o executável
+   * clássico. Marcar a linha resolveria a frase numa das duas plataformas e a
+   * estragaria na outra, e este arquivo não crava fato que não vale sempre.
+   *
+   * O que tornou a marca dispensável foi a segunda etapa de `fecharAplicativo`:
+   * acordar a janela e pedir de novo funciona nas duas classes, então o
+   * RESULTADO deixou de depender de a allowlist ter adivinhado a plataforma.
+   */
   'bloco de notas': { rotulo: 'Bloco de Notas', comando: 'notepad.exe', argumentos: [], processo: 'notepad.exe', fechavel: true },
   notepad: { rotulo: 'Bloco de Notas', comando: 'notepad.exe', argumentos: [], processo: 'notepad.exe', fechavel: true },
   /**
@@ -788,6 +800,102 @@ const sondaDiscoReal: SondaDisco = () =>
  */
 export type ExecutorAguardado = (comando: string, argumentos: string[]) => Promise<number>;
 
+/**
+ * ACORDAR A JANELA E PEDIR DE NOVO — a segunda etapa do fechamento educado.
+ *
+ * O PROBLEMA, medido na auditoria de 15/08/2026 com o Bloco de Notas do
+ * Windows 11: `taskkill` sem `/F` devolve código 0, o processo continua na
+ * tabela, e a IARA relatava honestamente que não conseguiu. Honesto e inútil —
+ * o operador pediu para fechar e o aplicativo continuou aberto.
+ *
+ * A CAUSA não é trabalho não salvo: é que aplicativo da Store fica SUSPENSO
+ * fora de foco. Suspenso, ele não processa a mensagem de fechamento que o
+ * `taskkill` educado enfileira, e não processa o `CloseMainWindow` também —
+ * que devolve `true` e não fecha (medido em 13/08).
+ *
+ * O CONSERTO é a ordem, não a força: `ShowWindow(SW_RESTORE)` seguido de
+ * `SetForegroundWindow` TIRA o processo da suspensão; aí ele volta a bombear a
+ * fila de mensagens, e o `CloseMainWindow` que vem depois é atendido como
+ * seria numa janela normal.
+ *
+ * O QUE ISTO NÃO É: um `/F` disfarçado. Nenhum processo é morto aqui. Se
+ * houver trabalho não salvo, o aplicativo acordado abre a caixa "deseja
+ * salvar?" e CONTINUA VIVO — e agora a caixa está na frente do operador, que é
+ * exatamente onde a decisão pertence. A frase de falha melhora junto: em vez de
+ * "dê uma olhada na janela", a IARA pode dizer que trouxe a janela para a
+ * frente e que ela está esperando resposta.
+ *
+ * Roubar o foco é um efeito visível, e é o efeito PEDIDO: ninguém manda fechar
+ * um aplicativo esperando que nada aconteça na tela.
+ *
+ * Devolve quantas janelas atenderam o pedido; `null` quando não há como tentar
+ * (outra plataforma, ou o PowerShell não subiu). `null` e `0` são coisas
+ * diferentes e a frase ao operador depende de qual foi.
+ */
+export type AcordarEFechar = (processo: string) => Promise<number | null>;
+
+/**
+ * O nome do processo vem SEMPRE da allowlist (`AplicativoAutorizado.processo`),
+ * nunca da frase do operador — `resolverAplicativo` mapeia frase para uma
+ * entrada fixa. Ainda assim ele é conferido contra esta expressão antes de
+ * entrar no script: o dia em que alguém acrescentar uma linha na allowlist com
+ * uma aspas dentro, a falha tem de ser um `null` honesto e não um comando a
+ * mais rodando como o operador.
+ */
+const NOME_DE_PROCESSO = /^[A-Za-z0-9_.-]{1,64}$/;
+
+const acordarEFecharReal: AcordarEFechar = (processo) =>
+  new Promise((resolver) => {
+    if (process.platform !== 'win32') {
+      resolver(null);
+      return;
+    }
+    if (!NOME_DE_PROCESSO.test(processo)) {
+      resolver(null);
+      return;
+    }
+    const semExtensao = processo.replace(/\.exe$/i, '');
+    /**
+     * `SW_RESTORE` (9) e não `SW_SHOW`: restaurar cobre também a janela
+     * minimizada, que é o estado mais comum de um app que ficou para trás.
+     * `Out-Null` em tudo porque a saída do P/Invoke poluiria o código de saída.
+     */
+    const script = [
+      "$ErrorActionPreference='SilentlyContinue';",
+      'Add-Type @"',
+      'using System;using System.Runtime.InteropServices;',
+      'public class IaraJanela{',
+      '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);',
+      '[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h,int c);}',
+      '"@;',
+      `$alvos = Get-Process -Name '${semExtensao}' -ErrorAction SilentlyContinue;`,
+      '$n = 0;',
+      'foreach ($p in $alvos) {',
+      '  if ($p.MainWindowHandle -ne [IntPtr]::Zero) {',
+      '    [IaraJanela]::ShowWindow($p.MainWindowHandle, 9) | Out-Null;',
+      '    [IaraJanela]::SetForegroundWindow($p.MainWindowHandle) | Out-Null;',
+      '    Start-Sleep -Milliseconds 250;',
+      '    if ($p.CloseMainWindow()) { $n++ }',
+      '  }',
+      '}',
+      'Write-Output $n;',
+    ].join('\n');
+
+    execFile(
+      'powershell',
+      ['-NoProfile', '-NonInteractive', '-Command', script],
+      { windowsHide: true, encoding: 'utf8', timeout: 15_000 },
+      (erro, saida) => {
+        if (erro) {
+          resolver(null);
+          return;
+        }
+        const n = Number.parseInt(String(saida).trim(), 10);
+        resolver(Number.isFinite(n) ? n : null);
+      },
+    );
+  });
+
 const executorAguardadoReal: ExecutorAguardado = (comando, argumentos) =>
   new Promise((resolver) => {
     const filho = spawn(comando, argumentos, { stdio: 'ignore', windowsHide: true });
@@ -954,6 +1062,12 @@ export class AgenteLocal {
      * verdade para o número de teste de ninguém.
      */
     private readonly enviadorWhatsapp: EnviadorWhatsapp = enviarWhatsappReal,
+    /**
+     * A segunda etapa do fechamento. Injetável pela mesma razão do executor de
+     * energia: provar que a IARA acorda a janela suspensa e pede de novo, sem
+     * roubar o foco da máquina que roda a suíte.
+     */
+    private readonly acordarEFechar: AcordarEFechar = acordarEFecharReal,
     /**
      * O lançador do agente de código. Injetável pela razão mais forte da lista:
      * o binário `claude` pode não existir na máquina que roda a suíte, e o
@@ -1300,7 +1414,61 @@ export class AgenteLocal {
     }
 
     const codigo = await this.executorAguardado('taskkill.exe', ['/IM', app.processo]);
-    const depois = await this.sonda(app.processo);
+    let depois = await this.sonda(app.processo);
+
+    /**
+     * SEGUNDA ETAPA — só quando a primeira não bastou.
+     *
+     * A ordem importa e é o inverso do instinto: primeiro o pedido educado que
+     * não mexe na tela de ninguém, e só se ele falhar é que a IARA vai
+     * incomodar o operador trazendo a janela para a frente. Aplicativo comum
+     * fecha no primeiro degrau e nunca chega aqui.
+     *
+     * Nada é forçado nesta etapa — ver `acordarEFecharReal`. O que ela faz é
+     * tirar o processo da suspensão para que ele possa ATENDER o mesmo pedido
+     * educado que já foi feito.
+     */
+    let acordadas: number | null = null;
+    if (depois !== null && depois.length > 0) {
+      acordadas = await this.acordarEFechar(app.processo);
+      if (acordadas !== null && acordadas > 0) {
+        /**
+         * ESPERA COM RE-SONDA, e não um `sleep` fixo — a primeira versão desta
+         * correção usava 700 ms e produziu um FALSO NEGATIVO na medição com
+         * três janelas reais: duas fecharam na hora, a terceira ainda estava
+         * desmontando, a sonda pegou o instante errado e a IARA relatou
+         * "continua na máquina". Vinte segundos depois não havia processo
+         * nenhum. Ela tinha conseguido e disse que não.
+         *
+         * Falso negativo custa menos que falso positivo, mas custa: o operador
+         * vai conferir à mão, ou pedir de novo, ou deixar de confiar no relato
+         * quando ele estiver certo. Sair no primeiro instante em que a tabela
+         * esvazia resolve os dois lados — rápido quando fechou, e sem prometer
+         * quando não fechou.
+         */
+        /**
+         * PRAZO POR RELÓGIO, não por soma de intervalos — e a distinção é um
+         * defeito que este próprio arquivo cometeu na primeira versão. O laço
+         * somava `INTERVALO_MS` a cada volta e parava "aos 6 s"; só que cada
+         * volta custa o intervalo MAIS a sonda, e a sonda é um `tasklist` de
+         * meio segundo. O teto de 6 s virava 13 s na prática, contra um corte
+         * de 20 s no Braço (`Braco.ts`) — a habilidade teria morrido por
+         * timeout em máquina um pouco mais lenta, e o operador veria "não
+         * respondeu" numa ação que estava dando certo.
+         *
+         * Um limite que não limita é pior que nenhum: ele passa a impressão de
+         * que o caso foi pensado.
+         */
+        const PRAZO_MS = 4_000;
+        const INTERVALO_MS = 400;
+        const limite = Date.now() + PRAZO_MS;
+        while (Date.now() < limite) {
+          await new Promise((r) => setTimeout(r, INTERVALO_MS));
+          depois = await this.sonda(app.processo);
+          if (depois === null || depois.length === 0) break;
+        }
+      }
+    }
 
     if (depois === null) {
       this.auditar(idUsuario, 'fechar_aplicativo', true, `${app.rotulo} (sem sonda)`);
@@ -1313,11 +1481,44 @@ export class AgenteLocal {
     }
 
     if (depois.length === 0) {
-      this.auditar(idUsuario, 'fechar_aplicativo', true, app.rotulo);
+      /**
+       * A frase distingue os dois degraus, e não é detalhe: "fechei" e "tive
+       * que trazer a janela para a frente para fechar" descrevem coisas
+       * diferentes acontecendo na tela de quem está lá. Quem viu a janela
+       * pular para a frente precisa ler a explicação disso.
+       */
+      const pelaJanela = acordadas !== null && acordadas > 0;
+      this.auditar(
+        idUsuario,
+        'fechar_aplicativo',
+        true,
+        pelaJanela ? `${app.rotulo} (acordado e fechado)` : app.rotulo,
+      );
       return {
         ok: true,
-        texto: `Pronto. Fechei ${artigoDe(app.rotulo)} ${app.rotulo}.`,
-        prova: { confirmado: true, evidencia: `${app.processo} sumiu da tabela de processos depois do pedido` },
+        /**
+         * O NÚMERO DE JANELAS VAI NA FRASE quando é mais de uma, e isso não é
+         * verbosidade: `fechar_aplicativo` fecha TODAS as janelas do
+         * aplicativo, inclusive as que o operador abriu para o trabalho dele e
+         * não mencionou no pedido. Medido na auditoria — o pedido "feche o
+         * Bloco de Notas" alcançou uma janela com um arquivo aberto que nada
+         * tinha a ver com o pedido.
+         *
+         * Antes da segunda etapa isso acontecia menos por acidente: janela
+         * suspensa sobrevivia. Agora que a habilidade funciona, o alcance dela
+         * ficou maior — e quem pediu tem direito de saber quantas fechou.
+         */
+        texto: pelaJanela
+          ? `Pronto. ${artigoDe(app.rotulo) === 'a' ? 'A' : 'O'} ${app.rotulo} ignorou o primeiro pedido, ` +
+            `então eu trouxe ${acordadas === 1 ? 'a janela' : `as ${acordadas} janelas`} para a frente e pedi de novo. ` +
+            (acordadas === 1 ? 'Fechou.' : `Fecharam todas as ${acordadas}.`)
+          : `Pronto. Fechei ${artigoDe(app.rotulo)} ${app.rotulo}.`,
+        prova: {
+          confirmado: true,
+          evidencia: pelaJanela
+            ? `${app.processo} sumiu da tabela de processos depois de ${acordadas} janela(s) acordada(s) e fechada(s)`
+            : `${app.processo} sumiu da tabela de processos depois do pedido`,
+        },
         codigo_erro: null,
       };
     }
@@ -1342,21 +1543,50 @@ export class AgenteLocal {
      * A recusa de forçar continua igual, e continua certa. O que muda é a IARA
      * parar de inventar o porquê.
      */
-    this.auditar(idUsuario, 'fechar_aplicativo', false, `${app.rotulo} resistiu`);
+    /**
+     * TERCEIRO DEGRAU: nem acordada a janela fechou.
+     *
+     * A REGRA DE 13/08 CONTINUA VALENDO AQUI, e a primeira versão desta
+     * correção a quebrou: eu escrevi "o aplicativo está segurando o fechamento,
+     * normalmente esperando você responder se quer salvar" — que é precisamente
+     * uma causa NÃO MEDIDA, plausível e tranquilizadora, o defeito que
+     * `fechar-aplicativo-honesto.test.ts` existe para impedir. Os dois testes
+     * ficaram vermelhos e estavam certos.
+     *
+     * O que esta frase pode afirmar é a SEQUÊNCIA — que foi observada — e mais
+     * nada. A classe do aplicativo continua sendo dita quando está declarada na
+     * allowlist (fato), e a hipótese do trabalho não salvo continua marcada
+     * como hipótese (não fato).
+     */
+    const tentouAcordar = acordadas !== null && acordadas > 0;
+    this.auditar(
+      idUsuario,
+      'fechar_aplicativo',
+      false,
+      `${app.rotulo} resistiu${tentouAcordar ? ' mesmo acordado' : ''}`,
+    );
     return {
       ok: false,
       texto:
         `Pedi para ${artigoDe(app.rotulo)} ${app.rotulo} fechar e o processo continua na máquina. ` +
+        (tentouAcordar
+          ? 'Trouxe a janela para a frente e pedi de novo — ela está aí na sua tela, e continuou aberta. '
+          : acordadas === null
+            ? 'Não consegui nem trazer a janela para a frente para insistir daqui. '
+            : `${artigoDe(app.rotulo) === 'a' ? 'Ela' : 'Ele'} não tem janela aberta para eu pedir o ` +
+              'fechamento: o que ficou é processo de fundo, sem tela. ') +
         (app.moderno
           ? `${artigoDe(app.rotulo) === 'a' ? 'Ela' : 'Ele'} é um aplicativo da Store, e esses ficam ` +
-            'suspensos quando não estão em foco: ignoram o pedido educado de fechamento. ' +
-            'Feche pela janela, ou me diga que eu abro para você fechar na tela.'
+            'suspensos quando não estão em foco — foi por isso que eu tentei acordar a janela antes ' +
+            'de parar. Por que ele resistiu mesmo acordado, eu não sei daqui.'
           : 'Não sei dizer o motivo daqui — pode ser trabalho não salvo esperando resposta na tela. ' +
             'Dê uma olhada na janela.') +
         ' Forçar eu não forço: se houvesse algo não salvo, você perderia.',
       prova: {
         confirmado: false,
-        evidencia: `${app.processo} ainda presente (${depois.length} processo(s)) depois do pedido de fechamento`,
+        evidencia:
+          `${app.processo} ainda presente (${depois.length} processo(s)) depois do pedido de fechamento` +
+          (tentouAcordar ? ` e de ${acordadas} janela(s) acordada(s)` : ''),
         motivo: 'divergente',
       },
       codigo_erro: 'FALHA_NA_EXECUCAO',
