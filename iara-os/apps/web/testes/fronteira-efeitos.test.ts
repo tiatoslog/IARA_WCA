@@ -158,6 +158,15 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       'desejado deste teste. Nenhuma escrita: a habilidade correspondente ' +
       'tem `idempotencia: leitura` e o cliente não conhece verbo de POST ' +
       'sobre a planilha.',
+    [path.join('servidor', 'nucleo', 'DiagnosticoProvedores.ts')]:
+      'LEITURA — a sonda do painel de cérebros (16/08/2026). Um GET que LISTA ' +
+      'modelos em cada provedor (`/v1/models`, `/api/tags`): corpo vazio, nada ' +
+      'criado, nada alterado, e NENHUM conteúdo do operador atravessa — o que ' +
+      'sai é a chave de API no cabeçalho, para o mesmo provedor que já a recebe ' +
+      'em toda inferência. Existe justamente para NÃO precisar gastar um pedido ' +
+      'de raciocínio só para descobrir se a chave é aceita. Não enxerga cota, e ' +
+      'o módulo diz isso em voz alta em vez de deixar a linha verde ser lida ' +
+      'como saldo — ver `combinar` e o teste do saldo não sondável.',
   };
 
   const comFetch = fontes(path.join(RAIZ, 'servidor'))

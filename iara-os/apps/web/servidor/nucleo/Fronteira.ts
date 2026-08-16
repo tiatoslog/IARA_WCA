@@ -199,6 +199,13 @@ export const LEITURA_EXTERNA: readonly string[] = [
   // nuvem de terceiro, não a máquina do operador —, e por isso o conteúdo que
   // sai daqui é o mesmo que já sai para a Anthropic hoje.
   'servidor/nucleo/ClienteCompativelOpenAI.ts',
+  // Sonda de diagnóstico dos provedores de raciocínio: um GET que LISTA modelos
+  // em cada um (`/v1/models`, `/api/tags`). Não gera texto, não gasta cota e não
+  // manda conteúdo do operador para lugar nenhum — o corpo da requisição é
+  // vazio, e o que sai é a chave de API no cabeçalho, para o mesmo provedor que
+  // já a recebe em toda inferência. Existe para o painel poder dizer "a chave do
+  // Gemini foi aceita" sem queimar um pedido de raciocínio para descobrir.
+  'servidor/nucleo/DiagnosticoProvedores.ts',
 ];
 
 /**

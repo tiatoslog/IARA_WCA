@@ -115,6 +115,12 @@ function pedido(sobre: Partial<PedidoRaciocinio> = {}): PedidoRaciocinio {
 
 class EloFalso implements ProvedorRaciocinio {
   chamadas = 0;
+  /** O apelido nomeia o cérebro no registro de saúde e no painel. Aqui ele sai
+   *  do modelo: cada elo falso do arquivo já tem um modelo distinto, então os
+   *  apelidos também ficam distintos sem que nenhum caso precise mudar. */
+  get apelido(): string {
+    return this.modelo;
+  }
   constructor(
     readonly origem: 'nuvem' | 'local',
     readonly modelo: string,

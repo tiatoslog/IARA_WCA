@@ -96,6 +96,7 @@ const PRAZO_SONDA_MS = 1_500;
 const CONTEXTO_PADRAO = 8192;
 
 export class ClienteOllama implements ProvedorRaciocinio {
+  readonly apelido = 'ollama' as const;
   readonly origem = 'local' as const;
   readonly modelo: string;
   private readonly url: string;

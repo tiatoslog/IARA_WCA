@@ -57,7 +57,18 @@ export interface RespostaRaciocinio {
 }
 
 export interface ProvedorRaciocinio {
-  /** 'nuvem' (Anthropic) ou 'local' (Ollama) — telemetria e snapshot. */
+  /**
+   * QUEM É ESTE CÉREBRO — `anthropic`, `groq`, `gemini`, `ollama`.
+   *
+   * `origem` responde "nuvem ou máquina local", que é o que a projeção precisa
+   * saber. Não responde QUAL nuvem, e essa diferença apareceu em 16/08/2026: com
+   * a cota da Anthropic esgotada, a operadora perguntou "mas você não tem Gemini
+   * e Grok?" e não havia, em lugar nenhum do sistema, um campo capaz de nomear
+   * o provedor que estava respondendo. Dois provedores de nuvem eram
+   * indistinguíveis entre si em toda a telemetria.
+   */
+  readonly apelido: string;
+  /** 'nuvem' (Anthropic, Groq, Gemini) ou 'local' (Ollama) — telemetria e snapshot. */
   readonly origem: 'nuvem' | 'local';
   readonly modelo: string;
   readonly disponivel: boolean;

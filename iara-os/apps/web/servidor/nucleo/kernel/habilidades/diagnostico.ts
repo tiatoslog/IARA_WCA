@@ -24,6 +24,13 @@ import { ponteDispositivos } from '../../../barramento/PonteDispositivos';
 import { persistenciaEmUso } from '../../ClienteSupabase';
 import { configUtilizavel } from '../Configuracao';
 import { estadoRaciocinio } from '../../FabricaRaciocinio';
+import { falhasObservadas } from '../../CadeiaDeRaciocinio';
+import {
+  fichasDeProvedores,
+  ROTULO_DO_ESTADO,
+  utilizavel,
+  type FichaProvedor,
+} from '../../DiagnosticoProvedores';
 
 /** O vocabulário do §27: quatro estados, e `desconhecido` é um deles de propósito. */
 type Saude = 'ONLINE' | 'OFFLINE' | 'DEGRADADO' | 'DESCONHECIDO';
@@ -178,6 +185,35 @@ export const diagnosticarSistema: Habilidade = {
     ];
 
     /**
+     * OS CÉREBROS, UM POR UM — e a razão de a linha única acima não bastar.
+     *
+     * Em 16/08/2026 a operadora perguntou pelo celular: "mas você tem outras api
+     * do gemini e do grok". A IARA repetiu a frase da cota da Anthropic. A
+     * `CadeiaDeRaciocinio` funcionava; o que faltava era a Anthropic ser o único
+     * elo daquele motor — as chaves de Groq e Gemini não estavam no ambiente da
+     * nuvem, embora estivessem na máquina de desenvolvimento.
+     *
+     * E não havia como descobrir isso de dentro: `Raciocínio ONLINE — chave da
+     * nuvem válida` é a MESMA linha num motor com quatro cérebros e num motor
+     * com um. Este bloco existe para que a diferença apareça sem ninguém precisar
+     * abrir o painel de variáveis do host.
+     *
+     * `nao_configurado` é impresso junto com os outros de propósito: o valor
+     * inteiro está em ver o que FALTA, não só o que existe.
+     */
+    const fichas = await fichasDeProvedores({ observado: falhasObservadas() });
+    const prontos = fichas.filter(utilizavel);
+    const linhaDoProvedor = (f: FichaProvedor): string =>
+      `  ${f.apelido.padEnd(10)} ${ROTULO_DO_ESTADO[f.estado].padEnd(16)} ` +
+      (f.modelo ? `${f.modelo} — ` : '') +
+      f.detalhe;
+    const blocoProvedores = [
+      '',
+      `Cérebros de raciocínio (${prontos.length} utilizável(is) de ${fichas.length} conhecidos):`,
+      ...fichas.map(linhaDoProvedor),
+    ];
+
+    /**
      * A TRILHA é o que transforma isto de painel em ferramenta de investigação.
      * Ela vem do Braço, em memória, e carrega o `execucao_id` — o mesmo número
      * que aparece no log estruturado do processo, para quem quiser a linha
@@ -196,8 +232,10 @@ export const diagnosticarSistema: Habilidade = {
         : ['', 'Nenhuma execução pedida nesta sessão ainda.'];
 
     return {
-      texto: ['Diagnóstico da IARA:', '', ...corpo, ...rodape].join('\n'),
-      detalhe: `diagnostico: ${dispositivos.length} dispositivo(s), executor ${saudeExecutor}`,
+      texto: ['Diagnóstico da IARA:', '', ...corpo, ...blocoProvedores, ...rodape].join('\n'),
+      detalhe:
+        `diagnostico: ${dispositivos.length} dispositivo(s), executor ${saudeExecutor}, ` +
+        `${prontos.length}/${fichas.length} cérebro(s) utilizável(is)`,
       resolveu: true,
     };
   },

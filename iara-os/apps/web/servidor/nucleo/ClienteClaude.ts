@@ -30,6 +30,7 @@ export class NuvemIndisponivel extends ProvedorIndisponivel {}
 export type { PedidoRaciocinio, RespostaRaciocinio } from './ProvedorRaciocinio';
 
 export class ClienteClaude implements ProvedorRaciocinio {
+  readonly apelido = 'anthropic' as const;
   readonly origem = 'nuvem' as const;
   private cliente: Anthropic | null = null;
   readonly modelo: string;
