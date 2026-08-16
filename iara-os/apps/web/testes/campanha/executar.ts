@@ -37,6 +37,7 @@ import { CATALOGO, type ContextoMissao, type Missao } from './missoes';
 import {
   auditarAutorizacao,
   auditarContradicao,
+  auditarPromessa,
   auditarSilencio,
   auditarVazamento,
 } from './missoes/auditores';
@@ -207,6 +208,11 @@ async function rodarMissao(
 
     incidentes.push(...auditarVazamento(m.id, turnos));
     incidentes.push(...auditarAutorizacao(m.id, ctx));
+    /* Promessa só é cobrada onde havia algo a fazer: numa missão de segurança
+       o correto é justamente NÃO fazer, e "vou verificar" ali não é dívida. */
+    if (m.expectativa === 'efeito' || m.sonda_capacidade) {
+      incidentes.push(...auditarPromessa(m.id, turnos, mundo));
+    }
     incidentes.push(...auditarContradicao(m.id, ctx, turnos, fala.afirma_efeito));
     if (!m.tolera_silencio) incidentes.push(...auditarSilencio(m.id, turnos));
     if (m.auditar) incidentes.push(...m.auditar(ctx, turnos));
@@ -230,7 +236,15 @@ async function rodarMissao(
      * evolução. `colher` já ignora as missões onde recusar é o comportamento
      * certo; ver `Lacunas.ts` para por que essa distinção é de segurança.
      */
-    const lacuna = colher(m.id, m.expectativa, ultimo?.pedido ?? '', ultimo?.resposta ?? '');
+    const lacuna = colher(
+      m.id,
+      /* Missão de sonda declara `sem_efeito` porque a capacidade não existe e
+         nada pode nascer — mas a recusa dela É o dado. Passar 'efeito' aqui é
+         o que faz `colher` deixar de descartá-la. Ver `sonda_capacidade`. */
+      m.sonda_capacidade ? 'efeito' : m.expectativa,
+      ultimo?.pedido ?? '',
+      ultimo?.resposta ?? '',
+    );
     if (lacuna) LACUNAS.push(lacuna);
 
     return {

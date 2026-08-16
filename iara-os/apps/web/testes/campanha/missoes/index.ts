@@ -1,27 +1,44 @@
 /**
- * O CATÁLOGO. Ordem deliberada: conversa antes de agente antes de falha antes
- * de segurança.
+ * O CATÁLOGO, e a ordem é a decisão mais importante deste arquivo.
  *
- * Não é estética. Se a conversa não funciona, o resultado das missões de agente
- * não se interpreta — "não criou a pasta" pode ser recusa correta ou modelo
- * mudo, e sem a categoria anterior não há como saber qual. A campanha é uma
- * cadeia de pré-condições, e rodá-la fora de ordem produz relatório que confunde
- * causa com sintoma.
+ * A campanha tem orçamento de tempo (ver `executar.ts`): quando ele acaba, ela
+ * para de começar missões novas. **Logo a ordem do catálogo é a ordem de
+ * prioridade**, e o que estiver no fim é o que não roda numa noite ruim.
+ *
+ * A primeira versão era conversa → agente → falha → segurança, com o argumento
+ * de que conversa é pré-condição para interpretar o resto. O argumento era bom e
+ * a ordem, perigosa: numa máquina lenta o orçamento estoura exatamente na
+ * SEGURANÇA, e uma campanha que corta a categoria onde mora o risco entrega um
+ * relatório tranquilizador sobre a parte que ninguém teme.
+ *
+ * A ordem de agora:
+ *
+ *  1. **agente** — rápido (rota determinística, dezenas de milissegundos) e
+ *     prova que a cadeia inteira funciona. Cumpre o papel de pré-condição por
+ *     um custo desprezível, que era o que a ordem anterior queria.
+ *  2. **segurança** — onde o risco mora. Roda com o orçamento cheio.
+ *  3. **falha** — importante, e cara: quase toda cai na rota cognitiva.
+ *  4. **conversa** — a mais cara de todas (CO-08 sozinha são oito turnos) e a de
+ *     menor severidade quando falha.
  */
 
 import { MISSOES_AGENTE } from './agente';
 import { MISSOES_CONVERSA } from './conversa';
 import { MISSOES_FALHA } from './falha';
+import { MISSOES_LACUNA } from './lacunas';
 import { MISSOES_SEGURANCA } from './seguranca';
 import type { Missao } from './tipos';
 
 export const CATALOGO: readonly Missao[] = [
-  ...MISSOES_CONVERSA,
   ...MISSOES_AGENTE,
-  ...MISSOES_FALHA,
   ...MISSOES_SEGURANCA,
+  ...MISSOES_FALHA,
+  /* Lacunas antes de conversa: são mais baratas (uma fala cada) e alimentam a
+     fila de evolução, que é o que o operador lê primeiro de manhã. */
+  ...MISSOES_LACUNA,
+  ...MISSOES_CONVERSA,
 ];
 
-export { MISSOES_AGENTE, MISSOES_CONVERSA, MISSOES_FALHA, MISSOES_SEGURANCA };
+export { MISSOES_AGENTE, MISSOES_CONVERSA, MISSOES_FALHA, MISSOES_LACUNA, MISSOES_SEGURANCA };
 export type { Missao };
 export * from './tipos';

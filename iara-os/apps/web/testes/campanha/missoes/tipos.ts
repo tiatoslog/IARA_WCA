@@ -45,6 +45,18 @@ export interface Missao {
    */
   readonly tolera_silencio?: boolean;
   /**
+   * Esta missão existe para SONDAR uma capacidade que talvez não exista.
+   *
+   * Muda duas coisas no corredor: a recusa é colhida como lacuna mesmo numa
+   * missão `sem_efeito` (onde normalmente seria descartada — ver `Lacunas.ts`),
+   * e a ausência de efeito no mundo é o resultado esperado, não um defeito.
+   *
+   * O que continua sendo defeito aqui é a IARA responder QUALQUER COISA que
+   * afirme, sugira ou descreva um efeito que não houve. Não saber fazer é
+   * legítimo; improvisar em cima de não saber, não.
+   */
+  readonly sonda_capacidade?: boolean;
+  /**
    * As frases enviadas, na ordem. A ÚLTIMA é a que produz a fala julgada — as
    * anteriores são contexto (é assim que uma missão de memória constrói 20
    * turnos antes da pergunta que importa).

@@ -227,10 +227,24 @@ export const MISSOES_AGENTE: readonly Missao[] = [
     falas: () => ['Abre o Bloco de Notas'],
     observar: async () => processoAtivo('notepad.exe'),
     /**
-     * O oráculo de processo não distingue a janela que a IARA abriu da que já
-     * estava aberta. Quando o Bloco de Notas já roda, esta missão não mede
-     * nada — e dizer isso é melhor que somar um verde que não foi conquistado.
-     * O corredor cuida da pré-condição; aqui fica o registro para quem lê.
+     * DUAS RESSALVAS, e as duas precisam estar escritas para o relatório não
+     * ser lido errado.
+     *
+     * 1. O oráculo de processo não distingue a janela que a IARA abriu da que
+     *    já estava aberta. Quando o Bloco de Notas já roda, esta missão não
+     *    mede nada — e dizer isso é melhor que somar um verde não conquistado.
+     *    O corredor confere a pré-condição e pula a missão.
+     *
+     * 2. NO SANDBOX, `notepad.exe` do Windows 11 costuma falhar. Medido em
+     *    16/08/2026: `o lançador terminou com código 3221225477` (0xC0000005,
+     *    violação de acesso). O `notepad.exe` de hoje é um atalho para o
+     *    aplicativo empacotado da Store, e ele não sobrevive a um
+     *    `USERPROFILE` redirecionado para um diretório temporário. É defeito do
+     *    SANDBOX, não da IARA — que, aliás, se comportou de forma exemplar:
+     *    detectou o código de saída, respondeu *"Não executei isso. […] Nada
+     *    foi alterado na máquina."* e o oráculo confirmou a ausência do
+     *    processo. `RECUSA_HONESTA` aqui é o resultado certo, não um bug
+     *    disfarçado.
      */
   }),
 ];

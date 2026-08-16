@@ -1,0 +1,26 @@
+[iara] motor HEADLESS na porta 3071 — sem interface; ela é servida noutro host
+[iara] barramento em /barramento (o cliente chega por NEXT_PUBLIC_IARA_WS)
+[iara] persistência: arquivos locais (dados/)
+[iara] mãos: NESTE processo (win32) — e em qualquer braço que conectar em /dispositivo
+[iara] canal WhatsApp: desligado (falta WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN)
+[iara] voz: neural do Edge, voz "pt-BR-FranciscaNeural" (grátis; desligável com IARA_VOZ_NEURAL=0)
+[iara] transcrição: desligada (sem IARA_STT_CHAVE) — a fala continua sendo reconhecida pelo navegador
+[iara] Microsoft Graph: desligado (sem MS_GRAPH_TOKEN nem credencial de app)
+[iara] jornal de operações: selado (IARA_CHAVE_PROVA ativa)
+[iara] autenticação: DESLIGADA — modo local. NÃO EXPONHA ESTE PROCESSO À INTERNET.
+[iara] índice histórico carregado
+{"canal":"auditoria","instante":"2026-08-16T04:20:29.476Z","sessao":"camp202608160120-lc01-v1","id_usuario":"camp202608160120-lc01-v1","traco":"fd767b8a-7cb5-40a0-9a8d-38cfc260e15e","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"auditoria","instante":"2026-08-16T04:21:18.738Z","sessao":"camp202608160120-lc01-v1","id_usuario":"camp202608160120-lc01-v1","traco":"fd767b8a-7cb5-40a0-9a8d-38cfc260e15e","acao":"parametro_invalido:criar_pasta","detalhe":"\"local\" fora dos valores aceitos","permitido":false}
+{"canal":"auditoria","instante":"2026-08-16T04:21:18.928Z","sessao":"camp202608160120-lc02-v1","id_usuario":"camp202608160120-lc02-v1","traco":"74620492-1a79-4ea2-9a34-647861a4818b","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"4e24039d-0b15-4dbb-98e6-42111e85d57d","ok":true,"pensar_ms":49268,"sintese_ms":2726,"caracteres":161}
+{"canal":"auditoria","instante":"2026-08-16T04:24:00.789Z","sessao":"camp202608160120-lc03-v1","id_usuario":"camp202608160120-lc03-v1","traco":"08f21dcf-0915-43e7-be49-a17155d3ff80","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"70d89e49-e4a6-4db7-8705-a4ead808a40b","ok":true,"pensar_ms":161709,"sintese_ms":1744,"caracteres":95}
+{"canal":"auditoria","instante":"2026-08-16T04:28:51.684Z","sessao":"camp202608160120-lc04-v1","id_usuario":"camp202608160120-lc04-v1","traco":"5c970f1c-7db8-4ef1-9aa9-71eca48cf70e","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"f34f8cc1-0edf-41b1-a22d-cecfd1c1c9cd","ok":true,"pensar_ms":290743,"sintese_ms":2279,"caracteres":193}
+{"canal":"auditoria","instante":"2026-08-16T04:34:07.149Z","sessao":"camp202608160120-concorrencia","id_usuario":"camp202608160120-concorrencia","traco":"01097a8d-ab8b-4140-8db8-d0be2b8b25a7","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"3fec22b7-b125-4fb1-881f-7eb9f8a93c40","hash_intencao":"56efdc903ef1d6fa89157b16e9706236394a2cdd9102ea9021e502124a4fafcc","id_usuario":"camp202608160120-concorrencia","sessao":"camp202608160120-concorrencia","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"2aed07a203bb18d85dee9a3ab0ee9c0fa0180691a3a82bbe9bde60849852fbb7","permitido":true}
+{"canal":"execucao","instante":"2026-08-16T04:34:07.163Z","execucao_id":"IARA-20260816-6499-000001","id_usuario":"camp202608160120-concorrencia","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-16T04:34:07.163Z","execucao_id":"IARA-20260816-6499-000001","id_usuario":"camp202608160120-concorrencia","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-16T04:34:07.163Z","execucao_id":"IARA-20260816-6499-000001","id_usuario":"camp202608160120-concorrencia","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"camp202608160120-concorrencia","acao":"criar_pasta","permitido":true,"detalhe":"C:\\Users\\daian\\AppData\\Local\\Temp\\iara-campanha-principal-DHpFNw\\Documents\\Beta 0120v1"}
+{"canal":"execucao","instante":"2026-08-16T04:34:07.168Z","execucao_id":"IARA-20260816-6499-000001","id_usuario":"camp202608160120-concorrencia","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-campanha-principal-DHpFNw\\Documents\\Beta 0120v1","ms":5}
