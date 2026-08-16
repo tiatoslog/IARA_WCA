@@ -55,7 +55,7 @@
  * que o programa precisa para existir.
  */
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -145,6 +145,30 @@ export function salvarCredencial(c: CredencialBraco): void {
    */
   writeFileSync(temporario, `${JSON.stringify(c, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
   renameSync(temporario, caminho);
+}
+
+/**
+ * DESCARTA a credencial deste computador.
+ *
+ * Existe por causa de um defeito real (15/08/2026): quando o motor recusava a
+ * credencial — revogada no "desconectar", apagada do banco, ou emitida contra
+ * outra instalação —, o braço só imprimia "não autorizado" e reconectava para
+ * sempre, num laço que nunca refazia o pareamento. A frase que ele mostrava
+ * ("autorize o código que aparece aqui") mentia: não havia código nenhum na
+ * tela, porque o pareamento só roda quando NÃO existe credencial. A operadora
+ * ficava sem saída a não ser baixar o programa de novo.
+ *
+ * Apagar é o que devolve o programa ao estado de primeira execução, que é
+ * exatamente o que ele é quando a credencial não vale mais. Silencioso se o
+ * arquivo já não existe — o destino desejado é o mesmo.
+ */
+export function apagarCredencial(): void {
+  try {
+    rmSync(caminhoCredencial(), { force: true });
+  } catch {
+    /* Arquivo travado por outro processo ou permissão negada: o pareamento
+       seguinte sobrescreve, e derrubar o programa aqui seria pior. */
+  }
 }
 
 /**

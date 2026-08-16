@@ -69,9 +69,61 @@ export function Automacao({
         </p>
       </div>
 
+      {/*
+        UM CONTROLE, TRÊS ESTADOS (15/08/2026, a pedido da operadora): "Baixar a
+        Automação" ficava para sempre no mesmo lugar, dizendo a mesma coisa,
+        mesmo depois de instalada — e um botão que não sabe o que já aconteceu
+        faz a pessoa duvidar se o passo funcionou. O botão agora é consequência
+        do fato observado (existe máquina pareada? alguma está desatualizada?),
+        que é a mesma regra de todo o resto desta interface.
+
+        O download NÃO some quando já há uma instalada: instalar no PRÓXIMO
+        computador continua exigindo o arquivo. Ele deixa de ser o gesto
+        principal e vira o secundário, que é o seu lugar depois da primeira vez.
+      */}
       <div className="ficha-campo">
-        <span>Baixar a Automação</span>
-        {manifesto.url ? (
+        <span>O programa</span>
+        {!manifesto.url ? (
+          <small>
+            Ainda não há um instalador publicado nesta instalação. Quem cuida do
+            sistema gera o programa com <code>npm run empacotar:braco</code> e
+            publica o endereço dele em <code>NEXT_PUBLIC_IARA_INSTALADOR</code>.
+          </small>
+        ) : maquinas === null ? (
+          <small>Perguntando…</small>
+        ) : atualizaveis.length > 0 ? (
+          <>
+            {manifesto.notas && (
+              <small className="maquina-notas-versao">Novidade: {manifesto.notas}</small>
+            )}
+            {atualizaveis.map((m) => (
+              <button
+                key={m.id}
+                className="ficha-salvar instalar"
+                disabled={!podeAgir}
+                title="Baixa, confere e substitui sozinha — o computador reabre a IARA na versão nova"
+                onClick={() => aoAtualizar(m.id)}
+              >
+                Atualizar em {m.nome}
+              </button>
+            ))}
+          </>
+        ) : lista.length > 0 ? (
+          <>
+            <p className="instalar-confirmacao">
+              <span aria-hidden className="maquina-sinal ligado" />
+              Instalada
+              {lista.length === 1
+                ? ` em ${lista[0].nome}`
+                : ` em ${lista.length} computadores`}
+              {lista.some((m) => m.desatualizada) && ' — uma versão antiga espera o computador ligar'}
+              {lista.every((m) => !m.desatualizada) && ' — na versão atual'}
+            </p>
+            <a className="automacao-baixar-de-novo" href={manifesto.url} download>
+              Baixar de novo, para outro computador
+            </a>
+          </>
+        ) : (
           <>
             <a className="ficha-salvar instalar" href={manifesto.url} download>
               Baixar a Automação
@@ -86,49 +138,6 @@ export function Automacao({
               <strong>Mais informações</strong> →{' '}
               <strong>Executar assim mesmo</strong>. Só na primeira vez.
             </small>
-          </>
-        ) : (
-          <small>
-            Ainda não há um instalador publicado nesta instalação. Quem cuida do
-            sistema gera o programa com <code>npm run empacotar:braco</code> e
-            publica o endereço dele em <code>NEXT_PUBLIC_IARA_INSTALADOR</code>.
-          </small>
-        )}
-      </div>
-
-      <div className="ficha-campo">
-        <span>Versão</span>
-        {maquinas === null ? (
-          <small>Perguntando…</small>
-        ) : lista.length === 0 ? (
-          <small>Nenhum computador pareado ainda — a versão aparece aqui depois.</small>
-        ) : atualizaveis.length === 0 && lista.every((m) => !m.desatualizada) ? (
-          <p className="automacao-status ativo">
-            <span aria-hidden className="maquina-sinal ligado" />
-            Todos os computadores estão na versão atual.
-          </p>
-        ) : (
-          <>
-            {manifesto.notas && (
-              <small className="maquina-notas-versao">Novidade: {manifesto.notas}</small>
-            )}
-            {atualizaveis.map((m) => (
-              <button
-                key={m.id}
-                className="ficha-salvar"
-                disabled={!podeAgir}
-                title="Baixa, confere e substitui sozinha — o computador reabre a IARA na versão nova"
-                onClick={() => aoAtualizar(m.id)}
-              >
-                Atualizar aplicativo em {m.nome}
-              </button>
-            ))}
-            {atualizaveis.length === 0 && (
-              <small>
-                Há computador desatualizado, mas desligado agora — quando ligar,
-                a linha dele no quadro de Dispositivos oferece a atualização.
-              </small>
-            )}
           </>
         )}
       </div>

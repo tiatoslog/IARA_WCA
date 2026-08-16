@@ -2003,6 +2003,23 @@ ol.plano {
   color: var(--c-tinta);
 }
 
+/* Baixar de novo é o gesto SECUNDÁRIO depois da primeira instalação: continua
+   ali para a próxima máquina, sem competir com o estado "Instalada". */
+.automacao-baixar-de-novo {
+  align-self: flex-start;
+  font-size: var(--t-rotulo);
+  color: var(--c-tinta-3);
+  text-decoration: none;
+  border-bottom: 1px solid var(--c-linha);
+  padding-bottom: 1px;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.automacao-baixar-de-novo:hover {
+  color: var(--c-tinta-2);
+  border-color: var(--c-tinta-3);
+}
+
 /* Faixa do modo ligação. */
 .escuta-faixa {
   margin: 0 0 10px;

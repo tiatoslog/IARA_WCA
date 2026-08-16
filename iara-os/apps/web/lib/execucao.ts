@@ -418,7 +418,14 @@ export function manifestoAtualizacaoDisponivel(m: ManifestoBraco): boolean {
  * (Updater separado, com validação de integridade), deliberadamente fora
  * deste escopo. Aqui só se detecta e avisa.
  */
-export const VERSAO_MINIMA_BRACO = '1.1.0';
+/**
+ * 1.3.0 (15/08/2026): abaixo disso, a Automação NÃO se recupera de uma
+ * credencial recusada — ela reconecta em laço eterno, sem nunca mostrar código
+ * novo, e a única saída da operadora é baixar o programa de novo. Uma máquina
+ * nessas condições precisa aparecer como desatualizada no quadro para que a
+ * atualização seja oferecida.
+ */
+export const VERSAO_MINIMA_BRACO = '1.3.0';
 
 /**
  * Compara duas versões `major.minor.patch` (sem qualificador de pré-release).

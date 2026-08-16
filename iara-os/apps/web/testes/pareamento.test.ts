@@ -469,7 +469,8 @@ class SocketDeBraco extends EventEmitter {
           id_usuario: 'mentira-do-cliente',
           nome,
           plataforma: 'win32 10.0.26200',
-          versao: '1.1.0',
+          /* A mínima corrente, nunca um literal — ver `versaoRelativa`. */
+          versao: VERSAO_MINIMA_BRACO,
           ...(token ? { token } : {}),
         }),
       ),
@@ -725,10 +726,22 @@ test('a dona ainda pode clicar duas vezes sem emitir duas credenciais', async ()
 // o que a gaveta Dispositivos de fato lê.
 // ===========================================================================
 
+/**
+ * As versões de teste são DERIVADAS da mínima, nunca literais — aprendido em
+ * 15/08/2026, quando a mínima subiu para 1.3.0 e dois testes quebraram por
+ * terem `'1.2.0'` escrito à mão como exemplo de "acima". O que está sob teste
+ * é a COMPARAÇÃO, não um número específico; fixar o número faz a suíte
+ * quebrar a cada versão nova sem que nada tenha regredido de verdade.
+ */
+function versaoRelativa(delta: number): string {
+  const [maior, menor, correcao] = VERSAO_MINIMA_BRACO.split('.').map(Number);
+  return `${maior}.${menor + delta}.${correcao}`;
+}
+
 test('VM-001..004. versaoBracoDesatualizada compara contra a mínima, e null nunca acusa', () => {
-  assert.equal(versaoBracoDesatualizada('1.0.0'), true, 'VM-001: abaixo da mínima é desatualizada');
+  assert.equal(versaoBracoDesatualizada(versaoRelativa(-1)), true, 'VM-001: abaixo da mínima é desatualizada');
   assert.equal(versaoBracoDesatualizada(VERSAO_MINIMA_BRACO), false, 'VM-002: igual à mínima não é desatualizada');
-  assert.equal(versaoBracoDesatualizada('1.2.0'), false, 'VM-003: acima da mínima não é desatualizada');
+  assert.equal(versaoBracoDesatualizada(versaoRelativa(1)), false, 'VM-003: acima da mínima não é desatualizada');
   assert.equal(
     versaoBracoDesatualizada(null),
     false,
@@ -779,7 +792,7 @@ test('VM-006. braço conectado NA mínima ou acima não recebe o aviso', async (
   const ponte = new PonteDispositivos(p);
   const socket = new SocketDeBraco();
   ponte.conectar(socket as unknown as WebSocket);
-  socket.apresentar(token, 'PC-ATUAL'); // helper já manda versao: '1.1.0'
+  socket.apresentar(token, 'PC-ATUAL'); // o helper manda a VERSAO_MINIMA_BRACO
   await espera(40);
 
   const maquinas = await inventarioDeMaquinas(ANA.id_usuario, ponte, p);

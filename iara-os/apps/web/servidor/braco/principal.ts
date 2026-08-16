@@ -57,6 +57,7 @@ import {
 } from '../../lib/execucao';
 import { executarOrdem } from '../nucleo/ExecutorDesktop';
 import {
+  apagarCredencial,
   caminhoCredencial,
   lerCredencial,
   renovarAcesso,
@@ -75,7 +76,7 @@ import {
 carregarEnv({ path: '.env.local' });
 carregarEnv();
 
-const VERSAO = '1.2.0';
+const VERSAO = '1.3.0';
 
 /**
  * O ENDEREÇO DA IARA, assado no executável em tempo de empacotamento.
@@ -198,7 +199,7 @@ function abrirNoSistema(caminho: string): void {
  * a única coisa que a operadora precisa ler no programa inteiro, e ela vai lê-la
  * de relance, com o celular na outra mão.
  */
-async function parearEsteComputador(): Promise<boolean> {
+async function parearEsteComputador(abrirNavegador = true): Promise<boolean> {
   let motor = motorHttp();
   if (!motor) {
     /**
@@ -250,10 +251,17 @@ async function parearEsteComputador(): Promise<boolean> {
      * abrir o navegador no ENDEREÇO DO PRÓPRIO MOTOR é o mesmo nível de
      * confiança de abrir a imagem que acabamos de gerar.
      */
-    abrirNoSistema(linkDoConvite(motor, pedido.codigo));
-    console.log('  O navegador vai abrir com o QR na tela da IARA.');
-    console.log('  Aponte a câmera do celular para ele — ou, se a janela não abrir,');
-    console.log('  use o desenho abaixo ou digite o código na aba Dispositivos:\n');
+    /* Só na primeira vez: uma renovação de código não pode empilhar abas de
+       navegador a cada cinco minutos. Quem já está com a tela aberta lê o
+       código novo do terminal — e o QR abaixo continua sendo redesenhado. */
+    if (abrirNavegador) {
+      abrirNoSistema(linkDoConvite(motor, pedido.codigo));
+      console.log('  O navegador vai abrir com o QR na tela da IARA.');
+      console.log('  Aponte a câmera do celular para ele — ou, se a janela não abrir,');
+      console.log('  use o desenho abaixo ou digite o código na aba Dispositivos:\n');
+    } else {
+      console.log('  Aponte a câmera do celular para o QR abaixo, ou digite o código:\n');
+    }
 
     const qr = await QRCode.toString(linkPareamento, { type: 'terminal', small: true });
     console.log(qr);
@@ -288,8 +296,20 @@ async function parearEsteComputador(): Promise<boolean> {
 
   const credencial = await aguardarAprovacao(motor, pedido);
   if (!credencial) {
-    console.log('  O código expirou sem ser autorizado. Feche e abra o programa para tentar de novo.\n');
-    return false;
+    /**
+     * CÓDIGO EXPIRADO NÃO É FIM DE LINHA — corrigido em 15/08/2026. A versão
+     * anterior mandava "feche e abra o programa para tentar de novo", e o
+     * caso normal em que isso acontece é o mais inocente que existe: a pessoa
+     * abriu a Automação e foi fazer outra coisa antes de pegar o celular.
+     * Exigir que ela reabra o programa por causa disso é cobrar por um
+     * intervalo de cinco minutos.
+     *
+     * Um código novo é um POST barato contra o próprio motor. O programa passa
+     * a se comportar como a tela que ele é: enquanto ninguém autorizou, sempre
+     * há um código válido — e um QR novo — esperando na frente da operadora.
+     */
+    console.log('\n  O código expirou. Gerando outro…\n');
+    return parearEsteComputador(false);
   }
 
   salvarCredencial({
@@ -318,6 +338,40 @@ async function garantirIdentidade(): Promise<void> {
   if (process.env.IARA_MOTOR_WS) return; // motor apontado à mão: quem digitou sabe
   if (lerCredencial()) return;
   await parearEsteComputador();
+}
+
+/**
+ * O motor recusou a credencial que temos: descarta e pareia de novo.
+ *
+ * Uma reparação DE CADA VEZ. Sem esta trava, cada mensagem `recusado` (uma por
+ * tentativa de reconexão, e o recuo começa em um segundo) abriria um pedido de
+ * pareamento novo — o operador veria códigos diferentes brotando no terminal,
+ * cada um invalidando o anterior na cabeça dele, e o motor levaria uma enxurrada
+ * de pedidos que a própria cota de `RegistroPareamento` acabaria barrando.
+ *
+ * Quem foi apontado à mão (`IARA_TOKEN`, `IARA_MOTOR_WS`) não entra aqui: ali a
+ * credencial é uma decisão de quem digitou, e apagá-la seria desfazer o que a
+ * pessoa acabou de configurar. Para esses, a recusa continua sendo só o erro
+ * impresso — que é a informação certa para quem está depurando.
+ */
+let reparandoIdentidade = false;
+async function repararIdentidade(): Promise<void> {
+  if (process.env.IARA_TOKEN || process.env.IARA_MOTOR_WS) return;
+  if (reparandoIdentidade) return;
+  reparandoIdentidade = true;
+
+  try {
+    console.log('\n[IARA] esta credencial não vale mais. Vou conectar este computador de novo.\n');
+    apagarCredencial();
+    const ok = await parearEsteComputador();
+    if (!ok) {
+      console.warn(
+        '[IARA] pareamento não concluído. Feche e abra o programa para tentar de novo.',
+      );
+    }
+  } finally {
+    reparandoIdentidade = false;
+  }
 }
 
 /**
@@ -719,6 +773,21 @@ async function conectar(): Promise<void> {
 
     if (pacote.tipo === 'recusado') {
       console.error(`[IARA] o motor recusou este computador: ${pacote.motivo}`);
+      /**
+       * RECUSA NÃO É QUEDA — e tratar as duas igual era o defeito de
+       * 15/08/2026. Reconectar resolve rede que caiu; contra uma credencial
+       * que o motor não aceita mais (revogada no "desconectar", apagada do
+       * banco, emitida contra outra instalação), reconectar é bater na mesma
+       * porta trancada a cada oito segundos, para sempre. A operadora via o
+       * laço e a frase "autorize o código que aparece aqui" sem código nenhum
+       * na tela — porque o pareamento só roda quando não há credencial — e a
+       * única saída que sobrava era baixar o programa de novo.
+       *
+       * Agora a credencial morta é descartada e o pareamento recomeça do
+       * zero: o navegador abre com o QR, o código aparece, e este computador
+       * volta a ser o que de fato é neste momento — uma máquina nova.
+       */
+      void repararIdentidade();
       return;
     }
 
