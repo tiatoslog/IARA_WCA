@@ -17,7 +17,8 @@
     "limpar": "node -e \"const f=require('node:fs');for(const d of f.readdirSync('.').filter(n=>n==='.next'||n.startsWith('.next-')))f.rmSync(d,{recursive:true,force:true})\"",
     "test": "node --import tsx --test \"testes/**/*.test.ts\"",
     "verificar": "node scripts/verificar-glsl.mjs && node scripts/varrer-segredos.mjs --tudo && tsc --noEmit && npm test",
-    "varrer-segredos": "node scripts/varrer-segredos.mjs"
+    "varrer-segredos": "node scripts/varrer-segredos.mjs",
+    "campanha": "node --import tsx testes/campanha/executar.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
