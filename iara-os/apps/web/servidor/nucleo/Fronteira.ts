@@ -193,6 +193,12 @@ export const LEITURA_EXTERNA: readonly string[] = [
   // Inferência local via Ollama: o prompt entra, o texto volta. Mesmo caso do
   // TTS — ver a justificativa do POST em `POST_SEM_EFEITO`.
   'servidor/nucleo/ClienteOllama.ts',
+  // Inferência nas camadas gratuitas (Groq, Gemini). Mesma classe do Ollama e
+  // do ClienteClaude: prompt entra, texto volta em stream, nada é criado nem
+  // alterado em serviço nenhum. A diferença em relação ao Ollama é o lugar —
+  // nuvem de terceiro, não a máquina do operador —, e por isso o conteúdo que
+  // sai daqui é o mesmo que já sai para a Anthropic hoje.
+  'servidor/nucleo/ClienteCompativelOpenAI.ts',
 ];
 
 /**
@@ -348,6 +354,14 @@ export const POST_SEM_EFEITO: Record<string, string> = {
     'criado, alterado ou entregue a ninguém no servidor Ollama — que roda na ' +
     'máquina do operador ou na rede privada dele — e nenhum terceiro é ' +
     'alcançado. É uma função pura cara, o mesmo caso do TTS logo acima.',
+  'servidor/nucleo/ClienteCompativelOpenAI.ts':
+    'POST de inferência nas camadas gratuitas (Groq, Gemini), que falam o ' +
+    'dialeto `/chat/completions`: o prompt entra, o texto volta em stream. ' +
+    'Nada é criado, alterado ou entregue a ninguém — é a mesma classe de ' +
+    '"POST que na verdade pensa" do `ClienteOllama` e do `ClienteClaude`. ' +
+    'Existe porque a cota da Anthropic acabou em 15/08/2026 e a IARA ficou ' +
+    'muda; a chave é DECLARADA (GROQ_API_KEY / GEMINI_API_KEY), nunca ' +
+    'descoberta.',
 };
 
 /**

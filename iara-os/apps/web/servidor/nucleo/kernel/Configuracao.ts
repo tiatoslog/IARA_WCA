@@ -88,7 +88,28 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
   // OLLAMA_URL no ambiente, o motor não toca a porta 11434 — nem para sondar.
   // A URL deve apontar para localhost ou rede privada (LAN/Tailscale); o
   // Ollama não tem autenticação própria e jamais deve ficar exposto à internet.
-  IARA_PROVEDOR: { natureza: 'texto', papel: 'provedor de raciocínio: anthropic, ollama ou auto' },
+  IARA_PROVEDOR: {
+    natureza: 'texto',
+    papel: 'provedor de raciocínio: anthropic, groq, gemini, ollama ou auto',
+  },
+  // As camadas GRATUITAS (15/08/2026, depois de a cota da Anthropic acabar e a
+  // IARA ficar muda). Mesma disciplina das outras: declaradas, nunca
+  // descobertas — sem a chave no ambiente, o provedor não existe. Em `auto`
+  // elas entram na cadeia como reserva, na ordem Anthropic → Groq → Gemini →
+  // Ollama; ver `CadeiaDeRaciocinio`.
+  GROQ_API_KEY: {
+    natureza: 'segredo_cabecalho',
+    prefixo: 'gsk_',
+    minimo: 20,
+    papel: 'chave da camada de raciocínio gratuita (Groq)',
+  },
+  GROQ_MODELO: { natureza: 'texto', papel: 'modelo servido pela Groq' },
+  GEMINI_API_KEY: {
+    natureza: 'segredo_cabecalho',
+    minimo: 20,
+    papel: 'chave da camada de raciocínio gratuita (Google Gemini)',
+  },
+  GEMINI_MODELO: { natureza: 'texto', papel: 'modelo servido pelo Gemini' },
   OLLAMA_URL: { natureza: 'url', papel: 'endereço do servidor Ollama local' },
   OLLAMA_MODELO: { natureza: 'texto', papel: 'modelo servido pelo Ollama' },
   // O padrão do binário (4096) trunca o prompt em silêncio — ver ClienteOllama.

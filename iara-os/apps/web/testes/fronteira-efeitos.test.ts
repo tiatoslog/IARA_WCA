@@ -131,6 +131,12 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       'em stream, nada muda no mundo. O servidor é o da máquina do operador ' +
       'ou da rede privada dele, declarado em OLLAMA_URL — nunca descoberto. ' +
       'Ver a entrada dele em `Fronteira.ts` (`POST_SEM_EFEITO`).',
+    [path.join('servidor', 'nucleo', 'ClienteCompativelOpenAI.ts')]:
+      'LEITURA — inferência nas camadas gratuitas (Groq, Gemini), que falam o ' +
+      'mesmo dialeto `/chat/completions`: o prompt entra, o texto volta em ' +
+      'stream, nada muda no mundo. Chave DECLARADA (GROQ_API_KEY / ' +
+      'GEMINI_API_KEY), nunca descoberta — a mesma disciplina do Ollama. ' +
+      'Nasceu do incidente de cota de 15/08/2026; ver `CadeiaDeRaciocinio`.',
     [path.join('servidor', 'nucleo', 'ClienteWhatsapp.ts')]:
       'EFEITO EXTERNO — envio proativo de WhatsApp pelo desenho R2 de ' +
       '`enviar_whatsapp`/`resolver_confirmacao` (arma pendência, exige ' +
