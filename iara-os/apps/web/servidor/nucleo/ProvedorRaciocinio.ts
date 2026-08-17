@@ -43,6 +43,20 @@ export interface PedidoRaciocinio {
    */
   capacidades?: string;
   sinal: AbortSignal;
+  /**
+   * O ORÇAMENTO DO TURNO, PERGUNTADO — não importado.
+   *
+   * A cadeia chama isto antes de tentar CADA elo. Devolver `false` significa "o
+   * turno não tem mais tentativa de rede para pagar", e a cadeia para sem tentar
+   * o próximo em vez de percorrer a fila inteira.
+   *
+   * É função e não objeto de propósito: esta camada não pode conhecer
+   * `OrcamentoDoTurno` — ela vive do lado de fora do kernel, e um import daqui
+   * para lá inverteria a fronteira que `testes/fronteira-interna.test.ts` vigia.
+   * Ausente significa "sem teto", que é o caso de quem chama o provedor fora de
+   * um turno (sonda, diagnóstico).
+   */
+  aoTentarProvedor?: () => boolean;
   aoReceberTexto: (pedaco: string) => void;
 }
 

@@ -284,6 +284,23 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
     let ultimoErro: unknown = new ProvedorIndisponivel('nenhum provedor de raciocínio disponível');
     for (const elo of fila) {
       /**
+       * O ORÇAMENTO DO TURNO DECIDE SE HÁ MAIS UMA TENTATIVA.
+       *
+       * Sem isto, uma chamada de modelo custava até quatro idas à rede e o teto
+       * de chamadas contava 1 — o multiplicador que nenhum teto de chamada vê. A
+       * cadeia não conhece o orçamento: ela recebe uma pergunta para fazer.
+       *
+       * Recusa aqui NÃO é falha do elo: nada é registrado contra ele, porque ele
+       * não foi tentado. Marcar carência por falta de orçamento faria o próximo
+       * turno rebaixar um provedor saudável.
+       */
+      if (pedido.aoTentarProvedor && !pedido.aoTentarProvedor()) {
+        throw new ProvedorIndisponivel(
+          'o orçamento de tentativas deste turno acabou antes de eu conseguir uma resposta',
+        );
+      }
+
+      /**
        * A porta de saída da troca: o instante em que o primeiro pedaço chega
        * ao operador. Daí em diante o turno é daquele elo, dê no que der.
        */

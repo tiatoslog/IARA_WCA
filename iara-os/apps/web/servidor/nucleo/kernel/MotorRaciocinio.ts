@@ -35,6 +35,8 @@ export interface PedidoSintese {
   /** Saídas dos passos já executados. Vazio numa resposta de passo único. */
   contexto: string;
   sinal: AbortSignal;
+  /** O teto de tentativas de rede do turno, como pergunta. Ver `PedidoRaciocinio`. */
+  aoTentarProvedor?: () => boolean;
   aoReceberTexto: (pedaco: string) => void;
 }
 
@@ -90,6 +92,9 @@ export class MotorRaciocinio {
     percepcao: Percepcao,
     catalogo: readonly ManifestoHabilidade[],
     sinal: AbortSignal,
+    /** O teto de tentativas de rede do turno. Opcional: quem chama fora de um
+     *  turno (sonda, diagnóstico) não tem orçamento para consultar. */
+    orcamento?: { aoTentarProvedor: () => boolean },
   ): Promise<Plano | null> {
     if (!this.provedor.disponivel) return null;
 
@@ -186,6 +191,7 @@ export class MotorRaciocinio {
           'MODO PLANEJADOR: responda somente com o JSON pedido. Sem saudação, sem explicação, sem markdown.',
         camadaGlobal: '',
         sinal,
+        aoTentarProvedor: orcamento?.aoTentarProvedor,
         aoReceberTexto: (p) => {
           bruto += p;
         },
@@ -294,6 +300,7 @@ export class MotorRaciocinio {
       camadaGlobal: pedido.camadaGlobal,
       capacidades: pedido.capacidades,
       sinal: pedido.sinal,
+      aoTentarProvedor: pedido.aoTentarProvedor,
       aoReceberTexto: pedido.aoReceberTexto,
     });
 

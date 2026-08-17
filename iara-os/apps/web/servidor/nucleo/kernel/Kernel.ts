@@ -34,6 +34,12 @@ import {
   type Papel,
 } from './Seguranca';
 import { RegistroErros } from './RegistroErros';
+import {
+  OrcamentoDoTurno,
+  tetosDoAmbiente,
+  type TetosDoTurno,
+  type VeredictoOrcamento,
+} from './OrcamentoDoTurno';
 import { PorteiroAutorizacao } from './PorteiroAutorizacao';
 import { motivoDaRecusa, nivelAtual, podeSem } from './Autonomia';
 import type { Plano } from './Evento';
@@ -207,6 +213,14 @@ export interface DependenciasKernel {
    * passa por ele de qualquer jeito.
    */
   registroOperacoes?: RegistroOperacoes;
+  /**
+   * Tetos do orçamento por turno. Ausente = os do ambiente, que por sua vez
+   * caem nos padrões do módulo. Injetável para que um teste possa provar o
+   * BLOQUEIO com teto de 1 sem esperar seis passos — e, como todas as injeções
+   * deste tipo aqui, ela aperta a trava, nunca a solta: nenhum valor injetado
+   * permite mais do que o ambiente permitiria por conta própria.
+   */
+  tetosOrcamento?: TetosDoTurno;
 }
 
 const ESTAGIO_DA_ROTA: Record<string, EstagioCognitivo> = {
@@ -604,6 +618,17 @@ export class Kernel {
     b.novoTraco();
     const inicio = Date.now();
 
+    /**
+     * UM ORÇAMENTO POR TURNO, criado aqui e em nenhum outro lugar.
+     *
+     * Vive na pilha, não no campo da classe: dois turnos do mesmo kernel não
+     * dividem teto (o segundo pedido do operador não pode nascer sem orçamento
+     * porque o primeiro gastou), e um campo compartilhado seria exatamente esse
+     * defeito — com a agravante de a fila serializar turnos, o que faria o
+     * vazamento aparecer só depois de duas telas conversando.
+     */
+    const orcamento = new OrcamentoDoTurno(this.dep.tetosOrcamento ?? tetosDoAmbiente());
+
     /* `idDaPergunta` nasceu lá em cima, antes da fila. Ele tem três
        consumidores: a bolha do operador (`MENSAGEM_RECEBIDA`), o endereço de
        toda fala deste turno (`responde_a`), e a projeção da fila enquanto o
@@ -750,7 +775,7 @@ export class Kernel {
                 },
               ],
             } satisfies Plano)
-          : await this.montarPlano(decisao.rota, p, controle.signal);
+          : await this.montarPlano(decisao.rota, p, controle.signal, orcamento);
       if (controle.signal.aborted) return;
 
       this.trabalho.iniciarTarefa(p, plano);
@@ -794,7 +819,7 @@ export class Kernel {
       }
 
       // --- 4. Execução ------------------------------------------------------
-      const execucao = await this.executarPlano(plano, p.bruto, controle);
+      const execucao = await this.executarPlano(plano, p.bruto, controle, orcamento);
       if (controle.signal.aborted) {
         /**
          * CANCELAR A RESPOSTA NÃO CANCELA O MUNDO.
@@ -834,6 +859,7 @@ export class Kernel {
         idMensagem,
         idDaPergunta,
         controle,
+        orcamento,
       );
       if (controle.signal.aborted) return;
 
@@ -879,6 +905,24 @@ export class Kernel {
         this.emAndamento = null;
         this.origemEmAndamento = null;
       }
+      /**
+       * O GASTO DO TURNO VAI PARA O JORNAL SEMPRE — estourado ou não.
+       *
+       * Registrar só o estouro daria a série errada: sem os turnos normais no
+       * registro não há como saber se o teto está apertado demais ou frouxo
+       * demais, e a primeira pessoa a ver um alerta de orçamento não teria nada
+       * com que comparar. É a mesma razão de a bateria de falsa conclusão contar
+       * também os cenários honestos.
+       */
+      this.auditoria.registrar({
+        instante: new Date().toISOString(),
+        sessao: this.dep.sessao,
+        id_usuario: this.dep.idUsuario,
+        traco: b.tracoAtual,
+        acao: orcamento.estouro ? `orcamento_turno:estourado` : 'orcamento_turno',
+        detalhe: orcamento.resumo(),
+        permitido: orcamento.estouro === null,
+      });
       this.trabalho.encerrarTarefa();
       await this.dep.estado.transicionar('ocioso', null);
       /* A vez do próximo espelho. Depois de `ocioso`, para que o turno da fila
@@ -893,6 +937,7 @@ export class Kernel {
     rota: string,
     p: Parameters<MotorPercepcao['perceber']> extends never ? never : ReturnType<MotorPercepcao['perceber']>,
     sinal: AbortSignal,
+    orcamento: OrcamentoDoTurno,
   ): Promise<Plano> {
     if (rota === 'sigilo') {
       return this.planejador.planoDeRecusa('Recusar acesso a registro de terceiro');
@@ -910,9 +955,22 @@ export class Kernel {
       });
     }
     if (rota === 'plano_cognitivo') {
+      /**
+       * O ORÇAMENTO É CONSULTADO ANTES DE PLANEJAR, e a recusa aqui degrada em
+       * vez de derrubar: sem chamada de modelo disponível, o plano de passo único
+       * determinístico ainda responde. É o mesmo desenho da nuvem desligada — a
+       * IARA continua atendendo com o que alcança, e diz o que não alcançou.
+       */
+      const permissao = orcamento.consumir('chamada_modelo');
+      if (!permissao.permitido) {
+        this.avisarOrcamento(permissao, 'planejamento');
+        return this.planejador.planoDeRaciocinio(p);
+      }
       // A LLM DECOMPÕE. Ela não executa nada do que propôs — o kernel é quem
       // roda cada passo, com validação de esquema e permissão em cada um.
-      const emergente = await this.raciocinio.planejar(p, this.habilidades.catalogo(), sinal);
+      const emergente = await this.raciocinio.planejar(p, this.habilidades.catalogo(), sinal, {
+        aoTentarProvedor: () => orcamento.consumir('tentativa_provedor').permitido,
+      });
       if (emergente) return emergente;
       // Planejamento falhou ou veio inválido: cai para o passo único, que
       // sempre funciona. Nunca executa plano pela metade.
@@ -921,10 +979,34 @@ export class Kernel {
     return this.planejador.planoDeRaciocinio(p);
   }
 
+  /**
+   * A recusa do orçamento chega ao operador como FATO, pelos mesmos canais das
+   * outras recusas: evento de falha e linha de auditoria. Barrar sem contar
+   * trocaria uma mentira ("fiz") por outra ("nada aconteceu").
+   */
+  private avisarOrcamento(v: VeredictoOrcamento, onde: string): void {
+    if (v.permitido) return;
+    this.dep.barramento.publicar({
+      tipo: 'FALHA',
+      modulo: 'orcamento',
+      mensagem: `${v.motivo} (${onde}).`,
+    });
+    this.auditoria.registrar({
+      instante: new Date().toISOString(),
+      sessao: this.dep.sessao,
+      id_usuario: this.dep.idUsuario,
+      traco: this.dep.barramento.tracoAtual,
+      acao: `orcamento_estourado:${v.recurso}`,
+      detalhe: `${onde} — gasto ${v.gasto}, teto ${v.teto}`,
+      permitido: false,
+    });
+  }
+
   private async executarPlano(
     plano: Plano,
     enunciado: string,
     controle: AbortController,
+    orcamento: OrcamentoDoTurno,
   ): Promise<ExecucaoPlano> {
     const b = this.dep.barramento;
     const passos: PassoExecutado[] = [];
@@ -934,6 +1016,57 @@ export class Kernel {
       // O passo de raciocínio é resolvido na composição da resposta, com
       // streaming. Aqui só passam as habilidades nativas.
       if (!passo.habilidade || passo.habilidade === 'raciocinio') continue;
+
+      /**
+       * O TETO DE PASSOS É CONFERIDO ANTES DE QUALQUER OUTRA PORTA — antes do
+       * catálogo, do porteiro, do esquema e do jornal — porque ele é o único que
+       * não fala sobre ESTE passo: fala sobre quanto o turno já gastou. Conferir
+       * depois faria o orçamento cobrar por trabalho que outra porta ia barrar de
+       * graça, e a mensagem ao operador citaria o recurso errado.
+       *
+       * O passo barrado continua na lista, e o laço NÃO para: cada passo que não
+       * vai acontecer aparece na resposta com o motivo. Sair no primeiro estouro
+       * deixaria o operador sabendo de um passo e ignorando os outros dois.
+       *
+       * `efeito_externo` entra na MESMA decisão para escrita, tudo ou nada — ver
+       * `consumirVarios`. A semântica vem do manifesto declarado, não de uma
+       * lista de nomes: habilidade de escrita nova nasce coberta.
+       */
+      /* Habilidade fora do catálogo cai como leitura para efeito de orçamento:
+         ela vai ser barrada logo abaixo e não alcança o mundo, então cobrar
+         `efeito_externo` dela seria cobrar por um efeito impossível. O `passo`
+         continua sendo cobrado — o turno gastou uma vez do teto tentando. */
+      const manifestoParaOrcamento = this.habilidades.manifesto(passo.habilidade);
+      const escreve = manifestoParaOrcamento?.idempotencia !== undefined &&
+        manifestoParaOrcamento.idempotencia !== 'leitura';
+      const permissaoDoPasso = orcamento.consumirVarios(
+        escreve
+          ? [{ recurso: 'passo' as const }, { recurso: 'efeito_externo' as const }]
+          : [{ recurso: 'passo' as const }],
+      );
+      if (!permissaoDoPasso.permitido) {
+        this.trabalho.registrarErro();
+        this.avisarOrcamento(permissaoDoPasso, `passo "${passo.descricao}"`);
+        passos.push({
+          descricao: passo.descricao,
+          habilidade: passo.habilidade,
+          /* `aguardando_confirmacao`, e não `falhou`: nada quebrou e nada
+             aconteceu no mundo. Falta uma decisão de quem paga a conta — mandar
+             de novo, ou subir o teto. É o mesmo verbo da recusa por autoridade,
+             pela mesma razão: o operador precisa saber que a ação está de pé,
+             não sepultada. */
+          estado: 'aguardando_confirmacao',
+          texto: '',
+          evidencia: permissaoDoPasso.motivo,
+        });
+        b.publicar({
+          tipo: 'PASSO_CONCLUIDO',
+          passo,
+          resumo: 'barrado pelo orçamento do turno',
+          ms: 0,
+        });
+        continue;
+      }
 
       this.trabalho.entrarNoPasso(passo.indice, passo.habilidade);
       b.publicar({ tipo: 'PASSO_INICIADO', passo, total: plano.passos.length });
@@ -1613,6 +1746,7 @@ export class Kernel {
      *  hora é exatamente o acoplamento implícito que produziu o CC-01. */
     respondeA: string,
     controle: AbortController,
+    orcamento: OrcamentoDoTurno,
   ): Promise<string> {
     const b = this.dep.barramento;
     const saidas = saidasDe(execucao);
@@ -1673,6 +1807,38 @@ export class Kernel {
         : falhas.length > 0
           ? `Não executei isso. ${falhas.join('; ')}. Nada foi alterado na máquina.`
           : 'Não consegui executar esse pedido e não tenho resultado para mostrar. Nada foi alterado.';
+      b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto, responde_a: respondeA });
+      return texto;
+    }
+
+    /**
+     * O TETO DE CHAMADA DE MODELO, conferido antes da síntese.
+     *
+     * Aqui a degradação é a mesma da camada desligada, e por isso ela reaproveita
+     * o ramo de baixo em vez de inventar um terceiro: o que muda é o motivo, não
+     * o comportamento. O que o turno já produziu é entregue; o que dependia de
+     * mais uma ida ao modelo é declarado como não feito.
+     *
+     * Este é o ponto do turno onde o estouro mais dói e onde ele é mais
+     * necessário: síntese é a chamada mais cara (histórico, persona, catálogo e
+     * contexto no prompt), e é a que um laço de reparo futuro vai querer repetir.
+     */
+    const permissaoDaSintese = orcamento.consumir('chamada_modelo');
+    if (!permissaoDaSintese.permitido) {
+      this.avisarOrcamento(permissaoDaSintese, 'síntese da resposta');
+      const texto = [
+        saidas.length > 0 ? saidas.join('\n\n') : '',
+        `${permissaoDaSintese.motivo}. ` +
+          (saidas.length > 0
+            ? 'Entreguei o que já estava pronto e não redigi o fechamento.'
+            : 'Não cheguei a produzir resultado neste turno. Nada foi alterado por mim depois disso.'),
+        falhas.length > 0 ? `Não executei: ${falhas.join('; ')}.` : '',
+        verificacoesPendentes.length > 0
+          ? `Sobre o resto, ${VERBO_DO_ESTADO.desconhecido}: ${verificacoesPendentes.join('; ')}.`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n');
       b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto, responde_a: respondeA });
       return texto;
     }
@@ -1809,6 +1975,10 @@ export class Kernel {
         .filter(Boolean)
         .join('\n\n'),
       sinal: controle.signal,
+      /* A cadeia pergunta antes de tentar OUTRO elo. Sem isto, uma chamada de
+         modelo contaria 1 no orçamento e custaria quatro idas à rede — que é
+         exatamente o multiplicador que um teto de chamadas não vê. */
+      aoTentarProvedor: () => orcamento.consumir('tentativa_provedor').permitido,
       aoReceberTexto: (pedaco) => {
         if (controle.signal.aborted) return;
         acumulado += pedaco;
@@ -1827,6 +1997,12 @@ export class Kernel {
       cache_lido: r.cache_lido,
       ms: Date.now() - inicio,
     });
+
+    /* Token é contabilizado DEPOIS porque ninguém sabe o custo antes de pagar.
+       O teto atua na chamada seguinte — e é por isso que ele é teto de
+       acumulado, com pior caso do tamanho de uma chamada. Está declarado no
+       cabeçalho de `OrcamentoDoTurno`. */
+    orcamento.registrar('tokens', r.tokens_entrada + r.tokens_saida);
 
     await this.dep.estado.aplicarIntencao({ campo: 'energia_cognitiva', delta: -0.06 });
     await this.dep.estado.aplicarIntencao({

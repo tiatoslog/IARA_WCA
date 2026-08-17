@@ -187,6 +187,20 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
   IARA_MODO: { natureza: 'texto', papel: 'unificado ou headless' },
   IARA_AMBIENTE: { natureza: 'texto', papel: 'produção ou homologação' },
   IARA_AUTONOMIA: { natureza: 'texto', papel: 'teto de autonomia' },
+  // — o orçamento do turno (ver OrcamentoDoTurno.ts). Todos opcionais: ausente
+  // significa o padrão do módulo, nunca "sem teto".
+  IARA_ORCAMENTO_PASSOS: { natureza: 'numero', papel: 'teto de habilidades executadas por turno' },
+  IARA_ORCAMENTO_CHAMADAS_MODELO: {
+    natureza: 'numero',
+    papel: 'teto de chamadas ao modelo por turno',
+  },
+  IARA_ORCAMENTO_TENTATIVAS_PROVEDOR: {
+    natureza: 'numero',
+    papel: 'teto de tentativas de provedor por turno (retentativa e fallback da cadeia)',
+  },
+  IARA_ORCAMENTO_EFEITOS: { natureza: 'numero', papel: 'teto de efeitos no mundo por turno' },
+  IARA_ORCAMENTO_TOKENS: { natureza: 'numero', papel: 'teto de tokens acumulados por turno' },
+  IARA_ORCAMENTO_TEMPO_MS: { natureza: 'numero', papel: 'teto de tempo de parede por turno' },
   IARA_ADMINS: { natureza: 'lista', papel: 'operadores administradores' },
   IARA_CIDADE: { natureza: 'texto', papel: 'cidade padrão' },
   IARA_LATITUDE: { natureza: 'texto', papel: 'latitude padrão' },
