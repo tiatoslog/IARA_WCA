@@ -14,7 +14,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { BarramentoEventos } from '../nucleo/kernel/BarramentoEventos';
 import { EstadoAtomico } from '../nucleo/EstadoAtomico';
-import { MemoriaOperacional } from '../nucleo/MemoriaOperacional';
+import { memoriaOperacional } from '../nucleo/MemoriaOperacional';
 import { Kernel } from '../nucleo/kernel/Kernel';
 import { outrosOperadores } from '../../lib/operadores';
 import { papelDe } from '../nucleo/kernel/Papeis';
@@ -43,7 +43,9 @@ import {
 const portalCanal = new PortalEfeitos(registroOperacoes);
 portalCanal.registrarTodas(INTEGRACOES);
 
-const memoria = new MemoriaOperacional();
+/* A MESMA memória da `Porta` — ver `memoriaOperacional`. O operador que fala
+   pela tela e pelo WhatsApp é um só, e o shard dele também. */
+const memoria = memoriaOperacional;
 
 /** Um kernel por operador, como no WebSocket. Estado não é por mensagem. */
 interface Residente {

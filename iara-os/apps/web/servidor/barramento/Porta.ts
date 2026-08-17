@@ -13,7 +13,7 @@
 
 import type { WebSocket } from 'ws';
 import { EstadoAtomico } from '../nucleo/EstadoAtomico';
-import { MemoriaOperacional } from '../nucleo/MemoriaOperacional';
+import { memoriaOperacional } from '../nucleo/MemoriaOperacional';
 import { TeoriaDaMente } from '../nucleo/TeoriaDaMente';
 import { SessaoOperador } from './SessaoOperador';
 import { PonteProjecao } from './PonteProjecao';
@@ -40,7 +40,9 @@ import {
   type OperadorAutenticado,
 } from '../nucleo/Autenticacao';
 
-const memoria = new MemoriaOperacional();
+/* A MESMA memória do canal WhatsApp — ver `memoriaOperacional`. Duas instâncias
+   aqui e lá apagavam a mensagem uma da outra em silêncio. */
+const memoria = memoriaOperacional;
 
 /**
  * Espelhos simultâneos por operador. O mesmo operador pode estar no app
