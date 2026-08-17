@@ -69,6 +69,20 @@ interface Shard {
   insights: InsightRelacional[];
   /** A ficha que o operador escreveu sobre si. Ausente em shard antigo. */
   preferencias?: PreferenciasOperador;
+  /**
+   * QUANTOS FATOS A PODA JÁ DESCARTOU, e quando foi a última.
+   *
+   * A poda é necessária — o shard não pode crescer sem teto — mas era INVISÍVEL:
+   * cortava os mais antigos e nada, nem log nem campo, dizia que houve corte. A
+   * bateria de memória mediu 0/60 de recall fora da janela e não tinha como
+   * distinguir "descartado pela poda" de "nunca foi gravado".
+   *
+   * Não é para o prompt e não é para a tela: é para quem investiga. Perda de dado
+   * sem registro da perda é a mesma doença que o gate sistêmico proíbe em bateria
+   * — corte não declarado é indistinguível de cobertura completa.
+   */
+  podados?: number;
+  ultima_poda?: string;
 }
 
 /**
@@ -241,7 +255,11 @@ export class MemoriaOperacional {
         destino,
       });
       if (shard.registros.length > LIMITE_HISTORICO * 3) {
+        const antes = shard.registros.length;
         shard.registros = shard.registros.slice(-LIMITE_HISTORICO * 2);
+        /* A perda passa a ter número e data. Ver o comentário de `podados`. */
+        shard.podados = (shard.podados ?? 0) + (antes - shard.registros.length);
+        shard.ultima_poda = new Date().toISOString();
       }
     });
   }
