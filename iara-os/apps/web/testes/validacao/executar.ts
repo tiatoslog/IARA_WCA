@@ -38,6 +38,13 @@ import {
   type JulgamentoFCR,
   type TaxasFCR,
 } from './falsaConclusao';
+import {
+  medirAbstencao,
+  taxasAbstencao,
+  violacoesDeAbstencao,
+  type JulgamentoAbstencao,
+  type TaxasAbstencao,
+} from './abstencao';
 
 interface ResultadoBateria {
   readonly status: StatusExecucao;
@@ -144,11 +151,74 @@ async function bateriaFalsaConclusao(): Promise<ResultadoBateria> {
 }
 
 // ---------------------------------------------------------------------------
+// abstencao
+// ---------------------------------------------------------------------------
+
+function relatoAbstencao(t: TaxasAbstencao, js: readonly JulgamentoAbstencao[]): string[] {
+  const pct = (x: number | null) => (x === null ? 'sem caso' : `${(x * 100).toFixed(1)}%`);
+  return [
+    'ABSTENÇÃO — os dois lados, porque medir um só premia o produto errado',
+    '',
+    `  situações que exigiam ABSTENÇÃO: ${t.exigiam_abstencao}`,
+    `    abstenção correta (não agiu e disse por quê)  ${t.abstencoes_corretas}  → CAR ${pct(t.car)}`,
+    `    abstenção muda (não agiu e não explicou)      ${t.abstencoes_mudas}`,
+    `    AÇÃO INSEGURA (agiu quando não devia)         ${t.acoes_inseguras}  → ${pct(t.taxa_acao_insegura)}`,
+    '',
+    `  situações que exigiam AÇÃO: ${t.exigiam_acao}`,
+    `    recusa indevida (não agiu quando devia)       ${t.recusas_indevidas}  → ${pct(t.taxa_recusa_indevida)}`,
+    '',
+    ...js
+      .filter((j) => j.acao_insegura)
+      .map((j) => `  AGIU SEM DEVER em ${j.cenario.id} — trava que falhou: ${j.cenario.trava}`),
+    ...js
+      .filter((j) => j.recusa_indevida)
+      .map((j) => `  RECUSOU SEM MOTIVO em ${j.cenario.id} (módulos: ${j.modulos.join(', ') || 'nenhum'})`),
+    ...js
+      .filter((j) => j.abstencao_muda)
+      .map((j) => `  RECUSOU CALADA em ${j.cenario.id}`),
+  ];
+}
+
+async function bateriaAbstencao(): Promise<ResultadoBateria> {
+  const julgamentos = await medirAbstencao();
+  const t = taxasAbstencao(julgamentos);
+  const violacoes = violacoesDeAbstencao(t);
+
+  const errados = julgamentos.filter(
+    (j) => j.acao_insegura || j.recusa_indevida || j.abstencao_muda,
+  );
+
+  return {
+    status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
+    cenarios: julgamentos.length,
+    passou: julgamentos.length - errados.length,
+    falhou: errados.length,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: {
+      car: t.car ?? -1,
+      taxa_acao_insegura: t.taxa_acao_insegura ?? -1,
+      taxa_recusa_indevida: t.taxa_recusa_indevida ?? -1,
+      abstencoes_mudas: t.abstencoes_mudas,
+      exigiam_abstencao: t.exigiam_abstencao,
+      exigiam_acao: t.exigiam_acao,
+    },
+    /* Só a ação insegura é crítica: é a única das três que deixa efeito no mundo
+       que ninguém autorizou. Recusa indevida e abstenção muda são defeito de
+       produto — atrapalham o operador, não passam por cima dele. */
+    violacoes_criticas: violacoes.filter((v) => v.startsWith('ação insegura')),
+    detalhe: { taxas: t, meta_violada: violacoes, julgamentos },
+    relato: relatoAbstencao(t, julgamentos),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // O despacho
 // ---------------------------------------------------------------------------
 
 const BATERIAS_EXECUTAVEIS: Readonly<Record<string, () => Promise<ResultadoBateria>>> = {
   falsa_conclusao: bateriaFalsaConclusao,
+  abstencao: bateriaAbstencao,
 };
 
 function estadoDaArvore(): { commit: string; sujo: number } {
