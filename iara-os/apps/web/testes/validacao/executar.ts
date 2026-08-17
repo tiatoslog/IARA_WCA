@@ -46,6 +46,19 @@ import {
   type TaxasAbstencao,
 } from './abstencao';
 import { medirExfiltracao, taxasExfiltracao, violacoesDeExfiltracao } from './exfiltracao';
+import { medirRecall, medirContrato, taxasRag, violacoesDeRag } from './rag';
+import { medirMemoria, taxasMemoria, violacoesDeMemoria } from './memoria';
+import { compararSuperficie, superficieAtual, violacoesDeSuperficie } from './superficie';
+import { medirRecuperacao, taxasRecuperacao, violacoesDeRecuperacao } from './recuperacao';
+import {
+  medirVolume,
+  medirCaos,
+  medirEndurance,
+  violacoesDeVolume,
+  violacoesDeEndurance,
+} from './volume';
+import { medirRoteamento, violacoesDeRoteamento } from './roteamento';
+import { medirQueda, violacoesDeQueda } from './queda';
 
 interface ResultadoBateria {
   readonly status: StatusExecucao;
@@ -474,6 +487,402 @@ async function bateriaInjecaoCadeia(): Promise<ResultadoBateria> {
 }
 
 // ---------------------------------------------------------------------------
+// rag_sintetico
+// ---------------------------------------------------------------------------
+
+async function bateriaRag(): Promise<ResultadoBateria> {
+  const recall = await medirRecall();
+  const contrato = await medirContrato();
+  const t = taxasRag(recall, contrato);
+  const violacoes = violacoesDeRag(recall, contrato);
+
+  /* Violação de CONTRATO é crítica (log bruto no prompt é custo e afogamento de
+     contexto); recall de paráfrase não é sequer violação. A assimetria está
+     documentada em `violacoesDeRag`. */
+  const criticas = violacoes.filter((v) => /contrato violado|acima do limiar/.test(v));
+
+  return {
+    status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
+    cenarios: recall.length + contrato.length,
+    passou:
+      recall.filter((j) => (j.pergunta.esperado ? j.acertou_em_2 : !j.ruido)).length +
+      contrato.filter((c) => !c.violou).length,
+    falhou:
+      recall.filter((j) => (j.pergunta.esperado ? !j.acertou_em_2 : j.ruido)).length +
+      contrato.filter((c) => c.violou).length,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: {
+      recall_em_1: t.recall_em_1,
+      recall_em_2: t.recall_em_2,
+      mrr: t.mrr,
+      perguntas_com_gabarito: t.perguntas,
+      ruido: t.ruido,
+      violacoes_de_contrato: t.violacoes_de_contrato,
+      acertos_parafrase: t.por_familia.parafrase?.acertos ?? -1,
+    },
+    violacoes_criticas: criticas,
+    detalhe: { taxas: t, recall, contrato },
+    relato: [
+      'RAG COM CORPUS SINTÉTICO — 62 linhas, gabarito conhecido',
+      '',
+      `  recall@1 ${(t.recall_em_1 * 100).toFixed(1)}% · recall@2 ${(t.recall_em_2 * 100).toFixed(1)}% · MRR ${t.mrr.toFixed(3)}`,
+      ...Object.entries(t.por_familia).map(
+        ([f, v]) => `  ${f.padEnd(18)} ${v.acertos}/${v.total}`,
+      ),
+      `  ruído: ${t.ruido} · violações de contrato: ${t.violacoes_de_contrato}`,
+      '',
+      ...violacoes.map((v) => `  ${v}`),
+    ],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// memoria_benchmark
+// ---------------------------------------------------------------------------
+
+async function bateriaMemoria(): Promise<ResultadoBateria> {
+  const julgamentos = await medirMemoria();
+  const t = taxasMemoria(julgamentos);
+  const violacoes = violacoesDeMemoria(julgamentos);
+
+  return {
+    status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
+    cenarios: julgamentos.length,
+    passou: t.aprovadas,
+    falhou: julgamentos.length - t.aprovadas,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: {
+      recall_na_janela: t.recall_na_janela,
+      falsa_memoria: t.falsa_memoria,
+      medicoes: t.medicoes,
+    },
+    /* Falsa memória e cruzamento entre operadores sao criticos: a IARA afirmando
+       fato que ninguem escreveu, ou o fato de um operador na boca de outro. Perda
+       por janela nao e critica — e desenho declarado. */
+    violacoes_criticas: violacoes.filter((v) => /falsa-memoria|isolamento/.test(v)),
+    detalhe: { taxas: t, julgamentos },
+    relato: [
+      'MEMORIA — recall, falsa memoria, obsolescencia, isolamento',
+      '',
+      ...julgamentos.map(
+        (j) => `  ${(j.aprovado ? 'ok' : 'FALHA').padEnd(6)} ${j.id.padEnd(32)} ${j.medido}`,
+      ),
+      '',
+      ...t.observacoes.map((o) => `  observacao: ${o}`),
+      ...violacoes.map((v) => `  ${v}`),
+    ],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// regressao_continua
+// ---------------------------------------------------------------------------
+
+async function bateriaSuperficie(): Promise<ResultadoBateria> {
+  const atual = superficieAtual();
+  const deltas = compararSuperficie();
+  const violacoes = violacoesDeSuperficie(deltas);
+  const itens =
+    atual.habilidades.length +
+    atual.integracoes.length +
+    atual.baterias.length +
+    atual.portas_de_saida.length;
+
+  return {
+    status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
+    cenarios: itens,
+    passou: itens - violacoes.length,
+    falhou: violacoes.length,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: {
+      habilidades: atual.habilidades.length,
+      integracoes: atual.integracoes.length,
+      baterias: atual.baterias.length,
+      portas_de_saida: atual.portas_de_saida.length,
+      itens_fora_da_declaracao: violacoes.length,
+    },
+    /* Superficie nova sem bateria e critico: e a porta por onde entra a habilidade
+       que nenhuma medicao viu. Foi assim que o proprio projeto chegou a L4. */
+    violacoes_criticas: violacoes,
+    detalhe: { atual, deltas },
+    relato: [
+      'PORTAO DE REGRESSAO CONTINUA — a superficie avaliavel esta declarada?',
+      '',
+      `  ${atual.habilidades.length} habilidade(s) · ${atual.integracoes.length} integracao(oes) · ` +
+        `${atual.baterias.length} bateria(s) · ${atual.portas_de_saida.length} porta(s) de saida`,
+      '',
+      ...violacoes.map((v) => `  ${v}`),
+      violacoes.length === 0 ? '  declaracao em dia.' : '',
+    ].filter(Boolean),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// recuperacao + custo_latencia — uma medicao, dois registros
+// ---------------------------------------------------------------------------
+
+/**
+ * DUAS BATERIAS, UM PASSE. Medir recuperacao exige rodar turnos ate o fim, e um
+ * turno que roda ate o fim ja carrega tudo que o custo precisa. Rodar duas vezes
+ * gastaria o dobro para medir os mesmos turnos — e as duas leituras poderiam
+ * divergir por variacao de maquina, o que produziria discussao sobre qual vale.
+ *
+ * O registro sai SEPARADO porque a pergunta e outra, e o veredito conta bateria,
+ * nao execucao.
+ */
+async function bateriaRecuperacao(qual: 'recuperacao' | 'custo'): Promise<ResultadoBateria> {
+  const julgamentos = await medirRecuperacao();
+  const t = taxasRecuperacao(julgamentos);
+  const violacoes = violacoesDeRecuperacao(t);
+
+  const relatoComum = [
+    ...julgamentos.map(
+      (j) =>
+        `  ${j.cenario.id.padEnd(22)} alcancou=${String(j.objetivo_alcancado).padEnd(5)} ` +
+        `efeitos=${j.vezes_no_mundo} tentativas=${j.tentativas} ${j.ms}ms ${j.tokens}tok`,
+    ),
+    '',
+  ];
+
+  if (qual === 'custo') {
+    return {
+      status: 'EXECUTADA_PASSOU',
+      cenarios: julgamentos.length,
+      passou: julgamentos.length,
+      falhou: 0,
+      inconclusivo: 0,
+      bloqueado: 0,
+      metricas: {
+        ms_por_turno: t.ms_por_turno,
+        tokens_por_turno: t.tokens_por_turno,
+        tokens_por_turno_bem_sucedido: Number.isFinite(t.tokens_por_turno_bem_sucedido)
+          ? t.tokens_por_turno_bem_sucedido
+          : -1,
+        chamadas_ao_provedor_por_turno: t.chamadas_por_turno,
+      },
+      /* Custo nao tem meta ainda: o provedor de laboratorio nao cobra, e inventar
+         um teto em token de mentira seria criar numero que ninguem pode cumprir
+         nem violar. O que a bateria prova e que a ATRIBUICAO existe. */
+      violacoes_criticas: [],
+      detalhe: { taxas: t, julgamentos },
+      relato: [
+        'CUSTO E LATENCIA POR TAREFA — atribuicao por desfecho',
+        '',
+        ...relatoComum,
+        `  ${t.ms_por_turno.toFixed(1)} ms/turno · ${t.tokens_por_turno.toFixed(0)} tokens/turno`,
+        `  ${t.tokens_por_turno_bem_sucedido.toFixed(0)} tokens por turno BEM-SUCEDIDO`,
+        `  ${t.chamadas_por_turno.toFixed(1)} chamada(s) ao provedor por turno`,
+      ],
+    };
+  }
+
+  return {
+    status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
+    cenarios: julgamentos.length,
+    passou: julgamentos.length - violacoes.length,
+    falhou: violacoes.length,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: {
+      falhas_recuperaveis: t.recuperaveis,
+      recuperadas: t.recuperadas,
+      taxa_de_recuperacao: t.taxa,
+      duplicou_efeito: t.duplicou.length,
+      recuperou_o_proibido: t.recuperou_o_proibido.length,
+    },
+    /* Taxa baixa NAO e violacao — e a lacuna conhecida, medida de proposito.
+       Violacao e contornar politica ou duplicar efeito ao tentar de novo. */
+    violacoes_criticas: violacoes,
+    detalhe: { taxas: t, julgamentos },
+    relato: [
+      'RECUPERACAO SEM DUPLICAR EFEITO',
+      '',
+      ...relatoComum,
+      `  taxa de recuperacao: ${t.recuperadas}/${t.recuperaveis} = ${(t.taxa * 100).toFixed(1)}%`,
+      `  contorno de politica: ${t.recuperou_o_proibido.length} · duplicacao: ${t.duplicou.length}`,
+      '',
+      '  LACUNA DECLARADA: nao existe re-plano. O passo falha, e registrado, e o laco',
+      '  segue. A taxa e linha de base para o dia em que a feature entrar.',
+      ...violacoes.map((v) => `  ${v}`),
+    ],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// volume_agentic - caos - endurance
+// ---------------------------------------------------------------------------
+
+/** O TETO DE HONESTIDADE das tres: provedor de laboratorio, nao modelo real. */
+const AVISO_DE_LABORATORIO =
+  'provedor de LABORATORIO: mede o sistema sob repeticao (travas, jornal, ' +
+  'idempotencia, trava da fala), nao a propensao de um modelo real - essa e a campanha';
+
+async function bateriaDeVolume(qual: 'volume' | 'caos'): Promise<ResultadoBateria> {
+  const r = qual === 'caos' ? await medirCaos(300) : await medirVolume(1000);
+  const violacoes = violacoesDeVolume(r);
+  const ruins = r.mentiras + r.duplicacoes + r.contornos + r.explosoes;
+
+  return {
+    status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
+    cenarios: r.turnos,
+    passou: r.turnos - ruins,
+    falhou: ruins,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: {
+      turnos: r.turnos,
+      semente: r.semente,
+      mentiras: r.mentiras,
+      duplicacoes: r.duplicacoes,
+      contornos: r.contornos,
+      explosoes: r.explosoes,
+      p50_ms: r.p50_ms,
+      p95_ms: r.p95_ms,
+    },
+    violacoes_criticas: violacoes,
+    detalhe: { resultado: r, aviso: AVISO_DE_LABORATORIO },
+    relato: [
+      qual === 'caos'
+        ? 'CAOS CONTROLADO - provedor caindo em voo e jornal desaparecendo'
+        : 'VOLUME AGENTIC - a taxa se sustenta fora da amostra escolhida a dedo?',
+      '',
+      `  ${r.turnos} turno(s), semente ${r.semente}`,
+      ...Object.entries(r.por_modo).map(([m, n]) => `    ${m.padEnd(20)} ${n}`),
+      '',
+      `  mentiras ${r.mentiras} - duplicacoes ${r.duplicacoes} - contornos ${r.contornos} - explosoes ${r.explosoes}`,
+      `  p50 ${r.p50_ms} ms - p95 ${r.p95_ms} ms`,
+      '',
+      `  ${AVISO_DE_LABORATORIO}`,
+      ...violacoes.map((v) => `  ${v}`),
+    ],
+  };
+}
+
+async function bateriaEndurance(): Promise<ResultadoBateria> {
+  const janela = Number(process.env.IARA_ENDURANCE_MS ?? 60_000);
+  const r = await medirEndurance(janela);
+  const violacoes = violacoesDeEndurance(r);
+
+  return {
+    status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
+    cenarios: r.turnos,
+    passou: violacoes.length > 0 ? 0 : r.turnos,
+    falhou: violacoes.length > 0 ? r.turnos : 0,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: {
+      janela_ms: r.janela_ms,
+      turnos: r.turnos,
+      heap_inicial_mb: r.heap_mb[0] ?? -1,
+      heap_final_mb: r.heap_mb.at(-1) ?? -1,
+      crescimento_mb: r.crescimento_mb,
+      handles_inicio: r.handles_inicio,
+      handles_fim: r.handles_fim,
+    },
+    violacoes_criticas: violacoes,
+    detalhe: { resultado: r, aviso: AVISO_DE_LABORATORIO },
+    relato: [
+      'ENDURANCE - o que cresce sozinho quando ela roda sem parar',
+      '',
+      `  ${r.turnos} turno(s) em ${Math.round(r.janela_ms / 1000)} s`,
+      `  heap ${r.heap_mb[0] ?? '?'} -> ${r.heap_mb.at(-1) ?? '?'} MB (delta ${r.crescimento_mb} MB)`,
+      `  handles ${r.handles_inicio} -> ${r.handles_fim}`,
+      '',
+      `  NIVEL ALCANCADO: ${r.nivel}`,
+      '  IARA_ENDURANCE_MS=21600000 roda o nivel de 6 h.',
+      ...violacoes.map((v) => `  ${v}`),
+    ],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// roteamento_modelo
+// ---------------------------------------------------------------------------
+
+async function bateriaRoteamento(): Promise<ResultadoBateria> {
+  const julgamentos = await medirRoteamento();
+  const violacoes = violacoesDeRoteamento(julgamentos);
+  const caracterizacoes = julgamentos.filter((j) => j.caracterizacao);
+
+  return {
+    status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
+    cenarios: julgamentos.length,
+    passou: julgamentos.filter((j) => j.aprovado).length,
+    falhou: violacoes.length,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: {
+      medicoes: julgamentos.length,
+      caracterizacoes: caracterizacoes.length,
+    },
+    /* Failover quebrado e critico: sem ele, um provedor fora do ar derruba o turno
+       inteiro. Nao rotear por custo NAO e violacao — a cadeia nao promete isso. */
+    violacoes_criticas: violacoes,
+    detalhe: { julgamentos },
+    relato: [
+      'ROTEAMENTO DE MODELO CONTRA MODELO FIXO',
+      '',
+      ...julgamentos.map(
+        (j) =>
+          `  ${(j.aprovado ? 'ok' : 'FALHA').padEnd(6)}${j.caracterizacao ? '(caract) ' : '         '}` +
+          `${j.id.padEnd(34)} ${j.medido}`,
+      ),
+      '',
+      '  LACUNA DECLARADA: CadeiaDeRaciocinio e FAILOVER com saude, nao roteador.',
+      '  Nao decide por tarefa, custo ou privacidade — e a caracterizacao acima e a',
+      '  linha de base para o dia em que alguem propuser que decida.',
+      ...violacoes.map((v) => `  ${v}`),
+    ],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// consistencia_queda
+// ---------------------------------------------------------------------------
+
+async function bateriaQueda(): Promise<ResultadoBateria> {
+  const julgamentos = await medirQueda();
+  const violacoes = violacoesDeQueda(julgamentos);
+
+  return {
+    status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
+    cenarios: julgamentos.length,
+    passou: julgamentos.filter((j) => j.honesto).length,
+    falhou: julgamentos.filter((j) => !j.honesto).length,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: {
+      crashes: julgamentos.length,
+      na_fila_de_verdade: julgamentos.filter((j) => j.pendente_de_verdade).length,
+      com_efeito_no_mundo: julgamentos.filter((j) => j.efeito_no_mundo).length,
+    },
+    /* Tudo aqui e critico: confirmacao por otimismo depois de crash e a porta da
+       duplicata, e jornal ilegivel depois de crash e perda de rastro de efeito
+       externo. */
+    violacoes_criticas: violacoes,
+    detalhe: { julgamentos },
+    relato: [
+      'CONSISTENCIA SOB QUEDA — crash real em processo filho',
+      '',
+      ...julgamentos.map(
+        (j) =>
+          `  ${(j.honesto ? 'ok' : 'FALHA').padEnd(6)} ${j.momento.padEnd(20)} ` +
+          `jornal=${String(j.estado_lido).padEnd(14)} mundo=${String(j.efeito_no_mundo).padEnd(5)} ` +
+          `na_fila=${j.pendente_de_verdade}`,
+      ),
+      '',
+      '  O jornal NAO distingue efeito aplicado de nao aplicado — e nao finge que',
+      '  distingue. Quem distingue e o verificador olhando o mundo depois, e o que',
+      '  torna isso possivel e a operacao continuar em pendentesDeVerdade.',
+      ...violacoes.map((v) => `  ${v}`),
+    ],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // O despacho
 // ---------------------------------------------------------------------------
 
@@ -504,6 +913,16 @@ const BATERIAS_EXECUTAVEIS: Readonly<Record<string, () => Promise<ResultadoBater
   ),
   injecao_cadeia: bateriaInjecaoCadeia,
   exfiltracao_execucao: bateriaExfiltracao,
+  rag_sintetico: bateriaRag,
+  memoria_benchmark: bateriaMemoria,
+  regressao_continua: bateriaSuperficie,
+  recuperacao: () => bateriaRecuperacao('recuperacao'),
+  custo_latencia: () => bateriaRecuperacao('custo'),
+  volume_agentic: () => bateriaDeVolume('volume'),
+  caos: () => bateriaDeVolume('caos'),
+  endurance: bateriaEndurance,
+  roteamento_modelo: bateriaRoteamento,
+  consistencia_queda: bateriaQueda,
 };
 
 function estadoDaArvore(): { commit: string; sujo: number } {

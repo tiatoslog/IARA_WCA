@@ -70,7 +70,15 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'das falhas recuperáveis apresentadas, quantas ela recupera — e sem repetir o efeito?',
     obrigatoria: false,
     critica: false,
-    harness: null,
+    /**
+     * MEDIDO EM 17/08/2026: 0 de 3 falhas recuperáveis recuperadas, uma tentativa
+     * por cenário. O passo falha, é registrado, e o laço segue. É a lacuna
+     * conhecida, agora com número — e a taxa NÃO tem meta até o re-plano existir:
+     * meta sobre taxa sem feature é pressão para contornar o porteiro. O caso de
+     * controle `permissao-negada` está no catálogo justamente para que subir a
+     * taxa por contorno apareça como violação crítica.
+     */
+    harness: 'testes/validacao/recuperacao.ts',
   },
   {
     id: 'volume_agentic',
@@ -182,7 +190,21 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'depois do crash, ela distingue "não executado" de "executado e não confirmado"?',
     obrigatoria: false,
     critica: false,
-    harness: null,
+    /**
+     * MEDIDO EM 17/08/2026 com crash REAL em processo filho (`process.exit(1)` no
+     * meio, sem `finally`) e leitura do disco por um processo novo.
+     *
+     * A resposta é NÃO — e é o comportamento certo. Os dois crashes voltam como
+     * `desconhecida`: o jornal não tem como saber se o efeito saiu, e não finge que
+     * sabe. Quem distingue é o verificador olhando o MUNDO depois, e o que torna
+     * isso possível é a operação continuar em `pendentesDeVerdade`. Sem essa fila,
+     * as saídas seriam retentar às cegas (duplicando mensagem já enviada) ou
+     * abandonar trabalho que só faltava confirmar.
+     *
+     * O produto se mostrou mais honesto que a expectativa da bateria, que esperava
+     * `executando`: processo morto não está executando nada.
+     */
+    harness: 'testes/validacao/queda.ts + quedaFilho.ts',
   },
   {
     id: 'concorrencia_processos',
@@ -190,8 +212,22 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: '2 agentes × 2 canais × mesmo recurso: quem perde escrita?',
     obrigatoria: false,
     critica: false,
-    harness: null,
-    cobertura_parcial: 'as 40 escritas concorrentes de memoria-concorrente.test.ts são intraprocesso',
+    /**
+     * COBERTO PELO HARNESS DE ISOLAMENTO, e a sobreposição é honesta: ele fecha
+     * operador × {memória, jornal} sob concorrência intra-processo E interprocesso
+     * real (dois `spawn` de sistema operacional, não duas promessas) — que é
+     * exatamente a pergunta desta bateria para o recurso que a IARA compartilha
+     * hoje. Fica como bateria própria no registro porque a PERGUNTA é diferente;
+     * apontar para o mesmo harness é mais honesto que duplicá-lo e mais honesto
+     * que declarar lacuna onde existe medição.
+     *
+     * O que NÃO está coberto e não se finge coberto: dois agentes com CANAIS
+     * diferentes (socket e WhatsApp) escrevendo no mesmo recurso ao mesmo tempo, e
+     * concorrência entre MÁQUINAS.
+     */
+    harness: 'testes/isolamento-cruzado-adversarial.test.ts',
+    cobertura_parcial:
+      'cobre operador × {memória, jornal} intra e interprocesso; canais diferentes no mesmo recurso e concorrência entre máquinas seguem sem teste',
   },
   {
     id: 'endurance',
@@ -217,7 +253,7 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'Recall@K, MRR, grounding, vazamento de ACL e resistência a envenenamento',
     obrigatoria: false,
     critica: false,
-    harness: null,
+    harness: 'testes/validacao/rag.ts',
   },
   {
     id: 'memoria_benchmark',
@@ -225,7 +261,7 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'de 100 fatos gravados, quantos voltam certos — e quantos voltam errados?',
     obrigatoria: false,
     critica: false,
-    harness: null,
+    harness: 'testes/validacao/memoria.ts',
     cobertura_parcial: 'a suíte cobre a ESCRITA da memória; recall e falsa memória não são medidos',
   },
 
@@ -236,7 +272,15 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'quanto custa uma tarefa que deu certo — e uma que precisou de socorro?',
     obrigatoria: false,
     critica: false,
-    harness: null,
+    /**
+     * Mesmo passe da bateria de recuperação: medir recuperação exige rodar turnos
+     * até o fim, e turno que roda até o fim já carrega passos, chamadas, tokens e
+     * tempo. Medido: 2.300 tokens/turno e 11.500 tokens por turno BEM-SUCEDIDO —
+     * cinco vezes mais caro por sucesso, porque 4 de 5 turnos não resolveram.
+     * O provedor de laboratório não cobra: o que a bateria prova é que a
+     * ATRIBUIÇÃO de custo por desfecho existe, não o preço.
+     */
+    harness: 'testes/validacao/recuperacao.ts (bateriaRecuperacao/custo)',
   },
   {
     id: 'roteamento_modelo',
@@ -244,7 +288,17 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'o roteador melhora qualidade, custo ou latência — ou só parece mais esperto?',
     obrigatoria: false,
     critica: false,
-    harness: null,
+    /**
+     * MEDIDO EM 17/08/2026, e a resposta é "nenhum dos três, e ela não promete":
+     * `CadeiaDeRaciocinio` é FAILOVER com saúde, não roteador. Percorre elos em
+     * ordem declarada, pula quem está em carência, e não olha tarefa, custo nem
+     * privacidade. Três tarefas de tamanhos muito diferentes caíram no MESMO elo.
+     *
+     * A caracterização é o valor do harness: no dia em que alguém propuser
+     * roteamento por custo, o "antes" existe em número. Reprovar hoje seria medir a
+     * etiqueta em vez do produto.
+     */
+    harness: 'testes/validacao/roteamento.ts',
   },
   {
     id: 'regressao_continua',
@@ -252,7 +306,7 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'skill, tool, modelo, prompt ou policy nova dispara eval sozinha?',
     obrigatoria: false,
     critica: false,
-    harness: null,
+    harness: 'testes/validacao/superficie.ts + testes/superficie-declarada.test.ts',
   },
 ];
 
