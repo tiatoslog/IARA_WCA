@@ -45,6 +45,7 @@ import { motivoDaRecusa, nivelAtual, podeSem } from './Autonomia';
 import type { Plano } from './Evento';
 import { PermissaoNegada, ParametroInvalido, type Habilidade, type Risco } from './Habilidade';
 import { confirmaAcontecimento, VERBO_DO_ESTADO, type EstadoExecucao } from './Verdade';
+import { lerAfirmacaoDeFeito } from './AfirmacaoDeFeito';
 import { RegistroOperacoes, registroOperacoes } from './RegistroOperacoes';
 import { PortalEfeitos } from './PortalEfeitos';
 import { INTEGRACOES } from './integracoes';
@@ -1478,7 +1479,15 @@ export class Kernel {
         if (controle.signal.aborted) break;
         this.trabalho.registrarErro();
 
-        const estado = await this.apurarAposExcecao(passo, operacao, manifesto.risco, erro, enunciado, controle);
+        const estado = await this.apurarAposExcecao(
+          passo,
+          operacao,
+          manifesto.risco,
+          manifesto.idempotencia,
+          erro,
+          enunciado,
+          controle,
+        );
         const evidencia = estado.evidencia ?? (erro as Error).message;
 
         passos.push({
@@ -1674,6 +1683,25 @@ export class Kernel {
     passo: { habilidade: string | null; parametros: Readonly<Record<string, unknown>> },
     operacao: Operacao | null,
     risco: string,
+    /**
+     * A SEMÂNTICA DECLARADA, e ela entrou aqui por causa de uma medição.
+     *
+     * O atalho abaixo era `risco === 'baixo'`, na premissa de que consulta não
+     * muda o mundo. A premissa vale enquanto a declaração for coerente — e nada
+     * no repositório impõe `risco baixo ⇒ semântica leitura`. `assumir_plano`
+     * está no catálogo hoje com `risco: 'baixo'` e `escrita_idempotente`.
+     *
+     * Com um `baixo` que ESCREVE, um timeout depois do efeito virava `falhou`, e
+     * `falhou` faz a resposta dizer "Nada foi alterado na máquina" — afirmação
+     * sobre o mundo, sem ninguém ter olhado o mundo. Achado pela bateria de falsa
+     * conclusão (17/08/2026), que contou isso como falsa negativa.
+     *
+     * Agora o atalho exige as DUAS coisas. Leitura de verdade continua no caminho
+     * rápido; escrita declarada com risco baixo passa pela apuração como
+     * qualquer escrita — e sem verificador cai em `desconhecido`, que é o estado
+     * honesto para "aconteceu e ninguém confirmou".
+     */
+    semantica: SemanticaEfeito,
     erro: unknown,
     enunciado: string,
     controle: AbortController,
@@ -1689,7 +1717,7 @@ export class Kernel {
       erro instanceof PermissaoNegada ||
       erro instanceof ParametroInvalido ||
       /indisponível:/.test(mensagem);
-    if (antesDeExecutar || risco === 'baixo') {
+    if (antesDeExecutar || (risco === 'baixo' && semantica === 'leitura')) {
       return { estado: 'falhou', evidencia: mensagem };
     }
 
@@ -1921,6 +1949,33 @@ export class Kernel {
       .filter(Boolean)
       .join('\n\n');
 
+    /**
+     * A TRAVA DA FALA — o conserto do 56%.
+     *
+     * Medido em 17/08/2026 (`npm run bateria -- falsa_conclusao`): com um provedor
+     * que mente por construção, o caminho determinístico não afirmou efeito falso
+     * nenhuma vez em 11 claims, e o caminho cognitivo afirmou em 9 de 16. A única
+     * defesa aqui era a linha de contexto pedindo "não afirme que foram" —
+     * instrução, não trava.
+     *
+     * `alcancouOMundo` é ESTREITO de propósito: só `falhou` e
+     * `aguardando_confirmacao` deixam a trava armada. Um passo `desconhecido`
+     * pode ter acontecido, e nesse caso o texto tem outra correção a fazer (o
+     * verbo de `Verdade.ts`), não esta. Entre deixar passar uma afirmação — que a
+     * bateria acusa — e engolir uma resposta honesta — que o operador nunca
+     * entende —, esta trava erra para o primeiro lado.
+     *
+     * COM A TRAVA ARMADA, A FALA NÃO É TRANSMITIDA ENQUANTO CHEGA. Conferir
+     * depois de streamar deixaria a mentira aparecer na tela e ser substituída
+     * meio segundo depois, e o operador já teria lido. O custo — perder a
+     * digitação ao vivo — cai só nos turnos em que nenhum passo chegou ao mundo,
+     * que são exatamente os turnos em que não há nada de bom para mostrar rápido.
+     */
+    const alcancouOMundo = execucao.passos.some(
+      (x) => x.estado === 'verificado' || x.estado === 'executado' || x.estado === 'desconhecido',
+    );
+    const travaArmada = execucao.passos.length > 0 && !alcancouOMundo;
+
     const inicio = Date.now();
     let acumulado = '';
     let abriu = false;
@@ -1982,6 +2037,9 @@ export class Kernel {
       aoReceberTexto: (pedaco) => {
         if (controle.signal.aborted) return;
         acumulado += pedaco;
+        /* Trava armada: acumula e não publica. A sala continua em "pensando"
+           porque é o que está acontecendo — ela ainda não falou. */
+        if (travaArmada) return;
         if (!abriu) {
           abriu = true;
           void this.dep.estado.transicionar('falando', 'raciocinio');
@@ -2003,6 +2061,78 @@ export class Kernel {
        acumulado, com pior caso do tamanho de uma chamada. Está declarado no
        cabeçalho de `OrcamentoDoTurno`. */
     orcamento.registrar('tokens', r.tokens_entrada + r.tokens_saida);
+
+    const textoDaLLM = r.texto || acumulado;
+
+    if (travaArmada) {
+      const leitura = lerAfirmacaoDeFeito(textoDaLLM);
+      if (leitura.afirma) {
+        /**
+         * A síntese afirmou efeito e nenhum passo chegou ao mundo. Ela é
+         * DESCARTADA e a resposta volta a ser composta pelo Kernel — que é o
+         * caminho medido em 0% de falsa conclusão.
+         *
+         * O descarte é DITO ao operador. Uma trava que corrige em silêncio
+         * ensina que a IARA às vezes muda de assunto sozinha; e um dia em que a
+         * trava errar, ninguém terá como saber que foi ela.
+         */
+        this.trabalho.registrarErro();
+        b.publicar({
+          tipo: 'FALHA',
+          modulo: 'verdade',
+          mensagem:
+            `A síntese afirmava efeito ("${leitura.ancora}") e nenhum passo deste turno ` +
+            'chegou ao mundo. Descartada.',
+        });
+        this.auditoria.registrar({
+          instante: new Date().toISOString(),
+          sessao: this.dep.sessao,
+          id_usuario: this.dep.idUsuario,
+          traco: b.tracoAtual,
+          acao: 'sintese_descartada:afirmacao_sem_efeito',
+          detalhe: `âncora "${leitura.ancora}"`,
+          permitido: false,
+        });
+        this.erros.registrar({
+          classe: 'afirmacao_sem_efeito',
+          entrada: percepcao.bruto,
+          observado: `a síntese afirmou "${leitura.ancora}" com nenhum passo alcançando o mundo`,
+          esperado: 'a fala não afirma o que os passos não sustentam',
+          instante: new Date().toISOString(),
+        });
+
+        const texto = [
+          saidas.length > 0 ? saidas.join('\n\n') : '',
+          falhas.length > 0
+            ? `Não executei isso. ${falhas.join('; ')}. Nada foi alterado na máquina.`
+            : 'Não executei o que você pediu, e não tenho resultado para mostrar. ' +
+              'Nada foi alterado na máquina.',
+          'Eu tinha redigido um fechamento dizendo que estava feito. Não está, ' +
+            'então descartei o fechamento em vez de te entregar ele.',
+        ]
+          .filter(Boolean)
+          .join('\n\n');
+
+        b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: idMensagem,
+          texto,
+          responde_a: respondeA,
+        });
+        return texto;
+      }
+
+      /* Não afirmou nada: a fala é honesta e vai inteira, de uma vez — foi só a
+         transmissão ao vivo que ficou retida. */
+      await this.dep.estado.transicionar('falando', 'raciocinio');
+      b.publicar({
+        tipo: 'RESPOSTA_TRECHO',
+        id_mensagem: idMensagem,
+        texto: textoDaLLM,
+        responde_a: respondeA,
+      });
+      return textoDaLLM;
+    }
 
     await this.dep.estado.aplicarIntencao({ campo: 'energia_cognitiva', delta: -0.06 });
     await this.dep.estado.aplicarIntencao({

@@ -47,7 +47,19 @@ export type ClasseErro =
    * que propõe desligar a máquina três vezes por semana é um sinal sobre o
    * prompt, e um inventário que só registra o que passou não o mostra.
    */
-  | 'autorizacao_negada';
+  | 'autorizacao_negada'
+  /**
+   * A SÍNTESE AFIRMOU EFEITO QUE NENHUM PASSO SUSTENTA — e a trava da fala a
+   * descartou antes de o operador ler.
+   *
+   * Classe própria, e não `afirmacao_sem_fonte`, porque a correção é outra:
+   * aquela pede procedência para um FATO citado; esta é sobre a LLM narrar uma
+   * AÇÃO que não houve. Medida em 17/08/2026 em 56% dos claims do caminho
+   * cognitivo, com provedor adversarial. Cada linha aqui é uma vez em que o
+   * modelo tentou e a trava segurou — a série diz se o prompt está melhorando ou
+   * se a trava é a única coisa de pé.
+   */
+  | 'afirmacao_sem_efeito';
 
 export interface ErroCognitivo {
   readonly classe: ClasseErro;
