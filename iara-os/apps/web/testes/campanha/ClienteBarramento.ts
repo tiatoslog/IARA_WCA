@@ -241,10 +241,34 @@ export class ClienteBarramento {
     const falaAnterior = this.ultimoSnapshot?.fala?.id ?? null;
     this.errosPendentes.length = 0;
 
-    this.enviar({ tipo: 'mensagem', texto, id_local: `camp${this.gravadas.length}` });
+    const idLocal = `camp${this.gravadas.length}`;
+    /**
+     * `op:${idLocal}` — a mesma transformação determinística que o servidor
+     * aplica em `PerguntaProjetada.id` (ver `lib/snapshot.ts`). É o endereço
+     * da PRÓPRIA pergunta deste cliente.
+     */
+    const minhaPergunta = `op:${idLocal}`;
+    this.enviar({ tipo: 'mensagem', texto, id_local: idLocal });
 
+    /**
+     * FILTRA POR `responde_a`, NÃO SÓ POR "É UMA FALA NOVA".
+     *
+     * ACHADO EM 17/08/2026: com dois espelhos falando ao mesmo tempo (missão
+     * `CC-01`), este cliente aceitava a primeira fala concluída diferente da
+     * anterior — inclusive a de OUTRO espelho. O oráculo de disco conferia o
+     * efeito do próprio pedido antes dele existir de verdade (a resposta real
+     * ainda estava a caminho), e a missão saía `FALSO_POSITIVO` por um buraco
+     * no HARNESS, não no produto: o jornal do motor mostrava as duas
+     * operações executadas e verificadas.
+     *
+     * `hooks/useIaraSocket.ts` (o cliente real) já resolve isso comparando
+     * `responde_a` com o id da própria bolha — a mesma correção de
+     * `FalaProjetada.responde_a`, cujo comentário cita este mesmo CC-01 de
+     * 16/08/2026 como o defeito original. Replicar aqui é o que falta para o
+     * harness enxergar o que a tela enxergaria.
+     */
     const nova = (f: FalaProjetada | null | undefined): boolean =>
-      !!f && f.concluida && f.id !== falaAnterior;
+      !!f && f.concluida && f.id !== falaAnterior && f.responde_a === minhaPergunta;
 
     const pacote = await this.esperarPacote(
       (p) =>
