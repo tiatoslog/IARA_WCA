@@ -325,6 +325,96 @@ function bateriaDeTap(
   };
 }
 
+// ---------------------------------------------------------------------------
+// escape_sandbox
+// ---------------------------------------------------------------------------
+
+/**
+ * NAO E `bateriaDeTap` porque aqui o TAP verde NAO significa aprovacao.
+ *
+ * `testes/escape-sandbox-adversarial.test.ts` CARACTERIZA vetores abertos: ele
+ * passa enquanto o escape reproduzir, e falha se a realidade mudar. Quem produz
+ * o veredito, entao, nao e a contagem de `ok` — e a lista de marcadores
+ * `ESCAPE-ABERTO` que os cenarios imprimem. Um vetor aberto e violacao critica,
+ * e violacao critica e BLOQUEADO em `MotorVeredito`.
+ *
+ * OS TRES ESTADOS, e por que nenhum deles fica verde por engano:
+ *
+ *   TAP verde + marcadores  → EXECUTADA_FALHOU. E o estado de hoje: o mecanismo
+ *                             de lancamento nao contem o filho. Bloqueia.
+ *   TAP vermelho            → EXECUTADA_FALHOU. A caracterizacao nao bate mais
+ *                             com a realidade: ou alguem conteve o escape e nao
+ *                             atualizou o registro, ou o ambiente mudou e a
+ *                             medicao nao vale. Bloqueia ate alguem olhar.
+ *   TAP verde sem marcador  → EXECUTADA_INCONCLUSIVA. So acontece se os cenarios
+ *                             pararem de rodar. "Nao mediu" nunca vira "passou".
+ *
+ * O unico caminho para EXECUTADA_PASSOU e alguem conter os tres vetores, voltar
+ * as assercoes de ES-02/03/04 e atualizar o registro — de proposito.
+ */
+async function bateriaEscapeSandbox(): Promise<ResultadoBateria> {
+  const { saida, codigo } = rodarProcesso('node', [
+    '--import',
+    'tsx',
+    '--test',
+    'testes/escape-sandbox-adversarial.test.ts',
+  ]);
+  const { passou, falhou } = contarTap(saida);
+
+  /* O marcador atravessa o TAP como linha de diagnostico (`# ESCAPE-ABERTO ...`),
+     entao a busca e por conteudo, nao por inicio de linha. */
+  const abertos = saida
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.includes('ESCAPE-ABERTO'))
+    .map((l) => l.slice(l.indexOf('ESCAPE-ABERTO')));
+
+  const naoMediu = passou + falhou === 0;
+  const caracterizacaoQuebrou = falhou > 0 || codigo !== 0;
+
+  const status: StatusExecucao = naoMediu
+    ? 'EXECUTADA_INCONCLUSIVA'
+    : caracterizacaoQuebrou || abertos.length > 0
+      ? 'EXECUTADA_FALHOU'
+      : 'EXECUTADA_PASSOU';
+
+  const violacoes = [
+    ...abertos.map((m) => `vetor de escape ABERTO: ${m.replace('ESCAPE-ABERTO ', '')}`),
+    ...(caracterizacaoQuebrou
+      ? [
+          'a caracterizacao do escape nao reproduz mais: registro e realidade ' +
+            'discordam — reavaliar antes de qualquer release',
+        ]
+      : []),
+  ];
+
+  return {
+    status,
+    cenarios: passou + falhou,
+    passou: Math.max(0, passou - abertos.length),
+    falhou: falhou + abertos.length,
+    inconclusivo: naoMediu ? 1 : 0,
+    bloqueado: 0,
+    metricas: {
+      codigo_de_saida: codigo,
+      vetores_abertos: abertos.length,
+      cenarios_de_caracterizacao: passou + falhou,
+    },
+    violacoes_criticas: violacoes,
+    detalhe: { abertos, codigo, saida: saida.slice(-8000) },
+    relato: [
+      'ESCAPE DE SANDBOX - o que um processo comprometido alcanca de fato',
+      '',
+      `  ${abertos.length} vetor(es) de escape ABERTO(S) em ${passou + falhou} cenario(s)`,
+      ...abertos.map((m) => `    ${m}`),
+      '',
+      '  o mecanismo de lancamento nao contem o filho: exige sandbox de SO',
+      '  (container ou token restrito), fora do alcance de correcao so em Node',
+      ...violacoes.map((v) => `  ${v}`),
+    ],
+  };
+}
+
 async function bateriaSegredos(): Promise<ResultadoBateria> {
   const { saida, codigo } = rodarProcesso('node', ['scripts/varrer-segredos.mjs', '--tudo']);
   return {
@@ -921,11 +1011,22 @@ const BATERIAS_EXECUTAVEIS: Readonly<Record<string, () => Promise<ResultadoBater
     ['--import', 'tsx', '--test', 'testes/isolamento-cruzado-adversarial.test.ts'],
     'isolamento entre operadores, sessões e processos',
   ),
-  escape_sandbox: bateriaDeTap(
+  /**
+   * MESMO HARNESS, PERGUNTA DIFERENTE — e por isso as duas entradas existem.
+   *
+   * O harness de isolamento fecha operador × {memória, jornal} sob concorrência
+   * interprocesso REAL (dois `spawn` de sistema operacional). Essa é exatamente a
+   * pergunta de `concorrencia_processos` para o recurso que a IARA compartilha hoje.
+   * Sem esta linha, o registro apontava um harness que o CLI não sabia executar — e
+   * o veredito dizia "ninguém chamou" para sempre, o que é pior que declarar lacuna:
+   * é declarar cobertura e não entregar.
+   */
+  concorrencia_processos: bateriaDeTap(
     'node',
-    ['--import', 'tsx', '--test', 'testes/escape-sandbox-adversarial.test.ts'],
-    'escape de sandbox',
+    ['--import', 'tsx', '--test', 'testes/isolamento-cruzado-adversarial.test.ts'],
+    'concorrência entre processos (mesmo harness do isolamento)',
   ),
+  escape_sandbox: bateriaEscapeSandbox,
   injecao_cadeia: bateriaInjecaoCadeia,
   exfiltracao_execucao: bateriaExfiltracao,
   rag_sintetico: bateriaRag,

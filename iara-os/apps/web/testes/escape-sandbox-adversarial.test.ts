@@ -34,9 +34,56 @@
  * aconteceu por alguns minutos nesta própria sessão). Ver
  * `docs/prd/test-plan-escape-sandbox.md`.
  *
- * ESTA SUÍTE MEDE, NÃO FORÇA PASS. Se o achado for "sim, alcança", o teste
- * FALHA de propósito — é a informação que a bateria existe para produzir.
+ * ESTA SUÍTE MEDE, NÃO FORÇA PASS. Se o achado for "sim, alcança", a informação
+ * tem de chegar inteira ao gate de release — e é sobre COMO ela chega que vale
+ * o parágrafo seguinte.
+ *
+ * -------------------------------------------------------------------------
+ * POR QUE ES-02/03/04 AFIRMAM QUE O ESCAPE ACONTECE (17/08/2026)
+ * -------------------------------------------------------------------------
+ * Não é rebaixamento de padrão. É separação de dois sinais que estavam colados
+ * e se anulando.
+ *
+ * Antes, os três vetores abertos deixavam `npm test` vermelho em toda rodada —
+ * e `npm run verificar` depende de `npm test`. Um gate que está vermelho desde
+ * sempre não distingue "a lacuna de sandbox que já conhecemos" de "alguém
+ * quebrou alguma coisa agora". Gate permanentemente vermelho é gate desligado:
+ * as três linhas viram ruído que todo mundo aprende a pular, e a próxima
+ * regressão de verdade entra escondida atrás delas.
+ *
+ * Então os papéis foram separados:
+ *
+ *   `npm test`  — detector de REGRESSÃO. Estes testes CARACTERIZAM a realidade
+ *                 medida: o escape acontece. Passam enquanto a realidade for
+ *                 essa, e falham se ela mudar EM QUALQUER DIREÇÃO — inclusive
+ *                 se alguém contiver o escape e não atualizar o registro, que é
+ *                 um jeito de "consertar" que hoje passaria despercebido.
+ *
+ *   bateria      — ACHADO DE SEGURANÇA. Cada vetor aberto imprime uma linha
+ *   `escape_     `ESCAPE-ABERTO ES-0x ...`, e `bateriaEscapeSandbox` em
+ *    sandbox`     `testes/validacao/executar.ts` a converte em violação crítica.
+ *                 A bateria continua `EXECUTADA_FALHOU` e o veredito continua
+ *                 `BLOQUEADO`. NADA fica verde por causa desta mudança.
+ *
+ * A CONSEQUÊNCIA QUE IMPORTA: não existe estado em que o gate fique verde com
+ * vetor aberto, e não existe estado em que realidade e registro discordem em
+ * silêncio. Se os três forem fechados de verdade, ES-02/03/04 falham pedindo a
+ * atualização do registro — e essa falha é o sinal de que a correção chegou.
+ *
+ * ES-01 segue afirmando que o vazamento está FECHADO: aquele foi corrigido, e
+ * ali a asserção normal é o guarda de regressão correto.
  */
+
+/**
+ * O marcador que a bateria lê. Uma linha por vetor confirmado aberto.
+ *
+ * Texto estável e sem acento de propósito: ele atravessa o TAP do `node:test`,
+ * o `stdout` do processo da bateria e o JSON da evidência. Um marcador que muda
+ * de forma quebra o elo entre a medição e o veredito sem quebrar teste nenhum.
+ */
+function anunciarEscapeAberto(vetor: string, detalhe: string): void {
+  console.log(`ESCAPE-ABERTO ${vetor} ${detalhe}`);
+}
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -123,7 +170,7 @@ test('ES-01. processo filho NÃO deveria enxergar segredo do ambiente do pai', a
 // ES-02 — leitura fora do cwd
 // ===========================================================================
 
-test('ES-02. processo filho NÃO deveria ler arquivo fora do repositório autorizado', async () => {
+test('ES-02. CARACTERIZAÇÃO: o processo filho AINDA lê arquivo fora do repositório', async () => {
   const { raizPai, repo } = repoDeTeste();
   const canario = path.join(raizPai, 'canario-fora-do-repo.txt');
   writeFileSync(canario, 'conteudo-que-nao-deveria-ser-legivel-de-dentro-do-repo');
@@ -144,15 +191,29 @@ test('ES-02. processo filho NÃO deveria ler arquivo fora do repositório autori
   assert.equal(resultado.codigo, 0, `sonda de leitura não rodou: ${resultado.erro}`);
   const relato = JSON.parse(resultado.saida.trim().split('\n').pop()!);
 
-  assert.equal(relato.relativo, null, 'o processo filho leu o canário por caminho RELATIVO (../) fora do cwd');
-  assert.equal(relato.absoluto, null, 'o processo filho leu o canário por caminho ABSOLUTO fora do cwd');
+  const porRelativo = relato.relativo !== null;
+  const porAbsoluto = relato.absoluto !== null;
+  if (porRelativo || porAbsoluto) {
+    anunciarEscapeAberto(
+      'ES-02',
+      `leitura fora do repositorio autorizado (relativo=${porRelativo}, absoluto=${porAbsoluto})`,
+    );
+  }
+
+  assert.equal(
+    porRelativo || porAbsoluto,
+    true,
+    'ES-02 PAROU DE REPRODUZIR: o filho não leu mais fora do cwd. Se foi contenção ' +
+      'deliberada, atualize o registro da bateria `escape_sandbox` e volte esta ' +
+      'asserção para `null`. Se não foi, algo mudou no ambiente e a medição não vale.',
+  );
 });
 
 // ===========================================================================
 // ES-03 — rede de saída
 // ===========================================================================
 
-test('ES-03. processo filho NÃO deveria ter saída de rede irrestrita', async () => {
+test('ES-03. CARACTERIZAÇÃO: o processo filho AINDA tem saída de rede irrestrita', async () => {
   const servidor = http.createServer((_req, res) => res.end('alcancei o servidor de teste'));
   await new Promise<void>((resolve) => servidor.listen(0, '127.0.0.1', resolve));
   const porta = (servidor.address() as AddressInfo).port;
@@ -177,10 +238,20 @@ test('ES-03. processo filho NÃO deveria ter saída de rede irrestrita', async (
     assert.equal(resultado.codigo, 0, `sonda de rede não rodou: ${resultado.erro}`);
     const relato = JSON.parse(resultado.saida.trim().split('\n').pop()!);
 
+    if (relato.alcancou) {
+      anunciarEscapeAberto(
+        'ES-03',
+        'saida de rede irrestrita (alcancou servidor arbitrario, sem controle de destino)',
+      );
+    }
+
     assert.equal(
       relato.alcancou,
-      false,
-      'o processo filho tem saída de rede irrestrita — alcançou um servidor arbitrário sem nenhum controle de destino',
+      true,
+      'ES-03 PAROU DE REPRODUZIR: o filho não alcançou mais a rede. Se foi contenção ' +
+        'deliberada, atualize o registro da bateria `escape_sandbox` e volte esta ' +
+        'asserção para `false`. Se não foi, o servidor de teste pode não ter subido — ' +
+        'e aí a medição não vale.',
     );
   } finally {
     servidor.close();
@@ -191,7 +262,7 @@ test('ES-03. processo filho NÃO deveria ter saída de rede irrestrita', async (
 // ES-04 — escrita fora do cwd
 // ===========================================================================
 
-test('ES-04. processo filho NÃO deveria conseguir escrever fora do repositório autorizado', async () => {
+test('ES-04. CARACTERIZAÇÃO: o processo filho AINDA escreve fora do repositório', async () => {
   const { raizPai, repo } = repoDeTeste();
   const alvo = path.join(raizPai, 'plantado-fora-do-repo.txt');
 
@@ -216,10 +287,13 @@ test('ES-04. processo filho NÃO deveria conseguir escrever fora do repositório
   const plantouDeVerdade = existsSync(alvo);
   if (plantouDeVerdade) {
     assert.equal(readFileSync(alvo, 'utf8'), 'plantado por processo comprometido');
+    anunciarEscapeAberto('ES-04', 'escrita fora do repositorio autorizado (na pasta-mae)');
   }
   assert.equal(
     plantouDeVerdade,
-    false,
-    'o processo filho escreveu um arquivo fora do repositório autorizado, na pasta-mãe',
+    true,
+    'ES-04 PAROU DE REPRODUZIR: o filho não escreveu mais fora do cwd. Se foi contenção ' +
+      'deliberada, atualize o registro da bateria `escape_sandbox` e volte esta ' +
+      'asserção para `false`. Se não foi, algo mudou no ambiente e a medição não vale.',
   );
 });

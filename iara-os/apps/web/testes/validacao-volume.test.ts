@@ -76,7 +76,21 @@ test('4. o sorteio é reprodutível — mesma semente, mesma distribuição', as
 
 test('5. endurance: a janela curta mede, e o nível fica DECLARADO', async () => {
   const r = await medirEndurance(3_000);
-  assert.ok(r.turnos > 50, `só ${r.turnos} turnos em 3 s — o motor está lento ou parado`);
+
+  /**
+   * LIMIAR DE VAZÃO NÃO CABE AQUI, e o valor antigo (`> 50` turnos em 3 s) era
+   * flaky: medido em 17/08/2026, uma reprovação em três rodadas de `npm test` —
+   * a suíte roda os arquivos em paralelo, e 3 s de relógio numa máquina em
+   * contenção rendem menos turnos sem que nada esteja quebrado. Reprovação que
+   * não vem de defeito é como se aprende a ignorar vermelho.
+   *
+   * O QUE ESTE TESTE PERGUNTA é "o motor rodou?", não "o motor é rápido?" — o
+   * cabeçalho do módulo já declara que latência não reprova, porque é máquina e
+   * máquina varia. O julgamento de amostra pequena continua existindo, e no
+   * lugar certo: `violacoesDeEndurance` acusa `turnos < 100`, e ele roda na
+   * bateria de 60 s, que não disputa CPU com outros 1330 testes.
+   */
+  assert.ok(r.turnos > 0, 'o motor de endurance não completou turno nenhum em 3 s — está parado');
   assert.match(r.nivel, /NÃO é o nível de 1 h/);
 
   /* Handle é o sinal confiável de vazamento: socket, timer e descritor não somem

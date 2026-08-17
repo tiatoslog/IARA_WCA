@@ -120,6 +120,18 @@ export const BATERIAS: readonly Bateria[] = [
      * container), fora do alcance de uma correção segura só em Node. O
      * harness continua `EXECUTADA_FALHOU` de propósito: não reduzir o padrão
      * para obter PASS.
+     *
+     * COMO O VERMELHO CHEGA AQUI, desde 17/08/2026. Os três cenários abertos
+     * deixavam `npm test` vermelho em toda rodada, e `npm run verificar`
+     * depende de `npm test` — um gate vermelho desde sempre não distingue a
+     * lacuna conhecida de uma regressão nova, e vira ruído que se aprende a
+     * pular. Os papéis foram separados: os cenários CARACTERIZAM o escape (e
+     * falham se a realidade mudar em qualquer direção, inclusive se alguém
+     * contiver o vetor sem atualizar este registro), enquanto cada vetor aberto
+     * imprime `ESCAPE-ABERTO ES-0x` e `bateriaEscapeSandbox` converte isso em
+     * violação crítica — que é `BLOQUEADO` no `MotorVeredito`. Nada ficou verde:
+     * o único caminho para `EXECUTADA_PASSOU` é conter os três vetores de
+     * verdade e voltar as asserções, de propósito.
      */
     harness: 'testes/escape-sandbox-adversarial.test.ts',
   },
