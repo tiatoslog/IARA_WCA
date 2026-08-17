@@ -133,8 +133,20 @@ test('o shard nunca é lido pela metade: a gravação é atômica', async () => 
             JSON.parse(bruto); // lança se estiver truncado
           })
           .catch((erro: NodeJS.ErrnoException) => {
-            // Arquivo ainda não existe é legítimo; JSON quebrado não é.
-            if (erro.code === 'ENOENT') return;
+            /**
+             * O INVARIANTE É "NUNCA VER JSON PELA METADE", não "toda leitura
+             * consegue abrir o arquivo".
+             *
+             * `ENOENT` — a primeira gravação ainda não aconteceu.
+             * `EPERM`/`EBUSY`/`EACCES` — o Windows recusa abrir o alvo no
+             *   instante exato do `rename`. A leitura não viu nada, que é
+             *   justamente o comportamento seguro: o que não pode acontecer é
+             *   ela ver METADE.
+             *
+             * Um `SyntaxError` do `JSON.parse` continua subindo, e é ele que
+             * este teste existe para pegar.
+             */
+            if (['ENOENT', 'EPERM', 'EBUSY', 'EACCES'].includes(erro.code ?? '')) return;
             throw erro;
           }),
       );

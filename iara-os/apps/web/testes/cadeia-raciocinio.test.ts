@@ -17,10 +17,14 @@
  *  · mentir na telemetria (a tela diz "nuvem" enquanto responde o local).
  */
 
-import test from 'node:test';
+import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { CadeiaDeRaciocinio, mereceOutroProvedor } from '../servidor/nucleo/CadeiaDeRaciocinio';
+import {
+  CadeiaDeRaciocinio,
+  limparFalhasObservadas,
+  mereceOutroProvedor,
+} from '../servidor/nucleo/CadeiaDeRaciocinio';
 import { interpretarLinhaOpenAI } from '../servidor/nucleo/ClienteCompativelOpenAI';
 import {
   ProvedorIndisponivel,
@@ -32,6 +36,21 @@ import {
 // ---------------------------------------------------------------------------
 // UN-201..204 — a leitura do stream (pura, sem rede)
 // ---------------------------------------------------------------------------
+
+/**
+ * O REGISTRO DE FALHAS É DO PROCESSO, e por isso vaza entre casos.
+ *
+ * `observacoes` é global de propósito — cota é propriedade da conta, não da
+ * sessão (ver o cabeçalho de `CadeiaDeRaciocinio`). Enquanto ninguém no caminho
+ * de execução o LIA, o vazamento era inofensivo. Desde que `ordenarPorSaude`
+ * passou a ordenar a fila por saúde, um caso que registra falha no apelido "a"
+ * muda a ordem de tentativa do caso seguinte que também usa "a" — e o teste do
+ * "erro do ÚLTIMO" passou a ver outro último.
+ *
+ * Cada caso monta elos novos e espera um histórico limpo. Zerar aqui é declarar
+ * essa expectativa em vez de depender da ordem em que os testes rodam.
+ */
+beforeEach(() => limparFalhasObservadas());
 
 test('linha SSE com conteúdo vira pedaço de texto', () => {
   const lida = interpretarLinhaOpenAI('data: {"choices":[{"delta":{"content":"oi"}}]}');

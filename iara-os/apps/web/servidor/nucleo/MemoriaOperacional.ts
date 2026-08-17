@@ -28,6 +28,41 @@ const RAIZ = path.resolve(process.cwd(), 'dados');
 const PASTA_SHARDS = path.join(RAIZ, 'memoria');
 const LIMITE_HISTORICO = 40;
 
+/**
+ * `rename` POR CIMA DE ARQUIVO ABERTO, no Windows.
+ *
+ * No POSIX o `rename` atômico é incondicional. No Windows ele falha com
+ * `EPERM`/`EBUSY`/`EACCES` enquanto QUALQUER processo mantém um descritor aberto
+ * no alvo — e nesta casa isso acontece o tempo todo: um leitor de histórico, o
+ * antivírus varrendo a pasta, o indexador do sistema. A janela é de
+ * milissegundos e passa sozinha.
+ *
+ * Sem esta insistência a falha subia por `gravarPreferencias`, que PROPAGA erro
+ * de propósito — o operador clicaria em salvar e leria que não salvou, por
+ * causa de um antivírus. Encontrado como teste intermitente (≈1 em 3 execuções
+ * da suíte completa) antes de aparecer como chamado de suporte.
+ *
+ * O teto é baixo de propósito: se depois de ~150 ms o alvo continua preso, não
+ * é mais disputa de milissegundos, e aí o erro DEVE subir — insistir mais
+ * esconderia um problema real (arquivo travado, permissão errada) atrás de uma
+ * lentidão inexplicável.
+ */
+const TENTATIVAS_RENOMEAR = 6;
+
+async function renomearComInsistencia(de: string, para: string): Promise<void> {
+  for (let tentativa = 1; ; tentativa += 1) {
+    try {
+      await rename(de, para);
+      return;
+    } catch (erro) {
+      const codigo = (erro as NodeJS.ErrnoException).code;
+      const disputa = codigo === 'EPERM' || codigo === 'EBUSY' || codigo === 'EACCES';
+      if (!disputa || tentativa >= TENTATIVAS_RENOMEAR) throw erro;
+      await new Promise((pronto) => setTimeout(pronto, tentativa * 5));
+    }
+  }
+}
+
 interface Shard {
   id_usuario: string;
   registros: RegistroMemoria[];
@@ -168,7 +203,7 @@ export class MemoriaOperacional {
     const alvo = path.join(PASTA_SHARDS, `${shard.id_usuario}.json`);
     const temporario = `${alvo}.${process.pid}.${randomUUID().slice(0, 8)}.tmp`;
     await writeFile(temporario, JSON.stringify(shard, null, 2), 'utf8');
-    await rename(temporario, alvo);
+    await renomearComInsistencia(temporario, alvo);
   }
 
   // ---------------------------------------------------------------------------

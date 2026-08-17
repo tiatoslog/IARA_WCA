@@ -148,6 +148,87 @@ export function limparFalhasObservadas(): void {
   observacoes.clear();
 }
 
+// ---------------------------------------------------------------------------
+// Carência — o cérebro que acabou de falhar vai para o fim da fila
+// ---------------------------------------------------------------------------
+
+/**
+ * QUANTO TEMPO UM CÉREBRO FICA NO FIM DA FILA DEPOIS DE FALHAR.
+ *
+ * O DEFEITO QUE ISTO FECHA, e ele é o MESMO incidente do cabeçalho deste
+ * arquivo, um passo adiante:
+ *
+ *   A cadeia aprendeu a ter para onde ir quando a cota da Anthropic acabou —
+ *   mas continuou tentando a Anthropic PRIMEIRO em todo turno seguinte. O
+ *   `observacoes` registrava "cota esgotada" e ninguém no caminho de execução
+ *   lia esse registro: `raciocinar` filtrava por `elo.disponivel`, que responde
+ *   "a chave está no ambiente" — nunca "a chave funcionou da última vez".
+ *
+ *   O custo é por turno e composto: uma ida à rede que já se sabe perdida,
+ *   até o timeout, antes de começar o pedido que vai de fato responder. Numa
+ *   máquina onde o elo local leva ~260 s, somar a espera do elo morto à frente
+ *   dele é a diferença entre lento e inutilizável. E quem paga é a operadora,
+ *   em toda mensagem, por dias, até alguém recarregar a conta.
+ *
+ * A CARÊNCIA É POR CLASSE porque as falhas não duram o mesmo tanto. Limite de
+ * taxa passa em segundos; crédito zerado e chave recusada não passam sozinhos —
+ * dependem de alguém agir fora do sistema, e insistir a cada minuto só produz
+ * mais linhas de log iguais.
+ */
+export const CARENCIA_MS: Record<ClasseFalhaProvedor, number> = {
+  /* Ninguém recarrega a conta sem perceber; e quando recarregar, o primeiro
+     turno em que os outros elos também estiverem em carência já o traz de
+     volta — ver `ordenarPorSaude`. */
+  quota: 15 * 60 * 1000,
+  /* Chave revogada ou errada não se conserta sozinha. Mesmo raciocínio. */
+  autenticacao: 15 * 60 * 1000,
+  /* Serviço fora costuma voltar. Espera o suficiente para não martelar. */
+  servico_fora: 2 * 60 * 1000,
+  /* A janela de um 429 é curta por definição. */
+  rate_limit: 60 * 1000,
+  /* Nunca chegam a ser registradas — ver `registrarFalhaProvedor` e
+     `mereceOutroProvedor`. Estão aqui para o mapa ser total, e valem zero
+     para que uma mudança futura naquelas regras não crie carência por acidente. */
+  cancelado: 0,
+  outra: 0,
+};
+
+/** Este cérebro falhou faz pouco tempo? */
+export function emCarencia(apelido: string, agora: number = Date.now()): boolean {
+  const falha = observacoes.get(apelido);
+  if (!falha) return false;
+  const carencia = CARENCIA_MS[falha.classe];
+  if (carencia <= 0) return false;
+  return agora - Date.parse(falha.instante) < carencia;
+}
+
+/**
+ * A fila do turno: quem não falhou recentemente vai na frente.
+ *
+ * REORDENA, NUNCA REMOVE — e essa é a decisão inteira.
+ *
+ * Excluir o elo em carência transformaria "todos os cérebros falharam faz
+ * pouco" em "a IARA não tem cérebro nenhum", que é trocar lentidão por morte.
+ * Com todos em carência a ordem original volta inteira e a cadeia tenta como
+ * sempre tentou: pior caso idêntico ao de hoje, caso comum muito melhor.
+ *
+ * É também o que devolve um provedor recarregado ao serviço sem ninguém avisar
+ * o sistema: assim que ele é tentado e responde, `registrarSucessoProvedor`
+ * apaga a observação e ele volta para a frente da fila no turno seguinte.
+ *
+ * A ordem RELATIVA dentro de cada grupo é preservada de propósito: a preferência
+ * declarada em `IARA_CADEIA_RACIOCINIO` continua mandando entre os saudáveis, e
+ * entre os doentes. A carência decide o grupo, não a hierarquia.
+ */
+export function ordenarPorSaude<T extends { apelido: string }>(
+  elos: readonly T[],
+  agora: number = Date.now(),
+): T[] {
+  const saudaveis = elos.filter((e) => !emCarencia(e.apelido, agora));
+  const emEspera = elos.filter((e) => emCarencia(e.apelido, agora));
+  return [...saudaveis, ...emEspera];
+}
+
 export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
   /** O elo que respondeu por último — é o que a telemetria e o snapshot mostram. */
   private atual: ProvedorRaciocinio;
@@ -194,7 +275,12 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
 
   async raciocinar(pedido: PedidoRaciocinio): Promise<RespostaRaciocinio> {
     const candidatos = this.elos.filter((e) => e.disponivel);
-    const fila = candidatos.length > 0 ? candidatos : this.elos;
+    /**
+     * `disponivel` responde "a chave está no ambiente"; `ordenarPorSaude`
+     * responde "ela funcionou da última vez". São perguntas diferentes, e era a
+     * segunda que faltava — ver `CARENCIA_MS`.
+     */
+    const fila = ordenarPorSaude(candidatos.length > 0 ? candidatos : this.elos);
     let ultimoErro: unknown = new ProvedorIndisponivel('nenhum provedor de raciocínio disponível');
     for (const elo of fila) {
       /**
