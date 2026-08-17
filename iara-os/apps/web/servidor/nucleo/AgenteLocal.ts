@@ -564,13 +564,18 @@ const VARIAVEIS_AMBIENTE_PERMITIDAS_AO_AGENTE = new Set(
  * exportação existir. Importar a função real elimina a divergência.
  */
 export function ambienteRestritoDoAgente(): NodeJS.ProcessEnv {
-  const ambiente: NodeJS.ProcessEnv = {};
+  // `Record`, não `NodeJS.ProcessEnv`, na variável local: o Next.js aumenta
+  // `ProcessEnv` global exigindo `NODE_ENV`, que este objeto construído campo
+  // a campo não tem como satisfazer estaticamente. `spawn` só quer um dicionário
+  // de string em string em tempo de execução — o cast no retorno é sobre a
+  // forma do tipo, não sobre o comportamento.
+  const ambiente: Record<string, string | undefined> = {};
   for (const chave of Object.keys(process.env)) {
     if (VARIAVEIS_AMBIENTE_PERMITIDAS_AO_AGENTE.has(chave.toLowerCase())) {
       ambiente[chave] = process.env[chave];
     }
   }
-  return ambiente;
+  return ambiente as NodeJS.ProcessEnv;
 }
 
 /**
