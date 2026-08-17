@@ -22,7 +22,7 @@
  * do commit, que é quando ela não influencia mais nada.
  */
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -592,15 +592,31 @@ async function bateriaRag(): Promise<ResultadoBateria> {
      documentada em `violacoesDeRag`. */
   const criticas = violacoes.filter((v) => /contrato violado|acima do limiar/.test(v));
 
+  /**
+   * O DENOMINADOR DO REGISTRO É O QUE A BATERIA JULGA — mesma regra que a bateria
+   * de falsa conclusão aprendeu do validador, e o validador cobrou de novo aqui.
+   *
+   * A primeira versão contava as 16 perguntas mais os 3 contratos como cenários, e
+   * punha as paráfrases não encontradas em `falhou`. `conferirRegistro` recusou:
+   * "PASSOU com cenário falhado". A recusa está certa — e o conserto não é rebaixar
+   * o status, é parar de chamar de falha o que a bateria declara NÃO ser falha.
+   *
+   * Paráfrase é CARACTERIZAÇÃO: busca lexical não encontra "o banco não responde" a
+   * partir de "timeout ao conectar", e cobrar isso seria cobrar semântica de quem se
+   * declara sintático. O número continua medido, publicado em `metricas` e
+   * assegurado por um piso na suíte — só não conta como cenário reprovado.
+   */
+  const julgados = [
+    ...recall.filter((j) => j.pergunta.familia !== 'parafrase'),
+  ];
+  const passouRecall = julgados.filter((j) => (j.pergunta.esperado ? j.acertou_em_2 : !j.ruido));
+
   return {
     status: violacoes.length > 0 ? 'EXECUTADA_FALHOU' : 'EXECUTADA_PASSOU',
-    cenarios: recall.length + contrato.length,
-    passou:
-      recall.filter((j) => (j.pergunta.esperado ? j.acertou_em_2 : !j.ruido)).length +
-      contrato.filter((c) => !c.violou).length,
+    cenarios: julgados.length + contrato.length,
+    passou: passouRecall.length + contrato.filter((c) => !c.violou).length,
     falhou:
-      recall.filter((j) => (j.pergunta.esperado ? !j.acertou_em_2 : j.ruido)).length +
-      contrato.filter((c) => c.violou).length,
+      julgados.length - passouRecall.length + contrato.filter((c) => c.violou).length,
     inconclusivo: 0,
     bloqueado: 0,
     metricas: {
@@ -611,6 +627,8 @@ async function bateriaRag(): Promise<ResultadoBateria> {
       ruido: t.ruido,
       violacoes_de_contrato: t.violacoes_de_contrato,
       acertos_parafrase: t.por_familia.parafrase?.acertos ?? -1,
+      perguntas_de_parafrase: t.por_familia.parafrase?.total ?? -1,
+      parafrase_fora_do_denominador: 1,
     },
     violacoes_criticas: criticas,
     detalhe: { taxas: t, recall, contrato },
@@ -988,6 +1006,70 @@ async function bateriaQueda(): Promise<ResultadoBateria> {
 }
 
 // ---------------------------------------------------------------------------
+// e2e_navegador
+// ---------------------------------------------------------------------------
+
+/**
+ * A BATERIA DE NAVEGADOR NAO FALA TAP, e por isso nao entra em `bateriaDeTap`.
+ *
+ * Ela sobe uma IARA descartavel (porta propria, USERPROFILE proprio, espelho do
+ * app), abre navegador de verdade e imprime linhas `PASS CT-xx` / `FALHA CT-xx` mais
+ * um `veredito`. Traduzir isso para o registro de evidencia e o trabalho daqui.
+ *
+ * O CHECK QUE IMPEDE O FALSO VERDE: zero linha `PASS` conta como INCONCLUSIVA, nunca
+ * como aprovacao. Um runner que nao subiu o navegador — porta ocupada, Playwright
+ * ausente, junção do Windows negada — sai com stdout vazio, e "nenhuma falha" num
+ * stdout vazio e exatamente a leitura que esta bateria existe para nao produzir.
+ */
+async function bateriaNavegador(): Promise<ResultadoBateria> {
+  const r = spawnSync(process.execPath, ['testes/navegador/executar.mjs'], {
+    encoding: 'utf8',
+    timeout: 900_000,
+  });
+  const saida = `${r.stdout ?? ''}\n${r.stderr ?? ''}`;
+  const linhas = saida.split('\n');
+
+  const passes = linhas.filter((l) => /^PASS /.test(l.trim()));
+  const falhas = linhas.filter((l) => /^(FALHA|FAIL) /.test(l.trim()));
+  const veredito = linhas.find((l) => /^veredito/.test(l.trim()))?.trim() ?? 'sem veredito impresso';
+
+  const cego = passes.length === 0 && falhas.length === 0;
+
+  return {
+    status: cego
+      ? 'EXECUTADA_INCONCLUSIVA'
+      : falhas.length > 0
+        ? 'EXECUTADA_FALHOU'
+        : 'EXECUTADA_PASSOU',
+    cenarios: passes.length + falhas.length,
+    passou: passes.length,
+    falhou: falhas.length,
+    inconclusivo: cego ? 1 : 0,
+    bloqueado: 0,
+    metricas: {
+      checks_pass: passes.length,
+      checks_falha: falhas.length,
+      saida_do_processo: r.status ?? -1,
+    },
+    /* Jornada no navegador que reprova nao e perigo — e produto ruim. Fica como
+       falha comum, e e por isso que esta bateria e obrigatoria e NAO critica. */
+    violacoes_criticas: [],
+    detalhe: { veredito, passes, falhas, saida: saida.slice(-8000) },
+    relato: [
+      'JORNADA REAL NO NAVEGADOR',
+      '',
+      ...passes.map((l) => `  ${l.trim()}`),
+      ...falhas.map((l) => `  ${l.trim()}`),
+      '',
+      `  ${veredito}`,
+      cego
+        ? '  INCONCLUSIVA: nenhuma linha de check saiu — o navegador provavelmente nao subiu.'
+        : '',
+    ].filter(Boolean),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // O despacho
 // ---------------------------------------------------------------------------
 
@@ -1039,6 +1121,7 @@ const BATERIAS_EXECUTAVEIS: Readonly<Record<string, () => Promise<ResultadoBater
   endurance: bateriaEndurance,
   roteamento_modelo: bateriaRoteamento,
   consistencia_queda: bateriaQueda,
+  e2e_navegador: bateriaNavegador,
 };
 
 function estadoDaArvore(): { commit: string; sujo: number } {
