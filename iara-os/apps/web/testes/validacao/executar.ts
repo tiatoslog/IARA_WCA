@@ -213,12 +213,107 @@ async function bateriaAbstencao(): Promise<ResultadoBateria> {
 }
 
 // ---------------------------------------------------------------------------
+// As três que já rodavam todo dia e não deixavam linha de evidência
+// ---------------------------------------------------------------------------
+
+/**
+ * `npm test` e `varrer-segredos` já existiam e já eram executados — e o veredito
+ * não os via, porque teste verde não escreve no diário. Sem estes três runners, o
+ * commit mais bem testado do repositório aparecia como "ninguém chamou".
+ *
+ * O artefato é a SAÍDA BRUTA do processo filho, não um resumo: é o que permite
+ * reabrir a rodada meses depois. Ver a regra da evidência bruta na Fase 5.
+ */
+function rodarProcesso(
+  comando: string,
+  argumentos: readonly string[],
+): { saida: string; codigo: number } {
+  try {
+    const saida = execFileSync(comando, [...argumentos], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      /* `shell` no Windows porque `npm` é um `.cmd`: sem isto o spawn devolve
+         EINVAL, que é o mesmo tropeço já registrado no agente de código. */
+      shell: process.platform === 'win32',
+    });
+    return { saida, codigo: 0 };
+  } catch (erro) {
+    const e = erro as { stdout?: string; stderr?: string; status?: number; message: string };
+    return { saida: e.stdout ?? e.stderr ?? e.message, codigo: e.status ?? 1 };
+  }
+}
+
+/** `# pass N` / `# fail N` do TAP do `node --test`. */
+function contarTap(saida: string): { passou: number; falhou: number } {
+  const passou = Number(/^# pass (\d+)$/m.exec(saida)?.[1] ?? '0');
+  const falhou = Number(/^# fail (\d+)$/m.exec(saida)?.[1] ?? '0');
+  return { passou, falhou };
+}
+
+function bateriaDeTap(
+  comando: string,
+  argumentos: readonly string[],
+  rotulo: string,
+): () => Promise<ResultadoBateria> {
+  return async () => {
+    const { saida, codigo } = rodarProcesso(comando, argumentos);
+    const { passou, falhou } = contarTap(saida);
+    /* Zero caso é INCONCLUSIVA, nunca sucesso: significa que o TAP não foi
+       entendido (comando errado, saída truncada), e "não consegui contar" jamais
+       pode virar "passou". É o `ESTADO_DESCONHECIDO` da campanha, aqui. */
+    const status: StatusExecucao =
+      passou + falhou === 0
+        ? 'EXECUTADA_INCONCLUSIVA'
+        : falhou > 0 || codigo !== 0
+          ? 'EXECUTADA_FALHOU'
+          : 'EXECUTADA_PASSOU';
+    return {
+      status,
+      cenarios: passou + falhou,
+      passou,
+      falhou,
+      inconclusivo: passou + falhou === 0 ? 1 : 0,
+      bloqueado: 0,
+      metricas: { codigo_de_saida: codigo },
+      violacoes_criticas: [],
+      detalhe: { comando: `${comando} ${argumentos.join(' ')}`, codigo, saida },
+      relato: [`${rotulo}: ${passou} passou, ${falhou} falhou, saída ${codigo}`],
+    };
+  };
+}
+
+async function bateriaSegredos(): Promise<ResultadoBateria> {
+  const { saida, codigo } = rodarProcesso('node', ['scripts/varrer-segredos.mjs', '--tudo']);
+  return {
+    status: codigo === 0 ? 'EXECUTADA_PASSOU' : 'EXECUTADA_FALHOU',
+    cenarios: 1,
+    passou: codigo === 0 ? 1 : 0,
+    falhou: codigo === 0 ? 0 : 1,
+    inconclusivo: 0,
+    bloqueado: 0,
+    metricas: { codigo_de_saida: codigo },
+    /* Segredo versionado é violação crítica por definição: não é "defeito a
+       corrigir depois", é credencial exposta agora. */
+    violacoes_criticas: codigo === 0 ? [] : ['a varredura de segredos encontrou algo'],
+    detalhe: { codigo, saida },
+    relato: [`varredura de segredos: saída ${codigo}`],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // O despacho
 // ---------------------------------------------------------------------------
 
 const BATERIAS_EXECUTAVEIS: Readonly<Record<string, () => Promise<ResultadoBateria>>> = {
   falsa_conclusao: bateriaFalsaConclusao,
   abstencao: bateriaAbstencao,
+  suite: bateriaDeTap('npm', ['test'], 'suíte unitária e de integração'),
+  fronteira_efeitos: bateriaDeTap(
+    'node',
+    ['--import', 'tsx', '--test', 'testes/fronteira-efeitos.test.ts'],
+    'fronteira de efeitos por grafo',
+  ),
+  segredos_artefato: bateriaSegredos,
 };
 
 function estadoDaArvore(): { commit: string; sujo: number } {
