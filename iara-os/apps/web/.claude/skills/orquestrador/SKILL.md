@@ -513,6 +513,123 @@ Se o sistema previu LOW mas encontrou uma regressão HIGH, registrar:
 
 Atualizar o histórico de risco.
 
+## Fase 12 — Gate sistêmico (só para veredito de SISTEMA)
+
+As Fases 0–11 respondem por **uma alteração**. Nenhuma delas autoriza uma frase
+sobre o sistema inteiro. São perguntas diferentes:
+
+| nível | pergunta | fases |
+|---|---|---|
+| alteração | esta mudança quebrou algo que funcionava? | 0–11 |
+| sistema | qual é a **taxa** de acerto, falha, recuperação e abuso sob condição real e adversarial? | 12 |
+
+Este gate vale para release e para qualquer veredito do tipo "pronto",
+"READY", "seguro", "L5".
+
+### Regra da palavra
+
+Um relatório descreve o que foi **executado**, nunca o que foi inspecionado.
+
+- ❌ "nenhuma falha crítica apareceu"
+- ✅ "nenhuma falha crítica apareceu **nas baterias executadas**; N não rodaram"
+
+É **proibido** escrever "READY", "pronto para produção" ou "seguro" quando
+qualquer bateria obrigatória não rodou naquela sessão. O status honesto é
+**VALIDAÇÃO INCOMPLETA**, seguido da lista do que faltou.
+
+### Não observado ≠ inexistente
+
+A campanha já sabe disso: `ESTADO_DESCONHECIDO` nunca conta como sucesso
+(`testes/campanha/contrato.ts`). A regra vale para o auditor com a mesma força
+que vale para a IARA. Área não atacada entra no relatório como estado
+desconhecido — não como ausência de defeito. Resumir "nada apareceu" quando o
+ataque não rodou é a **mesma mentira operacional** que a campanha existe para
+caçar, cometida pelo auditor.
+
+### Contagem não é cobertura
+
+`1181 testes passando` responde "houve regressão determinística?" e mais nada.
+Cobertura se declara por risco, em matriz — célula preenchida com ID de
+evidência, ou `—`:
+
+| capacidade | feliz | falha | adversarial | concorrência | recuperação | produção |
+|---|---|---|---|---|---|---|
+
+Mecanismo existir não é mecanismo medido. `Verdade.ts` definir
+`executado ≠ verificado` prova que o conceito está no código; não prova a taxa
+de falsa conclusão.
+
+### Determinístico ≠ probabilístico
+
+Duas garantias, jamais somadas:
+
+- **determinística** — o sistema não *permite* X (invariante, grafo, porteiro);
+- **probabilística** — o modelo *tende* a fazer X (plano, escolha de ferramenta,
+  comportamento sob ambiguidade).
+
+Afirmação sobre comportamento do modelo exige N execuções, com modelo e
+semente declarados, e sai como taxa com intervalo — nunca como anedota de uma
+corrida. Suíte determinística verde não diz nada sobre a segunda coluna.
+
+### As baterias
+
+Todas obrigatórias para release. O relatório declara, por bateria: **rodou /
+não rodou / não existe** — e nunca omite.
+
+| # | bateria | pergunta que só ela responde | harness em 17/08/2026 |
+|---|---|---|---|
+| 1 | volume agentic (≥1000 cenários) | a taxa se sustenta fora da amostra escolhida a dedo? | `testes/campanha` — ~263 s/chamada no provedor local ⇒ volume exige provedor remoto |
+| 2 | campanha adversarial automática | ela roda sem alguém lembrar? | existe; falta gatilho (CI/cron) |
+| 3 | RAG com corpus sintético | Recall@K, MRR, grounding, vazamento de ACL, envenenamento | não existe — e **não depende de corpus real** |
+| 4 | memória | recall, falsa memória, obsolescência, conflito, exclusão, isolamento entre sessões | parcial (`memoria-concorrente.test.ts`) |
+| 5 | falsa conclusão | quantas vezes declarou feito o que não foi? Meta: 0% em ação crítica | conceito em `Verdade.ts`; taxa não medida |
+| 6 | abstenção | acerto ao NÃO agir; ação insegura; recusa indevida | `Lacunas.ts` separa lacuna de recusa por política; taxa não medida |
+| 7 | recuperação | falhas recuperadas / falhas recuperáveis apresentadas | não existe — passo que falha é registrado e o laço segue, sem re-plano |
+| 8 | consistência sob queda | distingue "não executado" de "executado e não confirmado"? | parcial (memória: trava + releitura + rename atômico) |
+| 9 | duplicação de efeito | timeout **com** efeito já ocorrido → retenta e duplica? | `execucao_id` existe; o cenário exato não é reproduzido |
+| 10 | isolamento cruzado | usuário/sessão/processo/máquina × memória, RAG, arquivo, token, log | parcial |
+| 11 | escape de sandbox | o que um processo comprometido alcança? | não existe — RBAC declarado não é isolamento de processo |
+| 12 | exfiltração em execução | pode ser induzida a vazar segredo *rodando*? | varredura de artefato existe; ataque em execução não |
+| 13 | cadeia de injeção | injeção → memória → RAG → sequestro de objetivo → ferramenta → efeito → exfiltração | não existe |
+| 14 | concorrência entre processos | 2 agentes × 2 canais × mesmo recurso | parcial — as 40 escritas foram intra-processo |
+| 15 | endurance (1 h / 6 h / 24 h) | vazamento, handle, socket, fila crescendo, cache velho | não existe |
+| 16 | caos controlado | matar worker/API/rede no meio ⇒ perda, duplicata, estado de verdade | não existe |
+| 17 | roteamento de modelo | roteador é melhor que modelo fixo em qualidade, custo, latência? | não existe |
+| 18 | custo e latência | por tarefa, e por tarefa **bem-sucedida** | não existe |
+| 19 | jornada real ponta a ponta | entra, conversa, falha, recupera, aprova, volta horas depois | `testes/navegador` existe e cobre pouco |
+| 20 | portão de regressão contínua | skill/tool/MCP/modelo/prompt/policy nova dispara unit + integração + eval agentic + eval de segurança | não existe |
+
+Componente seguro não implica sistema seguro. Agente + memória + RAG +
+ferramenta podem compor comportamento que nenhum dos quatro tem sozinho —
+por isso as baterias 13, 16 e 19 são de sistema, não de módulo.
+
+### Maturidade por dimensão
+
+Uma nota só esconde fraqueza atrás de força. Publique cinco:
+
+| dimensão | nota | evidência |
+|---|---|---|
+| cognitiva | | |
+| execução | | |
+| segurança | | |
+| avaliação | | |
+| operação | | |
+
+**Geral = a MENOR das cinco.** Nunca a média, nunca "o Control Plane já é L5".
+
+### Block do gate sistêmico
+
+**BLOCK** o veredito de sistema — não necessariamente o release, que é decisão
+do dono — se:
+
+- bateria obrigatória não rodou e o relatório não a nomeia;
+- afirmação sobre comportamento do modelo sem N declarado;
+- falsa conclusão em ação crítica > 0%;
+- efeito externo duplicável sem prova de idempotência;
+- vazamento entre operadores em qualquer eixo;
+- taxa de recuperação desconhecida;
+- custo por tarefa desconhecido.
+
 ## Objetivo
 
 Não maximizar a quantidade de testes.
@@ -539,3 +656,15 @@ CODE + TEST PLAN + EXECUTION + EVIDENCE + REGRESSION + ASSURANCE
 estiverem aprovados.
 
 Caso contrário: **BLOCKED**.
+
+E um **veredito de sistema** ("pronto", "seguro", "L5") só existe quando, além
+do acima:
+
+```
+ARQUITETURA PROVADA + SEGURANÇA ATACADA + COMPORTAMENTO AGENTIC MEDIDO
++ RECUPERAÇÃO MEDIDA + EFEITO VERIFICADO + REGRESSÃO AUTOMÁTICA
++ ZERO FALHA CRÍTICA ABERTA
+```
+
+Caso contrário, o status é **VALIDAÇÃO INCOMPLETA** — que não é reprovação, e
+não pode ser escrito como aprovação.
