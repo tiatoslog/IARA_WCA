@@ -1,0 +1,365 @@
+﻿TAP version 13
+# {"canal":"agente_local","usuario":"daiane","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (s-agente-local)"}
+# {"canal":"agente_local","usuario":"daiane","acao":"energia:desligar","permitido":true,"detalhe":"agendado em 20s (46987252-1808-4c3b-b8dc-c0df8f229df7)"}
+# {"canal":"agente_local","usuario":"daiane","acao":"energia_pendente:reiniciar","permitido":true,"detalhe":"aguardando confirmação (s-agente-local)"}
+# {"canal":"agente_local","usuario":"daiane","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (s-agente-local)"}
+# {"canal":"agente_local","usuario":"daiane","acao":"energia:cancelar","permitido":true,"detalhe":"pendência descartada (s-agente-local)"}
+# Subtest: nome de pasta: aceita nomes honestos, barra travessia e lixo
+ok 1 - nome de pasta: aceita nomes honestos, barra travessia e lixo
+  ---
+  duration_ms: 7.7134
+  type: 'test'
+  ...
+# Subtest: allowlist de aplicativos: reconhece autorizado, recusa o resto
+ok 2 - allowlist de aplicativos: reconhece autorizado, recusa o resto
+  ---
+  duration_ms: 0.8306
+  type: 'test'
+  ...
+# Subtest: raiz autorizada resolve para caminho real da máquina
+ok 3 - raiz autorizada resolve para caminho real da máquina
+  ---
+  duration_ms: 0.9311
+  type: 'test'
+  ...
+# Subtest: energia nunca executa sem confirmação; confirmo executa; segunda vez não
+ok 4 - energia nunca executa sem confirmação; confirmo executa; segunda vez não
+  ---
+  duration_ms: 2.5067
+  type: 'test'
+  ...
+# Subtest: confirmação de um operador não libera pendência de outro
+ok 5 - confirmação de um operador não libera pendência de outro
+  ---
+  duration_ms: 0.6612
+  type: 'test'
+  ...
+# Subtest: cancelar descarta a pendência e envia abort de shutdown
+ok 6 - cancelar descarta a pendência e envia abort de shutdown
+  ---
+  duration_ms: 2.1257
+  type: 'test'
+  ...
+# {"canal":"agente_local","usuario":"daiane","acao":"capturar_tela","permitido":false,"detalhe":"powershell saiu 0"}
+# Subtest: captura só afirma sucesso com arquivo no disco
+ok 7 - captura só afirma sucesso com arquivo no disco
+  ---
+  duration_ms: 39.362
+  type: 'test'
+  ...
+# {"canal":"agente_local","usuario":"daiane","acao":"capturar_tela","permitido":true,"detalhe":"C:\\\\Users\\\\daian\\\\Downloads\\\\Capturas IARA\\\\captura-2026-08-17-072030.png (4 bytes)"}
+# Subtest: captura registra o caminho quando o arquivo de fato nasce
+ok 8 - captura registra o caminho quando o arquivo de fato nasce
+  ---
+  duration_ms: 10.5703
+  type: 'test'
+  ...
+# {"canal":"agente_local","usuario":"daiane","acao":"capturar_tela","permitido":false,"detalhe":"powershell saiu 0"}
+# Subtest: a captura devolve caminho e tamanho, jamais bytes de imagem
+ok 9 - a captura devolve caminho e tamanho, jamais bytes de imagem
+  ---
+  duration_ms: 4.6186
+  type: 'test'
+  ...
+# Subtest: sem Windows, a captura recusa em voz alta em vez de sumir do catálogo
+ok 10 - sem Windows, a captura recusa em voz alta em vez de sumir do catálogo
+  ---
+  duration_ms: 0.6586
+  type: 'test'
+  ...
+# Subtest: print mencionado não é print pedido
+ok 11 - print mencionado não é print pedido
+  ---
+  duration_ms: 24.509
+  type: 'test'
+  ...
+# Subtest: a captura vai para Documentos por padrão, e obedece quando mandam
+ok 12 - a captura vai para Documentos por padrão, e obedece quando mandam
+  ---
+  duration_ms: 0.7518
+  type: 'test'
+  ...
+# Subtest: extração do nome preserva acentos e ignora o local
+ok 13 - extração do nome preserva acentos e ignora o local
+  ---
+  duration_ms: 4.4381
+  type: 'test'
+  ...
+# Subtest: o nome não engole preposição, local, nem a cauda da frase
+ok 14 - o nome não engole preposição, local, nem a cauda da frase
+  ---
+  duration_ms: 0.5982
+  type: 'test'
+  ...
+# Subtest: com âncora de nomeação, o artigo faz parte do nome; sem âncora, continua sendo ligação
+ok 15 - com âncora de nomeação, o artigo faz parte do nome; sem âncora, continua sendo ligação
+  ---
+  duration_ms: 0.3586
+  type: 'test'
+  ...
+# Subtest: extração de local e ação de energia
+ok 16 - extração de local e ação de energia
+  ---
+  duration_ms: 0.9947
+  type: 'test'
+  ...
+# Subtest: comandos do agente local são reconhecidos como âncoras acionáveis
+ok 17 - comandos do agente local são reconhecidos como âncoras acionáveis
+  ---
+  duration_ms: 1.3892
+  type: 'test'
+  ...
+# Subtest: "documentos" com SharePoint na frase não vira listagem da pasta local
+ok 18 - "documentos" com SharePoint na frase não vira listagem da pasta local
+  ---
+  duration_ms: 0.8542
+  type: 'test'
+  ...
+# Subtest: antes do primeiro turno, a cadeia é null — não uma cadeia vazia com cara de turno
+ok 19 - antes do primeiro turno, a cadeia é null — não uma cadeia vazia com cara de turno
+  ---
+  duration_ms: 2.9442
+  type: 'test'
+  ...
+# Subtest: um turno completo projeta todos os elos, cada um vindo do seu evento
+ok 20 - um turno completo projeta todos os elos, cada um vindo do seu evento
+  ---
+  duration_ms: 21.0196
+  type: 'test'
+  ...
+# Subtest: turno de conversa mostra só os elos que teve — sem plano e sem execução inventados
+ok 21 - turno de conversa mostra só os elos que teve — sem plano e sem execução inventados
+  ---
+  duration_ms: 8.6932
+  type: 'test'
+  ...
+# Subtest: recado autônomo (lembrete/vigia) não sobrescreve a resposta de um turno fechado
+ok 22 - recado autônomo (lembrete/vigia) não sobrescreve a resposta de um turno fechado
+  ---
+  duration_ms: 1.3039
+  type: 'test'
+  ...
+# Subtest: turno novo substitui a cadeia — nada do turno anterior vaza
+ok 23 - turno novo substitui a cadeia — nada do turno anterior vaza
+  ---
+  duration_ms: 1.097
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.511Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"4dd5fe6b-be19-4db1-bb6d-2b2c376c2dc0","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.552Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"96b24f66-7ca7-42c5-b1ab-b5ca6926510d","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.562Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"7f517a94-a0be-4351-8634-56ad1ea27ac5","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: mensagem de OUTRO espelho não cancela o turno em voo — ela espera a vez
+ok 24 - CC-01: mensagem de OUTRO espelho não cancela o turno em voo — ela espera a vez
+  ---
+  duration_ms: 76.3963
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.576Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"e834a9be-b362-48cf-8030-d7246e9fefa3","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.584Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"8ce80a22-21c7-4fb4-ae97-dda38c460f39","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: cada fala declara a pergunta que responde — nenhuma tela herda a resposta da outra
+ok 25 - CC-01: cada fala declara a pergunta que responde — nenhuma tela herda a resposta da outra
+  ---
+  duration_ms: 23.2994
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.605Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"e8f9bd8f-47dd-47cc-a53c-221bd9dcbea2","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.615Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"380a36c3-05a1-4006-ba7e-82913e07ce52","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: a MESMA tela reescrevendo continua preemptando — a correção não matou a interrupção legítima
+ok 26 - CC-01: a MESMA tela reescrevendo continua preemptando — a correção não matou a interrupção legítima
+  ---
+  duration_ms: 29.6782
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.637Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"9a6bcfe4-f108-4c46-9e5c-51d65a876ff9","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.640Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3fd1f5d0-eb6b-4454-b958-71a624d1cca0","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.644Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"e7be1c2d-41c0-4cbb-a786-ddb37902d3ab","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.647Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"64e7fc35-4aa9-4d67-9ad1-42a52b5181a8","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.653Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"f909d199-687b-4a17-8725-1dcf8b986d8d","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio
+ok 27 - CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio
+  ---
+  duration_ms: 38.9853
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.668Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"b96e820d-71d6-4076-bff4-f03968cff4be","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.678Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"911f3ff8-ac22-4018-8a6a-ff08b5909eff","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-10: o pedido que espera a vez é PUBLICADO, com o id que a tela reconhece
+ok 28 - CT-10: o pedido que espera a vez é PUBLICADO, com o id que a tela reconhece
+  ---
+  duration_ms: 21.0953
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.705Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"e7d05cb9-488e-457c-844b-28d7d08da9fd","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.713Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3a07078d-b497-42c0-8a5d-d1ee82a15829","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-10: o id do pedido na fila é o MESMO que a resposta dele vai endereçar
+ok 29 - CT-10: o id do pedido na fila é o MESMO que a resposta dele vai endereçar
+  ---
+  duration_ms: 37.5714
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.750Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"ea89c7bb-8d9e-4904-9f0e-26fbd36eb699","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-10: desistir da fila publica a fila sem o pedido
+ok 30 - CT-10: desistir da fila publica a fila sem o pedido
+  ---
+  duration_ms: 26.3398
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.786Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"f8c97621-6039-415e-a4c1-9d68c7a8fbd6","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o interromper de uma tela NÃO derruba o turno da outra
+ok 31 - CT-05: o interromper de uma tela NÃO derruba o turno da outra
+  ---
+  duration_ms: 32.3578
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.818Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"ba2c6b28-e524-4de4-a0ad-fdaa4dc7ec50","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o interromper da PRÓPRIA tela continua cancelando
+ok 32 - CT-05: o interromper da PRÓPRIA tela continua cancelando
+  ---
+  duration_ms: 44.9301
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.848Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"b77fe6e7-fc9f-4de2-b727-bebf1638609d","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: interromper com o próprio pedido NA FILA tira o pedido da fila, E CONTA
+ok 33 - CT-05: interromper com o próprio pedido NA FILA tira o pedido da fila, E CONTA
+  ---
+  duration_ms: 31.7841
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.884Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3cf53c0f-21aa-441c-b658-7ce67d557c7b","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o cancelamento GLOBAL continua existindo — é o do desligamento
+ok 34 - CT-05: o cancelamento GLOBAL continua existindo — é o do desligamento
+  ---
+  duration_ms: 34.7755
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.916Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"97ff6beb-c0d9-4754-a62b-3722c86157a4","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: fim de sessão esvazia a fila — pedido enfileirado não sobrevive ao fechamento de todas as telas
+ok 35 - CT-05: fim de sessão esvazia a fila — pedido enfileirado não sobrevive ao fechamento de todas as telas
+  ---
+  duration_ms: 26.5509
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.947Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"df9eeadf-4fa1-46fb-b7b9-9765158d54c1","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: tela fechada devolve a vaga dela na fila — e não derruba o turno em voo
+ok 36 - CT-05: tela fechada devolve a vaga dela na fila — e não derruba o turno em voo
+  ---
+  duration_ms: 36.4187
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.971Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"2fd7e677-ecd3-486d-b708-3ab9a736131c","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: fechar a tela NÃO cancela o turno que ela mesma já tinha começado
+ok 37 - CT-05: fechar a tela NÃO cancela o turno que ela mesma já tinha começado
+  ---
+  duration_ms: 24.6951
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.988Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"5f807a4e-795b-44d4-a7b6-93d255dd7fce","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: turno SEM TELA (WhatsApp, ciclo autônomo) pode ser parado por qualquer tela
+ok 38 - CT-05: turno SEM TELA (WhatsApp, ciclo autônomo) pode ser parado por qualquer tela
+  ---
+  duration_ms: 15.9486
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:31.999Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"d4259c3d-1e07-4731-9949-cd94a3051498","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:32.002Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"174db58d-69ca-433e-8f51-df864e0ca4d9","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-17T10:20:32.015Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3a682a3b-b5f2-458e-8c96-76319f12c399","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: preempção da própria tela NÃO esvazia a fila das outras
+ok 39 - CT-05: preempção da própria tela NÃO esvazia a fila das outras
+  ---
+  duration_ms: 19.9518
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-17T10:20:32.018Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"a8bfb4f5-d4b8-4119-a61c-1cd10d3eb6a4","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: a mesma tela que já espera não ocupa duas vagas — o segundo pedido substitui o primeiro
+ok 40 - CC-01: a mesma tela que já espera não ocupa duas vagas — o segundo pedido substitui o primeiro
+  ---
+  duration_ms: 17.1908
+  type: 'test'
+  ...
+# Subtest: duas instâncias (tela e WhatsApp) não apagam a mensagem uma da outra
+ok 41 - duas instâncias (tela e WhatsApp) não apagam a mensagem uma da outra
+  ---
+  duration_ms: 167.5129
+  type: 'test'
+  ...
+# Subtest: a ficha salva pela tela sobrevive à mensagem seguinte do outro canal
+ok 42 - a ficha salva pela tela sobrevive à mensagem seguinte do outro canal
+  ---
+  duration_ms: 265.832
+  type: 'test'
+  ...
+# Subtest: escritas concorrentes na mesma instância não perdem registro
+ok 43 - escritas concorrentes na mesma instância não perdem registro
+  ---
+  duration_ms: 1140.5643
+  type: 'test'
+  ...
+# Subtest: o shard nunca é lido pela metade: a gravação é atômica
+ok 44 - o shard nunca é lido pela metade: a gravação é atômica
+  ---
+  duration_ms: 356.7726
+  type: 'test'
+  ...
+# Subtest: a Porta e o canal WhatsApp compartilham a MESMA memória
+ok 45 - a Porta e o canal WhatsApp compartilham a MESMA memória
+  ---
+  duration_ms: 6.298
+  type: 'test'
+  ...
+# Subtest: antes do primeiro turno não há pergunta — null, não bolha vazia
+ok 46 - antes do primeiro turno não há pergunta — null, não bolha vazia
+  ---
+  duration_ms: 4.5394
+  type: 'test'
+  ...
+# Subtest: a frase do operador é projetada no snapshot, com o id que o cliente deu
+ok 47 - a frase do operador é projetada no snapshot, com o id que o cliente deu
+  ---
+  duration_ms: 1.2682
+  type: 'test'
+  ...
+# Subtest: a pergunta sobrevive ao turno: quem conecta depois vê o par, não a resposta órfã
+ok 48 - a pergunta sobrevive ao turno: quem conecta depois vê o par, não a resposta órfã
+  ---
+  duration_ms: 0.8084
+  type: 'test'
+  ...
+# Subtest: turno novo substitui a pergunta — nunca se veem duas perguntas ao mesmo tempo
+ok 49 - turno novo substitui a pergunta — nunca se veem duas perguntas ao mesmo tempo
+  ---
+  duration_ms: 0.4937
+  type: 'test'
+  ...
+# Subtest: duas mensagens idênticas seguidas têm ids diferentes
+ok 50 - duas mensagens idênticas seguidas têm ids diferentes
+  ---
+  duration_ms: 0.7383
+  type: 'test'
+  ...
+# Subtest: o id do cliente é aceito quando tem forma inerte
+ok 51 - o id do cliente é aceito quando tem forma inerte
+  ---
+  duration_ms: 0.7719
+  type: 'test'
+  ...
+# Subtest: id malformado é DESCARTADO e a mensagem passa — a frase não se perde por causa do id
+ok 52 - id malformado é DESCARTADO e a mensagem passa — a frase não se perde por causa do id
+  ---
+  duration_ms: 0.6313
+  type: 'test'
+  ...
+# Subtest: cliente antigo, sem id_local, continua funcionando
+ok 53 - cliente antigo, sem id_local, continua funcionando
+  ---
+  duration_ms: 0.336
+  type: 'test'
+  ...
+1..53
+# tests 53
+# suites 0
+# pass 53
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3555.3382

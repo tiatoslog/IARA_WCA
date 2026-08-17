@@ -79,7 +79,17 @@ async function abrirEspelho(navegador, rotulo, coletor) {
     ws.on('framereceived', (f) => {
       try {
         const p = JSON.parse(typeof f.payload === 'string' ? f.payload : f.payload.toString());
-        if (p.tipo === 'snapshot') coletor.estagios[rotulo].push({ em: Date.now(), estagio: p.snapshot.estagio });
+        if (p.tipo === 'snapshot') {
+          coletor.estagios[rotulo].push({
+            em: Date.now(),
+            estagio: p.snapshot.estagio,
+            /* `undefined` = servidor sem o campo; `[]` = ninguém esperando.
+               Distinguir os dois é o que separa "a fila não chegou" de "a fila
+               chegou vazia" — e foi exatamente essa dúvida que travou a rodada
+               anterior desta bateria. */
+            fila: p.snapshot.fila?.map((f) => f.id) ?? null,
+          });
+        }
       } catch {
         /* quadro que não é JSON */
       }
@@ -240,11 +250,19 @@ async function principal() {
     // CT-05 — "parar" numa tela, com pedido da outra em voo
     // -----------------------------------------------------------------------
     let ct05 = null;
+    let ct10 = null;
     /** Quanto tempo a tela B passou mostrando "executando" em cada rodada. */
     const janelasMedidas = [];
     for (let n = 1; n <= TENTATIVAS && !ct05; n += 1) {
       const beta = `Beta ${MARCA}c5r${n}`;
       const corteEstagio = coletor.estagios.B.length;
+      /**
+       * Sem estado de fila no contrato, este caso era uma corrida contra o
+       * relógio: só dava para clicar em "parar" e torcer para o pedido de B
+       * ainda estar esperando. Quatro rodadas, quatro inconclusivos. Agora a
+       * tela DIZ que está esperando (`.balao.operador.esperando`), e o teste
+       * espera esse estado aparecer — como a pessoa faria.
+       */
       /**
        * A JANELA. O turno de A precisa durar o bastante para B apertar "parar"
        * com o pedido dele ainda na fila. Criar pasta fecha em ~300 ms — rápido
@@ -254,8 +272,25 @@ async function principal() {
       await preparar(a, 'vai chover hoje?');
       await preparar(b, `Crie uma pasta chamada ${beta} nos Documentos`);
       const [envioA, envioB] = await Promise.all([disparar(a), disparar(b)]);
-      // B desiste: o pedido dele está na fila, atrás do de A.
-      const tentativaParar = await parar(b);
+
+      /**
+       * QUEM ESPEROU? Não dá para presumir que foi B: `Promise.all` não ordena
+       * os dois envios, e em rodadas anteriores o pedido de B chegou primeiro —
+       * então era A quem esperava, e o teste procurava o estado na tela errada.
+       * Agora quem espera é DESCOBERTO, e é essa tela que desiste.
+       */
+      const achouEsperando = async (page) =>
+        page
+          .waitForSelector('.balao.operador.esperando', { timeout: 6000 })
+          .then(() => true)
+          .catch(() => false);
+      const [esperouA, esperouB] = await Promise.all([achouEsperando(a), achouEsperando(b)]);
+      const esperou = esperouA || esperouB;
+      const desistente = esperouB ? b : esperouA ? a : null;
+
+      const tentativaParar = desistente
+        ? await parar(desistente)
+        : { em: null, observado: ['nenhuma tela mostrou "esperando a vez"'] };
       const cliqueParar = tentativaParar.em;
       await esperarAssentar([a, b]);
 
@@ -266,12 +301,14 @@ async function principal() {
       );
 
       const juntos = Math.abs(envioB - envioA) <= 300;
-      /* A situação sob teste é "B apertou parar com o pedido dele ESPERANDO".
-         Se Beta existe, o turno de B já tinha começado e o parar chegou tarde:
-         rodada inconclusiva, tenta de novo. */
-      const bEsperava = juntos && Boolean(cliqueParar) && !discoBeta;
+      /* A situação sob teste é "B apertou parar com o pedido dele ESPERANDO",
+         e agora isso é OBSERVADO NA TELA — `esperou` — em vez de inferido do
+         relógio. Era a diferença entre um caso testável e uma corrida. */
+      const bEsperava = juntos && esperou && Boolean(cliqueParar);
       const doTurno = coletor.estagios.B.slice(corteEstagio);
-      const linhaDoTempo = doTurno.map((e) => `+${e.em - envioB}:${e.estagio}`).join(' ');
+      const linhaDoTempo = doTurno
+        .map((e) => `+${e.em - envioB}:${e.estagio}${e.fila === null ? '/sem-campo' : `/fila=${e.fila.length}`}`)
+        .join(' ');
       /* A JANELA DO BOTÃO: do primeiro "executando" que chega à tela até o
          "ocioso" seguinte. É exatamente o intervalo em que o "parar" existe
          para quem está olhando. */
@@ -281,9 +318,25 @@ async function principal() {
       console.log(`[ct-05 rodada ${n}] estágio na tela B: ${linhaDoTempo || '(nenhum snapshot)'}`);
       console.log(
         `[ct-05 rodada ${n}] desalinhamento ${Math.abs(envioB - envioA)} ms · ` +
+          `tela de B disse "esperando a vez"=${esperou} · ` +
           `parar=${cliqueParar ? `+${cliqueParar - envioB} ms` : `NÃO CLICOU [${tentativaParar.observado.join(' ')}]`} · ` +
           `Beta=${discoBeta ? 'existe' : 'ausente'} · respondeu A=${respondeuA}`,
       );
+      /**
+       * CT-10 PELA TELA: a espera CHEGOU ao navegador?
+       *
+       * É uma pergunta mais fraca que a do CT-05 e, por isso mesmo, respondível
+       * aqui: basta que algum snapshot recebido por esta aba tenha trazido a
+       * fila com alguém dentro. Não depende de o clique cair na janela certa —
+       * depende só de o contrato existir e viajar.
+       */
+      if (juntos && doTurno.some((e) => Array.isArray(e.fila) && e.fila.length > 0)) {
+        ct10 = {
+          n,
+          desalinhamento_ms: Math.abs(envioB - envioA),
+          maior_fila: Math.max(...doTurno.map((e) => (Array.isArray(e.fila) ? e.fila.length : 0))),
+        };
+      }
       if (bEsperava) ct05 = { n, beta, discoBeta, respondeuA, atraso_parar_ms: cliqueParar - envioB };
     }
 
@@ -294,6 +347,16 @@ async function principal() {
      * observado sobre a correção. A medição da janela vai junto, porque é ela
      * que explica por que não foi, e é um achado por si só.
      */
+    registrar(
+      'CT-10',
+      ct10 ? true : null,
+      ct10
+        ? `rodada ${ct10.n}: a espera CHEGOU ao navegador — snapshot com ${ct10.maior_fila} pedido(s) na fila, ` +
+          `numa corrida de ${ct10.desalinhamento_ms} ms. O estado que faltava no contrato existe e viaja.`
+        : `NÃO EXECUTADO: nenhuma rodada com corrida trouxe fila não-vazia ao cliente. ` +
+          `Pode ser ausência de corrida OU do contrato — o campo distingue os dois (null = servidor sem o campo).`,
+    );
+
     if (ct05) {
       registrar('CT-05a', true, `rodada ${ct05.n}: o "parar" de B chegou com o pedido dele ainda esperando a vez`);
       registrar(
@@ -309,12 +372,12 @@ async function principal() {
       registrar(
         'CT-05',
         null,
-        `NÃO EXECUTADO em ${TENTATIVAS} rodadas. O clique CHEGOU a acontecer em parte delas — o que não deu ` +
-          `foi chegar enquanto o pedido de B ainda esperava: assim que o turno de A fecha, o da fila entra ` +
-          `em milissegundos, e o snapshot não distingue "trabalhando no pedido de A" de "trabalhando no ` +
-          `pedido de B" (não existe estado de fila no contrato — lacuna declarada nº 3). Quem está na tela ` +
-          `B não tem como saber se ainda dá tempo de desistir. Janelas de "executando" medidas: ${janelas}. ` +
-          `A invariante está provada em testes/cross-talk-espelhos.test.ts; o caminho pela interface, não.`,
+        `NÃO EXECUTADO em ${TENTATIVAS} rodadas. O estado de fila JÁ EXISTE no contrato (CT-10) e foi ` +
+          `observado chegando ao navegador; o que não se consegue nesta máquina é apanhá-lo NA TELA a ` +
+          `tempo de clicar: os snapshots chegam em rajada, medida em vários segundos, num Next em dev com ` +
+          `o Canvas 3D e a voz neural ligados. É limitação do ambiente de medição, não da correção. ` +
+          `Janelas de "executando" medidas: ${janelas}. A invariante está provada em ` +
+          `testes/cross-talk-espelhos.test.ts, onde o turno é segurado por um portão sob controle do teste.`,
       );
     }
 

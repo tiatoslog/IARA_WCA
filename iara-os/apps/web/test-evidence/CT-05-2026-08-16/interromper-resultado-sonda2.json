@@ -1,0 +1,487 @@
+{
+  "fase": "sonda2",
+  "url": "http://127.0.0.1:3077",
+  "raiz": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-9ilVSh\\casa",
+  "ct04": {
+    "n": 1,
+    "cortado": "Pris2c4r1",
+    "vencedor": "Segs2c4r1",
+    "perguntas": 2,
+    "respostas": 1
+  },
+  "ct05": null,
+  "conversa": {
+    "A": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Pris2c4r1 na área de trabalho"
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segs2c4r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segs2c4r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta s2c5r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta s2c5r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta s2c5r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta s2c5r2\" em Documentos."
+      }
+    ],
+    "B": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Pris2c4r1 na área de trabalho"
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segs2c4r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segs2c4r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta s2c5r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta s2c5r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta s2c5r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta s2c5r2\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      }
+    ]
+  },
+  "janelas_do_botao_parar_ms": [
+    1,
+    12941
+  ],
+  "estagios": {
+    "A": [
+      {
+        "em": 1786961190969,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961201602,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961209835,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961212008,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961212008,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961216558,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961216560,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961218733,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961218733,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961218734,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961218734,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961231720,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961233973,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961233973,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961233973,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961233973,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961236060,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961236060,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961236061,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961236061,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961236061,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961236061,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961249275,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961260522,
+        "estagio": "executando",
+        "fila": [
+          "op:msx2ldl2-3gw2tk"
+        ]
+      },
+      {
+        "em": 1786961260522,
+        "estagio": "executando",
+        "fila": [
+          "op:msx2ldl2-3gw2tk"
+        ]
+      },
+      {
+        "em": 1786961260522,
+        "estagio": "executando",
+        "fila": [
+          "op:msx2ldl2-3gw2tk"
+        ]
+      },
+      {
+        "em": 1786961260522,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260523,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260523,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260523,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260523,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260523,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961273361,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961290142,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961304797,
+        "estagio": "ocioso",
+        "fila": []
+      }
+    ],
+    "B": [
+      {
+        "em": 1786961192606,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961208211,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961210003,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961210003,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961216532,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961216532,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961218725,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961218725,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961218725,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961218728,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961231660,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961233874,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961233874,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961233874,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961233875,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961236079,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961236079,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961236079,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961236079,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961236079,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961236080,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961249207,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961260410,
+        "estagio": "executando",
+        "fila": [
+          "op:msx2ldl2-3gw2tk"
+        ]
+      },
+      {
+        "em": 1786961260411,
+        "estagio": "executando",
+        "fila": [
+          "op:msx2ldl2-3gw2tk"
+        ]
+      },
+      {
+        "em": 1786961260411,
+        "estagio": "executando",
+        "fila": [
+          "op:msx2ldl2-3gw2tk"
+        ]
+      },
+      {
+        "em": 1786961260411,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260411,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260411,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260411,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260411,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961260412,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961273351,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961290153,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961304714,
+        "estagio": "ocioso",
+        "fila": []
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "CT-04",
+      "ok": true,
+      "detalhe": "rodada 1: duas perguntas e UMA resposta — o segundo pedido preemptou o primeiro"
+    },
+    {
+      "id": "CT-05",
+      "ok": null,
+      "detalhe": "NÃO EXECUTADO em 2 rodadas. O clique CHEGOU a acontecer em parte delas — o que não deu foi chegar enquanto o pedido de B ainda esperava: assim que o turno de A fecha, o da fila entra em milissegundos, e o snapshot não distingue \"trabalhando no pedido de A\" de \"trabalhando no pedido de B\" (não existe estado de fila no contrato — lacuna declarada nº 3). Quem está na tela B não tem como saber se ainda dá tempo de desistir. Janelas de \"executando\" medidas: 1, 12941 ms. A invariante está provada em testes/cross-talk-espelhos.test.ts; o caminho pela interface, não."
+    }
+  ],
+  "veredito": "INCOMPLETO"
+}

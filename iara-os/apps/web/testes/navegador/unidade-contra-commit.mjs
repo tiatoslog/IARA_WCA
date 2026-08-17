@@ -13,6 +13,14 @@
  * commit apenas dos arquivos que divergem. A árvore de trabalho não é tocada.
  *
  *   node testes/navegador/unidade-contra-commit.mjs 6aa2d3f testes/cross-talk-espelhos.test.ts
+ *
+ * LIMITE, e ele importa para não se tirar conclusão errada daqui: o espelho
+ * carrega `servidor`, `lib`, `testes` e `dados`, e MAIS NADA. Teste que leia
+ * `components`, `public` ou `ativos` — os de arte, cenário e ícone — falha aqui
+ * por falta de arquivo, não por regressão. Esta ferramenta serve para exercitar
+ * um teste CONFINADO ao núcleo contra código antigo; apontá-la para a suíte
+ * inteira produz uma tela de vermelho que não quer dizer nada. Descoberto na
+ * marra em 16/08/2026, tentando exatamente isso.
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';

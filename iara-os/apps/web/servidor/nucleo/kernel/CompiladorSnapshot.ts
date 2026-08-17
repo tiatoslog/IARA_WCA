@@ -71,6 +71,11 @@ export class CompiladorSnapshot {
    */
   private pergunta: PerguntaProjetada | null = null;
   /**
+   * Quem espera a vez. Vive fora do ciclo do turno de propósito: a fila
+   * atravessa turnos — é justamente o pedido que NÃO é o turno corrente.
+   */
+  private fila: PerguntaProjetada[] = [];
+  /**
    * A cadeia cognitiva do turno — FASE A (14/08/2026). Acumulada dos MESMOS
    * eventos que o resto deste arquivo já absorvia; nenhum evento novo, nenhuma
    * pergunta ao kernel. Zerada quando `MENSAGEM_RECEBIDA` abre o turno
@@ -119,6 +124,12 @@ export class CompiladorSnapshot {
           verificacao: [],
           resposta: null,
         };
+        break;
+
+      case 'FILA_ATUALIZADA':
+        /* Estado completo, não delta — o evento já vem assim. Copiar aqui
+           mantém o compilador sem referência ao array do Kernel. */
+        this.fila = e.pedidos.map((p) => ({ id: p.id_mensagem, texto: p.texto }));
         break;
 
       case 'PERCEPCAO_CONCLUIDA':
@@ -326,6 +337,7 @@ export class CompiladorSnapshot {
       origem_raciocinio: base.origem_raciocinio,
       fala: this.fala,
       pergunta: this.pergunta,
+      fila: this.fila,
       // Cópia com arrays congelados por spread: o acumulador continua mutável
       // aqui dentro, mas o que sai pela fronteira é dado morto, como todo o
       // resto do snapshot.

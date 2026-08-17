@@ -112,6 +112,9 @@ function montar(habilidade: Habilidade) {
   barramento.assinar('TAREFA_CANCELADA', (e) => canceladas.push(e.motivo));
   barramento.assinar('FALHA', (e) => falhas.push({ modulo: e.modulo, mensagem: e.mensagem }));
 
+  const filas: Array<readonly { id_mensagem: string; texto: string }[]> = [];
+  barramento.assinar('FILA_ATUALIZADA', (e) => filas.push(e.pedidos));
+
   const kernel = new Kernel({
     sessao: 's-crosstalk',
     idUsuario: 'u-crosstalk',
@@ -145,7 +148,7 @@ function montar(habilidade: Habilidade) {
     } as unknown as MotorRaciocinio,
   });
 
-  return { kernel, concluidas, canceladas, falhas };
+  return { kernel, concluidas, canceladas, falhas, filas };
 }
 
 /** Espera a habilidade do turno em voo ter começado de fato. */
@@ -245,6 +248,72 @@ test('CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio',
   lab.soltar();
   await turnoA;
   assert.equal(concluidas.length, 5, 'os cinco que ENTRARAM (1 em voo + 4 na fila) respondem');
+});
+
+// ===========================================================================
+// CT-10 — a espera existe no contrato, não só no código
+// ===========================================================================
+
+/**
+ * A lacuna que a auditoria deixou explícita: a serialização de turnos criou um
+ * estado novo — "seu pedido está esperando a vez" — e não havia nada no
+ * contrato que o dissesse. A pessoa via a própria bolha, via a IARA
+ * trabalhando, e não tinha como saber se o trabalho era o pedido dela.
+ */
+test('CT-10: o pedido que espera a vez é PUBLICADO, com o id que a tela reconhece', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, filas } = montar(lab.habilidade);
+
+  const turnoA = kernel.processar(PEDIDO, 'a1', 'espelho-A');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+  assert.equal(filas.length, 0, 'sem ninguém esperando, não se publica fila');
+
+  await kernel.processar(PEDIDO, 'b1', 'espelho-B');
+  assert.equal(filas.length, 1, 'entrar na fila é um fato e precisa ser publicado');
+  assert.deepEqual(
+    filas[0].map((p) => p.id_mensagem),
+    ['op:b1'],
+    'o id publicado é o MESMO `op:` que a tela deu à própria bolha — é assim que ela se reconhece',
+  );
+
+  lab.soltar();
+  await turnoA;
+
+  const ultima = filas[filas.length - 1];
+  assert.deepEqual(ultima, [], 'ao sair da fila, a fila publicada fica vazia');
+});
+
+test('CT-10: o id do pedido na fila é o MESMO que a resposta dele vai endereçar', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, filas, concluidas } = montar(lab.habilidade);
+
+  const turnoA = kernel.processar(PEDIDO, 'a1', 'espelho-A');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+  await kernel.processar(PEDIDO, 'b1', 'espelho-B');
+  const idNaFila = filas[0][0].id_mensagem;
+
+  lab.soltar();
+  await turnoA;
+
+  /* Se o id mudasse entre a fila e o turno, a tela veria o pedido "sair da
+     fila" e uma resposta chegar endereçada a outra coisa — dois pedidos onde
+     só houve um. */
+  assert.equal(concluidas[1].responde_a, idNaFila);
+});
+
+test('CT-10: desistir da fila publica a fila sem o pedido', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, filas } = montar(lab.habilidade);
+
+  const turnoA = kernel.processar(PEDIDO, 'a1', 'espelho-A');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+  await kernel.processar(PEDIDO, 'b1', 'espelho-B');
+  kernel.interromper('espelho-B');
+
+  assert.deepEqual(filas[filas.length - 1], [], 'quem desistiu some da fila publicada');
+
+  lab.soltar();
+  await turnoA;
 });
 
 // ===========================================================================

@@ -456,13 +456,31 @@ const SEM_NOME = /^(?:nova|novo|uma|um|a|o|mim|favor|aqui|ali|ai|aí|isso|isto)$
  * uma linha de teste.
  */
 export function extrairNomePasta(bruto: string): string {
+  /**
+   * A ÂNCORA DE NOMEAÇÃO decide se a ligação inicial é ligação ou é o nome.
+   *
+   * "crie uma pasta DE teste" → o "de" liga, e o nome é `teste`.
+   * "crie uma pasta chamada UM Relatório" → o "Um" É o nome, e cortá-lo faz a
+   * IARA batizar a pasta de outro jeito sem avisar ninguém.
+   *
+   * O defeito era real e voltado ao operador (achado em auditoria, 16/08/2026):
+   * pedir `pasta chamada Um k5c4r1` criava `k5c4r1`, e a fala confirmava o nome
+   * trocado com toda a naturalidade. Pior que feio — um sistema que renomeia
+   * calado corrompe qualquer verificação que use o nome como âncora, e foi
+   * exatamente assim que um teste de concorrência passou sem ter testado nada.
+   *
+   * O "de" da fórmula "chamada DE X" é absorvido pela própria âncora, porque
+   * ali ele pertence à maneira de nomear, não ao nome. `chamad[ao]` cobre
+   * "chamado", que antes não era âncora nenhuma e virava parte do nome.
+   */
   const m = bruto.match(
-    /pasta\s+(?:chamada\s+|com\s+o\s+nome\s+|nomeada\s+)?["“']?(.+?)["”']?\s*[?.!]*$/i,
+    /pasta\s+(chamad[ao]\s+(?:de\s+)?|com\s+o\s+nome\s+(?:de\s+)?|de\s+nome\s+|nomead[ao]\s+(?:como\s+)?)?["“']?(.+?)["”']?\s*[?.!]*$/i,
   );
-  let nome = (m?.[1] ?? '').trim();
+  const nomeada = Boolean(m?.[1]);
+  let nome = (m?.[2] ?? '').trim();
   nome = nome.replace(CAUDA_DO_PEDIDO, '').trim();
   nome = nome.replace(CORTESIA, '').trim();
-  nome = nome.replace(LIGACAO_INICIAL, '').trim();
+  if (!nomeada) nome = nome.replace(LIGACAO_INICIAL, '').trim();
   // Aspas sobrando quando o nome vinha citado e a cauda foi cortada por fora.
   nome = nome.replace(/^["“']|["”']$/g, '').trim();
   // "crie uma pasta" sem nome, ou sobrou só ruído: nome honesto de fallback.

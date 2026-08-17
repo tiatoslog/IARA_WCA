@@ -280,6 +280,41 @@ test('o nome não engole preposição, local, nem a cauda da frase', () => {
   }
 });
 
+/**
+ * QUEM NOMEIA É A OPERADORA — achado em auditoria adversarial (16/08/2026).
+ *
+ * `pasta chamada Um k5c4r1` criava a pasta `k5c4r1`: a regra de ligação inicial
+ * cortava o artigo mesmo quando o nome tinha sido introduzido de propósito por
+ * "chamada". A IARA confirmava o nome trocado sem uma ressalva. É a mesma
+ * família da mentira operacional — a fala não corresponde ao que foi pedido —
+ * e teve consequência prática: um teste de concorrência que procurava o nome
+ * pedido dentro da resposta passou sem ter medido nada, porque o nome nunca
+ * aparecia.
+ *
+ * A regra que ficou: COM âncora de nomeação, o que vem depois é o nome, artigo
+ * incluído. SEM âncora, a ligação continua sendo cortada — "pasta de teste"
+ * nunca quis dizer uma pasta chamada "de teste".
+ */
+test('com âncora de nomeação, o artigo faz parte do nome; sem âncora, continua sendo ligação', () => {
+  const casos: Array<[string, string]> = [
+    // COM âncora: o nome vai inteiro.
+    ['Crie uma pasta chamada Um Relatório na área de trabalho', 'Um Relatório'],
+    ['crie uma pasta chamada A Definir nos documentos', 'A Definir'],
+    ['crie uma pasta chamado Uma Ideia no desktop', 'Uma Ideia'],
+    ['crie uma pasta com o nome O Projeto em documentos', 'O Projeto'],
+    // "chamada DE X" é a fórmula, e o "de" pertence a ela — não ao nome.
+    ['crie uma pasta chamada de teste na área de trabalho', 'teste'],
+    ['crie uma pasta com o nome de Contratos nos downloads', 'Contratos'],
+    // SEM âncora: nada muda em relação ao comportamento de sempre.
+    ['Crie uma pasta de teste na área de trabalho do meu computador', 'teste'],
+    ['crie uma pasta de contratos aereos na area de trabalho por favor', 'contratos aereos'],
+    ['cria uma pasta Relatórios Aéreos em documentos', 'Relatórios Aéreos'],
+  ];
+  for (const [frase, esperado] of casos) {
+    assert.equal(extrairNomePasta(frase), esperado, `"${frase}"`);
+  }
+});
+
 test('extração de local e ação de energia', () => {
   assert.equal(extrairLocalAutorizado('pasta X em documentos'), 'documentos');
   assert.equal(extrairLocalAutorizado('pasta X nos downloads'), 'downloads');

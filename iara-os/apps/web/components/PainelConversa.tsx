@@ -182,6 +182,14 @@ export function PainelConversa({
   }, [falas]);
 
   const ocupada = estado.estagio !== 'ocioso' && estado.estagio !== 'escutando';
+  /**
+   * Tem pedido MEU esperando a vez? Se tem, "parar" precisa estar disponível —
+   * é o único momento em que desistir ainda cancela alguma coisa sem que nada
+   * tenha acontecido no mundo. Antes disto o botão dependia só de a sessão
+   * estar ocupada, e ficava indistinguível para quem esperava e para quem
+   * estava sendo atendido.
+   */
+  const meuPedidoEspera = falas.some((f) => f.papel === 'operador' && f.na_fila);
 
   /**
    * OS ATALHOS DA SALA VAZIA SÃO DE QUEM PERGUNTA (15/08/2026, a pedido da
@@ -475,8 +483,21 @@ export function PainelConversa({
         )}
 
         {falas.map((f) => (
-          <div key={f.id} className={f.papel === 'operador' ? 'balao operador' : 'balao iara'}>
+          <div
+            key={f.id}
+            className={
+              f.papel === 'operador'
+                ? f.na_fila
+                  ? 'balao operador esperando'
+                  : 'balao operador'
+                : 'balao iara'
+            }
+          >
             {f.texto || <span className="reticencias">…</span>}
+            {/* A ESPERA DITA COM TODAS AS LETRAS. Sem isto, um pedido atrás do
+                pedido de outra tela é indistinguível de um pedido lento — e a
+                pessoa não sabe se ainda dá tempo de desistir. */}
+            {f.na_fila && <span className="balao-espera">esperando a vez</span>}
           </div>
         ))}
         <div ref={fim} />
@@ -608,8 +629,8 @@ export function PainelConversa({
           <button
             className="cb"
             onClick={onInterromper}
-            disabled={!ocupada && !vozFalando}
-            title="Interromper a IARA"
+            disabled={!ocupada && !vozFalando && !meuPedidoEspera}
+            title={meuPedidoEspera ? 'Desistir do pedido que está na fila' : 'Interromper a IARA'}
             aria-label="Interromper a IARA"
           >
             <IconeInterromper />

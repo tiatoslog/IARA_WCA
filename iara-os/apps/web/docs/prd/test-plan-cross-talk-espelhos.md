@@ -220,6 +220,57 @@ a pasta "X" — `LIGACAO_INICIAL` corta o artigo mesmo quando o nome veio depois
 de "chamada". É anterior a este trabalho, é voltado ao usuário, e foi o que
 produziu o falso verde. Fica como tarefa à parte.
 
+## Quarta passagem — os itens em aberto (16/08/2026)
+
+As três lacunas que as passagens anteriores declararam foram tratadas, e a
+declaração deixou de ser desculpa.
+
+**1. Não existia estado de fila no contrato — agora existe.** Era a causa-raiz
+de CT-04 e CT-05 não serem prováveis pela interface, e antes disso era um
+problema de produto: com a serialização de turnos, o pedido de uma tela pode
+ESPERAR, e nada dizia isso a quem esperava. A pessoa via a própria bolha, via a
+IARA trabalhando, e não sabia se o trabalho era o pedido dela.
+
+- evento `FILA_ATUALIZADA` com a fila INTEIRA a cada mudança (estado, nunca
+  delta — quem chega no meio precisa da verdade de agora);
+- `SnapshotCognitivo.fila`, projetada pelo compilador;
+- cada espelho se reconhece comparando os ids com os `op:` das próprias bolhas —
+  o mesmo truque de `PerguntaProjetada.id`, e pela mesma razão: o snapshot é um
+  só para todas as telas, então quem se identifica é quem lê;
+- a bolha que espera aparece recuada, com "esperando a vez", e o botão "parar"
+  fica disponível para quem espera — é o único momento em que desistir cancela
+  algo sem que nada tenha acontecido no mundo.
+
+Três casos novos em `testes/cross-talk-espelhos.test.ts` (CT-10), incluindo o
+que trava a armadilha sutil: **o id publicado na fila é o MESMO que a resposta
+vai endereçar**. Se mudasse entre a fila e o turno, a tela veria o pedido sair
+da fila e uma resposta chegar endereçada a outra coisa — dois pedidos onde só
+houve um.
+
+**2. "Crie uma pasta chamada Um X" criava a pasta "X" — corrigido.** Com âncora
+de nomeação ("chamada", "chamado", "com o nome", "de nome"), o que vem depois é
+o nome, artigo incluído. Sem âncora, a ligação inicial continua sendo cortada:
+"pasta de teste" nunca quis dizer uma pasta chamada "de teste". O "de" da
+fórmula "chamada DE X" foi absorvido pela própria âncora, e `chamado` — que
+antes não era âncora nenhuma e virava parte do nome — entrou junto.
+
+**3. A suspeita do botão desabilitado tinha outra explicação.** Não era o botão:
+nesta máquina os snapshots chegam ao navegador **em rajada**, medida em vários
+segundos, num Next em dev com o Canvas 3D e a voz neural ligados. Enquanto a
+rajada não chega, a tela mostra o estado velho — daí o botão parecer
+desabilitado durante uma janela em que o servidor já dizia "executando".
+
+### O que continua NÃO PROVADO pela interface
+
+CT-04 e CT-05 seguem irreprodutíveis no navegador nesta máquina, e agora se sabe
+por quê: a rajada de snapshots. O estado de fila **foi observado chegando ao
+cliente** (captura de WebSocket, `fila=1` numa corrida de 16 ms), mas não de
+forma reproduzível o bastante para sustentar um check. As duas invariantes estão
+provadas em unidade, onde o turno é segurado por um portão sob controle do
+teste. Fica declarado como limitação do ambiente de medição, não da correção — e
+como o próximo alvo de quem quiser fechar isso: medir a latência de entrega de
+snapshot antes de tentar de novo.
+
 ## Regra de bloqueio
 
 BLOCK se qualquer um de CT-01, CT-03, CT-08 ou CT-09 falhar, ou se algum PASS

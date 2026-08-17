@@ -29,6 +29,7 @@ export type TipoEvento =
   | 'RESPOSTA_TRECHO'
   | 'TAREFA_CONCLUIDA'
   | 'TAREFA_CANCELADA'
+  | 'FILA_ATUALIZADA'
   | 'FALHA';
 
 /** Campos que todo evento carrega, sem exceção. */
@@ -172,6 +173,24 @@ export type EventoKernel =
       responde_a: string | null;
     })
   | (EventoBase & { tipo: 'TAREFA_CANCELADA'; motivo: string })
+  /**
+   * QUEM ESTÁ ESPERANDO A VEZ — a fila inteira, sempre que ela muda.
+   *
+   * O evento carrega o estado COMPLETO, não o delta, pela mesma razão que o
+   * snapshot carrega: quem chega no meio precisa da verdade de agora, e um
+   * delta perdido deixaria a tela mostrando uma fila que não existe mais.
+   *
+   * Nasceu da lacuna que a auditoria de 16/08 deixou explícita: com a
+   * serialização de turnos, o pedido de uma tela pode ESPERAR — e não havia no
+   * contrato nada que dissesse isso. A pessoa via a própria bolha, a IARA
+   * trabalhando, e não tinha como saber se o que estava sendo feito era o
+   * pedido dela ou o da outra tela. Sem isso, "desistir antes da vez" é uma
+   * ação que a interface oferece sem dizer se ainda vale.
+   */
+  | (EventoBase & {
+      tipo: 'FILA_ATUALIZADA';
+      pedidos: readonly { readonly id_mensagem: string; readonly texto: string }[];
+    })
   | (EventoBase & { tipo: 'FALHA'; modulo: string; mensagem: string });
 
 /** Extrai o payload de um tipo específico — usado pelos assinantes tipados. */

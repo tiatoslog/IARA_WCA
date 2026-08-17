@@ -35,6 +35,12 @@ export interface Fala {
    * bolhas do operador e em recado que a IARA dá sem ninguém ter perguntado.
    */
   responde_a?: string | null;
+  /**
+   * Para bolhas do operador: este pedido ainda está ESPERANDO A VEZ atrás do
+   * pedido de outra tela. Derivado de `snapshot.fila` a cada pacote, nunca
+   * guardado — é estado do servidor, e o cliente aqui é projeção burra.
+   */
+  na_fila?: boolean;
   destino?: string;
   latencia_ms?: number;
   cache_lido?: number;
@@ -262,6 +268,34 @@ export function useIaraSocket(credencial: Credencial) {
     });
   }, []);
 
+  /**
+   * QUEM AINDA ESPERA A VEZ.
+   *
+   * A fila do snapshot vale para a sessão inteira; esta tela se reconhece nela
+   * pelos ids `op:` das bolhas que ELA criou. Marca e desmarca a cada pacote —
+   * um pedido que saiu da fila precisa parar de dizer que está nela, e como o
+   * evento carrega a fila inteira, "não está na lista" é informação tão boa
+   * quanto "está".
+   *
+   * Servidor antigo não manda `fila`: nesse caso nada é marcado, e a tela se
+   * comporta como antes de o campo existir.
+   */
+  const absorverFila = useCallback((s: SnapshotCognitivo) => {
+    if (!s.fila) return;
+    const esperando = new Set(s.fila.map((p) => p.id));
+    setFalas((antes) => {
+      let mudou = false;
+      const proximo = antes.map((f) => {
+        if (f.papel !== 'operador') return f;
+        const agora = esperando.has(f.id);
+        if (Boolean(f.na_fila) === agora) return f;
+        mudou = true;
+        return { ...f, na_fila: agora };
+      });
+      return mudou ? proximo : antes;
+    });
+  }, []);
+
   const aplicar = useCallback(
     (pacote: PacoteServidor) => {
       /**
@@ -315,11 +349,12 @@ export function useIaraSocket(credencial: Credencial) {
         // pergunta que a provocou.
         absorverPergunta(pacote.snapshot);
         absorverFala(pacote.snapshot);
+        absorverFila(pacote.snapshot);
         return;
       }
       registrarLog(pacote.nivel, pacote.texto);
     },
-    [registrarLog, absorverPergunta, absorverFala],
+    [registrarLog, absorverPergunta, absorverFala, absorverFila],
   );
 
   useEffect(() => {

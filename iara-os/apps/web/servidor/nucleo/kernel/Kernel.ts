@@ -127,6 +127,14 @@ interface PedidoNaFila {
   readonly texto: string;
   readonly idLocal?: string;
   readonly origem: string;
+  /**
+   * O `op:` que a tela vai reconhecer como a PRÓPRIA bolha — o mesmo que o
+   * turno usará em `MENSAGEM_RECEBIDA` quando chegar a vez. Decidido aqui, na
+   * entrada da fila, e não no começo do turno: a projeção da fila precisa dele
+   * antes de o turno existir, e dois lugares gerando o id dariam dois ids
+   * diferentes para o mesmo pedido.
+   */
+  readonly id: string;
 }
 
 /**
@@ -388,7 +396,9 @@ export class Kernel {
    * executados contra uma sessão que não tem mais ninguém olhando.
    */
   pararTudo(motivo: string): void {
+    const tinhaFila = this.fila.length > 0;
     this.fila.length = 0;
+    if (tinhaFila) this.publicarFila();
     this.cancelar(motivo);
   }
 
@@ -452,6 +462,18 @@ export class Kernel {
     if (espera < 0) return;
     this.fila.splice(espera, 1);
     this.dep.barramento.publicar({ tipo: 'TAREFA_CANCELADA', motivo });
+    this.publicarFila();
+  }
+
+  /**
+   * A fila INTEIRA, sempre que ela muda. Estado completo, nunca delta — ver
+   * `FILA_ATUALIZADA` em `Evento.ts`.
+   */
+  private publicarFila(): void {
+    this.dep.barramento.publicar({
+      tipo: 'FILA_ATUALIZADA',
+      pedidos: this.fila.map((p) => ({ id_mensagem: p.id, texto: p.texto })),
+    });
   }
 
   /** Quantos pedidos de outras telas estão esperando. Leitura, para teste e
@@ -471,8 +493,12 @@ export class Kernel {
     if (this.emAndamento) return;
     const proximo = this.fila.shift();
     if (!proximo) return;
+    /* A tela precisa saber que saiu da fila ANTES de o turno começar: entre o
+       `shift` e a primeira transição de estágio existe uma janela em que a
+       pessoa ainda veria "esperando a vez" sobre um pedido que já entrou. */
+    this.publicarFila();
     try {
-      await this.processar(proximo.texto, proximo.idLocal, proximo.origem);
+      await this.processar(proximo.texto, proximo.idLocal, proximo.origem, proximo.id);
     } catch (erro) {
       /* `processar` já trata as próprias falhas; o que chega aqui é o que
          escapou do `finally` dele. Deixar subir mataria a drenagem e os
@@ -494,7 +520,25 @@ export class Kernel {
    * ciclo autônomo, teste), o turno ganha um id próprio: a pergunta precisa de
    * identidade nos espelhos mesmo quando não nasceu numa tela.
    */
-  async processar(texto: string, idLocal?: string, origem: string = ORIGEM_SEM_TELA): Promise<void> {
+  async processar(
+    texto: string,
+    idLocal?: string,
+    origem: string = ORIGEM_SEM_TELA,
+    /** Só a drenagem da fila passa isto: o pedido já ganhou id ao entrar nela. */
+    idJaAtribuido?: string,
+  ): Promise<void> {
+    /**
+     * O prefixo `op:` é o que garante que um id vindo da rede nunca colida com
+     * o `randomUUID` das falas da IARA. Sem ele, um cliente que mandasse como
+     * `id_local` o id de uma resposta em curso faria a própria bolha e a fala
+     * da IARA disputarem a mesma linha da lista.
+     *
+     * Calculado ANTES da fila porque a fila também precisa dele: é por este id
+     * que a tela reconhece, na projeção da fila, qual dos pedidos esperando é o
+     * dela.
+     */
+    const idDaPergunta = idJaAtribuido ?? (idLocal ? `op:${idLocal}` : `op:${randomUUID()}`);
+
     /**
      * DUAS PREEMPÇÕES QUE ERAM UMA SÓ — o CC-01 (16/08/2026).
      *
@@ -520,7 +564,8 @@ export class Kernel {
     if (this.emAndamento && this.origemEmAndamento !== origem) {
       const jaEspera = this.fila.findIndex((x) => x.origem === origem);
       if (jaEspera >= 0) {
-        this.fila[jaEspera] = { texto, idLocal, origem };
+        this.fila[jaEspera] = { texto, idLocal, origem, id: idDaPergunta };
+        this.publicarFila();
         return;
       }
       if (this.fila.length >= TETO_DA_FILA) {
@@ -536,7 +581,8 @@ export class Kernel {
         });
         return;
       }
-      this.fila.push({ texto, idLocal, origem });
+      this.fila.push({ texto, idLocal, origem, id: idDaPergunta });
+      this.publicarFila();
       return;
     }
 
@@ -558,17 +604,10 @@ export class Kernel {
     b.novoTraco();
     const inicio = Date.now();
 
-    /**
-     * O prefixo `op:` é o que garante que um id vindo da rede nunca colida com
-     * o `randomUUID` das falas da IARA. Sem ele, um cliente que mandasse como
-     * `id_local` o id de uma resposta em curso faria a própria bolha e a fala
-     * da IARA disputarem a mesma linha da lista.
-     *
-     * Guardado em variável porque agora ele tem um SEGUNDO consumidor: toda
-     * fala deste turno viaja carimbada com ele em `responde_a`. É o que permite
-     * a um espelho recusar-se a apresentar como sua a resposta de outro pedido.
-     */
-    const idDaPergunta = idLocal ? `op:${idLocal}` : `op:${randomUUID()}`;
+    /* `idDaPergunta` nasceu lá em cima, antes da fila. Ele tem três
+       consumidores: a bolha do operador (`MENSAGEM_RECEBIDA`), o endereço de
+       toda fala deste turno (`responde_a`), e a projeção da fila enquanto o
+       pedido espera a vez. */
 
     try {
       b.publicar({

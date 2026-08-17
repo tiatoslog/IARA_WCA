@@ -292,6 +292,26 @@ export interface SnapshotCognitivo {
   readonly pergunta?: PerguntaProjetada | null;
 
   /**
+   * OS PEDIDOS QUE ESPERAM A VEZ, em ordem de chegada.
+   *
+   * Uma sessão tem um kernel e até quatro telas, e desde a serialização de
+   * turnos (CC-01, 16/08/2026) o pedido de uma tela pode ficar esperando o da
+   * outra. Sem este campo, a pessoa via a própria bolha, via a IARA
+   * trabalhando, e não tinha como saber se o trabalho em curso era o pedido
+   * dela ou o da outra tela — e "parar" virava uma ação oferecida sem dizer se
+   * ainda valia.
+   *
+   * Cada espelho encontra a SI MESMO comparando estes ids com os `op:` das
+   * bolhas que ele criou. É o mesmo truque de `PerguntaProjetada.id`, e pela
+   * mesma razão: o snapshot é um só para todas as telas, então quem se
+   * identifica é quem lê.
+   *
+   * Vazio quando ninguém espera. Ausente em servidor antigo — o cliente
+   * degrada para não mostrar nada, que é o comportamento de antes.
+   */
+  readonly fila?: readonly PerguntaProjetada[];
+
+  /**
    * A cadeia cognitiva do turno corrente (ou do último concluído). `null`
    * antes do primeiro turno da sessão — o painel mostra "nenhum turno ainda"
    * em vez de uma cadeia vazia com cara de turno que não aconteceu.

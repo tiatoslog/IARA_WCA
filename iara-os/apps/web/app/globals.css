@@ -1238,6 +1238,26 @@ ol.plano {
   border-radius: var(--r-g) 18px 6px 18px;
 }
 
+/**
+ * ESPERANDO A VEZ — o pedido entrou na fila atrás do de outra tela.
+ *
+ * Recuo, não alerta: não há nada errado acontecendo, e um balão em cor de aviso
+ * ensinaria a operadora a temer a própria fila. A opacidade menor é a mesma
+ * gramática do resto da sala — o que ainda não é fato aparece recuado.
+ */
+.balao.operador.esperando {
+  opacity: 0.62;
+}
+
+.balao-espera {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  opacity: 0.75;
+}
+
 .balao.iara {
   align-self: flex-start;
   color: var(--c-tinta);

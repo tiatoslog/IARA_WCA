@@ -1,0 +1,1174 @@
+{
+  "fase": "fila",
+  "url": "http://127.0.0.1:3077",
+  "raiz": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-f0EQdK\\casa",
+  "ct04": null,
+  "ct05": null,
+  "conversa": {
+    "A": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Prig1c4r1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Prig1c4r1\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segg1c4r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segg1c4r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Prig1c4r2 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Prig1c4r2\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segg1c4r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segg1c4r2\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Prig1c4r3 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Prig1c4r3\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segg1c4r3 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segg1c4r3\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Prig1c4r4 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Prig1c4r4\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segg1c4r4 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segg1c4r4\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta g1c5r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta g1c5r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta g1c5r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta g1c5r2\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta g1c5r3 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta g1c5r3\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta g1c5r4 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta g1c5r4\" em Documentos."
+      }
+    ],
+    "B": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Prig1c4r1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Prig1c4r1\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segg1c4r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segg1c4r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Prig1c4r2 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Prig1c4r2\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segg1c4r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segg1c4r2\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Prig1c4r3 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Prig1c4r3\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segg1c4r3 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segg1c4r3\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Prig1c4r4 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Prig1c4r4\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Segg1c4r4 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Segg1c4r4\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta g1c5r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta g1c5r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta g1c5r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta g1c5r2\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta g1c5r3 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta g1c5r3\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta g1c5r4 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta g1c5r4\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 24.6 °C e 37.9 °C. É previsão de modelo numérico, não medição."
+      }
+    ]
+  },
+  "janelas_do_botao_parar_ms": [
+    4533,
+    1,
+    2,
+    1
+  ],
+  "estagios": {
+    "A": [
+      {
+        "em": 1786961375268,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961376334,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961391241,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961391242,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961391242,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961391250,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961391250,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961395334,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961395337,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961395337,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961395339,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961395339,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961409106,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961418983,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961418983,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961418984,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961418984,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961422964,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961422964,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961422964,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961422964,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961436893,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961451425,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961451425,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961451425,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961451425,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961455692,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961455694,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961455696,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961455696,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961470065,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961480817,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961480819,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961480819,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961480819,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961480819,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961485258,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961485258,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961485258,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961485259,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961485259,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961498388,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961507355,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961507356,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961507359,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961509687,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961509687,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961509687,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961509687,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961509687,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961509687,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961511952,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961523101,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961532080,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961532128,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961532128,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534329,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961534329,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534330,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534330,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534331,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534331,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534331,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961547808,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961556822,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961556828,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961556828,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961556828,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961556828,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961556828,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961559100,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961559100,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961559101,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961559101,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961572564,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961581526,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961581526,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961581526,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961581526,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961581526,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961581526,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961583790,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961583790,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961583790,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961583790,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961596871,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961612296,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961625629,
+        "estagio": "ocioso",
+        "fila": []
+      }
+    ],
+    "B": [
+      {
+        "em": 1786961376149,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961391158,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961391158,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961391159,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961391166,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961391166,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961395347,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961395349,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961395350,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961395350,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961395350,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961407221,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961419009,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961419010,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961419011,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961419011,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961422971,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961422972,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961422972,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961422972,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961437004,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961451296,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961451296,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961451297,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961451297,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961455566,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961455567,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961455567,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961455567,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961470053,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961480743,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961480743,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961480806,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961480806,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961480806,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961485138,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961485138,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961485139,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961485139,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961485139,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961498396,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961507397,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961507397,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961507397,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961507397,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961507397,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961507397,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961507397,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961507397,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961507397,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961511930,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961523034,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961534206,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534206,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534207,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534207,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961534208,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534208,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534208,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534208,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534209,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961534209,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961547656,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961556794,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961556794,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961556796,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961556796,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961556796,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961559057,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961559057,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961559057,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961559058,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961559058,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961572569,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961581530,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961581530,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961581531,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961581531,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961581531,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961583676,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961583677,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961583677,
+        "estagio": "executando",
+        "fila": []
+      },
+      {
+        "em": 1786961583677,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961583677,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961596940,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961612283,
+        "estagio": "ocioso",
+        "fila": []
+      },
+      {
+        "em": 1786961627927,
+        "estagio": "ocioso",
+        "fila": []
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "CT-04",
+      "ok": null,
+      "detalhe": "NÃO EXECUTADO em 4 rodadas: o primeiro turno sempre fechou antes de o segundo chegar (2p/2r, 2p/2r, 2p/2r, 2p/2r). A preempção da mesma tela está provada em testes/cross-talk-espelhos.test.ts."
+    },
+    {
+      "id": "CT-10",
+      "ok": null,
+      "detalhe": "NÃO EXECUTADO: nenhuma rodada com corrida trouxe fila não-vazia ao cliente. Pode ser ausência de corrida OU do contrato — o campo distingue os dois (null = servidor sem o campo)."
+    },
+    {
+      "id": "CT-05",
+      "ok": null,
+      "detalhe": "NÃO EXECUTADO em 4 rodadas. O clique CHEGOU a acontecer em parte delas — o que não deu foi chegar enquanto o pedido de B ainda esperava: assim que o turno de A fecha, o da fila entra em milissegundos, e o snapshot não distingue \"trabalhando no pedido de A\" de \"trabalhando no pedido de B\" (não existe estado de fila no contrato — lacuna declarada nº 3). Quem está na tela B não tem como saber se ainda dá tempo de desistir. Janelas de \"executando\" medidas: 4533, 1, 2, 1 ms. A invariante está provada em testes/cross-talk-espelhos.test.ts; o caminho pela interface, não."
+    }
+  ],
+  "veredito": "INCOMPLETO"
+}
