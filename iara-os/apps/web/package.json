@@ -19,6 +19,7 @@
     "verificar": "node scripts/verificar-glsl.mjs && node scripts/varrer-segredos.mjs --tudo && tsc --noEmit && npm test",
     "varrer-segredos": "node scripts/varrer-segredos.mjs",
     "campanha": "node --import tsx testes/campanha/executar.ts",
+    "superficie": "node --import tsx testes/validacao/superficieCLI.ts",
     "veredito": "node --import tsx testes/validacao/veredito.ts",
     "bateria": "node --import tsx testes/validacao/executar.ts"
   },
