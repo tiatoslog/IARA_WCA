@@ -143,6 +143,17 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       '"confirmo", só então chama a Meta). Só `AgenteLocal.ts` o importa, que ' +
       'já é EFEITO EXTERNO e só é alcançado pelo catálogo — ver a entrada dele ' +
       'em `Fronteira.ts` e o porteiro correspondente em `G3`.',
+    [path.join('servidor', 'nucleo', 'ClienteGoogleCalendario.ts')]:
+      'LEITURA — eventos do Google Calendar, mais o POST de troca de JWT por ' +
+      'access token (autenticação, mesma classe do `renovarTokenGraph` da ' +
+      'Microsoft Graph). Nada é criado, alterado ou entregue a ninguém — ver a ' +
+      'entrada dele em `Fronteira.ts` (`POST_SEM_EFEITO`).',
+    [path.join('servidor', 'nucleo', 'ClienteGoogleCalendarioEscrita.ts')]:
+      'EFEITO EXTERNO — criação de evento real pelo mesmo desenho R2 de ' +
+      '`criar_evento_calendario`/`resolver_confirmacao` (arma pendência, exige ' +
+      '"confirmo", só então chama o Google). Só `AgenteLocal.ts` o importa, que ' +
+      'já é EFEITO EXTERNO e só é alcançado pelo catálogo — ver a entrada dele ' +
+      'em `Fronteira.ts` e o porteiro correspondente em `G3`.',
     [path.join('servidor', 'braco', 'principal.ts')]:
       'LEITURA — Etapa 2 do sistema de atualização (14/08/2026). Baixa o ' +
       '`.exe` novo de um endereço que o MOTOR mandou (nunca escolhido pelo ' +

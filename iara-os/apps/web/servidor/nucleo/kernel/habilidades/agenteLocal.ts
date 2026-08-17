@@ -776,6 +776,42 @@ export const resolverConfirmacao: Habilidade = {
       };
     }
 
+    /**
+     * CALENDÁRIO DIVERGE DA MESMA FORMA QUE WHATSAPP, pela mesma razão: o
+     * Google responde síncrono, dentro desta chamada, e fingir que não sei
+     * se o evento foi criado quando já sei seria a mesma mentira operacional
+     * que este arquivo existe para impedir.
+     */
+    if (tipo === 'calendario') {
+      const resultado = await agenteLocal.confirmarCriarEventoCalendario(ctx.id_usuario, ctx.sessao);
+      if (!resultado) {
+        await ctx.registro.marcar(operacaoPendente.id_operacao, 'desconhecida', {
+          fonte: 'executor',
+          descricao: 'pendência consumida entre a autorização e a confirmação',
+          instante: new Date().toISOString(),
+        });
+        return {
+          texto: 'A pendência sumiu bem na hora de confirmar — pode ter sido resolvida em outra conversa. Peça de novo se precisar.',
+          detalhe: 'calendario: pendência consumida entre autorizar e confirmar',
+          resolveu: false,
+        };
+      }
+      await ctx.registro.marcar(
+        operacaoPendente.id_operacao,
+        resultado.sucesso ? 'aceita_pelo_provedor' : 'falhou',
+        {
+          fonte: 'executor',
+          descricao: resultado.sucesso ? 'evento aceito pelo provedor' : `provedor recusou: ${resultado.texto}`,
+          instante: new Date().toISOString(),
+        },
+      );
+      return {
+        texto: resultado.texto,
+        detalhe: `calendario: ${resultado.sucesso ? 'criado' : 'falhou'}`,
+        resolveu: resultado.sucesso,
+      };
+    }
+
     const texto = agenteLocal.confirmar(ctx.id_usuario, ctx.sessao);
     await ctx.registro.marcar(operacaoPendente.id_operacao, 'desconhecida', {
       fonte: 'executor',
@@ -787,10 +823,10 @@ export const resolverConfirmacao: Habilidade = {
   },
 
   /**
-   * TRÊS RAMOS agora, não dois — WhatsApp entrou com uma propriedade que nem
-   * cancelar nem confirmar-energia têm: é verificável DE VERDADE. A Meta
-   * responde dentro desta chamada, então "confirmado" aqui não é opinião, é o
-   * que o provedor disse — nos dois sentidos, sucesso ou recusa.
+   * QUATRO RAMOS agora — WhatsApp e calendário entraram com uma propriedade
+   * que nem cancelar nem confirmar-energia têm: são verificáveis DE VERDADE.
+   * O provedor responde dentro desta chamada, então "confirmado" aqui não é
+   * opinião, é o que ele disse — nos dois sentidos, sucesso ou recusa.
    *
    * CANCELAR é: a pendência sumiu. Confere-se e pronto.
    *
@@ -806,11 +842,11 @@ export const resolverConfirmacao: Habilidade = {
         : { confirmado: true, evidencia: 'nenhuma pendência ativa; cancelamento efetivado' };
     }
 
-    if (resultado.detalhe.startsWith('whatsapp:')) {
+    if (resultado.detalhe.startsWith('whatsapp:') || resultado.detalhe.startsWith('calendario:')) {
       if (resultado.detalhe.includes('consumida entre')) {
         return { confirmado: false, evidencia: resultado.texto, motivo: 'divergente' };
       }
-      // Sucesso OU falha — os dois são fato conhecido, porque a Meta
+      // Sucesso OU falha — os dois são fato conhecido, porque o provedor
       // respondeu dentro desta mesma chamada. `confirmado: true` nos dois
       // casos: o que se verifica é "sei o que aconteceu", não "deu certo".
       return { confirmado: true, evidencia: resultado.texto };

@@ -156,6 +156,25 @@ export const EFEITO_EXTERNO: readonly string[] = [
    * que é o portal.
    */
   'servidor/nucleo/ClienteWhatsapp.ts',
+  /**
+   * A CRIAÇÃO DE EVENTO NO GOOGLE CALENDAR — mesmo desenho R2 de
+   * `ClienteWhatsapp.ts`, mesma pergunta respondida "sim": um evento real,
+   * visível no calendário/telefone do operador, é exatamente a fronteira que
+   * o comentário de `Agenda.ts` (acima, em ESTADO_INTERNO) cita como o que
+   * tornaria um lembrete efeito externo — "não marca compromisso em
+   * calendário de terceiro". Este módulo marca.
+   *
+   * Separado de `ClienteGoogleCalendario.ts` (LEITURA_EXTERNA, abaixo) de
+   * propósito: aquele só lê, este só cria. Um arquivo só com as duas funções
+   * tornaria as duas categorias indistinguíveis para `G5` (categorias
+   * disjuntas por MÓDULO, não por função dentro do módulo).
+   *
+   * Só alcançável via `AgenteLocal.ts`: `pedirCriarEventoCalendario` arma a
+   * pendência sem chamar o Google; quem de fato chama é
+   * `confirmarCriarEventoCalendario`, disparado por `resolver_confirmacao`
+   * em `habilidades/agenteLocal.ts` — já porteiro.
+   */
+  'servidor/nucleo/ClienteGoogleCalendarioEscrita.ts',
 ];
 
 /**
@@ -187,6 +206,15 @@ export const LEITURA_EXTERNA: readonly string[] = [
   // Microsoft Graph: lê e-mail e busca no SharePoint. Ver `POST_SEM_EFEITO`
   // para o POST de busca — é consulta, não escrita.
   'servidor/nucleo/ClienteGraph.ts',
+  /**
+   * Google Calendar — SÓ LEITURA de eventos, mais a obtenção do próprio
+   * token de acesso (conta de serviço). Ver `POST_SEM_EFEITO`: o POST que
+   * troca o JWT por access token não cria nem altera nada no calendário de
+   * ninguém — é autenticação, mesma classe do `renovarTokenGraph` da
+   * Microsoft Graph. A CRIAÇÃO de evento é outro módulo — ver
+   * `ClienteGoogleCalendarioEscrita.ts` em EFEITO_EXTERNO, acima.
+   */
+  'servidor/nucleo/ClienteGoogleCalendario.ts',
   // Lê a planilha de cargas da operação LUFT via Graph. Só GET — nada é
   // criado, alterado nem entregue a ninguém no SharePoint.
   'servidor/nucleo/ClientePlanilhaOcis.ts',
@@ -394,6 +422,12 @@ export const POST_SEM_EFEITO: Record<string, string> = {
     'Existe porque a cota da Anthropic acabou em 15/08/2026 e a IARA ficou ' +
     'muda; a chave é DECLARADA (GROQ_API_KEY / GEMINI_API_KEY), nunca ' +
     'descoberta.',
+  'servidor/nucleo/ClienteGoogleCalendario.ts':
+    'POST contra `oauth2.googleapis.com/token`, trocando um JWT auto-assinado ' +
+    'pela conta de serviço por um access token. Nada é criado, alterado ou ' +
+    'entregue a ninguém no Google Calendar — é autenticação, a mesma classe ' +
+    'do POST de `renovarTokenGraph` em `ClienteGraph.ts` contra o Azure AD. A ' +
+    'leitura de eventos que este arquivo também faz é GET.',
 };
 
 /**

@@ -43,6 +43,7 @@ import {
   type ProcessoMedido,
 } from './SondasDesempenho';
 import { enviarWhatsapp as enviarWhatsappGraph } from './ClienteWhatsapp';
+import { criarEventoCalendario as criarEventoCalendarioGoogle } from './ClienteGoogleCalendarioEscrita';
 import { repositoriosDisponiveis, resolverRepositorio } from './RepositoriosAutorizados';
 import {
   caminhoDoTranscript,
@@ -446,7 +447,28 @@ interface PendenciaWhatsapp {
   readonly expira_em: number;
 }
 
-type Pendencia = PendenciaEnergia | PendenciaWhatsapp;
+/**
+ * A pendência de criação de evento de calendário — MESMO desenho das duas
+ * acima, mesma pergunta ("alguém fora da IARA percebe?") respondida "sim":
+ * um evento real, visível no Google Calendar/telefone do operador, é
+ * exatamente o que `Agenda.ts` (o lembrete INTERNO) descreve como a
+ * fronteira que o tornaria efeito externo. `inicio`/`fim` já chegam
+ * RESOLVIDOS em ISO — quem interpretou "amanhã às 14h" foi `Quando.ts`,
+ * nunca esta camada.
+ */
+interface PendenciaCalendario {
+  readonly tipo: 'calendario';
+  readonly id: string;
+  readonly assunto: string;
+  readonly inicio: string;
+  readonly fim: string;
+  readonly local: string;
+  readonly sessao: string;
+  readonly criada_em: number;
+  readonly expira_em: number;
+}
+
+type Pendencia = PendenciaEnergia | PendenciaWhatsapp | PendenciaCalendario;
 
 /** Assinatura compatível com `child_process.spawn` — injetável nos testes
  *  para que "confirmar desligamento" seja testável sem desligar nada. */
@@ -480,6 +502,75 @@ const MAX_SESSOES_AGENTE = 20;
 export interface ProcessoAgente {
   readonly pid: number | null;
   matar(): void;
+}
+
+/**
+ * ALLOWLIST DE AMBIENTE PARA O PROCESSO DO AGENTE — nunca herança total.
+ *
+ * ACHADO REAL (17/08/2026, `testes/escape-sandbox-adversarial.test.ts`,
+ * ES-01): `spawn` sem `env:` herda `process.env` INTEIRO do motor, e isso
+ * inclui todo segredo declarado nele — `ANTHROPIC_API_KEY`,
+ * `IARA_CHAVE_PROVA`, credenciais de Supabase/Graph/WhatsApp. Um processo de
+ * agente comprometido (dependência maliciosa, hook de git no repositório
+ * aberto) lia qualquer uma delas de `process.env` sem esforço nenhum.
+ *
+ * O binário `claude` NÃO precisa de nada disso para rodar: ele autentica pela
+ * própria sessão salva em disco, não por variável de ambiente — confirmado em
+ * `testes/e2e-agente-codigo-real.test.ts`, que roda o binário real SEM login e
+ * ele ainda assim inicia, cria o diário da sessão e responde. O que ele
+ * precisa do ambiente é só o que o próprio sistema operacional exige para
+ * localizar e executar um programa — nunca configuração do motor.
+ *
+ * Comparação por nome em minúsculas: no Windows a variável de PATH aparece
+ * como `Path`, não `PATH`, e uma comparação sensível a maiúscula a perderia —
+ * o processo filho não encontraria o próprio executável.
+ */
+const VARIAVEIS_AMBIENTE_PERMITIDAS_AO_AGENTE = new Set(
+  [
+    'PATH',
+    'SystemRoot',
+    'windir',
+    'HOME',
+    'USERPROFILE',
+    'HOMEDRIVE',
+    'HOMEPATH',
+    'APPDATA',
+    'LOCALAPPDATA',
+    'TEMP',
+    'TMP',
+    'PATHEXT',
+    'ComSpec',
+    'NUMBER_OF_PROCESSORS',
+    'PROCESSOR_ARCHITECTURE',
+    'OS',
+    'LANG',
+    'LC_ALL',
+    'SHELL',
+    'USER',
+    'LOGNAME',
+  ].map((v) => v.toLowerCase()),
+);
+
+/**
+ * O ambiente restrito de verdade — construído a cada lançamento, nunca
+ * cacheado: o ambiente do motor pode mudar entre uma sessão de agente e
+ * outra.
+ *
+ * EXPORTADA DE PROPÓSITO. `lancadorAgenteReal` não é exportável sem reabrir a
+ * fronteira que este arquivo inteiro existe para fechar, mas um harness de
+ * segurança que reimplementasse esta função à parte divergiria dela em
+ * silêncio no primeiro ajuste de allowlist — foi exatamente o que aconteceu
+ * ao escrever `testes/escape-sandbox-adversarial.test.ts` antes desta
+ * exportação existir. Importar a função real elimina a divergência.
+ */
+export function ambienteRestritoDoAgente(): NodeJS.ProcessEnv {
+  const ambiente: NodeJS.ProcessEnv = {};
+  for (const chave of Object.keys(process.env)) {
+    if (VARIAVEIS_AMBIENTE_PERMITIDAS_AO_AGENTE.has(chave.toLowerCase())) {
+      ambiente[chave] = process.env[chave];
+    }
+  }
+  return ambiente;
 }
 
 /**
@@ -528,6 +619,11 @@ const lancadorAgenteReal: LancadorAgente = (argumentos, diretorio, aoSair) => {
     /* `shell: false` explícito: o padrão já é esse, e escrevê-lo impede que
        alguém o "conserte" para true no dia em que o PATH der trabalho. */
     shell: false,
+    /* Allowlist, nunca herança total — ver `ambienteRestritoDoAgente`. Sem
+       isto, todo segredo do motor (`ANTHROPIC_API_KEY`, `IARA_CHAVE_PROVA`,
+       credenciais de Supabase/Graph/WhatsApp) ficava visível para qualquer
+       código rodando dentro da sessão do agente. */
+    env: ambienteRestritoDoAgente(),
   });
 
   let saida = '';
@@ -1016,6 +1112,21 @@ export type EnviadorWhatsapp = (
 const enviarWhatsappReal: EnviadorWhatsapp = (destinatario, mensagem) =>
   enviarWhatsappGraph(destinatario, mensagem);
 
+/**
+ * A criação de UM evento de calendário — assinatura mínima, sem conhecer
+ * pendência ou confirmação. Mesmo desenho de `EnviadorWhatsapp`: quem decide
+ * QUANDO chamar é `AgenteLocal`; a função só sabe falar com o Google.
+ */
+export type CriadorEventoCalendario = (
+  assunto: string,
+  inicioIso: string,
+  fimIso: string,
+  local: string,
+) => Promise<{ ok: boolean; texto: string }>;
+
+const criarEventoCalendarioReal: CriadorEventoCalendario = (assunto, inicioIso, fimIso, local) =>
+  criarEventoCalendarioGoogle(assunto, inicioIso, fimIso, local);
+
 // ---------------------------------------------------------------------------
 
 export class AgenteLocal {
@@ -1076,6 +1187,12 @@ export class AgenteLocal {
      * contra o binário de verdade.
      */
     private readonly lancadorAgente: LancadorAgente = lancadorAgenteReal,
+    /**
+     * A criação de evento de calendário. Injetável pela mesma razão do
+     * envio de WhatsApp: "confirmar criação" precisa ser testável sem criar
+     * evento de verdade no calendário real de ninguém.
+     */
+    private readonly criadorEventoCalendario: CriadorEventoCalendario = criarEventoCalendarioReal,
   ) {}
 
   /** As sessões de agente de código deste processo, por id. */
@@ -2055,7 +2172,9 @@ export class AgenteLocal {
   /** R2: nunca executa — registra a pendência e devolve o pedido de confirmação. */
   /** Rótulo de UMA LINHA para qualquer pendência — usado só para dizer "descartei o pedido anterior de X". */
   private rotuloPendencia(p: Pendencia): string {
-    return p.tipo === 'energia' ? ROTULO_ENERGIA[p.acao] : `a mensagem de WhatsApp para ${p.destinatario}`;
+    if (p.tipo === 'energia') return ROTULO_ENERGIA[p.acao];
+    if (p.tipo === 'whatsapp') return `a mensagem de WhatsApp para ${p.destinatario}`;
+    return `o evento "${p.assunto}" no calendário`;
   }
 
   private pendenciaAnteriorTrocada(idUsuario: string, rotuloNova: string): string {
@@ -2118,6 +2237,47 @@ export class AgenteLocal {
     return (
       `${trocou}Confirma o envio para ${destinatario}: "${previa}"? Responda "confirmo" em até 1 minuto. ` +
       '"cancela" desiste. Mensagem entregue não se desfaz — por isso pergunto antes.'
+    );
+  }
+
+  /**
+   * R2 aplicado a calendário: NUNCA cria aqui — registra a pendência e
+   * devolve o pedido de confirmação. Mesma trava dupla de `pedirWhatsapp`
+   * (interlock em memória + operação persistida no jornal, as duas amarradas
+   * a operador+sessão); ver `ClienteGoogleCalendarioEscrita.ts` para o
+   * porquê deste módulo nunca chamar o Google diretamente.
+   *
+   * `rotuloQuando` é o que `Quando.ts` já traduziu ("amanhã às 14:00") — a
+   * mesma frase que a IARA repete na fala, para que uma leitura errada da
+   * data seja corrigível ANTES de o evento existir de verdade.
+   */
+  pedirCriarEventoCalendario(
+    idUsuario: string,
+    assunto: string,
+    inicioIso: string,
+    fimIso: string,
+    local: string,
+    sessao: string,
+    rotuloQuando: string,
+  ): string {
+    const rotuloNovo = `o evento "${assunto}" no calendário`;
+    const trocou = this.pendenciaAnteriorTrocada(idUsuario, rotuloNovo);
+
+    this.pendencias.set(idUsuario, {
+      tipo: 'calendario',
+      id: randomUUID(),
+      assunto,
+      inicio: inicioIso,
+      fim: fimIso,
+      local,
+      sessao,
+      criada_em: Date.now(),
+      expira_em: Date.now() + VALIDADE_PENDENCIA_MS,
+    });
+    this.auditar(idUsuario, 'calendario_pendente', true, `"${assunto}" ${rotuloQuando}, aguardando confirmação (${sessao})`);
+    return (
+      `${trocou}Confirma o evento "${assunto}" ${rotuloQuando}${local ? ` em ${local}` : ''}? ` +
+      'Responda "confirmo" em até 1 minuto. "cancela" desiste.'
     );
   }
 
@@ -2243,6 +2403,37 @@ export class AgenteLocal {
     this.auditar(
       idUsuario,
       `whatsapp:${resultado.ok ? 'enviado' : 'falhou'}`,
+      resultado.ok,
+      `${pendencia.id}: ${resultado.texto}`,
+    );
+    return { texto: resultado.texto, sucesso: resultado.ok };
+  }
+
+  /**
+   * A confirmação de criação de evento — irmã de `confirmarComunicacao`,
+   * mesma razão de existir separada de `confirmar`: o Google responde
+   * SÍNCRONO, dentro desta mesma chamada, com sucesso ou erro. `null` quando
+   * não há pendência de calendário válida — quem chama já conferiu
+   * `tipoPendencia` antes.
+   */
+  async confirmarCriarEventoCalendario(
+    idUsuario: string,
+    sessao: string,
+  ): Promise<{ texto: string; sucesso: boolean } | null> {
+    const pendencia = this.valida(idUsuario, sessao);
+    if (!pendencia || pendencia.tipo !== 'calendario') return null;
+
+    this.pendencias.delete(idUsuario);
+
+    const resultado = await this.criadorEventoCalendario(
+      pendencia.assunto,
+      pendencia.inicio,
+      pendencia.fim,
+      pendencia.local,
+    );
+    this.auditar(
+      idUsuario,
+      `calendario:${resultado.ok ? 'criado' : 'falhou'}`,
       resultado.ok,
       `${pendencia.id}: ${resultado.texto}`,
     );

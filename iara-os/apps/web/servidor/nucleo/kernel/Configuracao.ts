@@ -169,6 +169,21 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
   // compartilhamento, não caminho — ver `ClientePlanilhaOcis.ts`.
   MS_GRAPH_OCI_URL: { natureza: 'url', papel: 'link da planilha de controle de OCIs (operação LUFT)' },
 
+  // — Google Calendar (calendário real, conta de serviço)
+  GOOGLE_CALENDAR_CLIENT_EMAIL: {
+    natureza: 'texto',
+    papel: 'e-mail da conta de serviço do Google Cloud (autenticação do calendário)',
+  },
+  GOOGLE_CALENDAR_PRIVATE_KEY: {
+    natureza: 'segredo',
+    minimo: 100,
+    papel: 'chave privada (PEM) da conta de serviço, assina o JWT de autenticação',
+  },
+  GOOGLE_CALENDAR_ID: {
+    natureza: 'texto',
+    papel: 'identificador do calendário lido/escrito (normalmente o e-mail do dono)',
+  },
+
   // — o canal WhatsApp
   WHATSAPP_TOKEN: { natureza: 'segredo_cabecalho', papel: 'token da Graph API' },
   WHATSAPP_PHONE_ID: { natureza: 'texto', papel: 'id do número' },

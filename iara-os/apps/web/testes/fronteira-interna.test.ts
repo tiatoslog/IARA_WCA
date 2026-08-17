@@ -266,6 +266,20 @@ test('G3. o EFEITO EXTERNO só é alcançado a partir do portal ou do catálogo'
      */
     'servidor/nucleo/kernel/habilidades/integracoes.ts',
     /**
+     * A HABILIDADE QUE ARMA A CRIAÇÃO DE EVENTO. Mesma categoria de
+     * `habilidades/integracoes.ts` logo acima, pela mesma razão: catálogo,
+     * alcançável só via `Kernel.abrirOperacao`.
+     *
+     * Importa `ClienteGoogleCalendario` (LEITURA_EXTERNA) só para
+     * `listarEventosCalendario`/`googleCalendarDisponivel` — leitura e
+     * checagem de credencial, não efeito — e importa `AgenteLocal` só para
+     * `agenteLocal.pedirCriarEventoCalendario(...)`, que ARMA a pendência
+     * (mesmo desenho de `enviar_whatsapp`) sem chamar o Google. Quem de fato
+     * chama `ClienteGoogleCalendarioEscrita` é `resolver_confirmacao`, em
+     * `habilidades/agenteLocal.ts` — já porteiro.
+     */
+    'servidor/nucleo/kernel/habilidades/calendario.ts',
+    /**
      * A DELEGAÇÃO A UM AGENTE DE CÓDIGO. Catálogo, como as duas acima: só
      * alcançável por `Kernel.abrirOperacao`.
      *
