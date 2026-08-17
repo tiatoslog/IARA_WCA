@@ -1,0 +1,15 @@
+# O DIÁRIO VAI PARA O GIT; O ARTEFATO BRUTO, NÃO.
+#
+# O diário responde "por que aquele commit foi considerado validado?" e precisa
+# viajar com o código — são ~600 bytes por bateria. O artefato bruto de uma rodada
+# da suíte é meio megabyte de TAP, e uma rodada por dia encheria o repositório de
+# saída de teste que ninguém relê. Ele fica na máquina (ou no armazenamento de
+# artefato do CI) e é localizável pelo `execucao` que a linha do diário guarda.
+#
+# CONFLITO NO DIÁRIO: é arquivo append-only, então duas sessões que rodam bateria
+# no mesmo dia conflitam nas últimas linhas. A resolução é sempre a mesma —
+# FIQUE COM AS DUAS LINHAS. Nenhuma delas invalida a outra: o motor decide o que
+# conta comparando commit, e duas rodadas do mesmo commit valem a pior.
+*
+!.gitignore
+!diario.jsonl
