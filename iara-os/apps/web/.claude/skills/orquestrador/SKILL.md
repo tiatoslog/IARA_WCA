@@ -571,10 +571,68 @@ Afirmação sobre comportamento do modelo exige N execuções, com modelo e
 semente declarados, e sai como taxa com intervalo — nunca como anedota de uma
 corrida. Suíte determinística verde não diz nada sobre a segunda coluna.
 
+### O veredito vem do sistema, não do relatório
+
+**O relatório NUNCA é a fonte de verdade do estado de release. O Verdict Engine
+é.** Ele mora em `testes/validacao/` e roda por `npm run veredito`:
+
+```
+BATERIAS (registro.ts)  +  EVIDENCE RECORDS (diario.jsonl)
+                      ↓
+              MotorVeredito.apurar()          ← determinístico, sem LLM
+                      ↓
+   BLOQUEADO · FALHOU · VALIDACAO_INCOMPLETA · PRONTO_COM_RISCOS · PRONTO
+```
+
+O modelo produz **observação, diagnóstico, hipótese e correção**. O **veredito**
+é conta feita sobre evidência. Não existe parâmetro de override, e não é
+permitido escrever no relatório um veredito diferente do que o comando imprimiu
+— se você discorda dele, o conserto é a evidência ou a regra, nunca o texto.
+
+Duas coisas separadas, e confundi-las foi o defeito de 17/08:
+
+```
+VEREDITO TÉCNICO          ≠          DECISÃO DE RELEASE
+(calculado, do sistema)              (do dono do produto)
+```
+
+`RELEASE PERMITIDO PELO DONO` + `VEREDITO TÉCNICO = BLOQUEADO` é um estado
+legítimo e transparente. `não executou` + `READY` não é.
+
+### Status de execução — quatro, e um deles é "não executada"
+
+```
+EXECUTADA_PASSOU · EXECUTADA_FALHOU · EXECUTADA_INCONCLUSIVA · NAO_EXECUTADA
+```
+
+Três regras de apuração que o motor impõe e que nenhuma revisão de texto pega:
+
+- **evidência é sobre um commit** — registro de outro commit não conta, e é
+  reportado como obsoleto em vez de descartado (é assim que "sempre verde" nasce);
+- **duas rodadas que discordam valem a pior** — intermitente nunca foi aprovação;
+- **`PASSOU` sem artefato bruto é rebaixado a inconclusiva** — a Fase 6 deixou de
+  ser prosa e virou `conferirRegistro`.
+
+### Evidence Record — uma linha por execução
+
+Sem ele, "por que o sistema foi considerado validado naquele commit?" só se
+responde relendo prosa. Campos obrigatórios (`RegistroEvidencia`):
+
+```
+bateria · execucao · commit · ambiente · instante · status
+cenarios · passou · falhou · inconclusivo · bloqueado
+artefato · metricas · versao_oraculo · violacoes_criticas
+```
+
+`artefato` aceita nulo e não aceita ausência. `violacoes_criticas` não vazio
+bloqueia sozinho, venha de bateria obrigatória ou opcional — segurança não é
+opcional porque a bateria é.
+
 ### As baterias
 
-Todas obrigatórias para release. O relatório declara, por bateria: **rodou /
-não rodou / não existe** — e nunca omite.
+O registro vivo é `testes/validacao/registro.ts`; a tabela abaixo é a versão
+para olho humano, e quando as duas divergirem vale o código. O relatório declara,
+por bateria: **rodou / não rodou / não existe** — e nunca omite.
 
 | # | bateria | pergunta que só ela responde | harness em 17/08/2026 |
 |---|---|---|---|
@@ -619,16 +677,16 @@ Uma nota só esconde fraqueza atrás de força. Publique cinco:
 
 ### Block do gate sistêmico
 
-**BLOCK** o veredito de sistema — não necessariamente o release, que é decisão
-do dono — se:
+O motor já bloqueia o que é mecânico (bateria crítica falhada, violação
+nomeada, obrigatória sem prova). Estes ficam com quem escreve o relatório,
+porque são sobre o TEXTO e não sobre a evidência:
 
-- bateria obrigatória não rodou e o relatório não a nomeia;
 - afirmação sobre comportamento do modelo sem N declarado;
-- falsa conclusão em ação crítica > 0%;
-- efeito externo duplicável sem prova de idempotência;
-- vazamento entre operadores em qualquer eixo;
-- taxa de recuperação desconhecida;
-- custo por tarefa desconhecido.
+- taxa publicada sem dizer contra que corpus, que modelo e que semente;
+- veredito no texto diferente do que `npm run veredito` imprimiu;
+- bateria omitida do relatório (o motor a conta; o texto que a esconde é que é o problema).
+
+Nada disso impede distribuir. Impede chamar de pronto.
 
 ## Objetivo
 
