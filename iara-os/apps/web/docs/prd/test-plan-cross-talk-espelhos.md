@@ -122,6 +122,104 @@ afrouxar um critério para o teste passar é a doença que ele existe para evita
    sem tocar a árvore de trabalho. Foi como o par antes/depois ficou comparável
    com o mesmo harness.
 
+## Segunda passagem — auditoria de garantia (16/08/2026, pós-entrega)
+
+O item 1 das lacunas acima (`interromper` global) era um defeito aberto, não uma
+pendência de teste. A auditoria o executou em vez de aceitá-lo.
+
+**Executado, e o que se descobriu:**
+
+- **CT-05 provado no kernel.** `testes/cross-talk-espelhos.test.ts` ganhou seis
+  casos: interromper de outra tela não derruba o turno alheio; interromper da
+  própria tela continua cancelando; interromper com o próprio pedido na fila o
+  retira; o cancelamento global do desligamento continua existindo. Vermelho
+  antes (`test-evidence/CT-05-2026-08-16/unidade-antes.log`, 3 falhas), verde
+  depois.
+- **Defeito NOVO, nascido da própria correção do CC-01.** Com a fila, "a última
+  tela fechou" cancelava o turno em voo e deixava os pedidos enfileirados
+  valendo — eles executariam contra uma sessão sem ninguém olhando. Daí
+  `Kernel.pararTudo`, que é o único caminho que esvazia a fila. `cancelar()` não
+  pode esvaziá-la porque ele também é a preempção da mesma tela; se esvaziasse,
+  quem reescrevesse a própria frase apagaria o pedido das outras — o CC-01 de
+  volta por outra porta. Há teste para os dois lados.
+- **CT-04 — a primeira afirmação sobre ele era FALSA, e foi retirada.** Esta
+  seção chegou a dizer "provado pela tela". Não estava. O portão contava a
+  aparição do nome da pasta no texto da fala, e o nome escolhido começava com
+  "Um" — que `extrairNomePasta` corta como ligação inicial. A IARA respondia
+  "criei a pasta X", o `contém "Um X"` dava zero, e o portão lia isso como
+  preempção enquanto os DOIS turnos rodavam até o fim (a conversa capturada tem
+  duas perguntas e duas respostas; o log do motor tem as duas pastas, criadas
+  com seis segundos de intervalo). Apanhado pela auditoria independente.
+  O portão agora conta PERGUNTAS E RESPOSTAS — duas perguntas, uma resposta —,
+  porque amarrar a prova ao texto que a IARA escolhe é deixar a coisa medida
+  decidir a medida.
+
+  Com o portão honesto, o resultado é: **observado UMA vez, e não reproduzido em
+  12 tentativas seguidas depois disso** (todas com duas perguntas e duas
+  respostas). A observação única foi na primeira rodada contra uma instância
+  recém-subida — a hipótese é que só um turno lento o bastante deixa o segundo
+  envio alcançá-lo, e um Next já aquecido não produz mais isso. **CT-04 pela
+  tela fica como NÃO REPRODUZÍVEL**; não me sustento na observação única. A
+  preempção da mesma tela está provada em `testes/cross-talk-espelhos.test.ts`,
+  onde o turno é segurado por um portão sob controle do teste.
+- **CT-06 é inalcançável pela interface, por construção.** `MAX_ESPELHOS` = 4 e
+  `TETO_DA_FILA` = 4. Com uma tela em voo sobram três espelhos para enfileirar,
+  mais uma vaga para a origem sem tela (WhatsApp, ciclo autônomo) — exatamente
+  quatro. Não existe uma quinta origem possível na topologia de hoje, então o
+  ramo da recusa por fila cheia é uma rede de segurança provada só por unidade.
+  Está dito aqui em vez de virar um PASS que ninguém alcançou.
+
+**Não executado, e por quê — medido:**
+
+- **CT-05 pela interface.** O clique no "parar" CHEGOU a acontecer em várias
+  rodadas — a primeira redação desta seção dizia que o botão nunca ficava
+  alcançável, e a auditoria independente refutou isso. O motivo real é outro e
+  mais interessante: assim que o turno de A fecha, o pedido da fila entra em
+  milissegundos, e **o snapshot não distingue "trabalhando no pedido de A" de
+  "trabalhando no pedido de B"**. Quem está na tela B não tem como saber se
+  ainda dá tempo de desistir — e o teste também não. É a consequência direta da
+  lacuna nº 3 (não existe estado de fila no contrato).
+
+## Terceira passagem — auditoria independente (16/08/2026)
+
+Um agente que não implementou nada executou o test-plan, revalidou a evidência e
+voltou com **BLOQUEIA**. Os três motivos eram legítimos e foram atendidos:
+
+1. **Falso verde no CT-04** — descrito acima. Retirado e corrigido.
+2. **CT-09 sem o vermelho da metade CC-01.** A linha exige saída bruta do teste
+   falhando antes da correção, e só existia a do CT-05. Produzida com
+   `testes/navegador/unidade-contra-commit.mjs`, que roda o arquivo de teste de
+   agora contra o código de outro commit sem tocar a árvore de trabalho:
+   **13 dos 14 casos falham contra `6aa2d3f`** — e o único que passa é o do
+   cancelamento global, comportamento que sempre existiu. Evidência em
+   `test-evidence/CC-01-2026-08-16/unidade-antes-contra-6aa2d3f.log`.
+3. **Requisito do plano não implementado** — "a fila não segure vaga de uma
+   sessão morta". Estava mesmo: o `close` de uma tela que não era a última não
+   devolvia a vaga dela. Agora devolve (`Kernel.esquecerEspelho`), sem tocar no
+   turno em voo, e com teste dos dois lados.
+
+Mais três defeitos que a auditoria encontrou e que foram corrigidos:
+
+- **Desistir na fila era mudo.** O `splice` saía sem publicar nada — bolha na
+  tela, sem resposta e sem aviso. Agora publica `TAREFA_CANCELADA`.
+- **Turno sem tela ficou sem quem o parasse.** Com o `interromper` casando por
+  origem, nenhuma tela conseguia mais parar um turno vindo do WhatsApp ou do
+  ciclo autônomo — regressão que eu não tinha percebido. `ORIGEM_SEM_TELA`
+  passou a ser interrompível por qualquer tela do operador.
+- **A bateria do CC-01 dizia "INCONCLUSIVO" e calculava FAIL.** A palavra existia
+  só no texto do detalhe. Errava para o lado seguro, mas afirmava um estado que
+  o código não tinha. As duas baterias agora têm três desfechos de verdade.
+
+E dois problemas da própria infra de evidência, também corrigidos: as duas
+baterias escreviam arquivos de mesmo nome na mesma pasta (a segunda apagava a
+primeira em silêncio) e usavam listas diferentes de raízes de disco para a mesma
+medida.
+
+**Não corrigido, e por isso registrado:** "Crie uma pasta chamada **Um** X" cria
+a pasta "X" — `LIGACAO_INICIAL` corta o artigo mesmo quando o nome veio depois
+de "chamada". É anterior a este trabalho, é voltado ao usuário, e foi o que
+produziu o falso verde. Fica como tarefa à parte.
+
 ## Regra de bloqueio
 
 BLOCK se qualquer um de CT-01, CT-03, CT-08 ou CT-09 falhar, ou se algum PASS

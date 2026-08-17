@@ -1,0 +1,70 @@
+[iara] IARA OS em http://localhost:3077
+[iara] barramento em /barramento (mesma porta, mesma origem)
+[iara] persistência: arquivos locais (dados/)
+[iara] mãos: NESTE processo (win32) — e em qualquer braço que conectar em /dispositivo
+[iara] canal WhatsApp: desligado (falta WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN)
+[iara] voz: neural do Edge, voz "pt-BR-FranciscaNeural" (grátis; desligável com IARA_VOZ_NEURAL=0)
+[iara] transcrição: desligada (sem IARA_STT_CHAVE) — a fala continua sendo reconhecida pelo navegador
+[iara] Microsoft Graph: desligado (sem MS_GRAPH_TOKEN nem credencial de app)
+[iara] jornal de operações: SEM SELO — IARA_CHAVE_PROVA ausente: o jornal de operações é validado só por estrutura. Quem escrever no disco consegue forjar um registro de autorização.
+[iara] autenticação: DESLIGADA — modo local. NÃO EXPONHA ESTE PROCESSO À INTERNET.
+[iara] índice histórico carregado
+ ○ Compiling / ...
+ ⚠ ../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/non-real-time-vad.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+ GET / 200 in 3443ms
+ GET / 200 in 185ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET / 200 in 89ms
+{"canal":"execucao","instante":"2026-08-17T09:47:00.068Z","execucao_id":"IARA-20260817-c53e-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-17T09:47:00.068Z","execucao_id":"IARA-20260817-c53e-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":1}
+{"canal":"execucao","instante":"2026-08-17T09:47:00.069Z","execucao_id":"IARA-20260817-c53e-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":1}
+{"canal":"auditoria","instante":"2026-08-17T09:47:08.201Z","sessao":"daiane","id_usuario":"daiane","traco":"0b8fa581-72e5-49c2-b566-866c2b027a49","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"d1b86209-7228-4cea-b73d-476310a456a9","hash_intencao":"b8376d42a7e727a5406e68d8962da623f0e9c6d992879f0a0e80e22c9e0b42bf","id_usuario":"daiane","sessao":"daiane","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 99.6%, mem 90.7%, 16 processo(s)"}
+{"canal":"execucao","instante":"2026-08-17T09:47:08.308Z","execucao_id":"IARA-20260817-c53e-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 16 processos lidos","ms":8240}
+{"canal":"execucao","instante":"2026-08-17T09:47:08.312Z","execucao_id":"IARA-20260817-c53e-000002","id_usuario":"daiane","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-17T09:47:08.312Z","execucao_id":"IARA-20260817-c53e-000002","id_usuario":"daiane","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-17T09:47:08.312Z","execucao_id":"IARA-20260817-c53e-000002","id_usuario":"daiane","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"criar_pasta","permitido":true,"detalhe":"C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1"}
+{"canal":"execucao","instante":"2026-08-17T09:47:09.369Z","execucao_id":"IARA-20260817-c53e-000002","id_usuario":"daiane","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1","ms":1057}
+{"canal":"auditoria","instante":"2026-08-17T09:47:10.492Z","sessao":"daiane","id_usuario":"daiane","traco":"23585c4d-637c-4a51-a263-524fcd23d23a","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"fbf6d2ea-8fc6-4895-8706-e5b98a0f203d","hash_intencao":"3479e68fb40c01b1dc5ee83bafbd9a2bc06546c2f984a3167618c131fe753634","id_usuario":"daiane","sessao":"daiane","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+{"canal":"execucao","instante":"2026-08-17T09:47:13.527Z","execucao_id":"IARA-20260817-c53e-000003","id_usuario":"daiane","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-17T09:47:13.527Z","execucao_id":"IARA-20260817-c53e-000003","id_usuario":"daiane","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-17T09:47:13.527Z","execucao_id":"IARA-20260817-c53e-000003","id_usuario":"daiane","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"criar_pasta","permitido":true,"detalhe":"C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"}
+{"canal":"execucao","instante":"2026-08-17T09:47:13.989Z","execucao_id":"IARA-20260817-c53e-000003","id_usuario":"daiane","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1","ms":462}
+{"canal":"voz","id_mensagem":"4cae2c50-7129-4646-8c97-dac448179ecc","ok":true,"pensar_ms":2023,"sintese_ms":6940,"caracteres":55}
+{"canal":"voz","id_mensagem":"3e955319-e05d-4a19-9fda-2e2de145628a","ok":true,"pensar_ms":3641,"sintese_ms":5087,"caracteres":49}

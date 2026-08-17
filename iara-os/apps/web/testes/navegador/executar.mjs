@@ -256,7 +256,9 @@ async function principal() {
     }
 
     mkdirSync(EVIDENCIA, { recursive: true });
-    codigo = await rodar(process.execPath, [path.join(AQUI, 'cross-talk-espelhos.mjs')], {
+    /** Qual bateria rodar contra a instância. Uma instância, várias baterias. */
+    const bateria = arg('--bateria', 'cross-talk-espelhos.mjs');
+    codigo = await rodar(process.execPath, [path.join(AQUI, bateria)], {
       cwd: APP,
       env: {
         ...process.env,

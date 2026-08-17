@@ -1,0 +1,97 @@
+﻿TAP version 13
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.290Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"9a449a60-586e-4073-9315-0b313ec6f463","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.305Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"287852d4-a034-4f4e-bf41-184ccb931500","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.308Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"99fa8ded-44bf-4af0-9442-c3220b4011fd","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: mensagem de OUTRO espelho não cancela o turno em voo — ela espera a vez
+ok 1 - CC-01: mensagem de OUTRO espelho não cancela o turno em voo — ela espera a vez
+  ---
+  duration_ms: 27.6022
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.333Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"664b9816-8ea7-4718-862b-976358d1e478","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.336Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"d912b798-9ba8-4e48-b512-991b10b9af96","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: cada fala declara a pergunta que responde — nenhuma tela herda a resposta da outra
+ok 2 - CC-01: cada fala declara a pergunta que responde — nenhuma tela herda a resposta da outra
+  ---
+  duration_ms: 28.1425
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.347Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"f275a3d9-5d4b-40db-a414-aa893473ea1b","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.350Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"7839ea87-67e3-4238-9222-e6d9d9471e2d","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: a MESMA tela reescrevendo continua preemptando — a correção não matou a interrupção legítima
+ok 3 - CC-01: a MESMA tela reescrevendo continua preemptando — a correção não matou a interrupção legítima
+  ---
+  duration_ms: 13.9235
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.363Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"bdd09c67-0982-445d-9599-53dd882ec054","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.364Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"4617ee57-5a5c-43f8-8b04-d86f680315e0","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.365Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"ea724889-5d75-4e50-beaa-b0fcd05ba9a5","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.365Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"4af46410-79d7-4edd-91e4-e1a8bd194181","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.368Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"b89911ce-2804-4fdc-83eb-0ef621b216fc","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio
+ok 4 - CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio
+  ---
+  duration_ms: 17.5084
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.380Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"2f6341bf-4854-4714-91dc-1610d6b78745","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o interromper de uma tela NÃO derruba o turno da outra
+ok 5 - CT-05: o interromper de uma tela NÃO derruba o turno da outra
+  ---
+  duration_ms: 11.9267
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.395Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"1bcbd4a7-638e-4a04-831b-3258b3cc3cbd","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o interromper da PRÓPRIA tela continua cancelando
+ok 6 - CT-05: o interromper da PRÓPRIA tela continua cancelando
+  ---
+  duration_ms: 15.2423
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.411Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"f9cc43f7-5165-4a3b-9494-49547ed3d1c4","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: interromper com o próprio pedido NA FILA tira o pedido da fila
+ok 7 - CT-05: interromper com o próprio pedido NA FILA tira o pedido da fila
+  ---
+  duration_ms: 16.0324
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.428Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3d21d2e4-6497-4bbf-a289-76001720e7b9","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o cancelamento GLOBAL continua existindo — é o do desligamento
+ok 8 - CT-05: o cancelamento GLOBAL continua existindo — é o do desligamento
+  ---
+  duration_ms: 15.0188
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.443Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"5ecff10a-9996-4b1a-8a94-1e09a4728350","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: fim de sessão esvazia a fila — pedido enfileirado não sobrevive ao fechamento de todas as telas
+ok 9 - CT-05: fim de sessão esvazia a fila — pedido enfileirado não sobrevive ao fechamento de todas as telas
+  ---
+  duration_ms: 16.0095
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.456Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"efa15b1f-cd80-4b29-8c36-61943dbd286e","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.457Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"1cc9a329-5e05-4fd3-a560-4a58f7540f1f","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.459Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"cd233abf-458b-4212-9f01-5ae5c88f0778","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: preempção da própria tela NÃO esvazia a fila das outras
+ok 10 - CT-05: preempção da própria tela NÃO esvazia a fila das outras
+  ---
+  duration_ms: 16.5254
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:32:12.471Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"2ed708ca-43bf-47f7-a8d3-4ee7f1f9f143","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: a mesma tela que já espera não ocupa duas vagas — o segundo pedido substitui o primeiro
+ok 11 - CC-01: a mesma tela que já espera não ocupa duas vagas — o segundo pedido substitui o primeiro
+  ---
+  duration_ms: 14.2641
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 868.5371

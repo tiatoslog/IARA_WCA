@@ -1,0 +1,107 @@
+{
+  "fase": "reverificacao",
+  "url": "http://127.0.0.1:3077",
+  "raiz": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa",
+  "marca": "rv1",
+  "decorrido_ms": 43453,
+  "rodadas": [
+    {
+      "n": 1,
+      "marca": "rv1r1",
+      "envio_a": 1786960027977,
+      "envio_b": 1786960027982,
+      "desalinhamento_ms": 5,
+      "fala_de_a_concluida_em": 1786960033855,
+      "houve_corrida": true
+    }
+  ],
+  "corrida": {
+    "n": 1,
+    "marca": "rv1r1",
+    "envio_a": 1786960027977,
+    "envio_b": 1786960027982,
+    "desalinhamento_ms": 5,
+    "fala_de_a_concluida_em": 1786960033855,
+    "houve_corrida": true,
+    "alfa": "Alfa rv1r1",
+    "beta": "Beta rv1r1"
+  },
+  "pastas": {
+    "alfa": "Alfa rv1r1",
+    "beta": "Beta rv1r1"
+  },
+  "conversa": {
+    "A": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos."
+      }
+    ],
+    "B": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho."
+      }
+    ]
+  },
+  "disco": {
+    "alfa": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1",
+    "beta": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+  },
+  "snapshots_recebidos": {
+    "A": 21,
+    "B": 20
+  },
+  "checks": [
+    {
+      "id": "CT-00",
+      "ok": true,
+      "detalhe": "corrida observada na rodada 1 (desalinhamento 5 ms)"
+    },
+    {
+      "id": "CT-01",
+      "ok": true,
+      "detalhe": "o espelho A recebeu resposta sobre o próprio pedido"
+    },
+    {
+      "id": "CT-02",
+      "ok": true,
+      "detalhe": "a pergunta do espelho A continua visível na tela do espelho A"
+    },
+    {
+      "id": "CT-03",
+      "ok": true,
+      "detalhe": "disco: Alfa rv1r1=C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1 | Beta rv1r1=C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+    },
+    {
+      "id": "CT-07",
+      "ok": true,
+      "detalhe": "24 fala(s) concluída(s): 24 endereçada(s), 0 com endereço órfão, 0 sem campo \"responde_a\""
+    }
+  ],
+  "veredito": "PASS"
+}

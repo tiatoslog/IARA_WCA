@@ -373,6 +373,87 @@ export class Kernel {
     this.dep.barramento.publicar({ tipo: 'TAREFA_CANCELADA', motivo });
   }
 
+  /**
+   * FIM DE LINHA: não sobrou tela nenhuma, ou o processo está caindo.
+   *
+   * Só isto esvazia a fila, e a distinção importa. `cancelar()` sozinho não
+   * pode esvaziá-la porque ele TAMBÉM é a preempção da mesma tela (ver
+   * `processar`) — se esvaziasse, quem reescrevesse a própria frase apagaria os
+   * pedidos das outras telas junto, que é exatamente o dano do CC-01 de volta
+   * por outra porta.
+   *
+   * Achado na auditoria de garantia, e ele nasceu COM a fila: antes de existir
+   * fila, "a última tela fechou" cancelava o turno em voo e não havia mais nada
+   * pendente. Agora havia — e os pedidos enfileirados continuariam sendo
+   * executados contra uma sessão que não tem mais ninguém olhando.
+   */
+  pararTudo(motivo: string): void {
+    this.fila.length = 0;
+    this.cancelar(motivo);
+  }
+
+  /**
+   * "PARE" — vindo de UMA TELA, e valendo só para o que é dela.
+   *
+   * `cancelar()` acima é global e continua sendo: é a porta do desligamento e
+   * do fim da sessão, onde derrubar tudo é o certo. `Porta.ts` chamava ELA para
+   * atender o botão de interromper, e o resultado era a segunda metade do
+   * CC-01: quem apertasse "parar" no computador matava o turno que a outra
+   * pessoa — a mesma pessoa, noutra tela — tinha acabado de pedir. Serializar
+   * os turnos consertou o cross-talk da resposta e deixou esta porta aberta:
+   * agora que os pedidos esperam a vez, um "parar" global derruba o turno em
+   * voo E deixa a fila andar, o que é ainda mais confuso do que era antes.
+   *
+   * Três casos, e só o primeiro cancela alguma coisa:
+   *  · o turno em voo é DESTA tela → cancela;
+   *  · o pedido desta tela está NA FILA → sai da fila (a pessoa desistiu antes
+   *    de chegar a vez);
+   *  · esta tela não tem nada em curso → não faz nada. Silêncio aqui é
+   *    honesto: não há o que parar.
+   */
+  interromper(origem: string): void {
+    /**
+     * Turno SEM TELA (WhatsApp, ciclo autônomo) pode ser parado por qualquer
+     * tela do operador. Antes de a origem existir, isto funcionava por
+     * acidente — `cancelar()` derrubava tudo. Casar só por igualdade teria
+     * tirado da operadora a única forma de interromper um turno que ela vê
+     * acontecendo e que nenhuma tela dela iniciou. Ver `ORIGEM_SEM_TELA`.
+     */
+    const emVooEhDela =
+      this.origemEmAndamento === origem || this.origemEmAndamento === ORIGEM_SEM_TELA;
+    if (this.emAndamento && emVooEhDela) {
+      this.cancelar('interrupção do operador');
+      return;
+    }
+    this.retirarDaFila(origem, 'o operador desistiu antes de chegar a vez');
+  }
+
+  /**
+   * A TELA SAIU. Retira da fila o pedido dela — e só isso.
+   *
+   * Não encosta no turno em voo de propósito: se ele já começou, o efeito pode
+   * estar a caminho do mundo, e as outras telas do mesmo operador continuam
+   * abertas para receber a resposta. O que não pode ficar é a VAGA: a fila tem
+   * uma por espelho, e espelho que não existe mais segurando vaga acabaria
+   * recusando o pedido de uma tela viva. Achado pela auditoria de garantia,
+   * contra a linha do test-plan que exige exatamente isto.
+   */
+  esquecerEspelho(origem: string): void {
+    this.retirarDaFila(origem, 'a tela que fez o pedido foi fechada antes de chegar a vez');
+  }
+
+  /**
+   * Tira um pedido da fila E CONTA. O `splice` mudo era o defeito que a
+   * auditoria apontou: um pedido que some sem uma linha sequer é a mesma
+   * família do CC-01 — o operador fica com a bolha na tela e nenhuma notícia.
+   */
+  private retirarDaFila(origem: string, motivo: string): void {
+    const espera = this.fila.findIndex((x) => x.origem === origem);
+    if (espera < 0) return;
+    this.fila.splice(espera, 1);
+    this.dep.barramento.publicar({ tipo: 'TAREFA_CANCELADA', motivo });
+  }
+
   /** Quantos pedidos de outras telas estão esperando. Leitura, para teste e
    *  diagnóstico — ninguém enfileira por fora de `processar`. */
   get pedidosNaFila(): number {

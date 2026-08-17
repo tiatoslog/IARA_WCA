@@ -247,6 +247,197 @@ test('CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio',
   assert.equal(concluidas.length, 5, 'os cinco que ENTRARAM (1 em voo + 4 na fila) respondem');
 });
 
+// ===========================================================================
+// CT-05 — o "interromper" também era global à sessão
+// ===========================================================================
+
+test('CT-05: o interromper de uma tela NÃO derruba o turno da outra', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, concluidas, canceladas } = montar(lab.habilidade);
+
+  // O turno em voo é do espelho B.
+  const turnoB = kernel.processar(PEDIDO, 'b1', 'espelho-B');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+
+  // O espelho A aperta "interromper". Ele não tem nada em andamento.
+  kernel.interromper('espelho-A');
+
+  assert.equal(
+    canceladas.length,
+    0,
+    'a tela A não pode cancelar um turno que não é dela — era o que `Porta.ts` fazia ao chamar `cancelar()` sem origem',
+  );
+
+  lab.soltar();
+  await turnoB;
+
+  assert.equal(concluidas.length, 1, 'o turno de B precisa ter chegado ao fim');
+  assert.equal(concluidas[0].responde_a, 'op:b1');
+});
+
+test('CT-05: o interromper da PRÓPRIA tela continua cancelando', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, concluidas, canceladas } = montar(lab.habilidade);
+
+  const turnoA = kernel.processar(PEDIDO, 'a1', 'espelho-A');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+
+  kernel.interromper('espelho-A');
+  lab.soltar();
+  await turnoA;
+
+  assert.equal(canceladas.length, 1, 'interromper o próprio turno tem de continuar funcionando');
+  assert.equal(concluidas.length, 0, 'turno cancelado não fala');
+});
+
+test('CT-05: interromper com o próprio pedido NA FILA tira o pedido da fila, E CONTA', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, concluidas, canceladas } = montar(lab.habilidade);
+
+  const turnoA = kernel.processar(PEDIDO, 'a1', 'espelho-A');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+  await kernel.processar(PEDIDO, 'b1', 'espelho-B');
+  assert.equal(kernel.pedidosNaFila, 1);
+
+  // B desistiu antes de chegar a vez dele.
+  kernel.interromper('espelho-B');
+  assert.equal(kernel.pedidosNaFila, 0, 'desistir na fila tem de tirar o pedido da fila');
+  /* Achado da auditoria de garantia: o `splice` era MUDO. Pedido que some sem
+     uma linha sequer deixa a bolha na tela sem resposta e sem aviso — a mesma
+     família do CC-01. */
+  assert.equal(canceladas.length, 1, 'retirar da fila precisa publicar o cancelamento');
+  assert.match(canceladas[0], /desistiu/i);
+
+  lab.soltar();
+  await turnoA;
+
+  assert.equal(concluidas.length, 1, 'só o turno de A fala; o de B foi retirado antes de existir');
+  assert.equal(concluidas[0].responde_a, 'op:a1');
+});
+
+test('CT-05: o cancelamento GLOBAL continua existindo — é o do desligamento', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, canceladas } = montar(lab.habilidade);
+
+  const turnoB = kernel.processar(PEDIDO, 'b1', 'espelho-B');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+
+  // `cancelar()` sem origem é a porta do desligamento e do fim da sessão —
+  // essa PRECISA derrubar tudo, e é por isso que ela não sumiu.
+  kernel.cancelar('todas as telas encerradas');
+  lab.soltar();
+  await turnoB;
+
+  assert.equal(canceladas.length, 1);
+  assert.equal(canceladas[0], 'todas as telas encerradas');
+});
+
+/**
+ * O caso que a FILA criou, e que não existia antes dela: com o turno em voo
+ * cancelado por "não sobrou tela nenhuma", os pedidos enfileirados continuavam
+ * valendo e seriam executados contra uma sessão sem ninguém olhando. Achado na
+ * auditoria de garantia, depois da entrega do CC-01.
+ */
+test('CT-05: fim de sessão esvazia a fila — pedido enfileirado não sobrevive ao fechamento de todas as telas', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, concluidas } = montar(lab.habilidade);
+
+  const turnoA = kernel.processar(PEDIDO, 'a1', 'espelho-A');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+  await kernel.processar(PEDIDO, 'b1', 'espelho-B');
+  assert.equal(kernel.pedidosNaFila, 1);
+
+  kernel.pararTudo('todas as telas encerradas');
+  assert.equal(kernel.pedidosNaFila, 0, 'fim de sessão precisa esvaziar a fila');
+
+  lab.soltar();
+  await turnoA;
+
+  assert.equal(lab.iniciou, 1, 'o pedido da fila NÃO pode ter executado depois do fim da sessão');
+  assert.equal(concluidas.length, 0, 'e ninguém fala numa sessão que acabou');
+});
+
+/**
+ * Os três casos abaixo saíram da auditoria de garantia (QA independente,
+ * 16/08/2026). Nenhum deles existia antes da fila — todos nasceram com ela.
+ */
+
+test('CT-05: tela fechada devolve a vaga dela na fila — e não derruba o turno em voo', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, concluidas, canceladas } = montar(lab.habilidade);
+
+  const turnoA = kernel.processar(PEDIDO, 'a1', 'espelho-A');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+  await kernel.processar(PEDIDO, 'b1', 'espelho-B');
+  assert.equal(kernel.pedidosNaFila, 1);
+
+  // A tela B foi fechada (F5, aba fechada, rede caiu) antes de chegar a vez.
+  kernel.esquecerEspelho('espelho-B');
+  assert.equal(kernel.pedidosNaFila, 0, 'espelho que não existe mais não pode segurar vaga');
+  assert.equal(canceladas.length, 1, 'e o pedido retirado precisa ser contado');
+  assert.match(canceladas[0], /fechada/i);
+
+  lab.soltar();
+  await turnoA;
+  assert.equal(concluidas.length, 1, 'o turno em voo de OUTRA tela não pode ter sido tocado');
+  assert.equal(concluidas[0].responde_a, 'op:a1');
+});
+
+test('CT-05: fechar a tela NÃO cancela o turno que ela mesma já tinha começado', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, concluidas, canceladas } = montar(lab.habilidade);
+
+  const turnoA = kernel.processar(PEDIDO, 'a1', 'espelho-A');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+
+  kernel.esquecerEspelho('espelho-A');
+  lab.soltar();
+  await turnoA;
+
+  assert.equal(canceladas.length, 0, 'o efeito já pode estar a caminho do mundo — não se cancela por fechar aba');
+  assert.equal(concluidas.length, 1, 'e a resposta continua indo para as outras telas do operador');
+});
+
+test('CT-05: turno SEM TELA (WhatsApp, ciclo autônomo) pode ser parado por qualquer tela', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel, canceladas } = montar(lab.habilidade);
+
+  // Sem origem: é como o canal WhatsApp e o ciclo autônomo entram.
+  const turnoCanal = kernel.processar(PEDIDO, 'w1');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+
+  /* Antes de a origem existir isto funcionava por acidente, porque o
+     `interromper` derrubava tudo. Casar só por igualdade tiraria da operadora
+     a única forma de parar um turno que ela vê acontecendo e que tela nenhuma
+     dela começou. */
+  kernel.interromper('espelho-A');
+  lab.soltar();
+  await turnoCanal;
+
+  assert.equal(canceladas.length, 1, 'a operadora precisa conseguir parar um turno que nenhuma tela dela iniciou');
+});
+
+test('CT-05: preempção da própria tela NÃO esvazia a fila das outras', async () => {
+  const lab = habilidadeComPortao();
+  const { kernel } = montar(lab.habilidade);
+
+  const turnoA = kernel.processar(PEDIDO, 'a1', 'espelho-A');
+  await esperarOTurnoEntrar(() => lab.iniciou, 1);
+  await kernel.processar(PEDIDO, 'b1', 'espelho-B');
+  assert.equal(kernel.pedidosNaFila, 1);
+
+  // A reescreve. Isto cancela o turno DELE — e não pode encostar na fila.
+  const turnoA2 = kernel.processar(PEDIDO, 'a2', 'espelho-A');
+  assert.equal(
+    kernel.pedidosNaFila,
+    1,
+    'quem reescreve a própria frase não pode apagar o pedido da outra tela — seria o CC-01 de volta por outra porta',
+  );
+
+  lab.soltar();
+  await Promise.all([turnoA, turnoA2]);
+});
+
 test('CC-01: a mesma tela que já espera não ocupa duas vagas — o segundo pedido substitui o primeiro', async () => {
   const lab = habilidadeComPortao();
   const { kernel, concluidas } = montar(lab.habilidade);

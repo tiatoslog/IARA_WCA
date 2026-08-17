@@ -1,0 +1,325 @@
+﻿node : warning: in the working copy of 'iara-os/apps/web/servidor/nucleo/kernel/Kernel.ts', LF will be replaced by 
+CRLF the next time Git touches it
+No linha:1 caractere:370
++ ... s\apps\web; node testes/navegador/unidade-contra-commit.mjs 6aa2d3f t ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: in the... Git touches it:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+warning: in the working copy of 'iara-os/apps/web/tsconfig.json', LF will be replaced by CRLF the next time Git 
+touches it
+fatal: path 'iara-os/apps/web/testes/navegador/cross-talk-espelhos.mjs' exists on disk, but not in '6aa2d3f'
+fatal: path 'iara-os/apps/web/testes/navegador/executar.mjs' exists on disk, but not in '6aa2d3f'
+[unidade] 10 arquivo(s) revertido(s) para 6aa2d3f
+[unidade] rodando testes/cross-talk-espelhos.test.ts contra esse código
+
+TAP version 13
+# {"canal":"auditoria","instante":"2026-08-16T12:16:36.606Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"93401536-3dcc-4ff2-8af5-7d711215fe99","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:16:36.628Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"dc0ffd7c-579e-49f0-8a3b-09409aef3938","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:17:06.643Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"dc0ffd7c-579e-49f0-8a3b-09409aef3938","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:17:06.655Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3746ea5a-964a-4bfa-b923-d674a10c7ee6","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: mensagem de OUTRO espelho não cancela o turno em voo — ela espera a vez
+not ok 1 - CC-01: mensagem de OUTRO espelho não cancela o turno em voo — ela espera a vez
+  ---
+  duration_ms: 30054.5251
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:161:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    nenhum turno pode ter sido cancelado por outra tela
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:172:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:17:06.676Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"fac7292e-838e-4fd6-89ea-516d1ba97ed6","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:17:36.689Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"fac7292e-838e-4fd6-89ea-516d1ba97ed6","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:17:36.694Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"96690333-6ab4-4eaf-9927-ee4337d8851a","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: cada fala declara a pergunta que responde — nenhuma tela herda a resposta da outra
+not ok 2 - CC-01: cada fala declara a pergunta que responde — nenhuma tela herda a resposta da outra
+  ---
+  duration_ms: 30044.417
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:184:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    a resposta de cada turno tem de apontar para a pergunta daquele turno, na ordem em que foram atendidos
+    + actual - expected
+    
+      [
+    +   undefined
+    -   'op:a1',
+    -   'op:b1'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'op:a1'
+    1: 'op:b1'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:195:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:17:36.704Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"71a4ddd6-7077-45ef-abd0-15cbea919687","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:17:36.709Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"56fe5b2c-6715-404d-bf85-afbbc5ef8734","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: a MESMA tela reescrevendo continua preemptando — a correção não matou a interrupção legítima
+not ok 3 - CC-01: a MESMA tela reescrevendo continua preemptando — a correção não matou a interrupção legítima
+  ---
+  duration_ms: 14.4554
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:202:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    a própria tela nunca entra na fila
+    
+    undefined !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:215:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:17:36.720Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"fe72920f-62b8-43c3-8d18-2c1390d007b0","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:18:06.730Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"fe72920f-62b8-43c3-8d18-2c1390d007b0","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:18:06.731Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"e79875e5-3e79-467d-be9a-ba9a39c7ccf8","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:18:36.740Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"e79875e5-3e79-467d-be9a-ba9a39c7ccf8","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:18:36.741Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"6d248a4a-4d15-425c-8b3f-08db6e3263da","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:19:06.745Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"6d248a4a-4d15-425c-8b3f-08db6e3263da","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:19:06.746Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"eaf3ca36-cdad-4319-bdac-3d7d1c3fba6a","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:19:36.753Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"eaf3ca36-cdad-4319-bdac-3d7d1c3fba6a","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:19:36.757Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"b43f912e-7ac5-4d71-b2a1-4de6929d64d9","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio
+not ok 4 - CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio
+  ---
+  duration_ms: 120048.5027
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:220:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 4
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 4
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:231:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:19:36.772Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"8d2ce55c-5ee9-498d-bbc5-bdf121f03eab","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o interromper de uma tela NÃO derruba o turno da outra
+not ok 5 - CT-05: o interromper de uma tela NÃO derruba o turno da outra
+  ---
+  duration_ms: 15.6475
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:254:1'
+  failureType: 'testCodeFailure'
+  error: 'kernel.interromper is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:263:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:19:36.787Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"d37a0f5a-72bb-4900-af1f-1faed74489af","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o interromper da PRÓPRIA tela continua cancelando
+not ok 6 - CT-05: o interromper da PRÓPRIA tela continua cancelando
+  ---
+  duration_ms: 14.6967
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:278:1'
+  failureType: 'testCodeFailure'
+  error: 'kernel.interromper is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:285:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:19:36.800Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"845df3f7-fb73-45a9-83c2-f0b4ff5b170a","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:20:06.766Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"b43f912e-7ac5-4d71-b2a1-4de6929d64d9","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:20:06.782Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"8d2ce55c-5ee9-498d-bbc5-bdf121f03eab","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:20:06.814Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"845df3f7-fb73-45a9-83c2-f0b4ff5b170a","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:20:06.817Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"8b0dd708-b427-4bc8-8ffe-349ae309e270","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: interromper com o próprio pedido NA FILA tira o pedido da fila, E CONTA
+not ok 7 - CT-05: interromper com o próprio pedido NA FILA tira o pedido da fila, E CONTA
+  ---
+  duration_ms: 30029.9314
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:293:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:300:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:20:06.834Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"21e2a32e-d0e7-4940-bc1d-6f25d9f74388","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o cancelamento GLOBAL continua existindo — é o do desligamento
+ok 8 - CT-05: o cancelamento GLOBAL continua existindo — é o do desligamento
+  ---
+  duration_ms: 15.6518
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:20:06.845Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"c3ae7bce-d847-4ace-b4a9-3cecdbab8faa","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:20:36.854Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"c3ae7bce-d847-4ace-b4a9-3cecdbab8faa","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:20:36.860Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"b548b860-57ea-40c5-a79e-9cc4f0172c5d","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: fim de sessão esvazia a fila — pedido enfileirado não sobrevive ao fechamento de todas as telas
+not ok 9 - CT-05: fim de sessão esvazia a fila — pedido enfileirado não sobrevive ao fechamento de todas as telas
+  ---
+  duration_ms: 30024.8554
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:341:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:348:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:20:36.871Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"e6042500-a35e-4cb3-88e0-db7595b2b2d6","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:21:06.882Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"e6042500-a35e-4cb3-88e0-db7595b2b2d6","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:21:06.886Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"33ef591e-ffc6-4f85-b5b1-13ee76dd26ac","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: tela fechada devolve a vaga dela na fila — e não derruba o turno em voo
+not ok 10 - CT-05: tela fechada devolve a vaga dela na fila — e não derruba o turno em voo
+  ---
+  duration_ms: 30027.5287
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:365:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:372:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:21:06.900Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"21c0e155-c87e-4a11-b5e6-24e7ae757fa8","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: fechar a tela NÃO cancela o turno que ela mesma já tinha começado
+not ok 11 - CT-05: fechar a tela NÃO cancela o turno que ela mesma já tinha começado
+  ---
+  duration_ms: 14.6592
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:386:1'
+  failureType: 'testCodeFailure'
+  error: 'kernel.esquecerEspelho is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:393:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:21:06.916Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"35a73f77-1968-4353-ae3c-eeedc4f46d65","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: turno SEM TELA (WhatsApp, ciclo autônomo) pode ser parado por qualquer tela
+not ok 12 - CT-05: turno SEM TELA (WhatsApp, ciclo autônomo) pode ser parado por qualquer tela
+  ---
+  duration_ms: 15.6341
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:401:1'
+  failureType: 'testCodeFailure'
+  error: 'kernel.interromper is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:413:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:21:06.930Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3f1cad30-f1af-4dee-90cb-0e35bf9d03b8","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:21:36.887Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"33ef591e-ffc6-4f85-b5b1-13ee76dd26ac","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:21:36.902Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"21c0e155-c87e-4a11-b5e6-24e7ae757fa8","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:21:36.933Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3f1cad30-f1af-4dee-90cb-0e35bf9d03b8","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:21:36.937Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"7c3714f6-ce1d-4178-be45-b1c960277570","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: preempção da própria tela NÃO esvazia a fila das outras
+not ok 13 - CT-05: preempção da própria tela NÃO esvazia a fila das outras
+  ---
+  duration_ms: 30021.0282
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:420:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:427:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T12:21:36.949Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"8d3f7ec8-ce9b-4ba7-af3d-6934544be439","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:22:06.953Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"8d3f7ec8-ce9b-4ba7-af3d-6934544be439","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T12:22:06.953Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"bde4da6f-cd47-4a9f-8089-884a93096c0a","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T12:22:36.962Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"bde4da6f-cd47-4a9f-8089-884a93096c0a","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# Subtest: CC-01: a mesma tela que já espera não ocupa duas vagas — o segundo pedido substitui o primeiro
+not ok 14 - CC-01: a mesma tela que já espera não ocupa duas vagas — o segundo pedido substitui o primeiro
+  ---
+  duration_ms: 60028.1261
+  type: 'test'
+  location: 'C:\\Users\\daian\\AppData\\Local\\Temp\\iara-unidade-DqllYQ\\app\\testes\\cross-talk-espelhos.test.ts:441:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    uma vaga por espelho
+    
+    undefined !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\AppData\Local\Temp\iara-unidade-DqllYQ\app\testes\cross-talk-espelhos.test.ts:450:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..14
+# tests 14

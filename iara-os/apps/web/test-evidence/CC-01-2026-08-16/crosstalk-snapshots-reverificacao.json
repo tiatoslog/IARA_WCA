@@ -1,0 +1,4882 @@
+{
+  "A": [
+    {
+      "em": 1786960003820,
+      "sessao": "daiane",
+      "seq": 1,
+      "instante": 1786960003811,
+      "traco": "2f819793-1ac7-454a-9326-e9d161a73b3a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:43.795Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 0.8,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": null,
+        "custo": null,
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 0,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": null,
+      "cadeia": null,
+      "voz_lider": true
+    },
+    {
+      "em": 1786960012985,
+      "sessao": "daiane",
+      "seq": 4,
+      "instante": 1786960005202,
+      "traco": "2f819793-1ac7-454a-9326-e9d161a73b3a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": null,
+        "custo": null,
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 0,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": null,
+      "cadeia": null,
+      "voz_lider": true
+    },
+    {
+      "em": 1786960020222,
+      "sessao": "daiane",
+      "seq": 5,
+      "instante": 1786960018929,
+      "traco": "2f819793-1ac7-454a-9326-e9d161a73b3a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": null,
+        "custo": null,
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 0,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": null,
+      "cadeia": null,
+      "voz_lider": true
+    },
+    {
+      "em": 1786960031964,
+      "sessao": "daiane",
+      "seq": 7,
+      "instante": 1786960028092,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0.55,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": null,
+        "custo": null,
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 2,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.55,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": null,
+        "plano": null,
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960031964,
+      "sessao": "daiane",
+      "seq": 11,
+      "instante": 1786960028243,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0.25,
+        "percepcao": 0.43000000000000005,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 5,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.25,
+        "janela": 0.43000000000000005,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960031964,
+      "sessao": "daiane",
+      "seq": 12,
+      "instante": 1786960028521,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 1,
+        "conhecimento": 0,
+        "raciocinio": 0.13,
+        "percepcao": 0.31000000000000005,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 6,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 1,
+        "estante": 0,
+        "rack": 0.13,
+        "janela": 0.31000000000000005,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960033854,
+      "sessao": "daiane",
+      "seq": 15,
+      "instante": 1786960030004,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.88,
+        "conhecimento": 0,
+        "raciocinio": 0.010000000000000009,
+        "percepcao": 0.19000000000000006,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 8,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.88,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1"
+          }
+        ],
+        "resposta": null
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960033854,
+      "sessao": "daiane",
+      "seq": 17,
+      "instante": 1786960030203,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.76,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0.07000000000000006,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 10,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.76,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": false,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": null,
+        "cache_lido": 0,
+        "voz": null
+      },
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em area_de_trabalho [IARA-20260817-c53e-000002] sucesso",
+            "ms": 1918
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1"
+          }
+        ],
+        "resposta": null
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960033855,
+      "sessao": "daiane",
+      "seq": 18,
+      "instante": 1786960030204,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.64,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 2228,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.64,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": true,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": 2228,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em area_de_trabalho [IARA-20260817-c53e-000002] sucesso",
+            "ms": 1918
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 2228
+        }
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960033855,
+      "sessao": "daiane",
+      "seq": 20,
+      "instante": 1786960030263,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.52,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0.55,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": null,
+        "custo": null,
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 2,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.52,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.55,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": true,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": 2228,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": null,
+        "plano": null,
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960033856,
+      "sessao": "daiane",
+      "seq": 24,
+      "instante": 1786960031500,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.4,
+        "conhecimento": 0,
+        "raciocinio": 0.25,
+        "percepcao": 0.43000000000000005,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 5,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.4,
+        "estante": 0,
+        "rack": 0.25,
+        "janela": 0.43000000000000005,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": true,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": 2228,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960035710,
+      "sessao": "daiane",
+      "seq": 25,
+      "instante": 1786960033729,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 1,
+        "conhecimento": 0,
+        "raciocinio": 0.13,
+        "percepcao": 0.31000000000000005,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 6,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 1,
+        "estante": 0,
+        "rack": 0.13,
+        "janela": 0.31000000000000005,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": true,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": 2228,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960037635,
+      "sessao": "daiane",
+      "seq": 29,
+      "instante": 1786960034131,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.88,
+        "conhecimento": 0,
+        "raciocinio": 0.010000000000000009,
+        "percepcao": 0.19000000000000006,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 10,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.88,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": false,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": null,
+        "cache_lido": 0,
+        "voz": null
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": null
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960037635,
+      "sessao": "daiane",
+      "seq": 30,
+      "instante": 1786960034132,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.76,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0.07000000000000006,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.76,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960037635,
+      "sessao": "daiane",
+      "seq": 31,
+      "instante": 1786960034134,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.64,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.64,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960039682,
+      "sessao": "daiane",
+      "seq": 32,
+      "instante": 1786960037155,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.52,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.52,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960042007,
+      "sessao": "daiane",
+      "seq": 33,
+      "instante": 1786960039221,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.4,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.4,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960046811,
+      "sessao": "daiane",
+      "seq": 34,
+      "instante": 1786960043366,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.28,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.28,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960063243,
+      "sessao": "daiane",
+      "seq": 35,
+      "instante": 1786960058376,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.16000000000000003,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.16000000000000003,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960077803,
+      "sessao": "daiane",
+      "seq": 36,
+      "instante": 1786960074615,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.040000000000000036,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.040000000000000036,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960092108,
+      "sessao": "daiane",
+      "seq": 37,
+      "instante": 1786960089644,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": false
+    }
+  ],
+  "B": [
+    {
+      "em": 1786960005220,
+      "sessao": "daiane",
+      "seq": 1,
+      "instante": 1786960005202,
+      "traco": "2f819793-1ac7-454a-9326-e9d161a73b3a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": null,
+        "custo": null,
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 0,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": null,
+      "cadeia": null,
+      "voz_lider": false
+    },
+    {
+      "em": 1786960022291,
+      "sessao": "daiane",
+      "seq": 4,
+      "instante": 1786960018929,
+      "traco": "2f819793-1ac7-454a-9326-e9d161a73b3a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": null,
+        "custo": null,
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 0,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": null,
+      "cadeia": null,
+      "voz_lider": false
+    },
+    {
+      "em": 1786960029991,
+      "sessao": "daiane",
+      "seq": 6,
+      "instante": 1786960028092,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0.55,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": null,
+        "custo": null,
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 2,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.55,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": null,
+        "plano": null,
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": false
+    },
+    {
+      "em": 1786960029991,
+      "sessao": "daiane",
+      "seq": 10,
+      "instante": 1786960028243,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0.25,
+        "percepcao": 0.43000000000000005,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 5,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.25,
+        "janela": 0.43000000000000005,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960029991,
+      "sessao": "daiane",
+      "seq": 11,
+      "instante": 1786960028521,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 1,
+        "conhecimento": 0,
+        "raciocinio": 0.13,
+        "percepcao": 0.31000000000000005,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 6,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 1,
+        "estante": 0,
+        "rack": 0.13,
+        "janela": 0.31000000000000005,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960033865,
+      "sessao": "daiane",
+      "seq": 14,
+      "instante": 1786960030004,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.88,
+        "conhecimento": 0,
+        "raciocinio": 0.010000000000000009,
+        "percepcao": 0.19000000000000006,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 8,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.88,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": null,
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1"
+          }
+        ],
+        "resposta": null
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960033865,
+      "sessao": "daiane",
+      "seq": 16,
+      "instante": 1786960030203,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.76,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0.07000000000000006,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 10,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.76,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": false,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": null,
+        "cache_lido": 0,
+        "voz": null
+      },
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em area_de_trabalho [IARA-20260817-c53e-000002] sucesso",
+            "ms": 1918
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1"
+          }
+        ],
+        "resposta": null
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960033865,
+      "sessao": "daiane",
+      "seq": 17,
+      "instante": 1786960030204,
+      "traco": "0b8fa581-72e5-49c2-b566-866c2b027a49",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.64,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": []
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 2228,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.64,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": true,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": 2228,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v22r-3dif44",
+        "texto": "Crie uma pasta chamada Alfa rv1r1 na área de trabalho"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em area_de_trabalho [IARA-20260817-c53e-000002] sucesso",
+            "ms": 1918
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Desktop\\Alfa rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 2228
+        }
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960033866,
+      "sessao": "daiane",
+      "seq": 19,
+      "instante": 1786960030263,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.52,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0.55,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": null,
+        "custo": null,
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 2,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.52,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.55,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": true,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": 2228,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": null,
+        "plano": null,
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960033866,
+      "sessao": "daiane",
+      "seq": 23,
+      "instante": 1786960031500,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.4,
+        "conhecimento": 0,
+        "raciocinio": 0.25,
+        "percepcao": 0.43000000000000005,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 5,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.4,
+        "estante": 0,
+        "rack": 0.25,
+        "janela": 0.43000000000000005,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": true,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": 2228,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960035729,
+      "sessao": "daiane",
+      "seq": 24,
+      "instante": 1786960033729,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "executando"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 1,
+        "conhecimento": 0,
+        "raciocinio": 0.13,
+        "percepcao": 0.31000000000000005,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 6,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 1,
+        "estante": 0,
+        "rack": 0.13,
+        "janela": 0.31000000000000005,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "4cae2c50-7129-4646-8c97-dac448179ecc",
+        "texto": "Pronto, criei a pasta \"Alfa rv1r1\" na Área de Trabalho.",
+        "concluida": true,
+        "responde_a": "op:msx1v22r-3dif44",
+        "destino": "plano_local",
+        "latencia_ms": 2228,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [],
+        "verificacao": [],
+        "resposta": null
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960037627,
+      "sessao": "daiane",
+      "seq": 28,
+      "instante": 1786960034131,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.88,
+        "conhecimento": 0,
+        "raciocinio": 0.010000000000000009,
+        "percepcao": 0.19000000000000006,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": null,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 10,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.88,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": false,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": null,
+        "cache_lido": 0,
+        "voz": null
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": null
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960037627,
+      "sessao": "daiane",
+      "seq": 29,
+      "instante": 1786960034132,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.76,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0.07000000000000006,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.76,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960037627,
+      "sessao": "daiane",
+      "seq": 30,
+      "instante": 1786960034134,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "executando",
+      "objetivo": "Criar pasta no computador",
+      "plano": {
+        "objetivo": "Criar pasta no computador",
+        "origem": "deterministico",
+        "passo_atual": 1,
+        "passos": [
+          {
+            "indice": 0,
+            "descricao": "Criar a pasta na raiz autorizada",
+            "estado": "concluido"
+          }
+        ]
+      },
+      "capacidades": {
+        "automacao": 0.64,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.6
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.64,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960039659,
+      "sessao": "daiane",
+      "seq": 31,
+      "instante": 1786960037155,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.52,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.52,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": null,
+        "voz_prevista": true
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960041996,
+      "sessao": "daiane",
+      "seq": 32,
+      "instante": 1786960039221,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.4,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.4,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960046806,
+      "sessao": "daiane",
+      "seq": 33,
+      "instante": 1786960043366,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.28,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.28,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960063239,
+      "sessao": "daiane",
+      "seq": 34,
+      "instante": 1786960058376,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.16000000000000003,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.16000000000000003,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960077612,
+      "sessao": "daiane",
+      "seq": 35,
+      "instante": 1786960074615,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0.040000000000000036,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0.040000000000000036,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": true
+    },
+    {
+      "em": 1786960092103,
+      "sessao": "daiane",
+      "seq": 36,
+      "instante": 1786960089644,
+      "traco": "23585c4d-637c-4a51-a263-524fcd23d23a",
+      "operador": {
+        "id_usuario": "daiane",
+        "nome": "Daiane",
+        "visto_em": "2026-08-17T09:46:45.202Z",
+        "preferencias": {
+          "como_chamar": "",
+          "tratamento": "nome",
+          "funcao": "",
+          "observacoes": ""
+        }
+      },
+      "estagio": "ocioso",
+      "objetivo": null,
+      "plano": null,
+      "capacidades": {
+        "automacao": 0,
+        "conhecimento": 0,
+        "raciocinio": 0,
+        "percepcao": 0,
+        "memoria": 0
+      },
+      "metricas": {
+        "energia_cognitiva": 1,
+        "paciencia_operacional": 1,
+        "afinidade": 1,
+        "carga_contextual": 0
+      },
+      "leitura": {
+        "estado": "neutro",
+        "confianca": 0.3,
+        "sinais": [
+          "intervalo curto entre envios"
+        ]
+      },
+      "expressao": {
+        "olhar": {
+          "x": 0,
+          "y": 0
+        },
+        "cabeca": {
+          "inclinacao": 0,
+          "giro": 0
+        },
+        "visemas": [],
+        "emocao": "neutra",
+        "intensidade": 0.2
+      },
+      "telemetria": {
+        "rota": "plano_local",
+        "custo": "zero",
+        "latencia_ms": 3892,
+        "tokens_entrada": 0,
+        "tokens_saida": 0,
+        "cache_lido": 0,
+        "eventos_no_traco": 11,
+        "descartados": 0
+      },
+      "luzes": {
+        "terminal": 0,
+        "estante": 0,
+        "rack": 0.12,
+        "janela": 0.25,
+        "gaveteiro": 0,
+        "cafeteira": 0,
+        "planta": 0.35,
+        "quadro_metas": 0.2
+      },
+      "nuvem_indisponivel": true,
+      "origem_raciocinio": "nenhuma",
+      "fala": {
+        "id": "3e955319-e05d-4a19-9fda-2e2de145628a",
+        "texto": "Pronto, criei a pasta \"Beta rv1r1\" em Documentos.",
+        "concluida": true,
+        "responde_a": "op:msx1v231-8ldaad",
+        "destino": "plano_local",
+        "latencia_ms": 3892,
+        "cache_lido": 0,
+        "voz": "/voz/56c9deba2460f7640bfeea0f286cfafa.mp3",
+        "voz_prevista": false
+      },
+      "pergunta": {
+        "id": "op:msx1v231-8ldaad",
+        "texto": "Crie uma pasta chamada Beta rv1r1 nos Documentos"
+      },
+      "cadeia": {
+        "intencao": {
+          "tipo": "texto",
+          "objetivo": "organização de arquivos",
+          "confianca": 0.92
+        },
+        "decisao": {
+          "rota": "plano_local",
+          "justificativa": "Âncoras reconhecidas (pasta) → plano determinístico.",
+          "custo": "zero"
+        },
+        "plano": {
+          "objetivo": "Criar pasta no computador",
+          "origem": "deterministico",
+          "total_passos": 1
+        },
+        "execucao": [
+          {
+            "indice": 0,
+            "habilidade": "criar_pasta",
+            "descricao": "Criar a pasta na raiz autorizada",
+            "resumo": "criar_pasta em documentos [IARA-20260817-c53e-000003] sucesso",
+            "ms": 674
+          }
+        ],
+        "verificacao": [
+          {
+            "habilidade": "criar_pasta",
+            "confirmado": true,
+            "evidencia": "diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-r6AUT8\\casa\\Documents\\Beta rv1r1"
+          }
+        ],
+        "resposta": {
+          "rota": "plano_local",
+          "latencia_ms": 3892
+        }
+      },
+      "voz_lider": true
+    }
+  ]
+}

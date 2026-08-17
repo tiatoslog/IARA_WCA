@@ -1,0 +1,130 @@
+{
+  "fase": "sonda",
+  "url": "http://127.0.0.1:3077",
+  "raiz": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-YbZGGD\\casa",
+  "ct04": {
+    "n": 1,
+    "um": "Um k4c4r1",
+    "dois": "Dois k4c4r1",
+    "sobreUm": 0,
+    "sobreDois": 1
+  },
+  "ct05": null,
+  "conversa": {
+    "A": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Um k4c4r1 na área de trabalho"
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Dois k4c4r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Não executei isso. Criar a pasta na raiz autorizada: criar_pasta passou de 5000ms; C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-YbZGGD\\casa\\Documents\\Dois k4c4r1 não existe depois da execução. Nada foi alterado na máquina."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k4c5r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k4c5r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k4c5r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k4c5r2\" em Documentos."
+      }
+    ],
+    "B": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Um k4c4r1 na área de trabalho"
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Dois k4c4r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Não executei isso. Criar a pasta na raiz autorizada: criar_pasta passou de 5000ms; C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-YbZGGD\\casa\\Documents\\Dois k4c4r1 não existe depois da execução. Nada foi alterado na máquina."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k4c5r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k4c5r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k4c5r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k4c5r2\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "CT-04",
+      "ok": true,
+      "detalhe": "rodada 1: o segundo pedido preemptou o primeiro e só ele foi respondido — a interrupção legítima continua de pé"
+    },
+    {
+      "id": "CT-05a",
+      "ok": false,
+      "detalhe": "em 2 rodadas o pedido de B já tinha executado quando o \"parar\" chegou — INCONCLUSIVO"
+    },
+    {
+      "id": "CT-05b",
+      "ok": false,
+      "detalhe": "não avaliado — CT-05a inconclusivo"
+    },
+    {
+      "id": "CT-05c",
+      "ok": false,
+      "detalhe": "não avaliado — CT-05a inconclusivo"
+    }
+  ],
+  "veredito": "FAIL"
+}

@@ -447,7 +447,13 @@ export function conectarOperador(socket: WebSocket): void {
     if (!operador || !residente?.kernel) return;
 
     if (pacote.tipo === 'interromper') {
-      residente.kernel.cancelar('interrupção do operador');
+      /**
+       * PARA O QUE É DESTA TELA, e só. Antes chamava `cancelar()`, que é
+       * global: quem apertasse "parar" no computador derrubava o turno pedido
+       * do celular. É a mesma confusão do CC-01 na outra porta — ver
+       * `Kernel.interromper`.
+       */
+      if (minhaSessao) residente.kernel.interromper(minhaSessao.id);
       return;
     }
 
@@ -639,6 +645,19 @@ export function conectarOperador(socket: WebSocket): void {
     residente.sessoes.delete(minhaSessao);
 
     // A última tela saiu: desmonta o transporte e para o trabalho em curso.
+    /**
+     * A VAGA DELA NA FILA VOLTA — mesmo com outras telas abertas.
+     *
+     * O turno EM VOO segue (é a linha abaixo, e continua valendo): fechar o
+     * navegador não pode cancelar a resposta que o app desktop está esperando.
+     * Mas o pedido que essa tela deixou ESPERANDO a vez é outra coisa: a fila
+     * tem uma vaga por espelho, e espelho que não existe mais segurando vaga
+     * acabaria recusando o pedido de uma tela viva — ainda mais num laço de
+     * reconexão, em que cada volta é um espelho novo. Achado pela auditoria de
+     * garantia, contra a linha do test-plan que exige isto.
+     */
+    residente.kernel?.esquecerEspelho(minhaSessao.id);
+
     // Com outra tela ainda aberta, o turno segue — fechar o navegador não pode
     // cancelar a resposta que o app desktop está esperando.
     if (residente.sessoes.size === 0) {
@@ -646,7 +665,7 @@ export function conectarOperador(socket: WebSocket): void {
       residente.ponte = null;
       residente.compilador?.encerrar();
       residente.compilador = null;
-      residente.kernel?.cancelar('todas as telas encerradas');
+      residente.kernel?.pararTudo('todas as telas encerradas');
       residente.ciclo?.parar();
       residente.ciclo = null;
 
@@ -693,7 +712,7 @@ export function conectarOperador(socket: WebSocket): void {
 export function encerrarResidentes(): void {
   for (const r of residentes.values()) {
     r.ciclo?.parar();
-    r.kernel?.cancelar('desligamento');
+    r.kernel?.pararTudo('desligamento');
     r.ponte?.encerrar();
     r.compilador?.encerrar();
     for (const sessao of r.sessoes) sessao.fechar();

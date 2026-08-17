@@ -258,9 +258,19 @@ async function principal() {
      * CT-00 — PORTÃO. Sem corrida observada, nenhum dos outros checks fala
      * sobre concorrência, e declarar PASS seria afirmar o que não foi medido.
      */
+    /**
+     * `null` quando a corrida não aconteceu — NÃO EXECUTADO, e não FAIL.
+     *
+     * A versão anterior calculava `checks.every(c => c.ok) ? 'PASS' : 'FAIL'`,
+     * de modo que a palavra "INCONCLUSIVO" existia só no texto do detalhe: o
+     * artefato dizia FAIL. Errava para o lado seguro — nunca deu PASS sem
+     * corrida —, mas o relatório afirmava um estado que o código não tinha.
+     * Apanhado pela auditoria independente, e o conserto é o mesmo princípio
+     * que esta bateria cobra da IARA: não afirmar o que não se faz.
+     */
     registrar(
       'CT-00',
-      Boolean(corrida),
+      corrida ? true : null,
       corrida
         ? `corrida observada na rodada ${corrida.n} (desalinhamento ${corrida.desalinhamento_ms} ms)`
         : `nenhuma das ${TENTATIVAS} rodadas sobrepôs os turnos dentro de ${TETO_DESALINHAMENTO_MS} ms — ` +
@@ -339,24 +349,38 @@ async function principal() {
       disco: { alfa: discoAlfa, beta: discoBeta },
       snapshots_recebidos: { A: coletor.snapshots.A.length, B: coletor.snapshots.B.length },
       checks,
-      veredito: checks.every((c) => c.ok) ? 'PASS' : 'FAIL',
+      /* Três desfechos, não dois — ver o comentário do CT-00. */
+      veredito: checks.some((c) => c.ok === false)
+        ? 'FAIL'
+        : checks.some((c) => c.ok === null)
+          ? 'INCOMPLETO'
+          : 'PASS',
     };
 
-    writeFileSync(path.join(EVIDENCIA, `resultado-${FASE}.json`), JSON.stringify(resultado, null, 2));
+    /* Prefixo da bateria no nome. Sem ele, duas baterias na mesma pasta com a
+       mesma `--fase` se sobrescrevem em silêncio — o auditor independente
+       tropeçou nisso, e depois eu tropecei de novo, apagando a evidência que o
+       meu próprio relatório citava. Infra de evidência que apaga evidência é
+       pior que não ter infra nenhuma. */
+    writeFileSync(path.join(EVIDENCIA, `crosstalk-resultado-${FASE}.json`), JSON.stringify(resultado, null, 2));
     writeFileSync(
-      path.join(EVIDENCIA, `console-${FASE}.log`),
+      path.join(EVIDENCIA, `crosstalk-console-${FASE}.log`),
       ['=== espelho A ===', ...coletor.console.A, '', '=== espelho B ===', ...coletor.console.B].join('\n'),
     );
     writeFileSync(
-      path.join(EVIDENCIA, `snapshots-${FASE}.json`),
+      path.join(EVIDENCIA, `crosstalk-snapshots-${FASE}.json`),
       JSON.stringify({ A: coletor.snapshots.A, B: coletor.snapshots.B }, null, 2),
     );
 
-    for (const c of checks) console.log(`${c.ok ? 'PASS' : 'FAIL'} ${c.id} — ${c.detalhe}`);
+    for (const c of checks) {
+      const rotulo = c.ok === true ? 'PASS' : c.ok === false ? 'FAIL' : 'NÃO EXECUTADO';
+      console.log(`${rotulo} ${c.id} — ${c.detalhe}`);
+    }
     console.log(`\nveredito ${FASE}: ${resultado.veredito} (${decorrido} ms)`);
     console.log(`evidência: ${path.resolve(EVIDENCIA)}`);
 
-    process.exitCode = resultado.veredito === 'PASS' ? 0 : 1;
+    /* 0 aprovado · 1 reprovado · 3 incompleto. */
+    process.exitCode = resultado.veredito === 'PASS' ? 0 : resultado.veredito === 'FAIL' ? 1 : 3;
   } finally {
     await navA.close();
     await navB.close();

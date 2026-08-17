@@ -1,0 +1,656 @@
+{
+  "fase": "depois",
+  "url": "http://127.0.0.1:3077",
+  "raiz": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-JVtXW0\\casa",
+  "ct04": {
+    "n": 1,
+    "um": "Um k5c4r1",
+    "dois": "Dois k5c4r1",
+    "sobreUm": 0,
+    "sobreDois": 1
+  },
+  "ct05": null,
+  "conversa": {
+    "A": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Um k5c4r1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"k5c4r1\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Dois k5c4r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Dois k5c4r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k5c5r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k5c5r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k5c5r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k5c5r2\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k5c5r3 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k5c5r3\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k5c5r4 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k5c5r4\" em Documentos."
+      }
+    ],
+    "B": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Um k5c4r1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"k5c4r1\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Dois k5c4r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Dois k5c4r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k5c5r1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k5c5r1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k5c5r2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k5c5r2\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k5c5r3 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k5c5r3\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta k5c5r4 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta k5c5r4\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "vai chover hoje?"
+      },
+      {
+        "papel": "iara",
+        "texto": "Provavelmente não chove hoje em Cuiabá (padrão do escritório — ainda não sei onde você está): 0% de probabilidade, 0 mm previstos, céu céu limpo, entre 25.6 °C e 38.1 °C. É previsão de modelo numérico, não medição."
+      }
+    ]
+  },
+  "janelas_do_botao_parar_ms": [
+    1903,
+    2,
+    2125,
+    1
+  ],
+  "estagios": {
+    "A": [
+      {
+        "em": 1786881217021,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881218045,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881224006,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881228613,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881228613,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881228613,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881228614,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881228614,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881237128,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881237128,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881237128,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881237128,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881250554,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881273725,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273725,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273725,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273729,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881273731,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273731,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273731,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881275552,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881275553,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881288394,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881303475,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881312777,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312777,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312777,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312778,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312778,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312778,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312779,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881312779,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881325403,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881341812,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881351569,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351569,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351569,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351569,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351569,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351571,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351571,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351571,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881353613,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881365509,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881381450,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881391763,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391764,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391764,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391764,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391764,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391765,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391765,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391765,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881393795,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881405819,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881420097,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881436263,
+        "estagio": "ocioso"
+      }
+    ],
+    "B": [
+      {
+        "em": 1786881217820,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881225629,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881228663,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881228663,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881228663,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881228663,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881230309,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881237025,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881237025,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881237025,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881237026,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881250506,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881271957,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273860,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273860,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273860,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881273861,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273861,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881273861,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881275637,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881275637,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881288490,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881303415,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881312773,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312773,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312774,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312775,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312775,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312775,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881312775,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881312776,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881327082,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881341812,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881349556,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351680,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351680,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351680,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351680,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351681,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351681,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881351681,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881353774,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881365503,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881381390,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881391831,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391831,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391832,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391832,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391832,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391832,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391832,
+        "estagio": "executando"
+      },
+      {
+        "em": 1786881391832,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881393902,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881405811,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881420246,
+        "estagio": "ocioso"
+      },
+      {
+        "em": 1786881436321,
+        "estagio": "ocioso"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "CT-04",
+      "ok": true,
+      "detalhe": "rodada 1: o segundo pedido preemptou o primeiro e só ele foi respondido — a interrupção legítima continua de pé"
+    },
+    {
+      "id": "CT-05",
+      "ok": null,
+      "detalhe": "NÃO EXECUTADO em 4 rodadas: o botão \"parar\" só fica habilitado enquanto a sessão está trabalhando, e a janela medida na tela foi de 1903, 2, 2125, 1 ms. Turno local fecha antes de o botão ser clicável — por automação ou por dedo humano. A invariante está provada em testes/cross-talk-espelhos.test.ts; o que NÃO está provado é o caminho pela interface."
+    }
+  ],
+  "veredito": "INCOMPLETO"
+}

@@ -1,0 +1,113 @@
+﻿TAP version 13
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.517Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"1d4e2a4a-3644-494f-a930-2bba7684245c","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.534Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"c17f8a44-4860-4dce-8c69-3fa28a1e4232","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.538Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"47e60688-923c-4650-b1bb-7b720a5d83f8","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: mensagem de OUTRO espelho não cancela o turno em voo — ela espera a vez
+ok 1 - CC-01: mensagem de OUTRO espelho não cancela o turno em voo — ela espera a vez
+  ---
+  duration_ms: 30.7965
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.563Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3c0e53ad-2d49-4519-bfd2-0631d4e5c9e6","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.566Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"cde6a262-8a51-4ed8-b9cd-ce853b2605b8","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: cada fala declara a pergunta que responde — nenhuma tela herda a resposta da outra
+ok 2 - CC-01: cada fala declara a pergunta que responde — nenhuma tela herda a resposta da outra
+  ---
+  duration_ms: 28.5756
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.578Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"c233084f-c9bf-42be-96e2-dc4c4f11c3c7","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.581Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"3159112e-89e8-4048-b181-f2feeb0b5546","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: a MESMA tela reescrevendo continua preemptando — a correção não matou a interrupção legítima
+ok 3 - CC-01: a MESMA tela reescrevendo continua preemptando — a correção não matou a interrupção legítima
+  ---
+  duration_ms: 15.2573
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.594Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"33300647-03a8-4ace-8e56-d6d4f7c90392","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.595Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"e444f87b-c444-4133-8c02-5571cd3a7391","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.595Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"97ff6f6b-6262-42ac-96dc-8885662efc06","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.596Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"10129501-6b7c-4ef4-a972-3e912416c799","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.599Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"d427459f-6f41-40d0-81cb-fd922e25977d","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio
+ok 4 - CC-01: fila cheia RECUSA em voz alta — nada é descartado em silêncio
+  ---
+  duration_ms: 17.7544
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.628Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"124e7c4a-f4dc-4961-8a40-fc86402af265","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o interromper de uma tela NÃO derruba o turno da outra
+not ok 5 - CT-05: o interromper de uma tela NÃO derruba o turno da outra
+  ---
+  duration_ms: 27.2392
+  type: 'test'
+  location: 'C:\\Users\\daian\\Desktop\\IARA\\IARA_WCA\\iara-os\\apps\\web\\testes\\cross-talk-espelhos.test.ts:1:6111'
+  failureType: 'testCodeFailure'
+  error: 'kernel.interromper is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\Desktop\IARA\IARA_WCA\iara-os\apps\web\testes\cross-talk-espelhos.test.ts:263:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.641Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"1257aba0-c354-452c-aa0c-770cb99feb02","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o interromper da PRÓPRIA tela continua cancelando
+not ok 6 - CT-05: o interromper da PRÓPRIA tela continua cancelando
+  ---
+  duration_ms: 14.418
+  type: 'test'
+  location: 'C:\\Users\\daian\\Desktop\\IARA\\IARA_WCA\\iara-os\\apps\\web\\testes\\cross-talk-espelhos.test.ts:1:6731'
+  failureType: 'testCodeFailure'
+  error: 'kernel.interromper is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\Desktop\IARA\IARA_WCA\iara-os\apps\web\testes\cross-talk-espelhos.test.ts:285:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.658Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"4bc05d53-18ca-4339-b093-49df34927af2","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: interromper com o próprio pedido NA FILA tira o pedido da fila
+not ok 7 - CT-05: interromper com o próprio pedido NA FILA tira o pedido da fila
+  ---
+  duration_ms: 16.2103
+  type: 'test'
+  location: 'C:\\Users\\daian\\Desktop\\IARA\\IARA_WCA\\iara-os\\apps\\web\\testes\\cross-talk-espelhos.test.ts:1:7219'
+  failureType: 'testCodeFailure'
+  error: 'kernel.interromper is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\daian\Desktop\IARA\IARA_WCA\iara-os\apps\web\testes\cross-talk-espelhos.test.ts:303:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.674Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"62994685-7712-4d64-9628-d73fbd430f62","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CT-05: o cancelamento GLOBAL continua existindo — é o do desligamento
+ok 8 - CT-05: o cancelamento GLOBAL continua existindo — é o do desligamento
+  ---
+  duration_ms: 16.1335
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:28:11.687Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"5cb53cda-7d17-45e1-9d7c-b4e068c9201f","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# Subtest: CC-01: a mesma tela que já espera não ocupa duas vagas — o segundo pedido substitui o primeiro
+ok 9 - CC-01: a mesma tela que já espera não ocupa duas vagas — o segundo pedido substitui o primeiro
+  ---
+  duration_ms: 15.9555
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-16T11:28:41.614Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"d427459f-6f41-40d0-81cb-fd922e25977d","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:41.630Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"124e7c4a-f4dc-4961-8a40-fc86402af265","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:41.645Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"1257aba0-c354-452c-aa0c-770cb99feb02","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-16T11:28:41.653Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"f2ca1a3a-3ace-486b-a3ff-afaf2edcb288","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-16T11:29:11.658Z","sessao":"s-crosstalk","id_usuario":"u-crosstalk","traco":"f2ca1a3a-3ace-486b-a3ff-afaf2edcb288","acao":"habilidade:laboratorio.demorar","detalhe":"falhou: laboratorio.demorar passou de 30000ms","permitido":false}
+1..9
+# tests 9
+# suites 0
+# pass 6
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 60820.4298
