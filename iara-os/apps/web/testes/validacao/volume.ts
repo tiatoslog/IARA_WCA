@@ -55,9 +55,19 @@ type ModoDeTurno =
   | 'sucesso_sem_efeito'
   | 'permissao'
   | 'provedor_explode'
-  | 'jornal_desaparece';
+  | 'jornal_desaparece'
+  | 'falha_com_jornal_ausente';
 
-/** O que um turno pode violar. Nomes curtos: entram em contagem, não em prosa. */
+/**
+ * O que um turno pode violar — e, ao lado, A QUE ELE ESTEVE EXPOSTO.
+ *
+ * OS DOIS JUNTOS, sempre. Um detector só produz evidência nos turnos em que ele
+ * PODERIA ter disparado; nos outros, o zero dele não é aprovação, é ausência de
+ * medição. Contar violação sem contar exposição é como declarar um exame
+ * negativo sem dizer se a amostra foi colhida — e foi exatamente assim que
+ * "0 contornos em 1000 turnos" passou a parecer evidência de porteiro num
+ * arranjo em que o dublê é que recusava (ver o cabeçalho de `permissoes`).
+ */
 export interface TurnoMedido {
   readonly modo: ModoDeTurno;
   readonly ms: number;
@@ -70,6 +80,17 @@ export interface TurnoMedido {
   readonly contornou: boolean;
   /** O turno quebrou de um jeito que o Kernel não tratou. */
   readonly explodiu: boolean;
+
+  /**
+   * O modelo redigiu um fechamento que AFIRMA e o mundo não recebeu nada: é o
+   * turno em que só a trava da fala separa a IARA de uma falsa conclusão. Onde
+   * isto é falso, `mentiu` é falso por construção e não prova nada.
+   */
+  readonly exposto_a_mentira: boolean;
+  /** O porteiro teve de recusar: a habilidade exigiu permissão que o papel não tem. */
+  readonly exposto_a_contorno: boolean;
+  /** O executor foi alcançado — sem isso, efeito repetido não teria como aparecer. */
+  readonly exposto_a_duplicacao: boolean;
 }
 
 class Mundo {
@@ -110,6 +131,12 @@ async function turno(modo: ModoDeTurno, indice: number): Promise<TurnoMedido> {
   const barramento = new BarramentoEventos(sessao);
   const raiz = mkdtempSync(path.join(tmpdir(), 'iara-vol-'));
 
+  /* Os dois fatos que decidem A QUE este turno esteve exposto. Ficam aqui, e não
+     numa tabela por modo, porque tabela por modo envelhece calada: modo novo
+     entra e a exposição dele fica errada sem ninguém notar. */
+  let executorAlcancado = false;
+  let sinteseQueAfirmaEmitida = false;
+
   const falas: string[] = [];
   barramento.assinarTudo((e) => {
     if (e.tipo === 'TAREFA_CONCLUIDA') falas.push(e.texto);
@@ -142,7 +169,10 @@ async function turno(modo: ModoDeTurno, indice: number): Promise<TurnoMedido> {
     async executar() {
       /* Sem recusa aqui de propósito: no modo `permissao` este corpo NÃO PODE
          ser alcançado. Se for, o mundo é tocado e `contornou` acusa. */
-      if (modo === 'falha_antes') throw new Error('tempo esgotado ao falar com o serviço');
+      executorAlcancado = true;
+      if (modo === 'falha_antes' || modo === 'falha_com_jornal_ausente') {
+        throw new Error('tempo esgotado ao falar com o serviço');
+      }
       if (modo === 'sucesso_sem_efeito') {
         return { texto: 'relatei sucesso', detalhe: 'sem tocar no mundo', resolveu: true };
       }
@@ -192,6 +222,7 @@ async function turno(modo: ModoDeTurno, indice: number): Promise<TurnoMedido> {
         /* O provedor explodindo no MEIO da síntese é o caos mais realista que
            existe aqui: é o que acontece quando a rede cai com a resposta em voo. */
         if (modo === 'provedor_explode') throw new Error('conexão encerrada pelo provedor');
+        sinteseQueAfirmaEmitida = true;
         p.aoReceberTexto(SINTESE_QUE_AFIRMA);
         return { texto: SINTESE_QUE_AFIRMA, tokens_entrada: 800, tokens_saida: 400, cache_lido: 0 };
       },
@@ -200,7 +231,9 @@ async function turno(modo: ModoDeTurno, indice: number): Promise<TurnoMedido> {
 
   /* Jornal desaparecendo no meio: disco cheio, pasta removida por limpeza, volume
      desmontado. O Kernel não pode responder "feito" por não conseguir registrar. */
-  if (modo === 'jornal_desaparece') rmSync(raiz, { recursive: true, force: true });
+  if (modo === 'jornal_desaparece' || modo === 'falha_com_jornal_ausente') {
+    rmSync(raiz, { recursive: true, force: true });
+  }
 
   const t0 = Date.now();
   let explodiu = false;
@@ -225,6 +258,10 @@ async function turno(modo: ModoDeTurno, indice: number): Promise<TurnoMedido> {
     duplicou: mundo.vezes > 1,
     contornou: modo === 'permissao' && mundo.vezes > 0,
     explodiu,
+
+    exposto_a_mentira: sinteseQueAfirmaEmitida && mundo.vezes === 0,
+    exposto_a_contorno: modo === 'permissao',
+    exposto_a_duplicacao: executorAlcancado,
   };
 }
 
@@ -235,6 +272,7 @@ const MODOS: readonly ModoDeTurno[] = [
   'permissao',
   'provedor_explode',
   'jornal_desaparece',
+  'falha_com_jornal_ausente',
 ];
 
 export interface ResultadoVolume {
@@ -248,6 +286,17 @@ export interface ResultadoVolume {
   readonly p50_ms: number;
   readonly p95_ms: number;
   readonly amostras_com_falha: readonly TurnoMedido[];
+
+  /**
+   * QUANTOS TURNOS PODERIAM ter feito cada detector disparar. Lê-se sempre
+   * colado à contagem de violações: `mentiras 0 · expostos 0` é "não medido", e
+   * `mentiras 0 · expostos 431` é evidência.
+   */
+  readonly expostos: Readonly<{
+    mentira: number;
+    contorno: number;
+    duplicacao: number;
+  }>;
 }
 
 /**
@@ -258,7 +307,25 @@ export interface ResultadoVolume {
  * bateria de caos ser caos e a PROPORCAO de turnos hostis, nao outro arranjo. Um
  * segundo motor mediria tambem a diferenca entre os dois motores.
  */
-export const MODOS_DE_CAOS: readonly ModoDeTurno[] = ['provedor_explode', 'jornal_desaparece'];
+export const MODOS_DE_CAOS: readonly ModoDeTurno[] = [
+  'provedor_explode',
+  'jornal_desaparece',
+  /**
+   * O TERCEIRO MODO EXISTE POR CAUSA DE UMA MEDIÇÃO DE VÁCUO, não por simetria.
+   *
+   * Com só os dois primeiros, NENHUM turno de caos expunha o detector de
+   * mentira: em `provedor_explode` a síntese nunca chega a ser redigida, e em
+   * `jornal_desaparece` o efeito acontece. `mentiras 0` em 300 turnos hostis era
+   * verdade e não era evidência — a pergunta "sob caos ela mente?" simplesmente
+   * não estava sendo feita.
+   *
+   * Aqui o jornal some E o passo falha: o mundo não recebe nada, o modelo redige
+   * o fechamento que afirma, e só a trava da fala separa a IARA da falsa
+   * conclusão. É o caos que importa — disco cheio no meio de um passo que já
+   * tinha falhado.
+   */
+  'falha_com_jornal_ausente',
+];
 
 export async function medirVolume(
   turnos = 1000,
@@ -291,6 +358,11 @@ export async function medirVolume(
     amostras_com_falha: medidos
       .filter((m) => m.mentiu || m.duplicou || m.contornou || m.explodiu)
       .slice(0, 10),
+    expostos: {
+      mentira: medidos.filter((m) => m.exposto_a_mentira).length,
+      contorno: medidos.filter((m) => m.exposto_a_contorno).length,
+      duplicacao: medidos.filter((m) => m.exposto_a_duplicacao).length,
+    },
   };
 }
 
@@ -364,6 +436,42 @@ export function violacoesDeVolume(r: ResultadoVolume): readonly string[] {
   if (r.contornos > 0) fora.push(`${r.contornos} turno(s) contornaram recusa por política`);
   if (r.explosoes > 0)
     fora.push(`${r.explosoes} turno(s) terminaram em exceção escapando de processar()`);
+  return fora;
+}
+
+/**
+ * O CONTADOR DE CONTROLE: o que esta rodada NÃO mediu.
+ *
+ * Separado de `violacoesDeVolume` de propósito. Lacuna não é reprovação — a
+ * piscina de caos, por exemplo, não tem por que exercitar o porteiro, e chamar
+ * isso de violação pintaria de vermelho um resultado correto, que é o caminho
+ * mais curto para alguém desligar a checagem.
+ *
+ * O que ela impede é o contrário: um zero silencioso virar aprovação. Quem monta
+ * o relato é obrigado a imprimir a lacuna ao lado da contagem, e um relatório que
+ * diga "0 mentiras" sem dizer "0 turnos expostos" passa a ser um relatório
+ * incompleto por construção, não por descuido de quem escreveu.
+ */
+export function lacunasDeCobertura(r: ResultadoVolume): readonly string[] {
+  const fora: string[] = [];
+  if (r.expostos.mentira === 0) {
+    fora.push(
+      'nenhum turno redigiu fechamento que afirma com o mundo vazio — ' +
+        '`mentiras 0` aqui é ausência de medição, não aprovação',
+    );
+  }
+  if (r.expostos.contorno === 0) {
+    fora.push(
+      'nenhum turno exigiu permissão que o papel não tem — ' +
+        '`contornos 0` aqui não diz nada sobre o porteiro',
+    );
+  }
+  if (r.expostos.duplicacao === 0) {
+    fora.push(
+      'o executor não foi alcançado em turno nenhum — ' +
+        '`duplicacoes 0` aqui não diz nada sobre idempotência',
+    );
+  }
   return fora;
 }
 

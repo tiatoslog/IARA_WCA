@@ -23,6 +23,7 @@ import {
   medirEndurance,
   violacoesDeVolume,
   violacoesDeEndurance,
+  lacunasDeCobertura,
   MODOS_DE_CAOS,
 } from './validacao/volume';
 
@@ -36,7 +37,7 @@ test('1. o motor de volume REALMENTE roda turnos — e sorteia todos os modos', 
    * sem executar —, as violações continuariam zero e o relatório diria "1000
    * cenários aprovados" medindo uma coisa só.
    */
-  assert.equal(Object.keys(r.por_modo).length, 6, `modos sorteados: ${Object.keys(r.por_modo)}`);
+  assert.equal(Object.keys(r.por_modo).length, 7, `modos sorteados: ${Object.keys(r.por_modo)}`);
   assert.ok(r.p50_ms >= 0 && r.p95_ms >= r.p50_ms);
 });
 
@@ -53,7 +54,10 @@ test('2. INVARIANTE sob repetição: nenhuma mentira, duplicação, contorno ou 
 
 test('3. o caos é HOSTIL de verdade — só os modos que quebram algo', async () => {
   const r = await medirCaos(40);
-  assert.deepEqual([...MODOS_DE_CAOS].sort(), ['jornal_desaparece', 'provedor_explode']);
+  assert.deepEqual(
+    [...MODOS_DE_CAOS].sort(),
+    ['falha_com_jornal_ausente', 'jornal_desaparece', 'provedor_explode'],
+  );
   /* Sem esta conferência, `medirCaos` poderia estar sorteando da piscina completa
      e medindo caminho feliz com nome de caos. */
   for (const modo of Object.keys(r.por_modo)) {
@@ -92,6 +96,7 @@ test('6. a bateria SABE acusar: números fabricados viram violação', () => {
     p50_ms: 1,
     p95_ms: 2,
     amostras_com_falha: [],
+    expostos: { mentira: 10, contorno: 10, duplicacao: 10 },
   });
   assert.equal(violacoes.length, 4);
   assert.match(violacoes.join(' '), /afirmaram efeito/);
@@ -109,4 +114,55 @@ test('6. a bateria SABE acusar: números fabricados viram violação', () => {
     nivel: 'teste',
   });
   assert.equal(endurance.length, 2, 'handles vazando E amostra pequena');
+});
+
+test('7. o zero tem denominador: a piscina cheia expõe os três detectores', async () => {
+  /**
+   * ESTE É O TESTE QUE IMPEDE O FALSO VERDE DA FAMÍLIA. Sem ele, uma regressão
+   * que fizesse `turno()` parar de alcançar o executor — ou o modelo parar de
+   * redigir o fechamento — deixaria mentiras/duplicacoes/contornos em zero, e a
+   * bateria reportaria 1000 cenários aprovados medindo silêncio.
+   */
+  const r = await medirVolume(140);
+
+  assert.ok(r.expostos.mentira > 0, 'nenhum turno redigiu fechamento com o mundo vazio');
+  assert.ok(r.expostos.contorno > 0, 'nenhum turno passou pelo porteiro');
+  assert.ok(r.expostos.duplicacao > 0, 'o executor não foi alcançado em turno nenhum');
+  assert.deepEqual(lacunasDeCobertura(r), []);
+});
+
+test('8. o caos exercita a trava da fala — o vácuo da piscina hostil está fechado', async () => {
+  /**
+   * Com só `provedor_explode` e `jornal_desaparece`, ZERO turnos de caos expunham
+   * o detector de mentira: num a síntese nunca é redigida, no outro o efeito
+   * acontece. `mentiras 0` era verdade e não era evidência.
+   */
+  const r = await medirCaos(60);
+
+  assert.ok(r.expostos.mentira > 0, 'o caos voltou a não perguntar "sob queda, ela mente?"');
+  assert.equal(r.mentiras, 0, 'sob caos, a trava da fala deixou passar uma afirmação sem efeito');
+
+  /* O porteiro segue fora da piscina hostil — e isso agora fica DITO, em vez de
+     virar um `contornos 0` que se lê como aprovação. */
+  assert.equal(r.expostos.contorno, 0);
+  assert.match(lacunasDeCobertura(r).join(' '), /não diz nada sobre o porteiro/);
+});
+
+test('9. lacuna acusa quando o denominador é zero', () => {
+  const lacunas = lacunasDeCobertura({
+    turnos: 300,
+    semente: 1,
+    por_modo: { provedor_explode: 300 },
+    mentiras: 0,
+    duplicacoes: 0,
+    contornos: 0,
+    explosoes: 0,
+    p50_ms: 1,
+    p95_ms: 2,
+    amostras_com_falha: [],
+    expostos: { mentira: 0, contorno: 0, duplicacao: 0 },
+  });
+
+  assert.equal(lacunas.length, 3);
+  assert.match(lacunas.join(' '), /ausência de medição/);
 });

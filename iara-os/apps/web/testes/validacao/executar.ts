@@ -56,6 +56,7 @@ import {
   medirEndurance,
   violacoesDeVolume,
   violacoesDeEndurance,
+  lacunasDeCobertura,
 } from './volume';
 import { medirRoteamento, violacoesDeRoteamento } from './roteamento';
 import { medirQueda, violacoesDeQueda } from './queda';
@@ -723,6 +724,7 @@ const AVISO_DE_LABORATORIO =
 async function bateriaDeVolume(qual: 'volume' | 'caos'): Promise<ResultadoBateria> {
   const r = qual === 'caos' ? await medirCaos(300) : await medirVolume(1000);
   const violacoes = violacoesDeVolume(r);
+  const lacunas = lacunasDeCobertura(r);
   const ruins = r.mentiras + r.duplicacoes + r.contornos + r.explosoes;
 
   return {
@@ -741,21 +743,34 @@ async function bateriaDeVolume(qual: 'volume' | 'caos'): Promise<ResultadoBateri
       explosoes: r.explosoes,
       p50_ms: r.p50_ms,
       p95_ms: r.p95_ms,
+      /* Vao para a metrica, e nao so para o relato, porque e por aqui que o
+         diario de evidencia guarda o denominador. Violacao sem denominador
+         reidrata, meses depois, como aprovacao. */
+      expostos_a_mentira: r.expostos.mentira,
+      expostos_a_contorno: r.expostos.contorno,
+      expostos_a_duplicacao: r.expostos.duplicacao,
+      lacunas_de_cobertura: lacunas.length,
     },
     violacoes_criticas: violacoes,
-    detalhe: { resultado: r, aviso: AVISO_DE_LABORATORIO },
+    detalhe: { resultado: r, aviso: AVISO_DE_LABORATORIO, lacunas },
     relato: [
       qual === 'caos'
         ? 'CAOS CONTROLADO - provedor caindo em voo e jornal desaparecendo'
         : 'VOLUME AGENTIC - a taxa se sustenta fora da amostra escolhida a dedo?',
       '',
       `  ${r.turnos} turno(s), semente ${r.semente}`,
-      ...Object.entries(r.por_modo).map(([m, n]) => `    ${m.padEnd(20)} ${n}`),
+      ...Object.entries(r.por_modo).map(([m, n]) => `    ${m.padEnd(24)} ${n}`),
       '',
-      `  mentiras ${r.mentiras} - duplicacoes ${r.duplicacoes} - contornos ${r.contornos} - explosoes ${r.explosoes}`,
+      /* CONTAGEM E DENOMINADOR NA MESMA LINHA. Separá-los deixa o zero sozinho
+         na tela, e zero sozinho lê-se como aprovacao. */
+      `  mentiras     ${r.mentiras} em ${r.expostos.mentira} turno(s) expostos`,
+      `  duplicacoes  ${r.duplicacoes} em ${r.expostos.duplicacao} turno(s) expostos`,
+      `  contornos    ${r.contornos} em ${r.expostos.contorno} turno(s) expostos`,
+      `  explosoes    ${r.explosoes} em ${r.turnos} turno(s) expostos`,
       `  p50 ${r.p50_ms} ms - p95 ${r.p95_ms} ms`,
       '',
       `  ${AVISO_DE_LABORATORIO}`,
+      ...lacunas.map((l) => `  NAO MEDIDO: ${l}`),
       ...violacoes.map((v) => `  ${v}`),
     ],
   };
