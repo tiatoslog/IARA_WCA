@@ -48,6 +48,7 @@ import {
 import type { Risco } from './Habilidade';
 import { exigirIdCanonico } from './Identidade';
 import { conferirRegistro, selarRegistro, type RegistroSelavel } from './Prova';
+import { redigir } from './Configuracao';
 
 const RAIZ_PADRAO = path.join(process.cwd(), 'dados', 'operacoes');
 
@@ -496,10 +497,32 @@ export class RegistroOperacoes {
    */
   private async gravar(op: Operacao): Promise<void> {
     await mkdir(this.raiz, { recursive: true });
-    const selo = selarRegistro(op as unknown as RegistroSelavel);
+
+    /**
+     * REDIGIR ANTES DE SELAR, e a ordem é a correção — não o gosto.
+     *
+     * O jornal guarda `parametros`, e parâmetro é texto que veio do operador: no
+     * dia em que ele colar uma credencial dentro do pedido ("manda pra Vânia
+     * minha chave sk-…"), ela fica em claro num `.jsonl` append-only, para
+     * sempre, legível por qualquer processo da máquina. Medido pela bateria
+     * `exfiltracao` em 17/08/2026 — o jornal era a terceira porta sem a
+     * propriedade que o socket tem desde 13/08.
+     *
+     * Redigir DEPOIS de selar seria pior que não redigir: o selo cobriria o
+     * conteúdo cru, a linha gravada seria a redigida, e a reidratação seguinte
+     * recalcularia um HMAC diferente — o jornal inteiro passaria a se declarar
+     * comprometido. A redação entra antes, e o selo passa a cobrir exatamente os
+     * bytes que estão no disco.
+     *
+     * A `chave_idempotencia` é campo próprio, derivado na criação com os
+     * parâmetros ainda crus: ela sobrevive à redação, e a deduplicação depois de
+     * um restart continua reconhecendo o mesmo efeito.
+     */
+    const seguro = JSON.parse(redigir(JSON.stringify(op))) as Operacao;
+    const selo = selarRegistro(seguro as unknown as RegistroSelavel);
     await appendFile(
       path.join(this.raiz, arquivoDe(op.id_usuario)),
-      `${JSON.stringify({ ...op, selo })}\n`,
+      `${JSON.stringify({ ...seguro, selo })}\n`,
       'utf8',
     );
   }

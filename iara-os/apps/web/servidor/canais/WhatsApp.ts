@@ -31,6 +31,7 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { operadorPorTelefone } from '../../lib/operadores';
+import { redigir } from '../nucleo/kernel/Configuracao';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
@@ -233,9 +234,26 @@ export async function entregarTexto(
         messaging_product: 'whatsapp',
         to: telefone,
         type: 'text',
-        // WhatsApp corta em 4096; deixo margem para não truncar no meio de
-        // uma palavra e parecer erro.
-        text: { body: texto.slice(0, 3900), preview_url: false },
+        /**
+         * REDIGIDO AQUI, e a razão é a mesma que pôs `redigir` na saída do
+         * socket: redação é propriedade do CANAL, não disciplina de quem escreve
+         * o texto.
+         *
+         * Esta porta não tinha a propriedade — e é a porta do celular, exatamente
+         * onde a credencial foi lida no incidente de 13/08. O socket redige o
+         * pacote serializado desde então; esta função mandava `texto` cru para o
+         * Graph. Medido pela bateria `exfiltracao` em 17/08/2026: o segredo do
+         * processo E o segredo de terceiro saíam em claro pelo WhatsApp enquanto
+         * os três cenários de socket saíam redigidos.
+         *
+         * ANTES do `slice`, não depois: cortar primeiro poderia partir a
+         * credencial em duas e o marcador não casaria mais — sobraria metade de
+         * uma chave viajando, que é vazamento com aparência de segurança.
+         *
+         * WhatsApp corta em 4096; a margem é para não truncar no meio de uma
+         * palavra e parecer erro.
+         */
+        text: { body: redigir(texto).slice(0, 3900), preview_url: false },
       }),
       signal: AbortSignal.timeout(10_000),
     });
