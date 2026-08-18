@@ -24,18 +24,39 @@ docker network connect bridge iara-proxy
 O proxy fica nas **duas** redes: é a única ponte para fora, e é por isso que ele
 consegue ser o ponto onde a allowlist se aplica.
 
-A imagem do agente (`IARA_AGENTE_IMAGEM`) não está aqui: ela carrega o
-`@anthropic-ai/claude-code` e as credenciais, e essas são decisões de quem
-instala.
+A imagem do agente:
+
+```bash
+docker build -f Dockerfile.agente -t iara-agente:local .
+```
+
+Ela é enxuta de propósito — `git` e mais nada além do CLI. Cada ferramenta a mais
+é uma ferramenta a mais na mão de código hostil que chegue pelo repositório
+aberto. Roda como usuário não-root (`agente`, `HOME=/casa`).
 
 ## Ligar
 
 ```
 IARA_AGENTE_SANDBOX=container
-IARA_AGENTE_IMAGEM=<a imagem com o agente>
+IARA_AGENTE_IMAGEM=iara-agente:local
 IARA_AGENTE_REDE=iara-agente-interna
 IARA_AGENTE_PROXY=http://iara-proxy:8888
+IARA_AGENTE_CREDENCIAIS=<pasta com a credencial do agente>
 ```
+
+### A credencial, e o que ela custa
+
+Montada em `/casa/.claude`, **somente leitura**. Verificado em 18/08: legível,
+`Read-only file system` na escrita, e o que estiver ao lado da pasta no host
+**não** aparece.
+
+Ela fica legível para qualquer código que rode dentro do container — que é
+justamente o código hostil contra o qual o sandbox existe. Não há como evitar:
+agente sem credencial não é agente. O que o sandbox muda é o **alcance**. Hoje,
+sem contenção, esse mesmo código lê a credencial do `HOME` do operador **e** o
+disco inteiro **e** a rede inteira. Contido, ele lê a credencial e mais nada.
+
+Por isso: **use credencial dedicada ao agente, não a do operador.**
 
 ## Medido em 18/08/2026 — Docker 29.5.2, containers Linux
 
@@ -47,6 +68,23 @@ IARA_AGENTE_PROXY=http://iara-proxy:8888
 
 Controle do egresso, na mesma rodada: `api.anthropic.com` respondeu HTTP 400 —
 o agente continua alcançando a API.
+
+### Ponta a ponta com a imagem real
+
+`argumentosDeContainer` (a função de produção, não uma réplica) contra
+`iara-agente:local`, sem credencial:
+
+- o CLI existe e roda — `2.1.234 (Claude Code)`, usuário `agente`, não-root;
+- o agente **escreve** no repositório montado, inclusive `git init`, e o que ele
+  escreve chega ao host — um sandbox que contém tudo e não deixa trabalhar não
+  serviria;
+- a invocação honra `--output-format json` e ecoa o `session_id`;
+- morre em `terminal_reason: "api_error"`.
+
+O log do proxy fecha a leitura: **duas conexões CONNECT estabelecidas** para
+`api.anthropic.com:443` e nenhum outro destino tentado. Ou seja, a allowlist de
+um domínio só é suficiente para esta invocação, e o que falta é credencial — não
+rota. Sem esse log, "api_error" poderia ser lido como proxy estreito demais.
 
 `testes/escape-sandbox-container.test.ts` mede isto continuamente e importa
 `argumentosDeContainer` de `AgenteLocal.ts`, nunca uma réplica. Ele **pula**

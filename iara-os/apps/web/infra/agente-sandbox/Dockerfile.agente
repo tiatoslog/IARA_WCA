@@ -1,0 +1,27 @@
+# A imagem do agente de código — o que roda DENTRO do sandbox.
+#
+# Enxuta de propósito: cada ferramenta a mais aqui é uma ferramenta a mais na
+# mão de código hostil que chegue pelo repositório aberto. `git` entra porque o
+# agente versiona o que edita; o resto fica de fora até alguém precisar e
+# declarar por quê.
+FROM node:22-alpine
+
+RUN apk add --no-cache git ca-certificates
+
+# Versão FIXA, não `latest`. A imagem é a superfície de execução do agente:
+# reconstruir e ganhar outra versão sem querer é a mesma classe de problema que
+# `npm install` sem lockfile — e aqui o efeito é sobre o que alcança o mundo.
+ARG VERSAO_AGENTE=latest
+RUN npm install -g @anthropic-ai/claude-code@${VERSAO_AGENTE}
+
+# NÃO ROOT. `--cap-drop ALL` já tira as capacidades; rodar como não-root fecha o
+# resto do que um processo comprometido faria dentro do próprio container.
+RUN addgroup -S agente && adduser -S agente -G agente -h /casa
+USER agente
+ENV HOME=/casa
+
+WORKDIR /trabalho
+
+# O lançador acrescenta os argumentos do `claude` (`-p`, `--session-id`, ...)
+# logo depois do nome da imagem — ver `argumentosDeContainer` em AgenteLocal.ts.
+ENTRYPOINT ["claude"]

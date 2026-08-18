@@ -675,6 +675,28 @@ export function argumentosDeContainer(
     ? ['-e', `http_proxy=${proxy}`, '-e', `https_proxy=${proxy}`, '-e', `HTTPS_PROXY=${proxy}`]
     : [];
 
+  /**
+   * A CREDENCIAL DO AGENTE — montada, somente leitura, e só se declarada.
+   *
+   * MEDIDO EM 18/08/2026 com a imagem real: sem isto o agente sobe, roda, honra
+   * `--output-format json` e morre em `terminal_reason: "api_error"`. O log do
+   * proxy mostra duas conexões ESTABELECIDAS para `api.anthropic.com:443` e
+   * nenhum outro destino tentado — ou seja, o que falta é credencial, não rota.
+   *
+   * O QUE ISTO CUSTA, declarado: a credencial fica legível para qualquer código
+   * que rode dentro do container, que é justamente o código hostil contra o qual
+   * o sandbox existe. Não há como evitar — um agente sem credencial não é um
+   * agente. O que o sandbox muda é o alcance: hoje esse mesmo código lê a
+   * credencial do `HOME` do operador E o disco inteiro E a rede inteira; contido,
+   * ele lê a credencial e mais nada. Por isso o caminho é declarado por quem
+   * instala, e a recomendação é credencial dedicada ao agente — não a do
+   * operador. `:ro` porque o agente usa a credencial, nunca a reescreve.
+   */
+  const credenciais = (process.env.IARA_AGENTE_CREDENCIAIS ?? '').trim();
+  const doCredencial = credenciais
+    ? ['-v', `${credenciais.replace(/\\/g, '/')}:/casa/.claude:ro`]
+    : [];
+
   return [
     'run',
     '--rm',
@@ -690,6 +712,7 @@ export function argumentosDeContainer(
     '--security-opt',
     'no-new-privileges',
     ...doProxy,
+    ...doCredencial,
     imagem,
     ...argumentos,
   ];
