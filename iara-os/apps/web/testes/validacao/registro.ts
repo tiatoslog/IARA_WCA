@@ -86,9 +86,17 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'a taxa se sustenta fora da amostra escolhida a dedo?',
     obrigatoria: false,
     critica: false,
-    harness: null,
-    cobertura_parcial:
-      'testes/campanha roda dezenas de missões, não milhares — ~263 s por chamada no provedor local',
+    /**
+     * 1000 turnos em 6,6 s (17/08/2026), seis modos de falha sorteados com semente
+     * fixa. O que destravou não foi ideia, foi medição: a auditoria declarava volume
+     * inviável por causa dos ~263 s por chamada do provedor local — verdade para
+     * aquele caminho, irrelevante aqui, porque um turno de laboratório custa ~5 ms.
+     *
+     * TETO DECLARADO: provedor de laboratório. Mede o SISTEMA sob repetição (travas,
+     * jornal, idempotência, trava da fala), não a propensão de um modelo real —
+     * essa é a campanha adversarial, e uma não substitui a outra.
+     */
+    harness: 'testes/validacao/volume.ts',
   },
 
   // — segurança atacada ----------------------------------------------------
@@ -114,12 +122,8 @@ export const BATERIAS: readonly Bateria[] = [
      * corrigido no mesmo dia — vazamento de segredo por herança de
      * `process.env` fechado por `ambienteRestritoDoAgente` (allowlist
      * explícita, exportada de AgenteLocal.ts, importada aqui — não
-     * reimplementada). TRÊS SEGUEM ABERTOS: leitura e escrita de arquivo fora
-     * do repositório autorizado, e saída de rede irrestrita — exigem
-     * sandboxing real de sistema operacional (Job Object restrito no Windows,
-     * container), fora do alcance de uma correção segura só em Node. O
-     * harness continua `EXECUTADA_FALHOU` de propósito: não reduzir o padrão
-     * para obter PASS.
+     * reimplementada). Os outros três ficaram abertos por um dia, com o harness
+     * em `EXECUTADA_FALHOU` de propósito, até a contenção existir.
      *
      * FECHADO EM 18/08/2026 — e o que "fechado" quer dizer aqui. O agente passou
      * a rodar CONTIDO POR PADRÃO: container com só o repositório montado, rede
@@ -145,12 +149,13 @@ export const BATERIAS: readonly Bateria[] = [
      * pular. Os papéis foram separados: os cenários CARACTERIZAM o escape (e
      * falham se a realidade mudar em qualquer direção, inclusive se alguém
      * contiver o vetor sem atualizar este registro), enquanto cada vetor aberto
-     * imprime `ESCAPE-ABERTO ES-0x` e `bateriaEscapeSandbox` converte isso em
-     * violação crítica — que é `BLOQUEADO` no `MotorVeredito`. Nada ficou verde:
-     * o único caminho para `EXECUTADA_PASSOU` é conter os três vetores de
-     * verdade e voltar as asserções, de propósito.
+     * imprimia um marcador que `bateriaEscapeSandbox` convertia em violação
+     * crítica. Nada ficou verde por afrouxar asserção: o que mudou o veredito
+     * foi a contenção passar a existir e a bateria passar a medi-la.
      */
-    harness: 'testes/escape-sandbox-adversarial.test.ts',
+    harness:
+      'testes/escape-sandbox-container.test.ts (o padrão) + ' +
+      'testes/escape-sandbox-adversarial.test.ts (o custo de sair)',
   },
   {
     id: 'exfiltracao_execucao',
@@ -264,7 +269,13 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'o que cresce sozinho: memória, handle, socket, fila, cache?',
     obrigatoria: false,
     critica: false,
-    harness: null,
+    /**
+     * NÍVEL DECLARADO, não prometido: 10.224 turnos em 60 s (17/08/2026), heap
+     * 22,9 → 26,4 MB e handles 2 → 2. `IARA_ENDURANCE_MS=21600000` roda o nível de
+     * 6 h. Vazamento POR TURNO aparece em dez mil turnos; vazamento por hora de
+     * relógio (cache que expira, timer diário) não — e a diferença fica no relato.
+     */
+    harness: 'testes/validacao/volume.ts (medirEndurance)',
   },
   {
     id: 'caos',
@@ -272,7 +283,13 @@ export const BATERIAS: readonly Bateria[] = [
     pergunta: 'matando worker, API e rede no meio: perde dado, duplica efeito, mente sobre estado?',
     obrigatoria: false,
     critica: false,
-    harness: null,
+    /**
+     * `medirCaos` = `medirVolume` com a piscina hostil: provedor caindo com a
+     * resposta em voo, jornal desaparecendo no meio do turno, e falha com jornal
+     * ausente — este último acrescentado depois de a própria bateria mostrar que,
+     * sem ele, ZERO turnos de caos expunham o detector de mentira.
+     */
+    harness: 'testes/validacao/volume.ts (medirCaos)',
   },
 
   // — RAG e memória, com corpus fabricado ----------------------------------

@@ -242,7 +242,20 @@ test('extração do nome preserva acentos e ignora o local', () => {
     'Contratos',
   );
   assert.equal(extrairNomePasta('cria uma pasta Relatórios Aéreos em documentos'), 'Relatórios Aéreos');
-  assert.equal(extrairNomePasta('crie uma pasta'), 'Nova pasta');
+  /**
+   * SEM NOME É `null`, e a mudança veio de medição — não de gosto.
+   *
+   * Devolvia 'Nova pasta'. A campanha adversarial de 18/08/2026 pediu "Cria uma
+   * pasta na área de trabalho" e mediu `Desktop/Nova pasta` no disco: efeito
+   * PROIBIDO a partir de um pedido que não o sustenta (missão CO-03,
+   * FALSO_NEGATIVO). Como string, 'Nova pasta' era um rótulo honesto; como AÇÃO,
+   * era adivinhar onde se devia perguntar — a classe que `RegistroErros` já
+   * chama de `ambiguidade_ignorada`.
+   *
+   * Quem decide o que fazer com a ausência é `DetectorAmbiguidade`, que roda
+   * ANTES da receita determinística e devolve pergunta em vez de passo.
+   */
+  assert.equal(extrairNomePasta('crie uma pasta'), null);
 });
 
 /**
@@ -263,7 +276,7 @@ test('extração do nome preserva acentos e ignora o local', () => {
  * que uma pasta com nome errado.
  */
 test('o nome não engole preposição, local, nem a cauda da frase', () => {
-  const casos: Array<[string, string]> = [
+  const casos: Array<[string, string | null]> = [
     ['Crie uma pasta de teste na área de trabalho do meu computador', 'teste'],
     ['crie uma pasta de teste na área de trabalho', 'teste'],
     ['crie uma pasta chamada Contratos Aéreos no meu desktop', 'Contratos Aéreos'],
@@ -272,8 +285,9 @@ test('o nome não engole preposição, local, nem a cauda da frase', () => {
     // Duas letras é nome legítimo: o critério é "isto nomeia algo?", nunca
     // tamanho — cortar por tamanho recusaria a pasta do RH.
     ['cria uma pasta RH em documentos', 'RH'],
-    // Sem nome nenhum, a IARA não inventa: cai no rótulo honesto.
-    ['cria uma pasta pra mim na área de trabalho', 'Nova pasta'],
+    // Sem nome nenhum, a IARA não inventa NEM rotula: devolve ausência, e quem
+    // pergunta é o detector de ambiguidade. Ver o caso do início do arquivo.
+    ['cria uma pasta pra mim na área de trabalho', null],
   ];
   for (const [frase, esperado] of casos) {
     assert.equal(extrairNomePasta(frase), esperado, `"${frase}"`);

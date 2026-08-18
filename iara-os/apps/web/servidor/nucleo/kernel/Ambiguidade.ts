@@ -16,6 +16,7 @@
  */
 
 import { normalizar } from '../texto';
+import { extrairNomePasta } from './Planejador';
 
 export type TipoAmbiguidade =
   /** "aquele relatório", "esse arquivo" — referência sem antecedente achável. */
@@ -23,7 +24,11 @@ export type TipoAmbiguidade =
   /** "manda pro João" com mais de um João possível. */
   | 'destinatario_multiplo'
   /** "manda isso" — ação que alcança alguém, sem alvo nenhum. */
-  | 'destinatario_ausente';
+  | 'destinatario_ausente'
+  /** "cria uma pasta" — criar algo que precisa de nome, sem nome nenhum. */
+  | 'objeto_sem_nome'
+  /** "cria a pasta X. na verdade não, deixa pra lá" — pedido cancelado na própria frase. */
+  | 'ordem_revogada';
 
 export interface Ambiguidade {
   readonly tipo: TipoAmbiguidade;
@@ -46,6 +51,26 @@ export const CONTEXTO_VAZIO: ContextoDecisao = {
 };
 
 // ---------------------------------------------------------------------------
+
+
+/**
+ * CRIAR ALGO QUE PRECISA DE NOME. Hoje só pasta — é a única criação nomeada que o
+ * catálogo determinístico executa. Quando entrar arquivo, entra aqui junto.
+ */
+const CRIAR_PASTA = /\b(cria|criar|crie|faz|fazer|faça|monta|montar|monte)\b[^.!?]*\bpasta\b/;
+
+/**
+ * REVOGAÇÃO NA MESMA MENSAGEM — e a lista é curta de propósito.
+ *
+ * `não` sozinho está FORA: "cria a pasta X, não a Y" é correção de alvo, não
+ * cancelamento, e tratá-la como revogação faria a IARA parar de atender pedido
+ * legítimo — o defeito simétrico, que custa mais caro que o original porque o
+ * operador não tem como entender o que aconteceu.
+ *
+ * O que entra são frases que só existem para desfazer o que veio antes.
+ */
+const REVOGACAO =
+  /\b(na verdade n[ãa]o|deixa pra l[áa]|deixa quieto|esquece|esquece isso|cancela|cancelar|melhor n[ãa]o|n[ãa]o precisa mais|desconsidera)\b/;
 
 /** Verbos que fazem algo CHEGAR em outra pessoa. */
 const VERBO_ENVIO = /\b(manda|mandar|mande|envia|enviar|envie|encaminha|encaminhar|encaminhe|repassa|repassar|passa pro|passa para)\b/;
@@ -164,6 +189,48 @@ export class DetectorAmbiguidade {
       }
     }
 
+    /**
+     * PEDIU E DESPEDIU NA MESMA MENSAGEM.
+     *
+     * Medido pela campanha em 18/08/2026 (CO-05): *"Cria uma pasta chamada
+     * Revogada X na área de trabalho. Na verdade não, deixa pra lá, esquece."*
+     * criava a pasta. A âncora "pasta chamada X" dispara no início da frase e
+     * nada olhava o resto — o pedido morre na segunda oração e o plano nasce da
+     * primeira.
+     *
+     * A revogação tem de vir DEPOIS do pedido: uma mensagem que começa com
+     * "esquece o que eu disse ontem, cria a pasta X" é pedido legítimo, e a
+     * posição é o que separa os dois casos.
+     */
+    const ondeRevoga = t.search(REVOGACAO);
+    const ondeAge = t.search(/\b(cria|criar|crie|manda|mandar|mande|envia|enviar|envie|abre|abrir|abra|apaga|apagar|apague|desliga|desligar|desligue|move|mover|mova)\b/);
+    if (ondeRevoga >= 0 && ondeAge >= 0 && ondeRevoga > ondeAge) {
+      achadas.push({
+        tipo: 'ordem_revogada',
+        faltando: 'se você ainda quer que eu faça',
+        candidatos: [],
+      });
+      /* Revogação vence o resto: perguntar "que nome dar à pasta" de um pedido
+         que a própria pessoa cancelou seria não ter lido a mensagem até o fim. */
+      return achadas;
+    }
+
+    /**
+     * CRIAR SEM NOME — a outra metade do achado de 18/08/2026 (CO-03).
+     *
+     * "Cria uma pasta na área de trabalho" criava `Nova pasta` no disco. O nome
+     * ausente vem de `extrairNomePasta`, que é a MESMA função que o planejador
+     * usa: uma segunda regra de extração aqui produziria dois entendimentos do
+     * mesmo pedido, que é a doença que o CLAUDE.md nomeia.
+     */
+    if (CRIAR_PASTA.test(t) && extrairNomePasta(bruto) === null) {
+      achadas.push({
+        tipo: 'objeto_sem_nome',
+        faltando: 'que nome dar à pasta',
+        candidatos: [],
+      });
+    }
+
     return achadas;
   }
 
@@ -182,6 +249,18 @@ export class DetectorAmbiguidade {
  * IARA não entendeu.
  */
 export function perguntaDe(a: Ambiguidade): string {
+  /* A revogação não é uma lacuna de dado — é um pedido desfeito. Perguntar
+     "preciso saber se você ainda quer, não tenho essa informação no que
+     conversamos" leria como desatenção: a informação ESTÁ na mensagem. */
+  /* Pergunta própria: a genérica diria "não tenho essa informação no que
+     conversamos", que é verdade e soa como desculpa. O que a pessoa precisa
+     ouvir é o que falta e por que a IARA não seguiu sozinha. */
+  if (a.tipo === 'objeto_sem_nome') {
+    return 'Que nome dar à pasta? Prefiro perguntar a inventar um nome por você.';
+  }
+  if (a.tipo === 'ordem_revogada') {
+    return 'Você pediu e cancelou na mesma mensagem, então não fiz nada. Quer que eu faça?';
+  }
   if (a.candidatos.length > 1) {
     const lista = a.candidatos.slice(0, 6);
     const ultimo = lista[lista.length - 1];

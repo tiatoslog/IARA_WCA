@@ -455,7 +455,7 @@ const SEM_NOME = /^(?:nova|novo|uma|um|a|o|mim|favor|aqui|ali|ai|aí|isso|isto)$
  * silenciosamente o que os outros casam. Em etapas, cada corte tem um nome e
  * uma linha de teste.
  */
-export function extrairNomePasta(bruto: string): string {
+export function extrairNomePasta(bruto: string): string | null {
   /**
    * A ÂNCORA DE NOMEAÇÃO decide se a ligação inicial é ligação ou é o nome.
    *
@@ -483,8 +483,21 @@ export function extrairNomePasta(bruto: string): string {
   if (!nomeada) nome = nome.replace(LIGACAO_INICIAL, '').trim();
   // Aspas sobrando quando o nome vinha citado e a cauda foi cortada por fora.
   nome = nome.replace(/^["“']|["”']$/g, '').trim();
-  // "crie uma pasta" sem nome, ou sobrou só ruído: nome honesto de fallback.
-  if (!nome || SEM_NOME.test(nome)) return 'Nova pasta';
+  /**
+   * SEM NOME É `null`, e não um nome inventado.
+   *
+   * Devolvia `'Nova pasta'`, com o comentário "nome honesto de fallback". Como
+   * string ele é honesto; como AÇÃO, não: a campanha adversarial de 18/08/2026
+   * pediu "Cria uma pasta na área de trabalho" — sem nome — e mediu
+   * `Desktop/Nova pasta` no disco, com o verificador confirmando. Desfecho
+   * `FALSO_NEGATIVO`: efeito proibido a partir de pedido que não o sustenta.
+   *
+   * `RegistroErros` já nomeia essa classe: `ambiguidade_ignorada` — "adivinhou
+   * onde deveria perguntar". Ausência de nome é DADO, e quem decide o que fazer
+   * com ela é o detector de ambiguidade, que roda antes da receita determinística
+   * e devolve pergunta em vez de passo.
+   */
+  if (!nome || SEM_NOME.test(nome)) return null;
   return nome;
 }
 
