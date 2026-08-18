@@ -34,7 +34,13 @@
  * o que se sabe dele.
  */
 
-import { configUtilizavel, lerConfig, redigir, type Ambiente } from './kernel/Configuracao';
+import {
+  MODELO_NUVEM_PADRAO,
+  configUtilizavel,
+  lerConfig,
+  redigir,
+  type Ambiente,
+} from './kernel/Configuracao';
 import { GEMINI, GROQ, type PerfilProvedorAberto } from './ClienteCompativelOpenAI';
 import { MOTIVO_DA_CLASSE, type FalhaObservada } from './CadeiaDeRaciocinio';
 
@@ -240,7 +246,7 @@ export async function fichasDeProvedores(opcoes: {
       if (!configUtilizavel('ANTHROPIC_API_KEY', ambiente)) {
         return naoConfigurado('anthropic', 'ANTHROPIC_API_KEY');
       }
-      const modelo = lerConfig('IARA_MODELO', ambiente) ?? 'claude-opus-5';
+      const modelo = lerConfig('IARA_MODELO', ambiente) ?? MODELO_NUVEM_PADRAO;
       const base = { apelido: 'anthropic', variavel: 'ANTHROPIC_API_KEY', configurado: true, modelo };
       const visto = doObservado(observado.get('anthropic'));
       if (visto) return { ...base, ...visto };

@@ -12,7 +12,12 @@
  * inclusive numa que tenha um Ollama rodando.
  */
 
-import { configUtilizavel, lerConfig, type Ambiente } from './kernel/Configuracao';
+import {
+  MODELO_NUVEM_PADRAO,
+  configUtilizavel,
+  lerConfig,
+  type Ambiente,
+} from './kernel/Configuracao';
 import { CadeiaDeRaciocinio } from './CadeiaDeRaciocinio';
 import { ClienteClaude } from './ClienteClaude';
 import { ClienteCompativelOpenAI, GEMINI, GROQ } from './ClienteCompativelOpenAI';
@@ -136,7 +141,7 @@ export async function estadoRaciocinio(ambiente: Ambiente = process.env): Promis
   if (usaNuvem) {
     return {
       origem: 'nuvem',
-      modelo: lerConfig('IARA_MODELO', ambiente) ?? 'claude-opus-5',
+      modelo: lerConfig('IARA_MODELO', ambiente) ?? MODELO_NUVEM_PADRAO,
       url: null,
       alcancavel: null,
     };

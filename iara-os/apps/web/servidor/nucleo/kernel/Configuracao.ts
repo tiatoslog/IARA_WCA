@@ -241,6 +241,33 @@ const ehSegredo = (n: NaturezaConfig): boolean =>
  */
 export type Ambiente = Readonly<Record<string, string | undefined>>;
 
+/**
+ * O MODELO DA NUVEM QUANDO NINGUÉM DECLARA `IARA_MODELO`.
+ *
+ * MORA AQUI, E NÃO REPETIDO EM CADA CHAMADOR, porque quatro cópias do mesmo
+ * padrão são quatro chances de trocar três e esquecer a quarta — e o resultado
+ * seria a IARA raciocinando num modelo e o `/saude` relatando outro. É a mesma
+ * regra que o CLAUDE.md chama de doença: regra duplicada entre dois lugares.
+ *
+ * SONNET 5 DESDE 18/08/2026, por decisão de custo com os números na mão. Medido
+ * em 33 chamadas reais desta base: 7.096 tokens de entrada e 125 de saída por
+ * chamada. A US$ 3/US$ 15 por milhão contra os US$ 5/US$ 25 do Opus 5, o turno
+ * cai de ~US$ 0,012 para ~US$ 0,007 com o prefixo cacheado — 60% do custo.
+ *
+ * POR QUE NÃO HAIKU, que seria 20%: ele não aceita `thinking` adaptativo nem o
+ * parâmetro `effort`, os dois enviados por `ClienteClaude`. Trocar para Haiku
+ * não é trocar uma string, é mudar código — e a falha apareceria como "a
+ * Anthropic nunca é usada", porque a cadeia cairia para o próximo elo, não como
+ * erro visível. Sonnet 5 é substituição direta: thinking adaptativo, `effort` no
+ * range inteiro, e o prefixo de ~6 mil tokens acima do mínimo de cache dele.
+ *
+ * O QUE ISTO NÃO DECIDE: se a qualidade basta. Custo é o eixo fácil; a taxa de
+ * falsa conclusão é o que importa, e ela se MEDE — `npm run bateria
+ * falsa_conclusao` roda contra o modelo configurado. Trocar de modelo sem
+ * reexecutar essa bateria é trocar por preço às cegas.
+ */
+export const MODELO_NUVEM_PADRAO = 'claude-sonnet-5';
+
 // 2. A inspeção
 // ---------------------------------------------------------------------------
 

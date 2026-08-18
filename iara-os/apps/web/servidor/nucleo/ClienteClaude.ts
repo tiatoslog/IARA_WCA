@@ -22,7 +22,7 @@ import {
   type ProvedorRaciocinio,
   type RespostaRaciocinio,
 } from './ProvedorRaciocinio';
-import { lerConfig } from './kernel/Configuracao';
+import { MODELO_NUVEM_PADRAO, lerConfig } from './kernel/Configuracao';
 import { PERSONA } from './Persona';
 
 export class NuvemIndisponivel extends ProvedorIndisponivel {}
@@ -49,7 +49,7 @@ export class ClienteClaude implements ProvedorRaciocinio {
    */
   constructor() {
     const chave = lerConfig('ANTHROPIC_API_KEY');
-    this.modelo = lerConfig('IARA_MODELO') ?? 'claude-opus-5';
+    this.modelo = lerConfig('IARA_MODELO') ?? MODELO_NUVEM_PADRAO;
     this.esforco = lerConfig('IARA_ESFORCO') ?? 'low';
     if (chave) this.cliente = new Anthropic({ apiKey: chave });
   }
