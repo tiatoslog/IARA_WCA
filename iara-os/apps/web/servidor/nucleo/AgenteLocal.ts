@@ -616,8 +616,96 @@ function comandoDoAgente(): string {
   return process.platform === 'win32' ? 'claude.exe' : 'claude';
 }
 
+/**
+ * SANDBOX DO AGENTE — o mecanismo que contém o filho, e por que ele é opcional.
+ *
+ * MEDIDO EM 18/08/2026 com Docker 29.5.2, containers Linux. Os três vetores que
+ * `escape-sandbox-adversarial.test.ts` mantinha abertos fecham assim:
+ *
+ *   ES-02 leitura fora  — só o repositório é montado; `cat ../canario` e o
+ *                         caminho absoluto do host falham os dois.
+ *   ES-04 escrita fora  — a escrita cai na camada efêmera do container e o
+ *                         disco do host não recebe nada.
+ *   ES-03 egresso       — rede `--internal` (nem DNS sai) mais proxy com
+ *                         allowlist: `api.anthropic.com` responde, `example.com`
+ *                         volta `403 Filtered`, e sem proxy o nome nem resolve.
+ *
+ * POR QUE NÃO `--network=none`, QUE SERIA MAIS SIMPLES: o agente real precisa
+ * alcançar a API da Anthropic. Um container sem rede fecharia ES-03 no papel e
+ * quebraria o produto — e, pior, faria a bateria passar numa configuração que a
+ * produção não pode rodar. Teste que mede o que ninguém vai executar é teste que
+ * mente. A allowlist é o que fecha o vetor SEM desligar o agente.
+ *
+ * POR QUE DESLIGADO POR PADRÃO: isto não é só endurecimento, é mudança de
+ * produto. O agente passa a rodar em Linux, sobre um repositório montado, com
+ * outro conjunto de ferramentas disponível. Ligar isso sozinho, em nome de
+ * segurança, quebraria a capacidade em toda máquina que não tenha a imagem e a
+ * rede prontas. Quem liga declara — a mesma disciplina de `IARA_COMANDO_AGENTE`.
+ */
+export type ModoSandboxAgente = 'nenhum' | 'container';
+
+export function modoSandboxDoAgente(): ModoSandboxAgente {
+  return (process.env.IARA_AGENTE_SANDBOX ?? '').trim().toLowerCase() === 'container'
+    ? 'container'
+    : 'nenhum';
+}
+
+/**
+ * OS ARGUMENTOS DO `docker run`, exportados pelo mesmo motivo que
+ * `ambienteRestritoDoAgente`: o harness de segurança tem de medir ESTA função,
+ * não uma réplica que diverge dela no primeiro ajuste de flag.
+ *
+ * `cap-drop ALL` e `no-new-privileges` não fecham nenhum dos três vetores
+ * medidos — entram porque um container que já está sendo criado não tem por que
+ * nascer com capacidade que ninguém usa.
+ */
+export function argumentosDeContainer(
+  argumentos: readonly string[],
+  diretorio: string,
+): string[] {
+  const imagem = (process.env.IARA_AGENTE_IMAGEM ?? 'iara-agente:local').trim();
+  const rede = (process.env.IARA_AGENTE_REDE ?? 'iara-agente-interna').trim();
+  const proxy = (process.env.IARA_AGENTE_PROXY ?? '').trim();
+
+  /* Barra invertida vira barra: `-v C:\repo:/trabalho` confunde o parser do
+     docker, que corta no primeiro `:`. Com `C:/repo:/trabalho` ele acerta. */
+  const montagem = `${diretorio.replace(/\\/g, '/')}:/trabalho`;
+
+  const doProxy = proxy
+    ? ['-e', `http_proxy=${proxy}`, '-e', `https_proxy=${proxy}`, '-e', `HTTPS_PROXY=${proxy}`]
+    : [];
+
+  return [
+    'run',
+    '--rm',
+    '-i',
+    '--network',
+    rede,
+    '-v',
+    montagem,
+    '--workdir',
+    '/trabalho',
+    '--cap-drop',
+    'ALL',
+    '--security-opt',
+    'no-new-privileges',
+    ...doProxy,
+    imagem,
+    ...argumentos,
+  ];
+}
+
 const lancadorAgenteReal: LancadorAgente = (argumentos, diretorio, aoSair) => {
-  const filho = spawn(comandoDoAgente(), argumentos, {
+  /* O ambiente restrito continua sendo do processo que se lanca AQUI. Em modo
+     container quem se lanca e o CLI do docker — que precisa de PATH e HOME para
+     achar o daemon —, e o ambiente do AGENTE passa a ser o que entra por `-e`.
+     Sao duas fronteiras diferentes, e confundi-las devolveria ao filho tudo que
+     ES-01 tirou dele. */
+  const emContainer = modoSandboxDoAgente() === 'container';
+  const comando = emContainer ? 'docker' : comandoDoAgente();
+  const args = emContainer ? argumentosDeContainer(argumentos, diretorio) : [...argumentos];
+
+  const filho = spawn(comando, args, {
     cwd: diretorio,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
