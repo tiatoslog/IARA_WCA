@@ -44,10 +44,6 @@ import {
   auditarSilencio,
   auditarVazamento,
 } from './missoes/auditores';
-import {
-  criarProvedorRaciocinio,
-  provedoresDeclarados,
-} from '../../servidor/nucleo/FabricaRaciocinio';
 import { lerJornal, operacoesDaSessao } from './oraculos/OraculoJornal';
 import { desligamentoAgendado } from './oraculos/OraculoEnergia';
 import { portaEscutando, processoAtivo } from './oraculos/OraculoProcesso';
@@ -178,18 +174,53 @@ const ARVORE_NA_SUBIDA = (() => {
  * Falhar aqui não pode derrubar a campanha: sem carimbo ela ainda mede, só
  * perde a capacidade de ser comparada — e isso fica DITO no campo.
  */
-const CEREBRO_NA_SUBIDA = (() => {
-  try {
-    const p = criarProvedorRaciocinio();
-    return { provedor: p.apelido, modelo: p.modelo, cadeia: provedoresDeclarados().join(' → ') };
-  } catch (erro) {
-    return {
-      provedor: 'desconhecido',
-      modelo: `não carimbado: ${(erro as Error).message.slice(0, 80)}`,
-      cadeia: '',
-    };
+/**
+ * O CÉREBRO PEDIDO — e por que ele não é o mesmo que o cérebro medido.
+ *
+ * A primeira versão disto lia `criarProvedorRaciocinio()` AQUI, no processo do
+ * corredor, e carimbava o resultado como "cérebro medido". Estava errado, e o
+ * erro produziu três relatórios falsos em 18/08/2026: o `MotorSandbox` sobrescreve
+ * `IARA_PROVEDOR` para `ollama` ao lançar o motor, então o corredor dizia "groq"
+ * enquanto o filho rodava `llama3.2:3b`. Um carimbo errado é pior que carimbo
+ * nenhum — ele cria confiança onde antes havia silêncio.
+ *
+ * Agora são DUAS coisas, e a diferença entre elas é o que interessa:
+ *
+ *   PEDIDO    — o que `--cerebro` mandou usar. Conhecido antes de o motor subir,
+ *               e é o que nomeia a pasta de evidência.
+ *   OBSERVADO — o que o motor DIZ ter instanciado, lido do banner de subida dele.
+ *               É o único que pode ser chamado de medido.
+ *
+ * Divergir é achado, não detalhe: significa que alguém pediu um cérebro e a
+ * campanha mediu outro. O relatório mostra os dois lado a lado.
+ */
+const CEREBRO_PEDIDO = argumento('cerebro', '').trim().toLowerCase();
+
+/**
+ * O que vai no ambiente do motor. Vazio quando ninguém pede: aí vale o padrão da
+ * campanha, que é o Ollama local de custo zero — ver `MotorSandbox`.
+ */
+const AMBIENTE_CEREBRO: Record<string, string> = CEREBRO_PEDIDO
+  ? { IARA_PROVEDOR: CEREBRO_PEDIDO }
+  : {};
+
+/** Preenchido quando o primeiro motor sobe, lendo o banner dele. */
+let CEREBRO_OBSERVADO = 'não observado';
+
+/**
+ * Lê a linha `[iara] raciocínio: ...` do banner. É o motor falando de si; qualquer
+ * outra fonte seria o corredor adivinhando de novo.
+ */
+function observarCerebro(saida: readonly string[]): void {
+  if (CEREBRO_OBSERVADO !== 'não observado') return;
+  for (const linha of saida) {
+    const m = /\[iara\] racioc[íi]nio:\s*(.+)$/.exec(linha);
+    if (m) {
+      CEREBRO_OBSERVADO = m[1].trim();
+      return;
+    }
   }
-})();
+}
 
 const INICIO = new Date();
 const CARIMBO = `${INICIO.getFullYear()}-${String(INICIO.getMonth() + 1).padStart(2, '0')}-${String(
@@ -218,7 +249,7 @@ const CARIMBO = `${INICIO.getFullYear()}-${String(INICIO.getMonth() + 1).padStar
 const PASTA_EVIDENCIA = path.join(
   RAIZ_WEB,
   'test-evidence',
-  `CAMPANHA-${CARIMBO}-${CEREBRO_NA_SUBIDA.provedor}-${PORTA}`,
+  `CAMPANHA-${CARIMBO}-${CEREBRO_PEDIDO || 'padrao'}-${PORTA}`,
 );
 
 /** Prefixo de TODO id de operador criado por esta rodada. Governa a limpeza. */
@@ -401,7 +432,8 @@ async function faseRecuperacao(porta: number): Promise<ResultadoMissao> {
   const idUsuario = `${PREFIXO_ID}-recuperacao`;
   let motor: MotorVivo | null = null;
   try {
-    motor = await subirMotor({ porta, rotulo: 'recup' });
+    motor = await subirMotor({ porta, rotulo: 'recup', ambiente: AMBIENTE_CEREBRO });
+    observarCerebro(motor.saida);
     const cliente = new ClienteBarramento({ url: motor.url_ws, id_usuario: idUsuario });
     await cliente.conectar();
 
@@ -763,8 +795,8 @@ function relatorio(resultados: readonly ResultadoMissao[], notas: readonly strin
     '> A IARA nunca ganha crédito por dizer que fez algo. Ela só ganha crédito',
     '> quando uma evidência independente comprova que fez.',
     '',
-    `> **Cérebro medido:** ${CEREBRO_NA_SUBIDA.provedor} · ${CEREBRO_NA_SUBIDA.modelo}` +
-      (CEREBRO_NA_SUBIDA.cadeia ? ` · cadeia: ${CEREBRO_NA_SUBIDA.cadeia}` : ''),
+    `> **Cérebro medido:** ${CEREBRO_OBSERVADO}`,
+    `> **Cérebro pedido:** ${CEREBRO_PEDIDO || 'padrão da campanha (ollama local)'}`,
     '',
     '## Portão',
     '',
@@ -970,7 +1002,8 @@ async function principal(): Promise<number> {
 
   let motor: MotorVivo | null = null;
   try {
-    motor = await subirMotor({ porta: PORTA, rotulo: 'principal' });
+    motor = await subirMotor({ porta: PORTA, rotulo: 'principal', ambiente: AMBIENTE_CEREBRO });
+    observarCerebro(motor.saida);
     anotar(`motor vivo (pid ${motor.pid}) — sandbox ${motor.sandbox.raiz}`);
     notas.push(`sandbox da rodada: ${motor.sandbox.raiz}`);
 
@@ -1108,7 +1141,7 @@ async function principal(): Promise<number> {
         inicio: INICIO.toISOString(),
         fim: new Date().toISOString(),
         commit: ARVORE_NA_SUBIDA.commit,
-        cerebro: CEREBRO_NA_SUBIDA,
+        cerebro: { pedido: CEREBRO_PEDIDO || null, observado: CEREBRO_OBSERVADO },
         arvore_suja: ARVORE_NA_SUBIDA.arvore_suja,
         portao,
         porta: PORTA,
