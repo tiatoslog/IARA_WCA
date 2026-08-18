@@ -111,6 +111,49 @@ export const GROQ: PerfilProvedorAberto = {
   modeloPadrao: 'llama-3.3-70b-versatile',
 };
 
+/**
+ * OPENROUTER — o mesmo protocolo, outro catálogo.
+ *
+ * ENTRA COMO PERFIL E NÃO COMO CLIENTE NOVO porque a API dele é
+ * `/chat/completions` com `Authorization: Bearer`, que é exatamente o que esta
+ * classe já fala. Um segundo cliente para o mesmo protocolo seria uma segunda
+ * cópia da mesma regra — e regra duplicada é a doença que o CLAUDE.md nomeia.
+ *
+ * O MODELO PADRÃO É `:free`, e o sufixo importa: sem ele o mesmo id vira a
+ * variante paga e a conta chega sem ninguém ter decidido nada.
+ *
+ * POR QUE NEMOTRON 3 ULTRA entre os quinze gratuitos do catálogo: o `a55b` do id
+ * são 55 bilhões de parâmetros ATIVOS, contra 12B do Nemotron Super, 8B do
+ * Laguna e ~4B do Gemma 4. Parâmetro ativo é o que decide capacidade na
+ * inferência, e nesse eixo ele não tem segundo colocado aqui. Some 1M de
+ * contexto e uma descrição que é a função da IARA: orquestração de agente e
+ * planejamento de múltiplas etapas.
+ *
+ * O QUE A IARA EXIGE DE FATO, e que descarta metade da lista: ela NÃO usa
+ * function calling. `MotorRaciocinio.interpretarPlano` recorta do primeiro `{`
+ * ao último `}` da resposta e joga fora todo passo fora do catálogo. O requisito
+ * é planejar em múltiplos passos e emitir JSON bem formado em prosa — não
+ * suportar a API de ferramentas. Por isso os modelos de CODIFICAÇÃO (Laguna,
+ * North Mini Code) não sobem na lista por bom benchmark de SWE: a IARA não
+ * escreve código, ela orquestra operação.
+ *
+ * POOLSIDE FICOU DE FORA POR ESCRITO, não por qualidade: a própria descrição do
+ * Laguna diz que o uso gratuito autoriza treinar com suas entradas e saídas.
+ * Numa IARA que carrega shard privado por operador, isso é decisão de quem
+ * opera, e não default meu.
+ *
+ * O CUSTO QUE NÃO É EM DINHEIRO, e vale para TODO `:free`: o modelo é servido
+ * por terceiro, e a política de dados da conta é que decide se o prompt vira
+ * treino. Fica escrito aqui para ser decisão, e não descoberta.
+ */
+export const OPENROUTER: PerfilProvedorAberto = {
+  apelido: 'openrouter',
+  base: 'https://openrouter.ai/api/v1',
+  variavelChave: 'OPENROUTER_API_KEY',
+  variavelModelo: 'OPENROUTER_MODELO',
+  modeloPadrao: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+};
+
 export const GEMINI: PerfilProvedorAberto = {
   apelido: 'gemini',
   /* O endpoint COMPATÍVEL do Google — o nativo tem outro formato, e adotá-lo

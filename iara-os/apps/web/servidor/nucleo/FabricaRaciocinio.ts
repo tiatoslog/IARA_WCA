@@ -20,17 +20,21 @@ import {
 } from './kernel/Configuracao';
 import { CadeiaDeRaciocinio } from './CadeiaDeRaciocinio';
 import { ClienteClaude } from './ClienteClaude';
-import { ClienteCompativelOpenAI, GEMINI, GROQ } from './ClienteCompativelOpenAI';
+import { ClienteCompativelOpenAI, GEMINI, GROQ, OPENROUTER } from './ClienteCompativelOpenAI';
 import { ClienteOllama } from './ClienteOllama';
 import type { OrigemRaciocinio, ProvedorRaciocinio } from './ProvedorRaciocinio';
 
 /** O que `IARA_PROVEDOR` aceita. Valor fora da lista é tratado como `auto` —
  *  ausência de valor válido é ausência, o padrão da casa. */
-type Escolha = 'anthropic' | 'ollama' | 'groq' | 'gemini' | 'auto';
+type Escolha = 'anthropic' | 'ollama' | 'groq' | 'gemini' | 'openrouter' | 'auto';
 
 function escolhaDeclarada(ambiente: Ambiente): Escolha {
   const bruto = (lerConfig('IARA_PROVEDOR', ambiente) ?? 'auto').toLowerCase();
-  return bruto === 'anthropic' || bruto === 'ollama' || bruto === 'groq' || bruto === 'gemini'
+  return bruto === 'anthropic' ||
+    bruto === 'ollama' ||
+    bruto === 'groq' ||
+    bruto === 'gemini' ||
+    bruto === 'openrouter'
     ? bruto
     : 'auto';
 }
@@ -43,10 +47,15 @@ function escolhaDeclarada(ambiente: Ambiente): Escolha {
  * por acidente.
  *
  * Em `auto`, monta a CADEIA com tudo que estiver declarado, nesta ordem:
- * Groq → Gemini (as duas camadas gratuitas) → Anthropic (a melhor qualidade, e
- * a única que cobra) → Ollama (o local). Se o primeiro falhar por cota, chave
- * ou serviço fora, o próximo assume no MESMO turno — ver `CadeiaDeRaciocinio`
- * e o incidente de 15/08/2026 que a originou.
+ * Groq → Gemini → OpenRouter (as três gratuitas) → Anthropic (a melhor
+ * qualidade, e a única que cobra) → Ollama (o local). Se o primeiro falhar por
+ * cota, chave ou serviço fora, o próximo assume no MESMO turno — ver
+ * `CadeiaDeRaciocinio` e o incidente de 15/08/2026 que a originou.
+ *
+ * OPENROUTER É TERCEIRO ENTRE OS GRATUITOS, e não primeiro: o padrão dele é um
+ * Nemotron 3 Ultra, forte em planejamento mas servido em fila gratuita. Ordenar gratuito por
+ * capacidade, e não por ordem de chegada, é o que faz a cadeia degradar suave
+ * em vez de degradar por acidente de configuração.
  *
  * A ANTHROPIC DESCEU PARA TERCEIRA EM 18/08/2026, por decisão de custo: ela é a
  * única paga, e passa a ser último recurso antes do local. O que se compra com
@@ -71,6 +80,7 @@ export function criarProvedorRaciocinio(ambiente: Ambiente = process.env): Prove
   if (escolha === 'ollama') return new ClienteOllama();
   if (escolha === 'groq') return new ClienteCompativelOpenAI(GROQ);
   if (escolha === 'gemini') return new ClienteCompativelOpenAI(GEMINI);
+  if (escolha === 'openrouter') return new ClienteCompativelOpenAI(OPENROUTER);
 
   const elos: ProvedorRaciocinio[] = [];
   if (configUtilizavel(GROQ.variavelChave, ambiente)) {
@@ -78,6 +88,9 @@ export function criarProvedorRaciocinio(ambiente: Ambiente = process.env): Prove
   }
   if (configUtilizavel(GEMINI.variavelChave, ambiente)) {
     elos.push(new ClienteCompativelOpenAI(GEMINI));
+  }
+  if (configUtilizavel(OPENROUTER.variavelChave, ambiente)) {
+    elos.push(new ClienteCompativelOpenAI(OPENROUTER));
   }
   if (configUtilizavel('ANTHROPIC_API_KEY', ambiente)) elos.push(new ClienteClaude());
   if (configUtilizavel('OLLAMA_URL', ambiente)) elos.push(new ClienteOllama());
@@ -112,6 +125,7 @@ export function provedoresDeclarados(ambiente: Ambiente = process.env): string[]
   const nomes: string[] = [];
   if (configUtilizavel(GROQ.variavelChave, ambiente)) nomes.push(GROQ.apelido);
   if (configUtilizavel(GEMINI.variavelChave, ambiente)) nomes.push(GEMINI.apelido);
+  if (configUtilizavel(OPENROUTER.variavelChave, ambiente)) nomes.push(OPENROUTER.apelido);
   if (configUtilizavel('ANTHROPIC_API_KEY', ambiente)) nomes.push('anthropic');
   if (configUtilizavel('OLLAMA_URL', ambiente)) nomes.push('ollama');
   return nomes;
@@ -149,7 +163,7 @@ export async function estadoRaciocinio(ambiente: Ambiente = process.env): Promis
 
   /* As camadas gratuitas são nuvem como qualquer outra — e o diagnóstico
      precisa nomear QUAL, senão quem investiga procura no provedor errado. */
-  for (const perfil of [GROQ, GEMINI]) {
+  for (const perfil of [GROQ, GEMINI, OPENROUTER]) {
     if (escolha === perfil.apelido || (escolha === 'auto' && configUtilizavel(perfil.variavelChave, ambiente))) {
       return {
         origem: 'nuvem',

@@ -22,6 +22,7 @@ const CHAVE_VALIDA = `sk-ant-${'a'.repeat(40)}`;
    prefixo fixo, só comprimento. */
 const CHAVE_GROQ = `gsk_${'b'.repeat(40)}`;
 const CHAVE_GEMINI = 'A'.repeat(39);
+const CHAVE_OPENROUTER = `sk-or-v1-${'c'.repeat(40)}`;
 
 async function comProcessEnv<T>(
   vars: Record<string, string | undefined>,
@@ -146,6 +147,40 @@ test('UN-211. auto com Groq + Anthropic: a GRATUITA vem primeiro, a paga depois'
   );
 });
 
+/**
+ * O OPENROUTER É GRATUITO MAS NÃO É O MAIS FORTE — um Nemotron de 55B ativos contra os
+ * 70B da Groq. Este teste trava as duas metades da decisão: ele entra DEPOIS das
+ * gratuitas melhores e ANTES da paga. Sem ele, alguém reordena por ordem de
+ * chegada e a IARA passa a responder pelo modelo menor sem nada ficar vermelho.
+ */
+test('UN-211d. OpenRouter entra depois das gratuitas melhores e antes da paga', async () => {
+  await comProcessEnv({ IARA_PROVEDOR: undefined }, () => {
+    /* Sozinho, é ele mesmo — e no modelo `:free`. O sufixo é o que separa o
+       gratuito do pago sob o MESMO id; perdê-lo é ganhar fatura em silêncio. */
+    const so = criarProvedorRaciocinio({ OPENROUTER_API_KEY: CHAVE_OPENROUTER });
+    assert.ok(so instanceof ClienteCompativelOpenAI);
+    assert.equal(so.modelo, 'nvidia/nemotron-3-ultra-550b-a55b:free');
+    assert.match(so.modelo, /:free$/);
+
+    /* Com a Groq presente, quem responde primeiro é a Groq. */
+    const comGroq = criarProvedorRaciocinio({
+      GROQ_API_KEY: CHAVE_GROQ,
+      OPENROUTER_API_KEY: CHAVE_OPENROUTER,
+    });
+    assert.ok(comGroq instanceof CadeiaDeRaciocinio);
+    assert.equal(comGroq.modelo, 'llama-3.3-70b-versatile');
+
+    /* Com a paga presente, o gratuito ainda vem primeiro — é o ponto da troca
+       de 18/08: dinheiro só se gasta quando o de graça falhou. */
+    const comPaga = criarProvedorRaciocinio({
+      OPENROUTER_API_KEY: CHAVE_OPENROUTER,
+      ANTHROPIC_API_KEY: CHAVE_VALIDA,
+    });
+    assert.ok(comPaga instanceof CadeiaDeRaciocinio);
+    assert.equal(comPaga.modelo, 'nvidia/nemotron-3-ultra-550b-a55b:free');
+  });
+});
+
 test('UN-211b. auto com Groq + Gemini (sem Anthropic): cadeia das duas gratuitas', async () => {
   await comProcessEnv(
     {
@@ -212,11 +247,12 @@ test('provedoresDeclarados: a lista que o /saude mostra, em ordem e sem segredo'
         ANTHROPIC_API_KEY: CHAVE_VALIDA,
         GROQ_API_KEY: CHAVE_GROQ,
         GEMINI_API_KEY: CHAVE_GEMINI,
+        OPENROUTER_API_KEY: CHAVE_OPENROUTER,
         OLLAMA_URL: 'http://127.0.0.1:11434',
       }),
       /* MESMA ORDEM DA CADEIA. `/saude` mostra quem responde PRIMEIRO; uma lista
          que discorde da fábrica aponta um cérebro enquanto a IARA usa outro. */
-      ['groq', 'gemini', 'anthropic', 'ollama'],
+      ['groq', 'gemini', 'openrouter', 'anthropic', 'ollama'],
     );
 
     /* O caso que o endpoint existe para tornar visível: nenhum cérebro

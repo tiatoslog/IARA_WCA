@@ -95,8 +95,9 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
   // As camadas GRATUITAS (15/08/2026, depois de a cota da Anthropic acabar e a
   // IARA ficar muda). Mesma disciplina das outras: declaradas, nunca
   // descobertas — sem a chave no ambiente, o provedor não existe. Em `auto`
-  // elas entram na cadeia como reserva, na ordem Anthropic → Groq → Gemini →
-  // Ollama; ver `CadeiaDeRaciocinio`.
+  // elas entram na cadeia na ordem Groq → Gemini → OpenRouter → Anthropic →
+  // Ollama: as gratuitas primeiro, a paga como último recurso antes do local.
+  // Ver `FabricaRaciocinio` e `CadeiaDeRaciocinio`.
   GROQ_API_KEY: {
     natureza: 'segredo_cabecalho',
     prefixo: 'gsk_',
@@ -110,6 +111,21 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
     papel: 'chave da camada de raciocínio gratuita (Google Gemini)',
   },
   GEMINI_MODELO: { natureza: 'texto', papel: 'modelo servido pelo Gemini' },
+  /**
+   * OPENROUTER — uma chave, muitos modelos, inclusive os `:free`.
+   *
+   * DECLARADA AQUI E NÃO SÓ NO PERFIL porque é este registro que a redação
+   * percorre: chave que não está no `REGISTRO` não é redigida quando um erro
+   * atravessa socket, WhatsApp ou jornal. Registrar não é papelada, é o que
+   * impede a chave de sair inteira numa mensagem de falha.
+   */
+  OPENROUTER_API_KEY: {
+    natureza: 'segredo_cabecalho',
+    prefixo: 'sk-or-v1-',
+    minimo: 20,
+    papel: 'chave da camada de raciocínio gratuita (OpenRouter)',
+  },
+  OPENROUTER_MODELO: { natureza: 'texto', papel: 'modelo servido pelo OpenRouter' },
   OLLAMA_URL: { natureza: 'url', papel: 'endereço do servidor Ollama local' },
   OLLAMA_MODELO: { natureza: 'texto', papel: 'modelo servido pelo Ollama' },
   // O padrão do binário (4096) trunca o prompt em silêncio — ver ClienteOllama.
