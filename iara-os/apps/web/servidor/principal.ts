@@ -39,6 +39,7 @@ import {
 } from './nucleo/Transcricao';
 import { formatarCodigo, pareamento } from './nucleo/Pareamento';
 import { provedoresDeclarados } from './nucleo/FabricaRaciocinio';
+import { MOTIVO_DA_CLASSE, falhasObservadas } from './nucleo/CadeiaDeRaciocinio';
 import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
 import { diagnosticoWhatsapp } from './canais/WhatsApp';
 import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
@@ -569,6 +570,29 @@ async function subir(): Promise<void> {
            * para o log de subida.
            */
           graph: statusRenovacaoGraph,
+          /**
+           * CONFIGURADO NÃO É UTILIZÁVEL — auditoria de 18/08/2026.
+           *
+           * `raciocinio` acima lista quem está DECLARADO no ambiente, e foi
+           * exatamente isso que enganou: o endpoint dizia `["groq","gemini",
+           * "anthropic"]` enquanto a operadora recebia erro em todo pedido. A
+           * Groq respondia 404 (modelo descomissionado) e a Anthropic estava
+           * sem crédito — nada disso era visível daqui, e de fora o deploy
+           * parecia saudável.
+           *
+           * Este campo é o que se OBSERVOU em uso real, lido do registro de
+           * processo que a cadeia já mantém. Não sonda, não instancia e não vai
+           * à rede: continua sendo o healthcheck do host, e healthcheck lento é
+           * deploy marcado como doente. Objeto vazio significa "nenhum cérebro
+           * falhou desde que este processo subiu" — que não é promessa de
+           * saldo, porque saldo só se descobre gastando.
+           */
+          raciocinio_falhas: Object.fromEntries(
+            [...falhasObservadas()].map(([apelido, f]) => [
+              apelido,
+              { classe: f.classe, motivo: MOTIVO_DA_CLASSE[f.classe], desde: f.instante },
+            ]),
+          ),
         }),
       );
       return;
@@ -811,6 +835,26 @@ async function subir(): Promise<void> {
         ? `[iara] mãos: NESTE processo (${process.platform}) — e em qualquer braço que conectar em ${CAMINHO_DISPOSITIVO}`
         : `[iara] mãos: SÓ por braço conectado em ${CAMINHO_DISPOSITIVO}. ` +
             'Sem braço, ação no computador é recusada em voz alta — nunca simulada.',
+    );
+    /**
+     * QUAL CÉREBRO ESTE PROCESSO VAI USAR — dito na subida, como todo o resto.
+     *
+     * O banner listava WhatsApp, voz, transcrição, Graph e jornal, e não dizia
+     * qual provedor de raciocínio tinha sido instanciado. A ausência custou caro
+     * em 18/08/2026: seis campanhas foram disparadas com `IARA_PROVEDOR` na linha
+     * de comando, o `MotorSandbox` sobrescrevia a variável para `ollama`, e nada
+     * em lugar nenhum contradizia a suposição de quem as disparou. Três
+     * relatórios saíram nomeando provedores que nunca responderam.
+     *
+     * Quem sabe qual cérebro atende é ESTE processo, não quem o lançou. Agora ele
+     * diz — e qualquer harness que precise carimbar o provedor lê daqui, em vez
+     * de deduzir do próprio ambiente.
+     */
+    const cerebros = provedoresDeclarados();
+    console.log(
+      cerebros.length > 0
+        ? `[iara] raciocínio: ${cerebros.join(' → ')}`
+        : '[iara] raciocínio: NENHUM provedor declarado — ela conversa mas não pensa',
     );
     console.log(`[iara] ${diagnosticoWhatsapp()}`);
     console.log(`[iara] voz: ${diagnosticoVoz()}`);

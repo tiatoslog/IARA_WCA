@@ -745,6 +745,53 @@ function extrairUf(bruto: string): string {
   return m ? m[1].toUpperCase() : 'GERAL';
 }
 
+/**
+ * O QUE A IARA FAZ SEM NUVEM — a única lista que pode ser dita ao operador.
+ *
+ * O DEFEITO QUE ISTO FECHA (auditoria de 18/08/2026). Com a nuvem fora, a IARA
+ * respondia: "continuo com o que é local: clima, hora, infraestrutura, histórico
+ * e busca". Três dessas cinco devolviam essa MESMA frase quando pedidas. A lista
+ * estava escrita à mão em DOIS lugares (`Kernel.mensagemHumanaDeFalha` e
+ * `DiagnosticoProvedores.resumirProvedores`), nenhum deles ligado às receitas
+ * que de fato existem — então ninguém percebeu quando as duas coisas
+ * divergiram. Prometer e recusar na mesma frase custa mais que ficar calado: o
+ * operador para de acreditar no resto.
+ *
+ * O `exemplo` não é decoração — é o portão. `testes/capacidades-sem-nuvem.test.ts`
+ * exige que cada frase daqui produza a âncora e chegue à receita. Foi assim que
+ * se descobriu que "infraestrutura" não era reconhecida pela palavra
+ * "infraestrutura", e que `busca` não reconhecia "busque".
+ *
+ * O RÓTULO É O QUE A CAPACIDADE FAZ, não o nome interno da âncora. "histórico"
+ * fez a operadora pedir o histórico da CONVERSA e não receber nada: a receita é
+ * de incidentes. Um rótulo vago é uma promessa que o operador preenche sozinho —
+ * e ele preenche pelo que precisa, não pelo que existe.
+ */
+export const CAPACIDADES_SEM_NUVEM: readonly {
+  readonly ancora: string;
+  readonly rotulo: string;
+  readonly exemplo: string;
+}[] = [
+  { ancora: 'clima', rotulo: 'clima', exemplo: 'vai chover hoje?' },
+  { ancora: 'relogio', rotulo: 'hora e data', exemplo: 'que horas sao agora?' },
+  {
+    ancora: 'infraestrutura',
+    rotulo: 'contagem da frota e das centrais',
+    exemplo: 'quantas centrais ativas?',
+  },
+  {
+    ancora: 'incidente',
+    rotulo: 'histórico de incidentes',
+    exemplo: 'esse erro ja aconteceu antes?',
+  },
+  { ancora: 'busca', rotulo: 'busca na internet', exemplo: 'busque na internet o preco do diesel' },
+];
+
+/** A enumeração pronta para entrar numa frase: "clima, hora e data e busca…". */
+export function capacidadesSemNuvemEmTexto(): string {
+  return CAPACIDADES_SEM_NUVEM.map((c) => c.rotulo).join(', ');
+}
+
 export class Planejador {
   /** Existe receita determinística para esta percepção? */
   temReceita(p: Percepcao): boolean {

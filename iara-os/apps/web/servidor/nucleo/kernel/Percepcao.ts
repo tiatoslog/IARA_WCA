@@ -119,7 +119,22 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     // funcionava para a palavra "pesquis", que ninguém digita. Mesmo motivo
     // para `noticia\w*` ("notícias" no plural). O `RoteadorIntencoes` já tinha
     // essa correção; esta cópia da regra não.
-    re: /\b(pesquis\w*|busca na internet|procura na web|noticia\w*)\b/,
+    // A MESMA CORREÇÃO, UMA CONJUGAÇÃO ADIANTE (18/08/2026). O parágrafo acima
+    // conserta `pesquis\w*` e para ali: `busca na internet` continuava exigindo
+    // o substantivo exato. A operadora escreveu "BUSQUE na internet o preço do
+    // diesel S10" e a IARA não reconheceu — o pedido foi parar na nuvem, que
+    // estava fora.
+    //
+    // `bus(c|qu)`, e não `busc`: em português o radical de *buscar* troca o `c`
+    // por `qu` antes de `e` — "busque", "busquem", "busquei". Um `busc\w*`
+    // parece cobrir o verbo inteiro e não cobre justamente a forma que o
+    // operador usa para PEDIR. É a mesma armadilha de `pesquis\b`: supor o
+    // radical em vez de conferir a conjugação.
+    //
+    // O verbo fica preso ao complemento ("na internet", "na web", "no google")
+    // de propósito: solto, capturaria "busca de emprego" — a doença de palavra
+    // genérica que a âncora `infraestrutura` já pagou caro com `frota`.
+    re: /\b(pesquis\w*|noticia\w*)\b|\b(bus(?:c|qu)\w*|procur\w*)\s+(n[ao]\s+(internet|web)|no\s+google)\b/,
     nome: 'busca',
     acionavel: true,
   },

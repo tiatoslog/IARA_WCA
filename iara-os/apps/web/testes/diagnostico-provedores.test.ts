@@ -27,6 +27,7 @@ import {
   type FichaProvedor,
 } from '../servidor/nucleo/DiagnosticoProvedores';
 import {
+  CARENCIA_MS,
   classificarFalhaProvedor,
   mereceOutroProvedor,
   registrarFalhaProvedor,
@@ -88,6 +89,57 @@ test('a troca de cérebro continua valendo exatamente para o que valia antes', (
   assert.equal(mereceOutroProvedor(new Error('503 overloaded')), true);
   assert.equal(mereceOutroProvedor(new ProvedorIndisponivel('sem chave declarada')), true);
   assert.equal(mereceOutroProvedor(new Error('erro sem assinatura conhecida')), false);
+});
+
+/**
+ * A REGRESSÃO MEDIDA EM PRODUÇÃO (18/08/2026) — a cadeia de três cérebros que
+ * desistia no primeiro.
+ *
+ * A Groq descomissionou `llama-3.3-70b-versatile`. O texto abaixo é o que a
+ * operadora recebeu na bolha de chat, literal, mais de uma vez: nenhuma regex o
+ * reconhecia, ele virava `outra`, e `outra` não merece troca. Gemini e Anthropic
+ * estavam configurados e nunca foram tentados.
+ *
+ * O caso é escrito com a string CRUA de propósito: uma versão parafraseada
+ * passaria a valer para o que nós imaginamos que o provedor diz, e o defeito
+ * nasceu exatamente da diferença entre as duas coisas.
+ */
+test('modelo descomissionado é falha do elo, e a cadeia segue para o próximo', () => {
+  const groq = new Error(
+    'groq respondeu 404: {"error":{"message":"The model `llama-3.3-70b-versatile` does not exist ' +
+      'or you do not have access to it.","type":"invalid_request_error","code":"model_not_found"}}',
+  );
+  assert.equal(classificarFalhaProvedor(groq), 'modelo_invalido');
+  assert.equal(mereceOutroProvedor(groq), true);
+
+  /* Outras formas do mesmo fato, de provedores que não mandam `model_not_found`. */
+  assert.equal(classificarFalhaProvedor(new Error('unknown model: gpt-x')), 'modelo_invalido');
+  assert.equal(
+    classificarFalhaProvedor(new Error('The model gemini-1.0-pro has been decommissioned')),
+    'modelo_invalido',
+  );
+
+  /* E não sequestra a classificação de quem já tinha nome: um 404 de modelo
+     dentro de uma recusa por crédito continua sendo problema de crédito. */
+  assert.equal(
+    classificarFalhaProvedor(new Error('credit balance is too low; model_not_found')),
+    'quota',
+  );
+});
+
+/**
+ * Nome de modelo errado não passa sozinho — está em configuração, não no ar.
+ * Insistir a cada turno é a ida à rede mais previsivelmente perdida do sistema.
+ */
+test('modelo inválido fica mais tempo no fim da fila que serviço fora', () => {
+  assert.ok(
+    CARENCIA_MS.modelo_invalido > CARENCIA_MS.servico_fora,
+    'um modelo inexistente volta a existir mais devagar que um serviço que caiu',
+  );
+  assert.ok(
+    CARENCIA_MS.modelo_invalido >= CARENCIA_MS.quota,
+    'ninguém corrige o nome do modelo mais rápido do que recarrega um cartão',
+  );
 });
 
 // ---------------------------------------------------------------------------

@@ -46,6 +46,21 @@ export type ClasseFalhaProvedor =
   | 'autenticacao'
   | 'rate_limit'
   | 'servico_fora'
+  /**
+   * O MODELO CONFIGURADO NÃO EXISTE MAIS NO PROVEDOR — auditoria de 18/08/2026.
+   *
+   * A Groq descomissionou `llama-3.3-70b-versatile` e passou a responder 404
+   * `model_not_found`. Nenhuma regex daqui reconhecia esse texto, então ele caía
+   * em `outra` — e `outra` NÃO merece troca, de propósito. Resultado: a cadeia
+   * desistia no PRIMEIRO elo e o operador recebia o JSON cru da Groq, com Gemini
+   * e Anthropic intactos logo atrás, nunca tentados. Uma cadeia de três cérebros
+   * comportando-se como se tivesse zero.
+   *
+   * É falha do PROVEDOR (aquele elo não serve para nenhum turno), não do pedido:
+   * merece troca imediata. E é a que menos se conserta sozinha — o nome do
+   * modelo está em configuração, não no ar —, daí a carência longa.
+   */
+  | 'modelo_invalido'
   | 'cancelado'
   /** Erro que não se encaixa em nenhuma das anteriores. Não vale troca: uma
    *  falha que não sabemos nomear pode muito bem repetir no próximo elo. */
@@ -60,6 +75,17 @@ export function classificarFalhaProvedor(erro: unknown, sinal?: AbortSignal): Cl
   /* A ORDEM IMPORTA e não é alfabética. Um 429 de cota traz as duas palavras;
      "sem crédito" é o diagnóstico útil, "tente mais devagar" é o inútil. */
   if (/credit balance|quota|insufficient|billing|payment/i.test(texto)) return 'quota';
+  /* Antes de `autenticacao`: "you do not have access to it" é a metade final da
+     frase que a Groq e a OpenAI usam para modelo inexistente, e ela cheira a
+     permissão sem ser. O código `model_not_found` é o sinal inequívoco; as
+     outras formas cobrem quem não o envia. */
+  if (
+    /model_not_found|does not exist or you do not have access|unknown model|model.{0,30}(not found|does not exist)|decommissioned|deprecated model/i.test(
+      texto,
+    )
+  ) {
+    return 'modelo_invalido';
+  }
   if (/rate.?limit|429|too many requests/i.test(texto)) return 'rate_limit';
   if (/401|403|invalid.?api.?key|unauthorized|permission/i.test(texto)) return 'autenticacao';
   if (/5\d{2}|overloaded|unavailable|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed/i.test(texto)) {
@@ -79,6 +105,7 @@ export const MOTIVO_DA_CLASSE: Record<ClasseFalhaProvedor, string> = {
   autenticacao: 'chave recusada',
   rate_limit: 'limite de taxa atingido',
   servico_fora: 'serviço fora do ar ou inalcançável',
+  modelo_invalido: 'o modelo configurado não existe neste provedor',
   cancelado: 'o turno foi cancelado',
   outra: 'falha não classificada',
 };
@@ -182,6 +209,10 @@ export const CARENCIA_MS: Record<ClasseFalhaProvedor, number> = {
   quota: 15 * 60 * 1000,
   /* Chave revogada ou errada não se conserta sozinha. Mesmo raciocínio. */
   autenticacao: 15 * 60 * 1000,
+  /* Nome de modelo errado está em CONFIGURAÇÃO: não passa sem deploy nem
+     recarga de ambiente. É a falha mais duradoura das cinco — insistir nela a
+     cada turno é a ida à rede mais previsivelmente perdida que existe aqui. */
+  modelo_invalido: 60 * 60 * 1000,
   /* Serviço fora costuma voltar. Espera o suficiente para não martelar. */
   servico_fora: 2 * 60 * 1000,
   /* A janela de um 429 é curta por definição. */

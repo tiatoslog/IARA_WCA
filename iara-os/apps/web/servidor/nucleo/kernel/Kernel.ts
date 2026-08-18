@@ -19,7 +19,7 @@ import { TeoriaDaMente } from '../TeoriaDaMente';
 import { BarramentoEventos } from './BarramentoEventos';
 import { MotorPercepcao } from './Percepcao';
 import { MemoriaTrabalho } from './MemoriaTrabalho';
-import { Planejador } from './Planejador';
+import { Planejador, capacidadesSemNuvemEmTexto } from './Planejador';
 import { FuncaoExecutiva, type Decisao } from './FuncaoExecutiva';
 import { DescobertaCapacidades } from './DescobertaCapacidades';
 import { lacunasCapacidade } from './LacunasCapacidade';
@@ -2309,10 +2309,19 @@ export class Kernel {
      * que consegue fazê-lo — a mensagem precisa dizer exatamente isso.
      */
     if (/credit balance is too low|billing/i.test(bruta)) {
+      /**
+       * A LISTA VEM DAS RECEITAS, NUNCA DA MEMÓRIA DE QUEM ESCREVE A FRASE.
+       *
+       * Auditoria de 18/08/2026: esta frase prometia "clima, hora,
+       * infraestrutura, histórico e busca" e três das cinco devolviam esta
+       * mesma frase quando pedidas. A lista estava escrita à mão aqui e de novo
+       * em `resumirProvedores` — duas cópias que ninguém comparava com as
+       * receitas que existem. Ver `CAPACIDADES_SEM_NUVEM`.
+       */
       return (
         'A cota da nuvem desta instalação acabou — não é defeito, é crédito. ' +
-        'Avise quem administra a IARA para recarregar em console.anthropic.com. ' +
-        'Enquanto isso continuo com o que é local: clima, hora, infraestrutura, histórico e busca.'
+        'Avise quem administra a IARA para recarregar. ' +
+        `Enquanto isso continuo com o que é local: ${capacidadesSemNuvemEmTexto()}.`
       );
     }
     if (/overloaded_error|rate_limit_error/i.test(bruta)) {

@@ -43,6 +43,7 @@ import {
 } from './kernel/Configuracao';
 import { GEMINI, GROQ, type PerfilProvedorAberto } from './ClienteCompativelOpenAI';
 import { MOTIVO_DA_CLASSE, type FalhaObservada } from './CadeiaDeRaciocinio';
+import { capacidadesSemNuvemEmTexto } from './kernel/Planejador';
 
 /**
  * Prazo curto, e os quatro provedores sondados em paralelo: a habilidade de
@@ -347,10 +348,13 @@ export function utilizavel(f: FichaProvedor): boolean {
 export function resumirProvedores(fichas: readonly FichaProvedor[], emUso: string | null): string {
   const configuradas = fichas.filter((f) => f.configurado);
   if (configuradas.length === 0) {
+    /* A segunda cópia escrita à mão da mesma lista — ver `CAPACIDADES_SEM_NUVEM`
+       e o incidente de 18/08/2026. Duas frases sobre a mesma coisa divergem: é
+       questão de quando, não de se. */
     return (
       'Não tenho nenhum provedor de raciocínio configurado neste motor — ' +
       'nem ANTHROPIC_API_KEY, nem GROQ_API_KEY, nem GEMINI_API_KEY, nem OLLAMA_URL. ' +
-      'Respondo só pelo caminho local: clima, hora, infraestrutura, histórico e busca.'
+      `Respondo só pelo caminho local: ${capacidadesSemNuvemEmTexto()}.`
     );
   }
 

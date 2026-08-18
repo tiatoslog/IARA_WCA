@@ -178,6 +178,43 @@ test('cota acabou no primeiro: o segundo assume e o operador nem percebe', async
   assert.equal(cadeia.modelo, 'llama-3.3-70b-versatile');
 });
 
+/**
+ * O INCIDENTE DE PRODUÇÃO DE 18/08/2026, ponta a ponta.
+ *
+ * A Groq descomissionou `llama-3.3-70b-versatile` e passou a responder 404
+ * `model_not_found`. A cadeia tinha três cérebros e comportou-se como se
+ * tivesse zero: o texto do 404 não casava com nenhuma regra de classificação,
+ * caía em `outra` — que NÃO merece troca, de propósito — e a operadora recebia
+ * o JSON cru da Groq com Gemini e Anthropic intactos, nunca tentados.
+ *
+ * O teste é da CADEIA, não da classificação: `diagnostico-provedores.test.ts`
+ * já garante que o erro é nomeado `modelo_invalido`. O que faltava provar é que
+ * nomear resulta em trocar — a distância entre as duas coisas é exatamente onde
+ * o defeito morava.
+ */
+test('modelo descomissionado no primeiro elo: o segundo responde e o operador nem percebe', async () => {
+  const descomissionado = new EloFalso('nuvem', 'llama-3.3-70b-versatile', true, () =>
+    Promise.reject(
+      new Error(
+        'groq respondeu 404: {"error":{"message":"The model `llama-3.3-70b-versatile` does not ' +
+          'exist or you do not have access to it.","type":"invalid_request_error",' +
+          '"code":"model_not_found"}}',
+      ),
+    ),
+  );
+  const vivo = new EloFalso('nuvem', 'gemini-flash-latest', true, () =>
+    Promise.resolve(respostaDe('quem respondeu fui eu')),
+  );
+
+  const cadeia = new CadeiaDeRaciocinio([descomissionado, vivo]);
+  const r = await cadeia.raciocinar(pedido());
+
+  assert.equal(r.texto, 'quem respondeu fui eu');
+  assert.equal(descomissionado.chamadas, 1);
+  assert.equal(vivo.chamadas, 1, 'o elo seguinte precisava ter sido tentado');
+  assert.equal(cadeia.modelo, 'gemini-flash-latest');
+});
+
 test('texto JÁ entregue fecha a porta da troca — nada de fala duplicada', async () => {
   const meioCaminho = new EloFalso('nuvem', 'a', true, async (p) => {
     p.aoReceberTexto('metade da frase');
