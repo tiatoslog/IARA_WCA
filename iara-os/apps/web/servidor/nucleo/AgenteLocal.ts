@@ -28,7 +28,7 @@
 
 import { mkdir, readdir } from 'node:fs/promises';
 import { existsSync, statSync, statfs } from 'node:fs';
-import { execFile, spawn } from 'node:child_process';
+import { execFile, spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { cpus, freemem, homedir, hostname, networkInterfaces, totalmem, uptime } from 'node:os';
 import path from 'node:path';
@@ -644,10 +644,79 @@ function comandoDoAgente(): string {
  */
 export type ModoSandboxAgente = 'nenhum' | 'container';
 
+/**
+ * O PADRÃO É CONTIDO, e sair disso exige escrever `nenhum` — não basta errar a
+ * grafia. Qualquer outro valor cai em `container`: a direção segura é a que
+ * sobrevive a um erro de digitação no `.env`.
+ */
 export function modoSandboxDoAgente(): ModoSandboxAgente {
-  return (process.env.IARA_AGENTE_SANDBOX ?? '').trim().toLowerCase() === 'container'
-    ? 'container'
-    : 'nenhum';
+  return (process.env.IARA_AGENTE_SANDBOX ?? '').trim().toLowerCase() === 'nenhum'
+    ? 'nenhum'
+    : 'container';
+}
+
+/**
+ * PRÉ-VOO DO SANDBOX — e a razão de ele RECUSAR em vez de cair para o spawn
+ * direto.
+ *
+ * Com o padrão contido, uma máquina sem Docker, sem a imagem ou sem a rede não
+ * tem como conter o agente. As duas saídas possíveis eram:
+ *
+ *   cair para o spawn direto  — a capacidade continua funcionando e a contenção
+ *                               some SEM NINGUÉM VER. É o rebaixamento
+ *                               silencioso de segurança: o operador acha que
+ *                               está contido porque o padrão diz que está.
+ *   recusar dizendo o que falta — a capacidade para até alguém montar o sandbox.
+ *
+ * A segunda, sempre. Uma trava que se desliga sozinha quando dá trabalho não é
+ * trava; e o custo da primeira é que o dia em que o Docker cair vira o dia em
+ * que o agente passa a rodar sem contenção, calado.
+ *
+ * Quem aceita o risco declara `IARA_AGENTE_SANDBOX=nenhum` — e aí a escolha tem
+ * dono e aparece no ambiente, em vez de acontecer por acidente de infra.
+ */
+export function conferirSandboxDoAgente(): void {
+  if (modoSandboxDoAgente() !== 'container') return;
+
+  const imagem = (process.env.IARA_AGENTE_IMAGEM ?? 'iara-agente:local').trim();
+  const rede = (process.env.IARA_AGENTE_REDE ?? 'iara-agente-interna').trim();
+  const faltando: string[] = [];
+
+  const docker = spawnSync('docker', ['info', '--format', '{{.ServerVersion}}'], {
+    encoding: 'utf8',
+    timeout: 30_000,
+  });
+  if (docker.status !== 0 || !docker.stdout?.trim()) {
+    faltando.push('o daemon do Docker não responde');
+  } else {
+    /* Imagem e rede só se pergunta com o daemon de pé: sem ele, `inspect` falha
+       por outro motivo e a mensagem culparia a coisa errada. */
+    const temImagem = spawnSync('docker', ['image', 'inspect', imagem], {
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    if (temImagem.status !== 0) {
+      faltando.push(
+        `a imagem "${imagem}" não existe (montar: infra/agente-sandbox/Dockerfile.agente)`,
+      );
+    }
+    const redes = spawnSync('docker', ['network', 'ls', '--format', '{{.Name}}'], {
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    if (!redes.stdout?.split('\n').some((l) => l.trim() === rede)) {
+      faltando.push(`a rede "${rede}" não existe (docker network create --internal ${rede})`);
+    }
+  }
+
+  if (faltando.length > 0) {
+    throw new Error(
+      `O agente de código roda contido por padrão e o sandbox não está montado: ${faltando.join('; ')}. ` +
+        'Não executei nada — cair para o lançamento sem contenção seria desligar a trava em silêncio. ' +
+        'Ver infra/agente-sandbox/LEIA-ME.md. Para assumir o risco e rodar sem contenção: ' +
+        'IARA_AGENTE_SANDBOX=nenhum.',
+    );
+  }
 }
 
 /**
@@ -725,6 +794,10 @@ const lancadorAgenteReal: LancadorAgente = (argumentos, diretorio, aoSair) => {
      Sao duas fronteiras diferentes, e confundi-las devolveria ao filho tudo que
      ES-01 tirou dele. */
   const emContainer = modoSandboxDoAgente() === 'container';
+  /* Recusa ANTES de qualquer spawn: uma sessão que nasce e morre já deixou
+     jornal, id e expectativa. `abrir_sessao_agente` transforma este erro no
+     relato que o operador lê. */
+  if (emContainer) conferirSandboxDoAgente();
   const comando = emContainer ? 'docker' : comandoDoAgente();
   const args = emContainer ? argumentosDeContainer(argumentos, diretorio) : [...argumentos];
 

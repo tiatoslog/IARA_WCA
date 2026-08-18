@@ -1,9 +1,21 @@
 # Sandbox do agente de código
 
-Fecha os três vetores que `testes/escape-sandbox-adversarial.test.ts` mede
-abertos no modo padrão (spawn direto no host). **Desligado por padrão** — ligar
-muda o produto, não só o endurecimento: o agente passa a rodar em Linux, sobre o
-repositório montado, com outro conjunto de ferramentas disponível.
+**LIGADO POR PADRÃO desde 18/08/2026.** O agente de código roda contido; o spawn
+direto no host só acontece para quem escrever `IARA_AGENTE_SANDBOX=nenhum`.
+
+## Sem Docker, o agente não roda — de propósito
+
+Numa máquina sem o daemon, sem a imagem ou sem a rede, o lançador **recusa** e diz
+o que falta. Não cai para o lançamento sem contenção.
+
+A alternativa seria o agente continuar funcionando e a contenção sumir sem
+ninguém ver — o dia em que o Docker caísse viraria o dia em que o agente passou a
+rodar exposto, calado. Uma trava que se desliga sozinha quando dá trabalho não é
+trava. Quem aceita o risco declara `IARA_AGENTE_SANDBOX=nenhum`, e aí a escolha
+tem dono e aparece no ambiente.
+
+Errar a grafia do opt-out (`nenhuma`, `none`, vazio) cai em **contido**: a direção
+segura é a que sobrevive a um erro de digitação no `.env`.
 
 ## Por que não `--network=none`
 

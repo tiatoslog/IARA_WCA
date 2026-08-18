@@ -121,7 +121,24 @@ export const BATERIAS: readonly Bateria[] = [
      * harness continua `EXECUTADA_FALHOU` de propósito: não reduzir o padrão
      * para obter PASS.
      *
-     * COMO O VERMELHO CHEGA AQUI, desde 17/08/2026. Os três cenários abertos
+     * FECHADO EM 18/08/2026 — e o que "fechado" quer dizer aqui. O agente passou
+     * a rodar CONTIDO POR PADRÃO: container com só o repositório montado, rede
+     * `--internal` e proxy com allowlist. Medido: leitura e escrita fora do
+     * repositório falham, e o egresso só alcança `api.anthropic.com` (que é o
+     * que o agente precisa — `--network=none` fecharia o vetor e quebraria o
+     * produto). Quem mede o padrão é `testes/escape-sandbox-container.test.ts`.
+     *
+     * Numa máquina sem Docker, imagem ou rede, o lançador RECUSA em vez de cair
+     * para o spawn direto: uma trava que se desliga sozinha quando dá trabalho
+     * não é trava. Nesse caso a bateria fica INCONCLUSIVA — porque segurança por
+     * recusa não é contenção medida, e o registro não pode confundir as duas.
+     *
+     * O caminho sem sandbox continua existindo atrás de `IARA_AGENTE_SANDBOX=
+     * nenhum`, e continua medido: `escape-sandbox-adversarial.test.ts` publica o
+     * custo dessa saída como `ESCAPE-SEM-SANDBOX`, que entra no relato sem
+     * bloquear — descreve configuração que ninguém tem por acidente.
+     *
+     * COMO O VERMELHO CHEGAVA AQUI, entre 17 e 18/08/2026. Os três cenários
      * deixavam `npm test` vermelho em toda rodada, e `npm run verificar`
      * depende de `npm test` — um gate vermelho desde sempre não distingue a
      * lacuna conhecida de uma regressão nova, e vira ruído que se aprende a

@@ -15,14 +15,20 @@
  *       windowsHide: true, shell: false,
  *     })
  *
- * ESTADO EM 17/08/2026, depois da primeira correção: o vazamento de segredo
- * por ambiente (ES-01) foi fechado — `lancadorAgenteReal` agora usa
- * `ambienteRestritoDoAgente()` (allowlist explícita, importada aqui, não
- * reimplementada) em vez de herdar `process.env` inteiro. Leitura, escrita
- * fora do repositório e rede de saída (ES-02, ES-03, ES-04) CONTINUAM
- * falhando: exigem sandboxing real de SO (Job Object restrito, container),
- * fora do alcance de uma correção segura só em Node — não tentado, para não
- * arriscar uma correção frágil que passa a inspeção e falha em produção.
+ * ⚠️ ESTE ARQUIVO MEDE O CAMINHO QUE DEIXOU DE SER O PADRÃO (18/08/2026).
+ *
+ * Desde que `modoSandboxDoAgente()` passou a devolver `container` por padrão, o
+ * spawn direto no host só acontece quando alguém escreve
+ * `IARA_AGENTE_SANDBOX=nenhum`. O que está medido aqui, portanto, é O CUSTO DE
+ * OPTAR POR SAIR — e é por isso que o marcador virou `ESCAPE-SEM-SANDBOX`: ele
+ * descreve a exceção declarada, não o padrão.
+ *
+ * Quem mede o padrão é `escape-sandbox-container.test.ts`. Apagar este arquivo
+ * seria perder a única medição do que a saída custa, e um risco que ninguém mede
+ * é um risco que reaparece como surpresa.
+ *
+ * ES-01 (vazamento de segredo por herança de `process.env`) foi fechado em
+ * 17/08 por `ambienteRestritoDoAgente()` e vale nos DOIS caminhos.
  *
  * Este arquivo espelha as opções de `spawn` de `lancadorAgenteReal` com um
  * binário substituto (Node) no lugar do `claude.exe`, que tipicamente não
@@ -53,25 +59,23 @@
  *
  * Então os papéis foram separados:
  *
- *   `npm test`  — detector de REGRESSÃO. Estes testes CARACTERIZAM a realidade
- *                 medida: o escape acontece. Passam enquanto a realidade for
- *                 essa, e falham se ela mudar EM QUALQUER DIREÇÃO — inclusive
- *                 se alguém contiver o escape e não atualizar o registro, que é
- *                 um jeito de "consertar" que hoje passaria despercebido.
+ *   `npm test`  — detector de REGRESSÃO. Estes testes CARACTERIZAM o caminho
+ *                 sem sandbox: ali o escape acontece. Passam enquanto a
+ *                 realidade for essa, e falham se ela mudar EM QUALQUER DIREÇÃO
+ *                 — inclusive se alguém contiver o escape e não atualizar o
+ *                 registro, que é um jeito de "consertar" que passaria
+ *                 despercebido.
  *
- *   bateria      — ACHADO DE SEGURANÇA. Cada vetor aberto imprime uma linha
- *   `escape_     `ESCAPE-ABERTO ES-0x ...`, e `bateriaEscapeSandbox` em
- *    sandbox`     `testes/validacao/executar.ts` a converte em violação crítica.
- *                 A bateria continua `EXECUTADA_FALHOU` e o veredito continua
- *                 `BLOQUEADO`. NADA fica verde por causa desta mudança.
+ *   bateria      — ACHADO DE SEGURANÇA, e desde 18/08 ela mede O PADRÃO, que é
+ *   `escape_     o container. Os marcadores daqui (`ESCAPE-SEM-SANDBOX`) entram
+ *    sandbox`    no relato como o custo da saída declarada, não como violação
+ *                crítica — porque descrevem uma configuração que ninguém tem
+ *                sem escrever `IARA_AGENTE_SANDBOX=nenhum`.
  *
- * A CONSEQUÊNCIA QUE IMPORTA: não existe estado em que o gate fique verde com
- * vetor aberto, e não existe estado em que realidade e registro discordem em
- * silêncio. Se os três forem fechados de verdade, ES-02/03/04 falham pedindo a
- * atualização do registro — e essa falha é o sinal de que a correção chegou.
- *
- * ES-01 segue afirmando que o vazamento está FECHADO: aquele foi corrigido, e
- * ali a asserção normal é o guarda de regressão correto.
+ * A CONSEQUÊNCIA QUE IMPORTA continua valendo: não existe estado em que o gate
+ * fique verde sem alguém ter MEDIDO contenção, e não existe estado em que
+ * realidade e registro discordem em silêncio. Sem Docker, a bateria é
+ * INCONCLUSIVA — nunca aprovada.
  */
 
 /**
@@ -82,7 +86,7 @@
  * de forma quebra o elo entre a medição e o veredito sem quebrar teste nenhum.
  */
 function anunciarEscapeAberto(vetor: string, detalhe: string): void {
-  console.log(`ESCAPE-ABERTO ${vetor} ${detalhe}`);
+  console.log(`ESCAPE-SEM-SANDBOX ${vetor} ${detalhe}`);
 }
 
 import test from 'node:test';

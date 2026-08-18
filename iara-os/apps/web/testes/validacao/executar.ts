@@ -331,93 +331,112 @@ function bateriaDeTap(
 // ---------------------------------------------------------------------------
 
 /**
- * NAO E `bateriaDeTap` porque aqui o TAP verde NAO significa aprovacao.
+ * A BATERIA MEDE O PADRAO — e desde 18/08/2026 o padrao e o container.
  *
- * `testes/escape-sandbox-adversarial.test.ts` CARACTERIZA vetores abertos: ele
- * passa enquanto o escape reproduzir, e falha se a realidade mudar. Quem produz
- * o veredito, entao, nao e a contagem de `ok` — e a lista de marcadores
- * `ESCAPE-ABERTO` que os cenarios imprimem. Um vetor aberto e violacao critica,
- * e violacao critica e BLOQUEADO em `MotorVeredito`.
+ * `modoSandboxDoAgente()` devolve `container` a menos que alguem escreva
+ * `IARA_AGENTE_SANDBOX=nenhum`. Entao a pergunta "o que um processo comprometido
+ * alcanca de fato?" se responde medindo O CAMINHO CONTIDO, e nao mais o spawn
+ * direto — que virou excecao declarada.
  *
- * OS TRES ESTADOS, e por que nenhum deles fica verde por engano:
+ * DOIS ARQUIVOS, PAPEIS DIFERENTES:
  *
- *   TAP verde + marcadores  → EXECUTADA_FALHOU. E o estado de hoje: o mecanismo
- *                             de lancamento nao contem o filho. Bloqueia.
- *   TAP vermelho            → EXECUTADA_FALHOU. A caracterizacao nao bate mais
- *                             com a realidade: ou alguem conteve o escape e nao
- *                             atualizou o registro, ou o ambiente mudou e a
- *                             medicao nao vale. Bloqueia ate alguem olhar.
- *   TAP verde sem marcador  → EXECUTADA_INCONCLUSIVA. So acontece se os cenarios
- *                             pararem de rodar. "Nao mediu" nunca vira "passou".
+ *   escape-sandbox-container.test.ts    o PADRAO. Decide o veredito.
+ *   escape-sandbox-adversarial.test.ts  o CUSTO DE SAIR. Entra no relato como
+ *                                       `ESCAPE-SEM-SANDBOX`, nunca como
+ *                                       violacao critica: descreve configuracao
+ *                                       que ninguem tem por acidente.
  *
- * O unico caminho para EXECUTADA_PASSOU e alguem conter os tres vetores, voltar
- * as assercoes de ES-02/03/04 e atualizar o registro — de proposito.
+ * OS ESTADOS, e por que nenhum fica verde por engano:
+ *
+ *   contencao medida e OK    → EXECUTADA_PASSOU. Alguem provou contencao nesta
+ *                              maquina, com Docker de pe.
+ *   contencao medida e FALHA → EXECUTADA_FALHOU + violacao critica. BLOQUEADO.
+ *   Docker fora do ar        → EXECUTADA_INCONCLUSIVA. Os cenarios de container
+ *                              PULAM, e "nao consegui medir" nunca vira "esta
+ *                              contido" — mesmo que o lancador recuse rodar sem
+ *                              sandbox, o que torna a maquina segura por outro
+ *                              motivo. Seguranca por recusa nao e contencao
+ *                              medida, e o registro nao pode confundir as duas.
  */
 async function bateriaEscapeSandbox(): Promise<ResultadoBateria> {
-  const { saida, codigo } = rodarProcesso('node', [
+  const padrao = rodarProcesso('node', [
+    '--import',
+    'tsx',
+    '--test',
+    'testes/escape-sandbox-container.test.ts',
+  ]);
+  const semSandbox = rodarProcesso('node', [
     '--import',
     'tsx',
     '--test',
     'testes/escape-sandbox-adversarial.test.ts',
   ]);
-  const { passou, falhou } = contarTap(saida);
 
-  /* O marcador atravessa o TAP como linha de diagnostico (`# ESCAPE-ABERTO ...`),
-     entao a busca e por conteudo, nao por inicio de linha. */
-  const abertos = saida
+  const { passou, falhou } = contarTap(padrao.saida);
+
+  /* `node:test` marca cenario pulado como `ok ... # SKIP`, e `contarTap` conta
+     isso como aprovado. Sem esta linha, uma maquina sem Docker reportaria
+     "3 passou" — o falso verde exato que esta bateria existe para nao produzir. */
+  const pulados = (padrao.saida.match(/# SKIP/g) ?? []).length;
+  const medidos = passou + falhou - pulados;
+
+  const custoDeSair = semSandbox.saida
     .split('\n')
     .map((l) => l.trim())
-    .filter((l) => l.includes('ESCAPE-ABERTO'))
-    .map((l) => l.slice(l.indexOf('ESCAPE-ABERTO')));
+    .filter((l) => l.includes('ESCAPE-SEM-SANDBOX'))
+    .map((l) => l.slice(l.indexOf('ESCAPE-SEM-SANDBOX')));
 
-  const naoMediu = passou + falhou === 0;
-  const caracterizacaoQuebrou = falhou > 0 || codigo !== 0;
+  const naoMediu = medidos <= 0;
+  const contencaoQuebrou = falhou > 0 || (padrao.codigo !== 0 && !naoMediu);
 
   const status: StatusExecucao = naoMediu
     ? 'EXECUTADA_INCONCLUSIVA'
-    : caracterizacaoQuebrou || abertos.length > 0
+    : contencaoQuebrou
       ? 'EXECUTADA_FALHOU'
       : 'EXECUTADA_PASSOU';
 
-  const violacoes = [
-    ...abertos.map((m) => `vetor de escape ABERTO: ${m.replace('ESCAPE-ABERTO ', '')}`),
-    ...(caracterizacaoQuebrou
-      ? [
-          'a caracterizacao do escape nao reproduz mais: registro e realidade ' +
-            'discordam — reavaliar antes de qualquer release',
-        ]
-      : []),
-  ];
+  const violacoes = contencaoQuebrou
+    ? [
+        'a contencao do agente NAO se sustentou no caminho padrao: ' +
+          'um processo comprometido alcanca o que o sandbox deveria fechar',
+      ]
+    : [];
 
   return {
     status,
-    cenarios: passou + falhou,
-    passou: Math.max(0, passou - abertos.length),
-    falhou: falhou + abertos.length,
+    cenarios: Math.max(0, medidos),
+    passou: contencaoQuebrou ? Math.max(0, medidos - falhou) : Math.max(0, medidos),
+    falhou,
     inconclusivo: naoMediu ? 1 : 0,
     bloqueado: 0,
     metricas: {
-      codigo_de_saida: codigo,
-      vetores_abertos: abertos.length,
-      cenarios_de_caracterizacao: passou + falhou,
+      codigo_de_saida: padrao.codigo,
+      cenarios_de_contencao: Math.max(0, medidos),
+      cenarios_pulados: pulados,
+      vetores_abertos_sem_sandbox: custoDeSair.length,
     },
     violacoes_criticas: violacoes,
-    detalhe: { abertos, codigo, saida: saida.slice(-8000) },
+    detalhe: {
+      padrao: padrao.saida.slice(-8000),
+      sem_sandbox: semSandbox.saida.slice(-4000),
+      custo_de_sair: custoDeSair,
+    },
     relato: [
       'ESCAPE DE SANDBOX - o que um processo comprometido alcanca de fato',
       '',
-      `  ${abertos.length} vetor(es) de escape ABERTO(S) em ${passou + falhou} cenario(s)`,
-      ...abertos.map((m) => `    ${m}`),
+      naoMediu
+        ? '  NAO MEDIDO: os cenarios de contencao pularam (daemon do Docker fora do ar).'
+        : `  PADRAO (container): ${medidos} cenario(s) de contencao, ${falhou} falha(s)`,
+      naoMediu
+        ? '  O lancador RECUSA rodar sem sandbox, entao a maquina nao fica exposta —'
+        : '  so o repositorio montado, rede --internal e proxy com allowlist.',
+      naoMediu ? '  mas recusa nao e contencao medida, e o registro nao confunde as duas.' : '',
       '',
-      '  MODO PADRAO (spawn direto no host): o mecanismo nao contem o filho.',
-      '  A CONTENCAO EXISTE e esta medida em testes/escape-sandbox-container.test.ts —',
-      '  container com so o repositorio montado e rede --internal + proxy com allowlist.',
-      '  Esta DESLIGADA por padrao: ligar muda o produto (agente passa a rodar em Linux,',
-      '  sobre repositorio montado) e quebraria toda maquina sem a imagem e a rede prontas.',
-      '  Ligar com: IARA_AGENTE_SANDBOX=container, IARA_AGENTE_IMAGEM, IARA_AGENTE_REDE,',
-      '  IARA_AGENTE_PROXY. Enquanto o padrao for o spawn direto, estes vetores seguem abertos.',
+      `  CUSTO DE SAIR (IARA_AGENTE_SANDBOX=nenhum): ${custoDeSair.length} vetor(es)`,
+      ...custoDeSair.map((m) => `    ${m}`),
+      '',
       ...violacoes.map((v) => `  ${v}`),
-    ],
+    ].filter(Boolean),
   };
 }
 
