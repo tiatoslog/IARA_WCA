@@ -260,6 +260,10 @@ export const LEITURA_EXTERNA: readonly string[] = [
 export const LEITURA_INTERNA: readonly string[] = [
   'servidor/nucleo/RagHistorico.ts', // lê o histórico de incidentes
   'servidor/nucleo/kernel/habilidades/dados.ts', // lê documentos
+  // Lê planilha genérica (.xlsx/.xls) de dados/documentos/. Mesmo disco de
+  // `dados.ts`, sem rede — por isso LEITURA_INTERNA, não LEITURA_EXTERNA
+  // (essa é onde `ClientePlanilhaOcis.ts` vive, por buscar via Graph).
+  'servidor/nucleo/PlanilhaGenerica.ts',
   /**
    * A allowlist de repositórios onde um agente de código pode trabalhar. Toca o
    * disco só para VALIDAR o que a configuração declara: a pasta existe, é pasta,
