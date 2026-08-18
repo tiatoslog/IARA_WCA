@@ -21,7 +21,21 @@ iara-os/apps/web/
   dados/          base determinística + shards privados (gerados)
   public/escritorio/        pixel art
   public/identidade_iara/   modelo 3D — ver components/projecao/EXPORTACAO.md
+  scripts/        utilitarios, separados por o que fazem com o disco
+    diagnostico/  SO LEEM
+    provas/       ponta a ponta, escrevem so em temporario
+    geracao/      ESCREVEM artefatos no repositorio
+    docs/         geram a documentacao
+
+docs/             manual/ (escrito a mao), gerado/ (automatico, nao editar),
+                  relatorios/ (congelados), especificacao/
+arquivos/         material de apoio que nao e codigo; packs-arte/ e
+                  identidade-metahuman/ ficam FORA do Git, por licenca
 ```
+
+Cada pasta tem um `README.md` dizendo o que vai ali e o que nao vai. Ao mover
+qualquer pasta de `arquivos/`, mova a regra do `.gitignore` junto: ela acompanha
+o caminho, e perde-la desfaz uma protecao de licenca em silencio.
 
 ## Duas projeções, um contrato
 
@@ -142,6 +156,8 @@ arquivo.
 cd iara-os/apps/web
 npm install
 npm run dev          # motor (8787) + web (3000), um comando
+npm run verificar    # caminhos, GLSL, tipos e testes — o que o CI roda
+npm run docs         # regenera docs/gerado/ (md, html, docx, pdf)
 ```
 
 Sem `ANTHROPIC_API_KEY` o sistema roda completo em modo local e **avisa isso na
