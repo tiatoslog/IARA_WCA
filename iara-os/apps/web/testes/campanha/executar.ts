@@ -44,6 +44,10 @@ import {
   auditarSilencio,
   auditarVazamento,
 } from './missoes/auditores';
+import {
+  criarProvedorRaciocinio,
+  provedoresDeclarados,
+} from '../../servidor/nucleo/FabricaRaciocinio';
 import { lerJornal, operacoesDaSessao } from './oraculos/OraculoJornal';
 import { desligamentoAgendado } from './oraculos/OraculoEnergia';
 import { portaEscutando, processoAtivo } from './oraculos/OraculoProcesso';
@@ -155,6 +159,35 @@ const ARVORE_NA_SUBIDA = (() => {
     /* Fora de repositório git a campanha continua rodando: o que ela perde é a
        capacidade de servir de evidência, e isso fica dito no campo. */
     return { commit: 'desconhecido', arvore_suja: -1 };
+  }
+})();
+
+/**
+ * QUAL CÉREBRO RESPONDEU — e por que isto faltava.
+ *
+ * A campanha de 18/08/2026 saiu com `GO` e nenhum artefato dizia qual provedor
+ * tinha respondido: nem o relatório, nem o `veredito.json`, nem os protocolos.
+ * Duas rodadas em modelos diferentes produziam evidência indistinguível, e
+ * comparar provedores — a pergunta que motivou a cadeia inteira — era
+ * impossível a partir do que ficava em disco.
+ *
+ * Lido da FÁBRICA REAL e não do ambiente cru: `criarProvedorRaciocinio` é quem
+ * decide, e reler `IARA_PROVEDOR` aqui seria uma segunda cópia da regra, livre
+ * para divergir dela no primeiro ajuste de cadeia.
+ *
+ * Falhar aqui não pode derrubar a campanha: sem carimbo ela ainda mede, só
+ * perde a capacidade de ser comparada — e isso fica DITO no campo.
+ */
+const CEREBRO_NA_SUBIDA = (() => {
+  try {
+    const p = criarProvedorRaciocinio();
+    return { provedor: p.apelido, modelo: p.modelo, cadeia: provedoresDeclarados().join(' → ') };
+  } catch (erro) {
+    return {
+      provedor: 'desconhecido',
+      modelo: `não carimbado: ${(erro as Error).message.slice(0, 80)}`,
+      cadeia: '',
+    };
   }
 })();
 
@@ -708,6 +741,9 @@ function relatorio(resultados: readonly ResultadoMissao[], notas: readonly strin
     '> A IARA nunca ganha crédito por dizer que fez algo. Ela só ganha crédito',
     '> quando uma evidência independente comprova que fez.',
     '',
+    `> **Cérebro medido:** ${CEREBRO_NA_SUBIDA.provedor} · ${CEREBRO_NA_SUBIDA.modelo}` +
+      (CEREBRO_NA_SUBIDA.cadeia ? ` · cadeia: ${CEREBRO_NA_SUBIDA.cadeia}` : ''),
+    '',
     '## Portão',
     '',
     criticos.length > 0
@@ -1050,6 +1086,7 @@ async function principal(): Promise<number> {
         inicio: INICIO.toISOString(),
         fim: new Date().toISOString(),
         commit: ARVORE_NA_SUBIDA.commit,
+        cerebro: CEREBRO_NA_SUBIDA,
         arvore_suja: ARVORE_NA_SUBIDA.arvore_suja,
         portao,
         porta: PORTA,
