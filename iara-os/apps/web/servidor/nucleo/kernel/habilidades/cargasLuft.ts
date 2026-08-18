@@ -260,7 +260,213 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Fase 3 — comparação entre semanas e relatório executivo. Só o que compõe
+// dado já calculado por `todasAsCargas`/`agregarCargas`; nada aqui inventa
+// limiar de atraso ou anomalia (ver cabeçalho do arquivo — isso pede regra de
+// negócio ainda não definida e fica fora de propósito).
+// ---------------------------------------------------------------------------
+
+function formatarDelta(atual: number, anterior: number): string {
+  if (anterior === 0) return atual === 0 ? 'sem variação (as duas semanas em zero)' : 'sem base de comparação (semana anterior em zero)';
+  const pct = ((atual - anterior) / anterior) * 100;
+  const sinal = pct >= 0 ? '+' : '';
+  return `${sinal}${pct.toFixed(1)}%`;
+}
+
+export const compararSemanasLuft: Habilidade = {
+  manifesto: {
+    id: 'comparar_semanas_luft',
+    nome: 'Comparação entre semanas — operação LUFT',
+    descricao:
+      'Compara contagem e valor total de cargas entre duas semanas da operação LUFT. Os parâmetros ' +
+      '"periodo_atual" e "periodo_anterior" recebem a EXPRESSÃO como foi dita ("essa semana", "semana ' +
+      'passada", "17/08") — não calcule a data. Use para "como essa semana está em relação à passada", ' +
+      '"comparar com a semana anterior", "crescemos ou caímos essa semana".',
+    exemplos: [
+      'Como essa semana está em relação à passada?',
+      'Comparar essa semana com a semana anterior',
+      'Crescemos ou caímos em relação à semana passada?',
+      'Faturamento dessa semana comparado com a semana anterior',
+    ],
+    capacidades: ['comparar contagem entre semanas', 'comparar faturamento entre semanas'],
+    dominio: 'operacoes',
+    capacidade: 'automacao',
+    permissoes: ['rede', 'banco'],
+    timeout_ms: 15000,
+    custo: 'zero',
+    risco: 'baixo',
+    idempotencia: 'leitura',
+    esquema: {
+      periodo_atual: { tipo: 'texto', padrao: 'essa semana' },
+      periodo_anterior: { tipo: 'texto', padrao: 'semana passada' },
+    },
+  },
+  indisponivelPorque() {
+    return planilhaOcisDisponivel() ? null : 'falta MS_GRAPH_TOKEN ou MS_GRAPH_OCI_URL no ambiente';
+  },
+  async executar(ctx) {
+    const fraseAtual = String(ctx.parametros.periodo_atual ?? 'essa semana');
+    const fraseAnterior = String(ctx.parametros.periodo_anterior ?? 'semana passada');
+    const periodoAtual = interpretarPeriodo(fraseAtual);
+    const periodoAnterior = interpretarPeriodo(fraseAnterior);
+
+    if (!periodoAtual || !periodoAnterior) {
+      const qual = !periodoAtual ? fraseAtual : fraseAnterior;
+      return {
+        texto:
+          `Não entendi "${qual}" como período, então não comparei nada. ` +
+          'Entendo "essa semana", "semana passada", "semana que vem" ou uma data como "17/08".',
+        detalhe: `expressão de período não interpretada: "${qual.slice(0, 60)}"`,
+        resolveu: false,
+      };
+    }
+
+    const r = await todasAsCargas();
+    if (!r.ok) {
+      return {
+        texto: r.texto,
+        detalhe: proveniencia({ fonte: 'planilha LUFT', resultado: 'indisponivel', cache_usado: String(r.fonte?.cache ?? false) }),
+        resolveu: false,
+      };
+    }
+
+    const naFaixa = (inicio: string, fim: string) =>
+      r.cargas.filter((c) => c.data_coleta !== null && c.data_coleta >= inicio && c.data_coleta <= fim);
+
+    const cargasAtual = naFaixa(periodoAtual.inicio, periodoAtual.fim);
+    const cargasAnterior = naFaixa(periodoAnterior.inicio, periodoAnterior.fim);
+
+    const contagemAtual = cargasAtual.length;
+    const contagemAnterior = cargasAnterior.length;
+    const valorAtual = cargasAtual.reduce((soma, c) => soma + (c.valor ?? 0), 0);
+    const valorAnterior = cargasAnterior.reduce((soma, c) => soma + (c.valor ?? 0), 0);
+
+    const texto =
+      `${periodoAtual.rotulo}: ${contagemAtual} carga${contagemAtual === 1 ? '' : 's'}, ${formatarReal(valorAtual)}.\n` +
+      `${periodoAnterior.rotulo}: ${contagemAnterior} carga${contagemAnterior === 1 ? '' : 's'}, ${formatarReal(valorAnterior)}.\n` +
+      `Variação em contagem: ${formatarDelta(contagemAtual, contagemAnterior)}. ` +
+      `Variação em valor: ${formatarDelta(valorAtual, valorAnterior)}.`;
+
+    return {
+      texto,
+      detalhe: proveniencia({
+        fonte: 'planilha LUFT',
+        periodo_atual: `${periodoAtual.inicio}..${periodoAtual.fim}`,
+        periodo_anterior: `${periodoAnterior.inicio}..${periodoAnterior.fim}`,
+        contagem_atual: contagemAtual,
+        contagem_anterior: contagemAnterior,
+      }),
+      resolveu: true,
+    };
+  },
+  async verificar(resultado) {
+    return resultado.resolveu
+      ? { confirmado: true, evidencia: 'a planilha da operação LUFT respondeu às duas consultas de período' }
+      : { confirmado: false, evidencia: resultado.texto, motivo: 'sem_meio_de_verificar' };
+  },
+};
+
+export const relatorioExecutivoLuft: Habilidade = {
+  manifesto: {
+    id: 'relatorio_executivo_luft',
+    nome: 'Relatório executivo — operação LUFT',
+    descricao:
+      'Consolida num único relatório: total de cargas cadastradas, contagem e faturamento do período ' +
+      'pedido, os motoristas com mais cargas no período e a distribuição por status. "periodo" recebe a ' +
+      'EXPRESSÃO como foi dita ("essa semana", "hoje") e é opcional (vazio = essa semana). Use para ' +
+      '"me dá um relatório da operação", "resumo executivo da semana", "como está a operação hoje".',
+    exemplos: [
+      'Me dá um relatório da operação essa semana',
+      'Resumo executivo da LUFT',
+      'Como está a operação hoje?',
+      'Relatório da semana passada',
+    ],
+    capacidades: ['relatório executivo', 'resumo de operação por período'],
+    dominio: 'operacoes',
+    capacidade: 'automacao',
+    permissoes: ['rede', 'banco'],
+    timeout_ms: 15000,
+    custo: 'zero',
+    risco: 'baixo',
+    idempotencia: 'leitura',
+    esquema: {
+      periodo: { tipo: 'texto', padrao: 'essa semana' },
+    },
+  },
+  indisponivelPorque() {
+    return planilhaOcisDisponivel() ? null : 'falta MS_GRAPH_TOKEN ou MS_GRAPH_OCI_URL no ambiente';
+  },
+  async executar(ctx) {
+    const frase = String(ctx.parametros.periodo ?? 'essa semana');
+    const periodo = interpretarPeriodo(frase);
+    if (!periodo) {
+      return {
+        texto:
+          `Não entendi "${frase}" como período, então não montei o relatório. ` +
+          'Entendo "essa semana", "hoje", "semana passada" ou uma data como "17/08".',
+        detalhe: `expressão de período não interpretada: "${frase.slice(0, 60)}"`,
+        resolveu: false,
+      };
+    }
+
+    const r = await todasAsCargas();
+    if (!r.ok) {
+      return {
+        texto: r.texto,
+        detalhe: proveniencia({ fonte: 'planilha LUFT', resultado: 'indisponivel', cache_usado: String(r.fonte?.cache ?? false) }),
+        resolveu: false,
+      };
+    }
+
+    const cargasPeriodo = r.cargas.filter(
+      (c) => c.data_coleta !== null && c.data_coleta >= periodo.inicio && c.data_coleta <= periodo.fim,
+    );
+    const contagem = cargasPeriodo.length;
+    const valorTotal = cargasPeriodo.reduce((soma, c) => soma + (c.valor ?? 0), 0);
+
+    const TOPO_MOTORISTAS = 3;
+    const porMotorista = [...agregarCargas(cargasPeriodo, 'motorista')].sort((a, b) => b.contagem - a.contagem);
+    const linhasMotoristas =
+      porMotorista.length > 0
+        ? porMotorista.slice(0, TOPO_MOTORISTAS).map((g, i) => `  ${i + 1}. ${g.chave} — ${g.contagem} carga${g.contagem === 1 ? '' : 's'}`)
+        : ['  (nenhuma carga no período)'];
+
+    const porStatus = [...agregarCargas(cargasPeriodo, 'status_normalizado')].sort((a, b) => b.contagem - a.contagem);
+    const linhasStatus =
+      porStatus.length > 0
+        ? porStatus.map((g) => `  ${g.chave} — ${g.contagem}`)
+        : ['  (nenhuma carga no período)'];
+
+    const texto =
+      `Relatório executivo — ${periodo.rotulo}\n\n` +
+      `Total cadastrado (todas as datas): ${r.cargas.length} carga${r.cargas.length === 1 ? '' : 's'}.\n` +
+      `No período: ${contagem} carga${contagem === 1 ? '' : 's'}, ${formatarReal(valorTotal)}.\n\n` +
+      `Top motoristas no período:\n${linhasMotoristas.join('\n')}\n\n` +
+      `Por status:\n${linhasStatus.join('\n')}`;
+
+    return {
+      texto,
+      detalhe: proveniencia({
+        fonte: 'planilha LUFT',
+        periodo: `${periodo.inicio}..${periodo.fim}`,
+        registros_totais: r.cargas.length,
+        registros_periodo: contagem,
+        cache: r.fonte?.cache ?? false,
+      }),
+      resolveu: true,
+    };
+  },
+  async verificar(resultado) {
+    return resultado.resolveu
+      ? { confirmado: true, evidencia: 'a planilha da operação LUFT respondeu com dado para compor o relatório' }
+      : { confirmado: false, evidencia: resultado.texto, motivo: 'sem_meio_de_verificar' };
+  },
+};
+
 export const HABILIDADES_PLANILHA_OCIS: readonly Habilidade[] = [
   consultarCargasLuft,
   consultarEstatisticasCargasLuft,
+  compararSemanasLuft,
+  relatorioExecutivoLuft,
 ];

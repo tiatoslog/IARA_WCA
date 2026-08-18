@@ -89,6 +89,14 @@ export function interpretarPeriodo(bruto: string, agora = new Date()): Periodo |
     return { inicio, fim, rotulo: `semana que vem (${paraDDMM(inicio)} a ${paraDDMM(fim)})` };
   }
 
+  if (/\b(semana passada|semana anterior)\b/.test(t)) {
+    const seg = segundaDaSemana(comDias(agora, -7));
+    const sex = comDias(seg, 4);
+    const inicio = paraISOLocal(seg);
+    const fim = paraISOLocal(sex);
+    return { inicio, fim, rotulo: `semana passada (${paraDDMM(inicio)} a ${paraDDMM(fim)})` };
+  }
+
   if (/\b(essa semana|esta semana|semana atual)\b/.test(t)) {
     const seg = segundaDaSemana(agora);
     const sex = comDias(seg, 4);

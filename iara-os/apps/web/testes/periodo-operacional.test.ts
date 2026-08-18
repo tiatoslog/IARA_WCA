@@ -57,6 +57,18 @@ test('"semana que vem" é a próxima segunda a sexta', () => {
   assert.equal(p!.fim, '2026-08-21');
 });
 
+test('"semana passada" é a segunda a sexta anterior', () => {
+  const p = interpretarPeriodo('semana passada', SEXTA);
+  assert.equal(p!.inicio, '2026-08-03');
+  assert.equal(p!.fim, '2026-08-07');
+});
+
+test('"semana anterior" é sinônimo de "semana passada"', () => {
+  const p = interpretarPeriodo('comparado com a semana anterior', SEXTA);
+  assert.equal(p!.inicio, '2026-08-03');
+  assert.equal(p!.fim, '2026-08-07');
+});
+
 test('data explícita "17/08" assume o ano corrente', () => {
   const p = interpretarPeriodo('cargas do dia 17/08', SEXTA);
   assert.equal(p!.inicio, '2026-08-17');

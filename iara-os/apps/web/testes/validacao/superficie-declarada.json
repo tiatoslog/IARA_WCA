@@ -12,6 +12,7 @@
     "buscar_historico|baixo|leitura|verificador=false",
     "cancelar_lembrete|medio|escrita_idempotente|verificador=true",
     "capturar_tela|medio|escrita_nao_idempotente|verificador=true",
+    "comparar_semanas_luft|baixo|leitura|verificador=true",
     "consultar_agenda|baixo|leitura|verificador=false",
     "consultar_cargas_luft|baixo|leitura|verificador=true",
     "consultar_clima|baixo|leitura|verificador=false",
@@ -34,6 +35,7 @@
     "listar_lembretes|baixo|leitura|verificador=false",
     "pesquisar_web|baixo|leitura|verificador=false",
     "recusar_por_sigilo|baixo|leitura|verificador=false",
+    "relatorio_executivo_luft|baixo|leitura|verificador=true",
     "resolver_confirmacao|alto|escrita_nao_idempotente|verificador=true",
     "ver_agenda_calendario|baixo|leitura|verificador=true"
   ],
