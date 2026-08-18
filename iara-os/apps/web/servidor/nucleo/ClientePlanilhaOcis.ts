@@ -55,6 +55,45 @@ const ABA_VIVA = '2026';
 /** Linha 1 é cabeçalho; dado real começa na 5 (linhas 2-4 são sub-cabeçalho/resumo). */
 const PRIMEIRA_LINHA_DE_DADO = 5;
 
+/**
+ * O ANO QUE ESTA LEITURA ALCANÇA — e ele precisa ser dito ao operador.
+ *
+ * O DEFEITO (18/08/2026). Perguntada quantas cargas existem, a IARA respondeu
+ * "2681 cargas no total". São 2681 em 2026. A planilha tem 10.777: as abas
+ * "2025" (4031) e "2024" (4065) estão no MESMO arquivo e não são lidas. A
+ * procedência interna já carimbava `fonte: '2026'` — o sistema sabia o ano e
+ * não contava a quem perguntou.
+ *
+ * É a classe de erro mais cara que existe aqui: a resposta certa para a
+ * pergunta errada. "2681" está correto para 2026 e é falso como total, e o
+ * operador não tem como perceber a diferença — ele perguntou "quantas cargas
+ * temos" e recebeu um número redondo, com procedência, sem ressalva.
+ *
+ * Note que trocar de ano NÃO é ligar uma flag: a aba 2026 tem outro mapa de
+ * colunas (VALOR na 17; nas antigas, na 25, com um bloco AGENDAMENTO no meio).
+ * Ler as antigas com o mapa desta produziria lixo silencioso — que é pior que
+ * a recusa. Enquanto esse mapa não existir, a resposta honesta é dizer o que se
+ * alcança e o que não.
+ */
+export const ANO_VIVO = ABA_VIVA;
+
+/**
+ * O operador citou um ano que esta leitura não alcança? Devolve o ano citado.
+ *
+ * Lê a FRASE CRUA, e não o parâmetro `periodo`, porque o caso perigoso é
+ * exatamente aquele em que a LLM larga o ano pelo caminho: "quantas cargas em
+ * 2025?" vira uma chamada sem período, o universo inteiro de 2026 responde, e
+ * o número sai rotulado como se fosse de 2025.
+ */
+export function anoForaDoAlcance(frase: string): string | null {
+  /* Só anos plausíveis de operação. `\b` dos dois lados para não capturar o
+     miolo de um número de OCI — "191597" não cita 2015. */
+  const achados = frase.match(/\b(20[12]\d)\b/g);
+  if (!achados) return null;
+  const fora = achados.find((a) => a !== ANO_VIVO);
+  return fora ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Retentativa — só para o que vale a pena repetir
 // ---------------------------------------------------------------------------

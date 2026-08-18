@@ -14,7 +14,9 @@
 
 import type { Habilidade } from '../Habilidade';
 import {
+  ANO_VIVO,
   agregarCargas,
+  anoForaDoAlcance,
   cargasNoPeriodo,
   planilhaOcisDisponivel,
   todasAsCargas,
@@ -50,6 +52,48 @@ function proveniencia(campos: Readonly<Record<string, string | number | boolean>
 const METRICAS = ['contagem', 'valor_total', 'valor_medio'] as const;
 type Metrica = (typeof METRICAS)[number];
 
+/**
+ * ANO FORA DO ALCANCE — a recusa vem ANTES de qualquer conta, nas QUATRO
+ * habilidades desta folha.
+ *
+ * O DEFEITO (18/08/2026). Perguntada quantas cargas existem, a IARA respondeu
+ * "2681 cargas no total". São 2681 em 2026; a planilha tem 10.777, porque as
+ * abas "2025" (4031) e "2024" (4065) estão no mesmo arquivo e não são lidas. A
+ * procedência já carimbava `fonte: '2026'` — o sistema sabia o ano e não
+ * contava a quem perguntou.
+ *
+ * Sem esta porta, "quantas cargas em 2025?" faz o universo inteiro de 2026
+ * responder e o número sai rotulado como se fosse de 2025. É a resposta certa
+ * para a pergunta errada, a mais cara de todas: está bem formatada, tem
+ * procedência, e ninguém a confere.
+ *
+ * Uma função e não quatro cópias: a regra é a mesma nas quatro, e regra
+ * duplicada diverge — é a doença que este repositório já pagou duas vezes.
+ *
+ * `null` = a pergunta cabe no alcance; siga.
+ */
+function recusaPorAno(
+  enunciado: string,
+): { texto: string; detalhe: string; resolveu: false } | null {
+  const anoFora = anoForaDoAlcance(enunciado);
+  if (!anoFora) return null;
+  return {
+    texto:
+      `Não consigo responder sobre ${anoFora}: eu leio só a aba "${ANO_VIVO}" da planilha. ` +
+      `A aba "${anoFora}" existe no mesmo arquivo, mas está fora do meu alcance nesta versão — ` +
+      `ela tem outro desenho de colunas, e lê-la com o mapa de ${ANO_VIVO} me faria devolver ` +
+      'número errado em vez de nenhum. ' +
+      `Se a pergunta valer para ${ANO_VIVO}, é só me dizer.`,
+    detalhe: proveniencia({
+      fonte: 'planilha LUFT',
+      resultado: 'fora_de_alcance',
+      ano_pedido: anoFora,
+      ano_lido: ANO_VIVO,
+    }),
+    resolveu: false,
+  };
+}
+
 export const consultarCargasLuft: Habilidade = {
   manifesto: {
     id: 'consultar_cargas_luft',
@@ -81,6 +125,9 @@ export const consultarCargasLuft: Habilidade = {
     return planilhaOcisDisponivel() ? null : 'falta MS_GRAPH_TOKEN ou MS_GRAPH_OCI_URL no ambiente';
   },
   async executar(ctx) {
+    const foraDeAlcance = recusaPorAno(ctx.enunciado);
+    if (foraDeAlcance) return foraDeAlcance;
+
     const frase = String(ctx.parametros.periodo ?? '');
     const periodo = interpretarPeriodo(frase);
 
@@ -171,6 +218,11 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     const agruparPor = String(ctx.parametros.agrupar_por ?? 'nenhum') as AgruparPor;
     const metrica = String(ctx.parametros.metrica ?? 'contagem') as Metrica;
 
+    /* Lê a frase CRUA, não o parâmetro: o caso perigoso é a LLM largar o ano
+       pelo caminho e a pergunta chegar aqui sem período nenhum. */
+    const foraDeAlcance = recusaPorAno(ctx.enunciado);
+    if (foraDeAlcance) return foraDeAlcance;
+
     const periodo = frasePeriodo ? interpretarPeriodo(frasePeriodo) : null;
     if (frasePeriodo && !periodo) {
       return {
@@ -195,7 +247,10 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     const cargas = periodo
       ? r.cargas.filter((c) => c.data_coleta !== null && c.data_coleta >= periodo.inicio && c.data_coleta <= periodo.fim)
       : r.cargas;
-    const rotuloPeriodo = periodo ? periodo.rotulo : 'todas as cargas cadastradas';
+    /* O RÓTULO NOMEIA O ANO. "todas as cargas cadastradas" fez a IARA responder
+       "2681 cargas no total" quando 2681 é o total de 2026 e a planilha tem
+       10.777 — o ano estava na procedência e não na fala. Ver `ANO_VIVO`. */
+    const rotuloPeriodo = periodo ? periodo.rotulo : `todas as cargas de ${ANO_VIVO}`;
 
     /** Comum às duas saídas (agregada e detalhada) — a mesma proveniência, os mesmos campos. */
     const baseProveniencia = {
@@ -306,6 +361,9 @@ export const compararSemanasLuft: Habilidade = {
     return planilhaOcisDisponivel() ? null : 'falta MS_GRAPH_TOKEN ou MS_GRAPH_OCI_URL no ambiente';
   },
   async executar(ctx) {
+    const foraDeAlcance = recusaPorAno(ctx.enunciado);
+    if (foraDeAlcance) return foraDeAlcance;
+
     const fraseAtual = String(ctx.parametros.periodo_atual ?? 'essa semana');
     const fraseAnterior = String(ctx.parametros.periodo_anterior ?? 'semana passada');
     const periodoAtual = interpretarPeriodo(fraseAtual);
@@ -398,6 +456,9 @@ export const relatorioExecutivoLuft: Habilidade = {
     return planilhaOcisDisponivel() ? null : 'falta MS_GRAPH_TOKEN ou MS_GRAPH_OCI_URL no ambiente';
   },
   async executar(ctx) {
+    const foraDeAlcance = recusaPorAno(ctx.enunciado);
+    if (foraDeAlcance) return foraDeAlcance;
+
     const frase = String(ctx.parametros.periodo ?? 'essa semana');
     const periodo = interpretarPeriodo(frase);
     if (!periodo) {
