@@ -60,6 +60,7 @@ import {
 } from './volume';
 import { medirRoteamento, violacoesDeRoteamento } from './roteamento';
 import { medirQueda, violacoesDeQueda } from './queda';
+import { julgarCampanha, type VereditoDaCampanha } from './campanha';
 
 interface ResultadoBateria {
   readonly status: StatusExecucao;
@@ -1070,6 +1071,148 @@ async function bateriaNavegador(): Promise<ResultadoBateria> {
 }
 
 // ---------------------------------------------------------------------------
+// campanha_adversarial
+// ---------------------------------------------------------------------------
+
+
+/**
+ * A CAMPANHA COMO BATERIA REGISTRAVEL — e o problema que isto resolve.
+ *
+ * A campanha leva HORAS (o provedor local custa ~263 s por chamada; uma missao de
+ * injecao sozinha levou 428 s). Rodar ela dentro de `npm run bateria` a cada
+ * certificacao e o caminho honesto e as vezes impraticavel; o veredito, enquanto
+ * isso, dizia "harness existe e ninguem o chamou" para sempre.
+ *
+ * DOIS MODOS, e o segundo tem trava:
+ *
+ *   sem env      roda o catalogo inteiro agora (horas) e ingere o proprio relatorio;
+ *   com env      ingere um relatorio JA ESCRITO — `IARA_CAMPANHA_RELATORIO=<pasta>`.
+ *
+ * A trava do segundo modo e o carimbo de commit no `veredito.json`. Relatorio sem
+ * carimbo, ou com carimbo de outro commit, sai INCONCLUSIVA com o motivo — nunca
+ * PASSOU. Ingerir relatorio antigo como prova do codigo de hoje e indistinguivel de
+ * ingerir o certo, e e a mesma familia de mentira que a campanha existe para cacar,
+ * cometida pelo auditor. A campanha carimba desde 17/08/2026; relatorio anterior a
+ * isso e legivel e nao e evidencia.
+ */
+async function bateriaCampanha(): Promise<ResultadoBateria> {
+  const pastaPedida = process.env.IARA_CAMPANHA_RELATORIO?.trim();
+  let pasta = pastaPedida ?? '';
+  let saidaDaRodada = '';
+
+  if (!pasta) {
+    const { saida } = rodarProcesso('node', [
+      '--import',
+      'tsx',
+      'testes/campanha/executar.ts',
+      '--orcamento',
+      process.env.IARA_CAMPANHA_ORCAMENTO ?? '300',
+    ]);
+    saidaDaRodada = saida;
+    const linha = /relat[oó]rio: (.+RELATORIO\.md)/.exec(saida);
+    if (!linha) {
+      return {
+        status: 'EXECUTADA_INCONCLUSIVA',
+        cenarios: 1,
+        passou: 0,
+        falhou: 0,
+        inconclusivo: 1,
+        bloqueado: 0,
+        metricas: {},
+        violacoes_criticas: [],
+        detalhe: { motivo: 'a campanha nao terminou de escrever o relatorio', saida },
+        relato: ['campanha: nao produziu relatorio — inconclusiva, nao falha'],
+      };
+    }
+    pasta = path.dirname(linha[1].trim());
+  }
+
+  let v: VereditoDaCampanha;
+  try {
+    v = JSON.parse(readFileSync(path.join(pasta, 'veredito.json'), 'utf8')) as VereditoDaCampanha;
+  } catch (erro) {
+    return {
+      status: 'EXECUTADA_INCONCLUSIVA',
+      cenarios: 1,
+      passou: 0,
+      falhou: 0,
+      inconclusivo: 1,
+      bloqueado: 0,
+      metricas: {},
+      violacoes_criticas: [],
+      detalhe: { motivo: `veredito.json ilegivel em ${pasta}`, erro: String(erro) },
+      relato: [`campanha: veredito.json ilegivel em ${pasta} — inconclusiva`],
+    };
+  }
+
+  const commitAtual = estadoDaArvore().commit;
+  /* Rodada minha (sem env) nao confere carimbo: o relatorio acabou de sair deste
+     processo, e nao ha nada a confundir. Ingestao SEMPRE confere. */
+  const j = julgarCampanha(v, pastaPedida ? commitAtual : null);
+
+  if (j.recusa) {
+    return {
+      status: 'EXECUTADA_INCONCLUSIVA',
+      cenarios: j.missoes_medidas,
+      passou: 0,
+      falhou: 0,
+      inconclusivo: j.missoes_medidas,
+      bloqueado: 0,
+      metricas: { missoes: j.missoes_medidas },
+      violacoes_criticas: [],
+      detalhe: { motivo: j.recusa, pasta },
+      relato: [
+        'CAMPANHA ADVERSARIAL — ingestao recusada',
+        '',
+        `  ${pasta}`,
+        `  ${j.recusa}`,
+        '  Relatorio de outro commit nao e prova do codigo de hoje. INCONCLUSIVA.',
+      ],
+    };
+  }
+
+  const inconclusivos = j.desconhecidos.length + j.nao_executadas.length;
+
+  return {
+    status:
+      j.status === 'FALHOU'
+        ? 'EXECUTADA_FALHOU'
+        : j.status === 'INCONCLUSIVA'
+          ? 'EXECUTADA_INCONCLUSIVA'
+          : 'EXECUTADA_PASSOU',
+    cenarios: j.missoes_medidas + j.nao_executadas.length,
+    passou: j.bons,
+    falhou: j.ruins.length,
+    inconclusivo: inconclusivos,
+    bloqueado: 0,
+    metricas: {
+      missoes_medidas: j.missoes_medidas,
+      desfechos_ruins: j.ruins.length,
+      estado_desconhecido: j.desconhecidos.length,
+      incidentes_criticos: j.criticos.length,
+      nao_executadas: j.nao_executadas.length,
+      arvore_suja_na_medicao: v.arvore_suja ?? -1,
+    },
+    violacoes_criticas: j.violacoes_criticas,
+    detalhe: { pasta, julgamento: j, veredito: v, saida: saidaDaRodada.slice(-8000) },
+    relato: [
+      'CAMPANHA ADVERSARIAL — catalogo com modelo de verdade no circuito',
+      '',
+      `  pasta: ${pasta}`,
+      `  commit medido: ${v.commit ?? 'sem carimbo'} · arvore suja na medicao: ${v.arvore_suja ?? '?'}`,
+      `  portao da propria campanha: ${v.portao ?? '?'}`,
+      '',
+      ...Object.entries(j.por_desfecho).map(([d, n]) => `  ${d.padEnd(22)} ${n}`),
+      '',
+      `  nao executadas: ${j.nao_executadas.length}${j.nao_executadas.length > 0 ? ` (${j.nao_executadas.join(', ')})` : ''}`,
+      `  incidentes criticos: ${j.criticos.length}`,
+      ...j.ruins.map((r) => `  RUIM ${r}`),
+      ...j.criticos.map((c) => `  CRITICO ${c}`),
+    ],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // O despacho
 // ---------------------------------------------------------------------------
 
@@ -1110,6 +1253,7 @@ const BATERIAS_EXECUTAVEIS: Readonly<Record<string, () => Promise<ResultadoBater
   ),
   escape_sandbox: bateriaEscapeSandbox,
   injecao_cadeia: bateriaInjecaoCadeia,
+  campanha_adversarial: bateriaCampanha,
   exfiltracao_execucao: bateriaExfiltracao,
   rag_sintetico: bateriaRag,
   memoria_benchmark: bateriaMemoria,

@@ -20,6 +20,7 @@
  */
 
 import { config as carregarEnv } from 'dotenv';
+import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { ClienteBarramento, type Turno } from './ClienteBarramento';
@@ -126,6 +127,34 @@ const PRAZO_TURNO_MS = Number(argumento('prazo', '600000'));
  */
 const ORCAMENTO_MS = Number(argumento('orcamento', '180')) * 60_000;
 const NAO_EXECUTADAS: string[] = [];
+
+/**
+ * O CÓDIGO MEDIDO É O DA SUBIDA, e o carimbo tem de ser tirado AQUI.
+ *
+ * A primeira versão disto lia `git rev-parse HEAD` no fim da rodada, junto com a
+ * escrita do relatório. Errado, e o erro é do tipo que só aparece na máquina de
+ * quem trabalha em paralelo: uma campanha leva horas, e se alguém commitar no meio,
+ * o relatório sairia carimbado com o commit DE OUTRO e afirmando ter medido um
+ * código que nunca rodou. O carimbo existe justamente para impedir essa confusão —
+ * tirá-lo no fim seria construir a mentira que ele deveria barrar.
+ *
+ * `arvore_suja` também é da subida: o que estava por gravar quando o motor subiu é
+ * o que foi medido. Mudança que chegou depois não entrou nesta rodada.
+ */
+const ARVORE_NA_SUBIDA = (() => {
+  try {
+    return {
+      commit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+      arvore_suja: execFileSync('git', ['status', '--porcelain=v1'], { encoding: 'utf8' })
+        .split('\n')
+        .filter((l) => l.trim().length > 0).length,
+    };
+  } catch {
+    /* Fora de repositório git a campanha continua rodando: o que ela perde é a
+       capacidade de servir de evidência, e isso fica dito no campo. */
+    return { commit: 'desconhecido', arvore_suja: -1 };
+  }
+})();
 
 const INICIO = new Date();
 const CARIMBO = `${INICIO.getFullYear()}-${String(INICIO.getMonth() + 1).padStart(2, '0')}-${String(
@@ -985,12 +1014,6 @@ async function principal(): Promise<number> {
     ].join('\n'),
     'utf8',
   );
-  writeFileSync(
-    path.join(PASTA_EVIDENCIA, 'veredito.json'),
-    JSON.stringify({ inicio: INICIO.toISOString(), porta: PORTA, voltas: VOLTAS, resultados, notas }, null, 2),
-    'utf8',
-  );
-
   const criticos = resultados.flatMap((r) => r.incidentes.filter((i) => i.severidade === 'critica'));
   const medidos = resultados.filter((r) => r.desfecho !== 'ERRO_DE_CAMPANHA');
   const bons = medidos.filter((r) => ehSucesso(r.desfecho));
@@ -1001,6 +1024,41 @@ async function principal(): Promise<number> {
       : medidos.length === 0 || NAO_EXECUTADAS.length > 0
         ? 'INCONCLUSIVO'
         : 'GO';
+
+  /**
+   * O RELATÓRIO PASSA A CARIMBAR O COMMIT — e sem isso ele não serve de evidência.
+   *
+   * Uma campanha leva horas e escreve num diretório com carimbo de hora. Nada nela
+   * dizia QUAL código foi medido, e "campanha de terça" não é resposta para "esta
+   * medição vale para o commit que estou por liberar?". Sem o carimbo, ingerir um
+   * relatório antigo como prova é indistinguível de ingerir o certo — que é a
+   * mesma família de mentira que a campanha existe para caçar, cometida pelo
+   * auditor.
+   *
+   * `arvore_suja` entra junto porque árvore suja significa que o código medido é o
+   * commit MAIS o que está por gravar. Declarado, não escondido: é o mesmo limite
+   * que `npm run bateria` já imprime em voz alta.
+   */
+  writeFileSync(
+    path.join(PASTA_EVIDENCIA, 'veredito.json'),
+    JSON.stringify(
+      {
+        inicio: INICIO.toISOString(),
+        fim: new Date().toISOString(),
+        commit: ARVORE_NA_SUBIDA.commit,
+        arvore_suja: ARVORE_NA_SUBIDA.arvore_suja,
+        portao,
+        porta: PORTA,
+        voltas: VOLTAS,
+        nao_executadas: NAO_EXECUTADAS,
+        resultados,
+        notas,
+      },
+      null,
+      2,
+    ),
+    'utf8',
+  );
 
   console.log('');
   console.log(
