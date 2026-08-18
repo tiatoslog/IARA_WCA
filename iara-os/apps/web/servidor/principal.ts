@@ -46,7 +46,7 @@ import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
 import { MAX_BYTES_IMAGEM, ROTA_ANEXO, extensaoDeImagem, guardar, porHashDeArquivo } from './nucleo/AnexoImagem';
 import { iniciarRenovacaoAutomaticaGraph, pararRenovacaoAutomaticaGraph } from './nucleo/ClienteGraph';
 import { estadoDaChave } from './nucleo/kernel/Prova';
-import { conferirAmbiente } from './nucleo/kernel/Configuracao';
+import { conferirAmbiente, motivoDeRecusa } from './nucleo/kernel/Configuracao';
 
 carregarEnv({ path: '.env.local' });
 carregarEnv();
@@ -587,6 +587,33 @@ async function subir(): Promise<void> {
            * falhou desde que este processo subiu" — que não é promessa de
            * saldo, porque saldo só se descobre gastando.
            */
+          /**
+           * O CÉREBRO QUE NEM CHEGOU A SER TENTADO, e por quê (18/08/2026).
+           *
+           * `raciocinio` lista quem entrou na cadeia; `raciocinio_falhas` diz
+           * quem entrou e falhou. Faltava o terceiro caso, e foi ele que custou
+           * caro: a operadora tinha `OPENROUTER_API_KEY` no painel do Railway e
+           * o provedor simplesmente não aparecia em lugar nenhum. Presente-porém-
+           * recusada e nunca-configurada produziam o mesmo silêncio.
+           *
+           * Só entra aqui quem está DECLARADO e não serve — quem nem foi
+           * declarado não é problema, é escolha. Nunca sai valor, só o motivo:
+           * este endpoint é público.
+           */
+          raciocinio_ignorado: Object.fromEntries(
+            (
+              [
+                ['groq', 'GROQ_API_KEY'],
+                ['gemini', 'GEMINI_API_KEY'],
+                ['openrouter', 'OPENROUTER_API_KEY'],
+                ['anthropic', 'ANTHROPIC_API_KEY'],
+                ['ollama', 'OLLAMA_URL'],
+              ] as const
+            )
+              .filter(([, variavel]) => process.env[variavel] !== undefined)
+              .map(([apelido, variavel]) => [apelido, motivoDeRecusa(variavel)])
+              .filter(([, motivo]) => motivo !== null),
+          ),
           raciocinio_falhas: Object.fromEntries(
             [...falhasObservadas()].map(([apelido, f]) => [
               apelido,

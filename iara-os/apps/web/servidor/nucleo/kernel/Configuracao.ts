@@ -479,6 +479,42 @@ export function configUtilizavel(
   }
 }
 
+/**
+ * POR QUE ESTA VARIÁVEL NÃO SERVE — a razão que o `catch` acima engolia.
+ *
+ * O CASO (18/08/2026): a operadora tinha `OPENROUTER_API_KEY` no Railway, e o
+ * `/saude` não listava o openrouter na cadeia. De fora, "presente porém
+ * recusada" e "nunca configurada" produziam exatamente o mesmo silêncio, e
+ * descobrir qual das duas era exigiu ler o código e eliminar hipóteses — que é
+ * trabalho que o próprio sistema devia ter feito.
+ *
+ * VAZIO É O CASO INTERESSANTE, e é o que `inspecionar` deixa passar de
+ * propósito: para ele vazio é ausente, e cada consumidor decide. Isso está
+ * certo para a subida — recusar boot por variável vazia derrubaria produção por
+ * nada — e é justamente o que torna esta função necessária, porque para a
+ * CADEIA vazio não é "cada um decide": é um cérebro a menos, em silêncio.
+ *
+ * `null` = serve. Nunca devolve o valor, só o diagnóstico — o retorno vai para
+ * `/saude`, que é público.
+ */
+export function motivoDeRecusa(
+  variavel: string,
+  ambiente: Ambiente = process.env,
+): string | null {
+  const bruto = ambiente[variavel];
+  if (bruto === undefined) return 'não está declarada neste ambiente';
+  if (normalizar(bruto) === '') {
+    return (
+      'está declarada mas o valor é vazio — no painel do provedor ela aparece ' +
+      'como configurada, e aqui não vale nada. Se for uma variável por ' +
+      'referência, a referência não resolveu.'
+    );
+  }
+  const problema = inspecionar(variavel, bruto);
+  if (problema) return `${problema.gravidade}: ${problema.motivo}`;
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // 4. A redação
 // ---------------------------------------------------------------------------
