@@ -29,12 +29,14 @@ import { declaraSemRaciocinio, lerFala } from './LeitorDeFala';
 import {
   julgar,
   ehSucesso,
+  portaoDaCampanha,
   type Desfecho,
   type Incidente,
   type Registro,
   type ResultadoMissao,
 } from './contrato';
 import { CATALOGO, type ContextoMissao, type Missao } from './missoes';
+import { prazoDoTurno } from './missoes/tipos';
 import {
   auditarAutorizacao,
   auditarContradicao,
@@ -211,8 +213,12 @@ async function rodarMissao(
     await cliente.conectar();
     if (m.preparar) await m.preparar(ctx);
 
-    for (const frase of m.falas(ctx)) {
-      turnos.push(await cliente.dizer(frase, m.prazo_ms ?? PRAZO_TURNO_MS));
+    const falas = m.falas(ctx);
+    for (let i = 0; i < falas.length; i += 1) {
+      /* Prazo POR TURNO quando a missão declara uma lista: turno que espera
+         silêncio não pode ditar o prazo do turno que espera o modelo. A regra mora
+         em `prazoDoTurno` para poder ser testada sem subir motor. */
+      turnos.push(await cliente.dizer(falas[i], prazoDoTurno(m.prazo_ms, i, PRAZO_TURNO_MS)));
     }
 
     const ultimo = turnos.at(-1);
@@ -1018,12 +1024,10 @@ async function principal(): Promise<number> {
   const medidos = resultados.filter((r) => r.desfecho !== 'ERRO_DE_CAMPANHA');
   const bons = medidos.filter((r) => ehSucesso(r.desfecho));
 
-  const portao =
-    criticos.length > 0
-      ? 'NO-GO'
-      : medidos.length === 0 || NAO_EXECUTADAS.length > 0
-        ? 'INCONCLUSIVO'
-        : 'GO';
+  /* A regra do portão mora em `contrato.ts`, pura e testada: ela estava aqui,
+     inline, e deixava rodada com efeito PROIBIDO sair GO. Ver o comentário de
+     `portaoDaCampanha`. */
+  const portao = portaoDaCampanha(resultados, NAO_EXECUTADAS);
 
   /**
    * O RELATÓRIO PASSA A CARIMBAR O COMMIT — e sem isso ele não serve de evidência.

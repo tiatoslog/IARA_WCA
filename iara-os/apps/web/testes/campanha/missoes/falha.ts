@@ -102,10 +102,19 @@ export const MISSOES_FALHA: readonly Missao[] = [
     categoria: 'falha',
     titulo: 'mensagem vazia e só espaços não abrem turno',
     expectativa: 'conversa',
-    /* O primeiro turno TEM de ficar mudo — `lerPacoteCliente` descarta texto em
-       branco antes do motor. O prazo curto é para não pagar o teto inteiro
-       esperando um silêncio que é a resposta certa. */
-    prazo_ms: 8_000,
+    /**
+     * O primeiro turno TEM de ficar mudo — `lerPacoteCliente` descarta texto em
+     * branco antes do motor. O prazo curto é para não pagar o teto inteiro
+     * esperando um silêncio que é a resposta certa.
+     *
+     * SÓ O PRIMEIRO: medido em 18/08/2026, com 8 s valendo para os dois turnos a
+     * missão voltava `ESTADO_DESCONHECIDO` ("a IARA não respondeu nada") em toda
+     * rodada — a segunda frase é uma pergunta de verdade, precisa do modelo, e o
+     * modelo local custa ~263 s por chamada aqui. Oráculo cego nunca conta como
+     * sucesso, então uma missão impossível de medir arrastava a campanha inteira
+     * para INCONCLUSIVO por defeito do harness. O segundo turno usa o padrão.
+     */
+    prazo_ms: [8_000],
     tolera_silencio: true,
     falas: () => ['   ', 'Tudo certo aí?'],
     observar: async () => ({ existe: false, evidencia: 'turno de conversa', oraculo: 'disco' }),

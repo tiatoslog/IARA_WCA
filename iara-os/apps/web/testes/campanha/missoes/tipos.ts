@@ -33,8 +33,20 @@ export interface Missao {
   /**
    * Teto por turno. Padrão no corredor; declarado aqui quando a missão SABE que
    * a resposta é rápida ou que não vai vir resposta nenhuma.
+   *
+   * ACEITA UMA LISTA — um prazo por turno, na ordem das falas — e a razão veio de
+   * uma medição. FA-07 manda duas frases de naturezas opostas: a primeira só com
+   * espaços (o silêncio É a resposta certa, e esperar o teto inteiro por ele é
+   * desperdiçar 10 minutos), a segunda uma pergunta de verdade (que precisa do
+   * modelo, e o modelo local custa ~263 s por chamada nesta máquina). Com um
+   * número só, os dois turnos herdavam 8 s e a missão voltava
+   * `ESTADO_DESCONHECIDO` para SEMPRE — arrastando a campanha inteira para
+   * inconclusiva por defeito do harness, não do produto.
+   *
+   * Lista mais curta que a lista de falas: os turnos restantes usam o padrão do
+   * corredor. É o caso comum — "só o primeiro turno é atípico".
    */
-  readonly prazo_ms?: number;
+  readonly prazo_ms?: number | readonly number[];
   /**
    * O silêncio é o comportamento CERTO desta missão?
    *
@@ -83,3 +95,23 @@ export function missao(m: Missao): Missao {
 }
 
 export type { Categoria, Expectativa, Incidente, Mundo };
+
+/**
+ * O PRAZO DO TURNO `i`, e ela existe separada do corredor por um motivo prático:
+ * `executar.ts` roda a campanha inteira ao ser importado (`process.exitCode = await
+ * principal()`), então importá-lo de um teste subiria um motor e conversaria com a
+ * IARA. A regra que precisa de teste mora aqui, onde importar não faz nada.
+ *
+ * A regra: lista mais curta que as falas → os turnos restantes usam o padrão. É o
+ * caso comum ("só o primeiro turno é atípico") e é exatamente onde um off-by-one
+ * devolveria silenciosamente o prazo errado para o turno que mais precisa dele.
+ */
+export function prazoDoTurno(
+  prazo: number | readonly number[] | undefined,
+  indice: number,
+  padrao: number,
+): number {
+  if (prazo === undefined) return padrao;
+  if (typeof prazo === 'number') return prazo;
+  return prazo[indice] ?? padrao;
+}

@@ -38,6 +38,13 @@ export interface LinhaDoJornal {
   readonly parametros: Record<string, unknown>;
   readonly criada_em: string;
   readonly atualizada_em: string;
+  /**
+   * QUANDO A OPERAÇÃO FOI AUTORIZADA — `null` quando nunca foi.
+   *
+   * É o campo ESTRUTURADO da autorização, e ele existe aqui porque o auditor
+   * procurava a palavra "autoriz" na prosa do histórico. Ver `auditarAutorizacao`.
+   */
+  readonly autorizada_em: string | null;
   readonly historico: readonly { fonte: string; descricao: string; instante: string }[];
   /** Veredito do selo, apurado POR ESTE módulo. */
   readonly selo: VereditoSelo;
@@ -150,6 +157,7 @@ export function lerJornal(
       parametros: (dado.parametros ?? {}) as Record<string, unknown>,
       criada_em: String(dado.criada_em ?? ''),
       atualizada_em: String(dado.atualizada_em ?? ''),
+      autorizada_em: typeof dado.autorizada_em === 'string' ? dado.autorizada_em : null,
       historico: Array.isArray(dado.historico)
         ? (dado.historico as LinhaDoJornal['historico'])
         : [],

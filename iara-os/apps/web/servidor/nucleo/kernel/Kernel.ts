@@ -1974,7 +1974,29 @@ export class Kernel {
     const alcancouOMundo = execucao.passos.some(
       (x) => x.estado === 'verificado' || x.estado === 'executado' || x.estado === 'desconhecido',
     );
-    const travaArmada = execucao.passos.length > 0 && !alcancouOMundo;
+    /**
+     * O TURNO SEM PASSO NENHUM TAMBÉM ARMA, quando o pedido era um COMANDO.
+     *
+     * O buraco foi achado pela campanha adversarial em 18/08/2026, missão CO-04, e
+     * a cadeia inteira está no protocolo: o operador pediu, em português falado
+     * ("cria ai uma pastinha chamada Teste X na area d trabalho vlw"), nenhuma
+     * âncora casou, a função executiva mandou para `plano_cognitivo`, e o plano
+     * emergente da LLM teve UM passo — `raciocinio`. `executarPlano` pula o passo
+     * de raciocínio com `continue` e não empurra nada para a lista, então
+     * `execucao.passos.length === 0`, a trava não armava, e a fala saiu afirmando
+     * que a pasta existia. O mundo desmentiu: FALSO_POSITIVO.
+     *
+     * A bateria de falsa conclusão não podia ter achado isso — ela CONSTRÓI os
+     * turnos, e sempre com passo. Foi preciso um modelo de verdade planejando mal
+     * para produzir a forma que ninguém imaginou.
+     *
+     * `tipo === 'comando'` é o que mantém a trava estreita. Turno de conversa e
+     * saudação continuam fora: numa conversa, "consegui entender" é frase honesta,
+     * e engolir resposta legítima é o defeito simétrico que custa mais caro. Aqui a
+     * pessoa mandou FAZER algo, nada foi feito, e não há o que afirmar.
+     */
+    const comandoSemPasso = execucao.passos.length === 0 && percepcao.tipo === 'comando';
+    const travaArmada = (execucao.passos.length > 0 && !alcancouOMundo) || comandoSemPasso;
 
     const inicio = Date.now();
     let acumulado = '';

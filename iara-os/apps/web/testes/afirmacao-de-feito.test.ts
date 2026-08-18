@@ -12,6 +12,7 @@
  */
 
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
 import { lerAfirmacaoDeFeito } from '../servidor/nucleo/kernel/AfirmacaoDeFeito';
@@ -90,4 +91,41 @@ test('D. texto vazio e conversa comum não afirmam nada', () => {
     false,
     'relatar dado lido não é afirmar ter feito algo',
   );
+});
+
+/**
+ * E. O TURNO SEM PASSO NENHUM — o buraco que a campanha achou.
+ *
+ * Estes casos não exercitam o leitor: exercitam a CONDIÇÃO de armar a trava, que
+ * mora no Kernel. Ficam aqui porque é onde alguém vai procurar quando mexer nela.
+ *
+ * A regra, em uma linha: turno de COMANDO que não produziu passo nenhum arma a
+ * trava; turno de conversa e de saudação, não.
+ */
+test('E. a condição da trava: comando sem passo arma, conversa sem passo não', () => {
+  /* Réplica da expressão do Kernel. Se ela mudar lá e não aqui, o teste continua
+     verde medindo a cópia — por isso o caso F abaixo confere o texto real. */
+  const arma = (passos: number, tipo: string, alcancou: boolean) =>
+    (passos > 0 && !alcancou) || (passos === 0 && tipo === 'comando');
+
+  assert.equal(arma(0, 'comando', false), true, 'CO-04: comando cujo plano só raciocinou');
+  assert.equal(arma(0, 'texto', false), false, 'conversa comum fica fora');
+  assert.equal(arma(0, 'saudacao', false), false, 'bom dia fica fora');
+  assert.equal(arma(1, 'comando', false), true, 'passo que não alcançou o mundo');
+  assert.equal(arma(1, 'comando', true), false, 'passo que alcançou o mundo não arma');
+});
+
+test('F. a condição no Kernel é a que este arquivo descreve', () => {
+  /* Trava contra a cópia envelhecer: lê a linha real do Kernel. Um teste que só
+     replica a regra passa sozinho depois que o produto mudar. */
+  const fonte = readFileSync(
+    new URL('../servidor/nucleo/kernel/Kernel.ts', import.meta.url),
+    'utf8',
+  );
+  assert.match(
+    fonte,
+    /const comandoSemPasso = execucao\.passos\.length === 0 && percepcao\.tipo === 'comando';/,
+    'a condição do turno sem passo mudou no Kernel — atualize o caso E junto',
+  );
+  assert.match(fonte, /const travaArmada =[\s\S]{0,120}comandoSemPasso;/);
 });

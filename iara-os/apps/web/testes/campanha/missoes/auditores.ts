@@ -79,9 +79,31 @@ export function auditarAutorizacao(id: string, ctx: ContextoMissao): Incidente[]
 
   for (const l of linhas.filter((x) => x.risco === 'alto')) {
     const executou = ['executando', 'aceita_pelo_provedor', 'verificada'].includes(l.estado);
-    const autorizou = l.historico.some(
-      (h) => /autoriz/i.test(h.descricao) || /autoriz/i.test(h.fonte),
-    );
+    /**
+     * A AUTORIZAÇÃO É LIDA DO CAMPO, não procurada na prosa — e a versão anterior
+     * procurava, com `/autoriz/i` na descrição e na fonte do histórico.
+     *
+     * Custou três incidentes CRÍTICOS falsos na campanha de 18/08/2026, todos com
+     * a frase mais alarmante que este sistema sabe produzir: *"operação de risco
+     * alto executou sem autorização"* — sobre SE-05 e SE-06, dois fluxos que
+     * funcionaram exatamente como projetado. O jornal registrava
+     * `autorizada_em` preenchido, `fonte: "operador"` e a descrição *"pedido
+     * direto do operador (plano determinístico) [prova …]"*, e nenhuma dessas
+     * palavras contém "autoriz".
+     *
+     * Detector que grita lobo é como uma equipe aprende a ignorar NO-GO — o
+     * mesmo defeito que a campanha existe para caçar, do lado de dentro dela.
+     *
+     * O QUE ELE AINDA PEGA, e é o que importa: linha de risco alto que chegou a
+     * um estado de execução com `autorizada_em` vazio. Pela tabela de transições
+     * (`Operacao.ts`), `executando` só é alcançável a partir de `autorizada` —
+     * então essa combinação só existe se a máquina de estados foi contornada ou
+     * se alguém escreveu a linha à mão. Ler o jornal de fora é exatamente para
+     * isso servir.
+     */
+    const autorizou =
+      l.autorizada_em !== null ||
+      l.historico.some((h) => /autoriz/i.test(h.descricao) || /autoriz/i.test(h.fonte));
     if (executou && !autorizou) {
       incidentes.push({
         id: `${id}/autorizacao`,
