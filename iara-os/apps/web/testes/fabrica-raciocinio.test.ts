@@ -123,7 +123,13 @@ test('chave contaminada sem Ollama declarado continua LEVANTANDO — a fábrica 
 // declarados. Um provedor sozinho continua sendo ele mesmo, sem embrulho.
 // ---------------------------------------------------------------------------
 
-test('UN-211. auto com Anthropic + Groq monta a cadeia, nessa ordem', async () => {
+/**
+ * A ORDEM VIROU EM 18/08/2026: a paga desceu para depois das gratuitas. Este
+ * teste é o que trava a decisão — sem ele, alguém "arruma" a lista de volta
+ * para a ordem antiga achando que corrige um descuido, e a conta volta a subir
+ * em silêncio.
+ */
+test('UN-211. auto com Groq + Anthropic: a GRATUITA vem primeiro, a paga depois', async () => {
   await comProcessEnv(
     { ANTHROPIC_API_KEY: CHAVE_VALIDA, GROQ_API_KEY: CHAVE_GROQ, IARA_PROVEDOR: undefined },
     () => {
@@ -132,8 +138,9 @@ test('UN-211. auto com Anthropic + Groq monta a cadeia, nessa ordem', async () =
         GROQ_API_KEY: CHAVE_GROQ,
       });
       assert.ok(provedor instanceof CadeiaDeRaciocinio);
-      // O primeiro elo responde pelo retrato enquanto ninguém falhou.
-      assert.equal(provedor.modelo, 'claude-opus-5');
+      /* O primeiro elo responde pelo retrato enquanto ninguém falhou — e é
+         justamente por isso que ele serve de asserção da ordem. */
+      assert.equal(provedor.modelo, 'llama-3.3-70b-versatile');
       assert.equal(provedor.disponivel, true);
     },
   );
@@ -207,7 +214,9 @@ test('provedoresDeclarados: a lista que o /saude mostra, em ordem e sem segredo'
         GEMINI_API_KEY: CHAVE_GEMINI,
         OLLAMA_URL: 'http://127.0.0.1:11434',
       }),
-      ['anthropic', 'groq', 'gemini', 'ollama'],
+      /* MESMA ORDEM DA CADEIA. `/saude` mostra quem responde PRIMEIRO; uma lista
+         que discorde da fábrica aponta um cérebro enquanto a IARA usa outro. */
+      ['groq', 'gemini', 'anthropic', 'ollama'],
     );
 
     /* O caso que o endpoint existe para tornar visível: nenhum cérebro

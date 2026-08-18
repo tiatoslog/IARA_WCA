@@ -38,10 +38,22 @@ function escolhaDeclarada(ambiente: Ambiente): Escolha {
  * por acidente.
  *
  * Em `auto`, monta a CADEIA com tudo que estiver declarado, nesta ordem:
- * Anthropic (a melhor qualidade, quando há crédito) → Groq → Gemini (as duas
- * camadas gratuitas) → Ollama (o local). Se o primeiro falhar por cota, chave
+ * Groq → Gemini (as duas camadas gratuitas) → Anthropic (a melhor qualidade, e
+ * a única que cobra) → Ollama (o local). Se o primeiro falhar por cota, chave
  * ou serviço fora, o próximo assume no MESMO turno — ver `CadeiaDeRaciocinio`
  * e o incidente de 15/08/2026 que a originou.
+ *
+ * A ANTHROPIC DESCEU PARA TERCEIRA EM 18/08/2026, por decisão de custo: ela é a
+ * única paga, e passa a ser último recurso antes do local. O que se compra com
+ * isso é dinheiro; o que se paga é qualidade média das respostas, porque o
+ * primeiro elo passa a ser o que responde quase sempre. A troca está declarada
+ * aqui para não ser redescoberta como "a IARA piorou" daqui a um mês.
+ *
+ * OLLAMA CONTINUA POR ÚLTIMO, e não promovido junto com as gratuitas: ele é
+ * local e sem custo, mas ~260 s por chamada nesta máquina. Colocá-lo antes da
+ * Anthropic faria a IARA levar minutos sempre que as duas gratuitas falhassem —
+ * trocar dinheiro por uma espera que o operador lê como travamento. Ele é a rede
+ * de segurança de quando não há mais nada, não uma economia.
  *
  * Sem nada declarado, o resultado é um `ClienteClaude` indisponível: o modo
  * honesto de sempre, mensagens incluídas. Chave CONTAMINADA continua
@@ -56,13 +68,13 @@ export function criarProvedorRaciocinio(ambiente: Ambiente = process.env): Prove
   if (escolha === 'gemini') return new ClienteCompativelOpenAI(GEMINI);
 
   const elos: ProvedorRaciocinio[] = [];
-  if (configUtilizavel('ANTHROPIC_API_KEY', ambiente)) elos.push(new ClienteClaude());
   if (configUtilizavel(GROQ.variavelChave, ambiente)) {
     elos.push(new ClienteCompativelOpenAI(GROQ));
   }
   if (configUtilizavel(GEMINI.variavelChave, ambiente)) {
     elos.push(new ClienteCompativelOpenAI(GEMINI));
   }
+  if (configUtilizavel('ANTHROPIC_API_KEY', ambiente)) elos.push(new ClienteClaude());
   if (configUtilizavel('OLLAMA_URL', ambiente)) elos.push(new ClienteOllama());
 
   if (elos.length === 0) return new ClienteClaude();
@@ -88,10 +100,14 @@ export function provedoresDeclarados(ambiente: Ambiente = process.env): string[]
   const escolha = escolhaDeclarada(ambiente);
   if (escolha !== 'auto') return [escolha];
 
+  /* A MESMA ORDEM DA CADEIA, e não uma lista qualquer: quem lê `/saude` está
+     lendo quem responde primeiro. Divergir daqui faria o diagnóstico apontar um
+     cérebro e a IARA usar outro — e essa é a divergência que ninguém percebe até
+     estar depurando a resposta errada. */
   const nomes: string[] = [];
-  if (configUtilizavel('ANTHROPIC_API_KEY', ambiente)) nomes.push('anthropic');
   if (configUtilizavel(GROQ.variavelChave, ambiente)) nomes.push(GROQ.apelido);
   if (configUtilizavel(GEMINI.variavelChave, ambiente)) nomes.push(GEMINI.apelido);
+  if (configUtilizavel('ANTHROPIC_API_KEY', ambiente)) nomes.push('anthropic');
   if (configUtilizavel('OLLAMA_URL', ambiente)) nomes.push('ollama');
   return nomes;
 }
