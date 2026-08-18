@@ -148,28 +148,33 @@ test('UN-211. auto com Groq + Anthropic: a GRATUITA vem primeiro, a paga depois'
 });
 
 /**
- * A ORDEM ENTRE AS GRATUITAS ESTÁ EM ABERTO, e o teste trava o que É hoje — não
- * o que deveria ser.
+ * O OPENROUTER É O PRIMEIRO ELO desde 18/08/2026, e este teste é o que trava a
+ * inversão — sem ele, alguém devolve a Groq para a frente achando que conserta
+ * um descuido, e a IARA volta a 429 em dois de cada três turnos em silêncio.
  *
- * A justificativa original desta posição era de tamanho: "um Nemotron de 55B
- * ativos contra os 70B da Groq". Ela caducou em 18/08/2026 junto com o modelo:
- * a Groq descomissionou o `llama-3.3-70b-versatile` e o substituto declarado é
- * `openai/gpt-oss-120b` — 120B totais, mas MoE com ~5,1B ATIVOS. Pelo critério
- * que a própria ordem invoca, o Nemotron (55B ativos) passou à frente.
+ * A posição anterior (terceiro entre os gratuitos) tinha um argumento de
+ * tamanho: "um Nemotron de 55B ativos contra os 70B da Groq". As duas metades
+ * dele caíram no mesmo dia:
  *
- * E a medição do mesmo dia aponta para o mesmo lado por outra razão: a camada
- * gratuita da Groq tem teto de 8.000 tokens por minuto e o prompt da IARA custa
- * ~5.000, então ela entrega ~uma chamada a cada 40 s. O OpenRouter aceitou três
- * chamadas de 5.600 tokens em oito segundos sem 429.
+ *   · A GROQ NÃO SERVE MAIS 70B. Ela descomissionou o `llama-3.3-70b-versatile`
+ *     e o substituto é `openai/gpt-oss-120b` — 120B totais, MoE com ~5,1B
+ *     ATIVOS, uma ordem de grandeza abaixo dos 55B do Nemotron. Pelo próprio
+ *     critério que ordenava a lista, a posição já estava invertida.
+ *   · O TETO GRATUITO DA GROQ É 8.000 TOKENS POR MINUTO, da organização e
+ *     compartilhado pelos três modelos de chat, contra ~5.000 só do prompt de
+ *     sistema da IARA. Cinco chamadas seguidas: 1 ok, 4 `429`. O OpenRouter
+ *     aceitou três de 5.600 tokens em oito segundos.
  *
- * NÃO REORDENEI AQUI, e a abstenção é deliberada: a campanha CO contra o
- * OpenRouter ainda não produziu rodada limpa (a primeira foi contaminada por
- * sondas concorrentes na mesma chave), e trocar o primeiro elo da cadeia de
- * produção é decisão de operação, com latência medida na mão. Este comentário
- * existe para que a ordem atual seja lida como PENDENTE de revisão, e não como
- * conclusão — que é o estado em que ela de fato está.
+ * MEDIDO NA CAMPANHA CO, 13 missões, rodadas em série: openrouter GO em 260 s
+ * com 0 falhas técnicas; groq GO em 24 s com 8 DE 13. A Groq passa no portão
+ * falhando em 62% dos turnos porque "estourou a cota" e "recusou corretamente"
+ * chegam ao contrato como o mesmo `RECUSA_HONESTA` — lacuna do portão, não
+ * evidência a favor da Groq.
+ *
+ * O QUE SE PAGA: latência, 260 s contra 24 s. A troca é um primeiro elo lento
+ * que responde por um rápido que 429 — e a IARA prefere demorar a não pensar.
  */
-test('UN-211d. OpenRouter entra depois das gratuitas melhores e antes da paga', async () => {
+test('UN-211d. o OpenRouter é o primeiro elo, à frente da Groq e da paga', async () => {
   await comProcessEnv({ IARA_PROVEDOR: undefined }, () => {
     /* Sozinho, é ele mesmo — e no modelo `:free`. O sufixo é o que separa o
        gratuito do pago sob o MESMO id; perdê-lo é ganhar fatura em silêncio. */
@@ -178,13 +183,21 @@ test('UN-211d. OpenRouter entra depois das gratuitas melhores e antes da paga', 
     assert.equal(so.modelo, 'nvidia/nemotron-3-ultra-550b-a55b:free');
     assert.match(so.modelo, /:free$/);
 
-    /* Com a Groq presente, quem responde primeiro é a Groq. */
+    /* Com a Groq presente, quem responde primeiro é o OpenRouter — é a metade
+       da inversão que este teste existe para travar. */
     const comGroq = criarProvedorRaciocinio({
       GROQ_API_KEY: CHAVE_GROQ,
       OPENROUTER_API_KEY: CHAVE_OPENROUTER,
     });
     assert.ok(comGroq instanceof CadeiaDeRaciocinio);
-    assert.equal(comGroq.modelo, 'openai/gpt-oss-120b');
+    assert.equal(comGroq.modelo, 'nvidia/nemotron-3-ultra-550b-a55b:free');
+
+    /* A Groq NÃO saiu da cadeia, só desceu: 24 s quando a cota permite é bom
+       demais para descartar, e como reserva ela nunca é o gargalo. */
+    assert.deepEqual(
+      provedoresDeclarados({ GROQ_API_KEY: CHAVE_GROQ, OPENROUTER_API_KEY: CHAVE_OPENROUTER }),
+      ['openrouter', 'groq'],
+    );
 
     /* Com a paga presente, o gratuito ainda vem primeiro — é o ponto da troca
        de 18/08: dinheiro só se gasta quando o de graça falhou. */
@@ -268,7 +281,7 @@ test('provedoresDeclarados: a lista que o /saude mostra, em ordem e sem segredo'
       }),
       /* MESMA ORDEM DA CADEIA. `/saude` mostra quem responde PRIMEIRO; uma lista
          que discorde da fábrica aponta um cérebro enquanto a IARA usa outro. */
-      ['groq', 'gemini', 'openrouter', 'anthropic', 'ollama'],
+      ['openrouter', 'groq', 'gemini', 'anthropic', 'ollama'],
     );
 
     /* O caso que o endpoint existe para tornar visível: nenhum cérebro
