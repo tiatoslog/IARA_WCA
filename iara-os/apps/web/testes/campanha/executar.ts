@@ -197,7 +197,29 @@ const CARIMBO = `${INICIO.getFullYear()}-${String(INICIO.getMonth() + 1).padStar
 ).padStart(2, '0')}-${String(INICIO.getHours()).padStart(2, '0')}${String(
   INICIO.getMinutes(),
 ).padStart(2, '0')}`;
-const PASTA_EVIDENCIA = path.join(RAIZ_WEB, 'test-evidence', `CAMPANHA-${CARIMBO}`);
+/**
+ * O CÉREBRO E A PORTA ENTRAM NO NOME DA PASTA — e isto é conserto de defeito,
+ * não organização.
+ *
+ * ACONTECEU EM 18/08/2026: duas campanhas foram disparadas com menos de um
+ * minuto de diferença, uma na Groq e outra no OpenRouter, para comparar os dois
+ * provedores. O carimbo tem resolução de MINUTO, então as duas resolveram para
+ * a mesma pasta e passaram a sobrescrever os protocolos uma da outra. Quem
+ * terminasse por último escreveria o `RELATORIO.md`, e o resultado seria um
+ * relatório coerente, plausível e feito de duas rodadas misturadas — sem nada
+ * em lugar nenhum indicando a mistura.
+ *
+ * É o pior tipo de defeito que uma campanha pode ter: ela existe para produzir
+ * evidência, e estava produzindo evidência falsa em silêncio.
+ *
+ * Com provedor e porta no nome, duas rodadas concorrentes não podem colidir —
+ * a porta já é única por processo, porque duas campanhas não escutam a mesma.
+ */
+const PASTA_EVIDENCIA = path.join(
+  RAIZ_WEB,
+  'test-evidence',
+  `CAMPANHA-${CARIMBO}-${CEREBRO_NA_SUBIDA.provedor}-${PORTA}`,
+);
 
 /** Prefixo de TODO id de operador criado por esta rodada. Governa a limpeza. */
 const PREFIXO_ID = `camp${CARIMBO.replace(/-/g, '')}`;
