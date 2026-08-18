@@ -72,19 +72,95 @@ const PRAZO_MS = Number(arg('--prazo', '45000'));
  * acrescentar uma capacidade à frase sem receita que a atenda, este arquivo é
  * onde a mentira aparece.
  */
+/**
+ * OS ORACLES — "respondeu" não é "funcionou".
+ *
+ * O CASO QUE OS CRIOU (operadora, 18/08/2026): perguntada a hora, a IARA
+ * respondeu "São 18:29 de terça-feira, 18 de agosto de 2026" quando eram 15:31.
+ * A versão anterior deste gate teria carimbado REAL e seguido em frente — veio
+ * texto, em português, com data e dia da semana corretos, sem erro técnico. Tudo
+ * certo, menos ser verdade.
+ *
+ * Um oracle é uma FONTE INDEPENDENTE da IARA. Ele não pergunta ao sistema se o
+ * sistema está certo: ele sabe a resposta por outro caminho e confere. Onde não
+ * existir fonte independente, não existe oracle — e o turno vale pelo que é,
+ * "apareceu na tela", sem fingir que foi verificado.
+ *
+ * Devolve `null` quando aprova, ou a razão da reprovação.
+ */
+const ORACULOS = {
+  /**
+   * O relógio de parede de quem roda o gate. Independente de verdade: não vem do
+   * servidor da IARA nem da mesma função que ela usa para formatar.
+   *
+   * Tolerância de 2 minutos absorve a latência do turno e a virada de minuto —
+   * não absorve fuso, que é o defeito que este oracle existe para pegar (3 h).
+   */
+  hora: (texto) => {
+    const m = texto.match(/(\d{1,2}):(\d{2})/);
+    if (!m) return 'a resposta não traz hora nenhuma';
+
+    const dito = Number(m[1]) * 60 + Number(m[2]);
+    const agora = new Date();
+    const ref = agora.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo',
+      hour12: false,
+    });
+    const [rh, rm] = ref.split(':').map(Number);
+    const esperado = rh * 60 + rm;
+
+    /* Distância circular: 23:59 e 00:01 distam 2 min, não 1438. */
+    const bruta = Math.abs(dito - esperado);
+    const dif = Math.min(bruta, 1440 - bruta);
+    if (dif <= 2) return null;
+    return (
+      `disse ${m[0]} e o relógio de referência marca ${ref} — ` +
+      `${dif} min de diferença${dif >= 170 && dif <= 190 ? ' (isto é fuso: UTC em vez de America/Sao_Paulo)' : ''}`
+    );
+  },
+
+  /** A data do dia, pelo mesmo relógio independente. */
+  data: (texto) => {
+    const hoje = new Date()
+      .toLocaleDateString('pt-BR', {
+        day: 'numeric',
+        month: 'long',
+        timeZone: 'America/Sao_Paulo',
+      })
+      .toLowerCase();
+    const [dia, , mes] = hoje.split(' ');
+    return new RegExp(`${dia}\\s+de\\s+${mes}`, 'i').test(texto)
+      ? null
+      : `a resposta não menciona a data de hoje (${hoje})`;
+  },
+
+  /** Busca na web que não traz número não trouxe preço nenhum. */
+  temNumero: (texto) =>
+    /\d/.test(texto) ? null : 'a resposta não traz nenhum número — não houve dado, só prosa',
+};
+
 const ROTEIRO = [
   { texto: 'Olá, IARA.', exige_real: false, nota: 'primeiro contato' },
   {
     texto: 'busque na internet o preço atual do diesel S10',
     exige_real: true,
     nota: 'prometida: busca na internet',
+    oraculos: ['temNumero'],
   },
   {
     texto: 'quantas centrais ativas temos em MT?',
     exige_real: true,
     nota: 'prometida: contagem da frota e das centrais',
   },
-  { texto: 'que horas são agora?', exige_real: true, nota: 'prometida: hora e data' },
+  {
+    texto: 'que horas são agora?',
+    exige_real: true,
+    nota: 'prometida: hora e data',
+    /* O turno que reprovaria o 18:29 de 18/08/2026. */
+    oraculos: ['hora', 'data'],
+  },
   { texto: 'vai chover hoje?', exige_real: true, nota: 'prometida: clima' },
   {
     texto: 'quanto faturamos no mês passado?',
@@ -215,6 +291,23 @@ async function principal() {
       else if (RECUSA_HONESTA.test(texto)) estado = 'DEGRADADO';
       else estado = 'REAL';
 
+      /**
+       * VERIFICAÇÃO SEMÂNTICA — só depois de REAL, e é o que separa "respondeu"
+       * de "funcionou". Uma resposta que chegou à tela, em português, sem erro
+       * técnico, e MENTINDO, é FALHA. Foi assim que "18:29" passaria por REAL.
+       *
+       * Não se cobra oracle de DEGRADADO: uma recusa honesta não afirma nada
+       * sobre o mundo, então não há o que conferir contra o mundo.
+       */
+      const reprovas = [];
+      if (estado === 'REAL') {
+        for (const nome of passo.oraculos ?? []) {
+          const motivo = ORACULOS[nome](texto);
+          if (motivo) reprovas.push(`${nome}: ${motivo}`);
+        }
+        if (reprovas.length > 0) estado = 'FALHA';
+      }
+
       /* A promessa cobrada: capacidade anunciada que degrada é promessa falsa. */
       const quebrouPromessa = passo.exige_real && estado !== 'REAL';
 
@@ -227,6 +320,7 @@ async function principal() {
         exige_real: passo.exige_real,
         estado,
         quebrou_promessa: quebrouPromessa,
+        oraculos_reprovados: reprovas,
         ms,
         dentro_do_prazo: ms <= PRAZO_MS,
         resposta: texto.slice(0, 500),
@@ -235,6 +329,7 @@ async function principal() {
       console.log(
         `  ${i + 1}. [${estado}${quebrouPromessa ? ' · PROMESSA QUEBRADA' : ''}] ${ms} ms — ${passo.texto}`,
       );
+      for (const r of reprovas) console.log(`       ↳ oracle reprovou — ${r}`);
     }
 
     relatorio.saude_depois = await lerSaude();
