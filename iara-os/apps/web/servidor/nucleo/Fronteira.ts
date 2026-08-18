@@ -234,6 +234,13 @@ export const LEITURA_EXTERNA: readonly string[] = [
   // já a recebe em toda inferência. Existe para o painel poder dizer "a chave do
   // Gemini foi aceita" sem queimar um pedido de raciocínio para descobrir.
   'servidor/nucleo/DiagnosticoProvedores.ts',
+  // Análise visual (18/08/2026) — a mesma classe do `ClienteCompativelOpenAI`
+  // e do `ClienteClaude`: imagem + pergunta entram, texto (e uma coordenada
+  // normalizada) volta, nada é criado nem alterado em serviço nenhum. Cadeia
+  // própria (Groq → Gemini → Anthropic) por razão de custo — ver ADR-1 em
+  // `docs/prd/test-plan.md` — mas a classificação de fronteira é idêntica à
+  // dos provedores de texto: LEITURA.
+  'servidor/nucleo/AnaliseVisual.ts',
 ];
 
 /**
@@ -428,6 +435,14 @@ export const POST_SEM_EFEITO: Record<string, string> = {
     'entregue a ninguém no Google Calendar — é autenticação, a mesma classe ' +
     'do POST de `renovarTokenGraph` em `ClienteGraph.ts` contra o Azure AD. A ' +
     'leitura de eventos que este arquivo também faz é GET.',
+  'servidor/nucleo/AnaliseVisual.ts':
+    'POST de inferência visual em três provedores (Groq, Gemini via dialeto ' +
+    '`/chat/completions`; Anthropic via Messages API): a imagem e a pergunta ' +
+    'entram, o texto (e uma coordenada normalizada) volta. Nada é criado, ' +
+    'alterado ou entregue a ninguém — a mesma classe de "POST que na verdade ' +
+    'pensa" do `ClienteCompativelOpenAI` e do `ClienteClaude`. Cadeia própria ' +
+    'por custo (Groq → Gemini → Anthropic), não a `ProvedorRaciocinio` ' +
+    'compartilhada — ver ADR-1 em `docs/prd/test-plan.md`.',
 };
 
 /**

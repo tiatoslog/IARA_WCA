@@ -178,6 +178,14 @@ test('A2. nenhum `fetch` a provedor externo fora da camada de integração', () 
       'de raciocínio só para descobrir se a chave é aceita. Não enxerga cota, e ' +
       'o módulo diz isso em voz alta em vez de deixar a linha verde ser lida ' +
       'como saldo — ver `combinar` e o teste do saldo não sondável.',
+    [path.join('servidor', 'nucleo', 'AnaliseVisual.ts')]:
+      'LEITURA — a IARA lendo um screenshot que o operador anexou: imagem e ' +
+      'pergunta entram, texto e uma coordenada normalizada voltam, nada é ' +
+      'criado nem alterado em serviço nenhum. Cadeia própria por custo (Groq ' +
+      '→ Gemini → Anthropic, mesma ordem de `FabricaRaciocinio`), mas mesma ' +
+      'classificação dos outros provedores de raciocínio — ver a entrada ' +
+      'dele em `Fronteira.ts` (`LEITURA_EXTERNA`) e o ADR-1 em ' +
+      '`docs/prd/test-plan.md`.',
   };
 
   const comFetch = fontes(path.join(RAIZ, 'servidor'))

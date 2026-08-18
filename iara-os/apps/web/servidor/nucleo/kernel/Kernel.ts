@@ -695,7 +695,11 @@ export class Kernel {
           return;
         }
 
-        b.publicar({ tipo: 'RACIOCINIO_INICIADO', modelo: 'claude (visão)', origem: 'nuvem' });
+        /* `modelo` fica genérico de propósito: `analisarImagem` tenta uma
+           CADEIA (Groq → Gemini → Anthropic, ver AnaliseVisual.ts) e só se
+           sabe quem respondeu depois que a chamada volta — nomear um
+           provedor aqui seria uma afirmação que ainda não é verdade. */
+        b.publicar({ tipo: 'RACIOCINIO_INICIADO', modelo: 'visão', origem: 'nuvem' });
         const resultado = await analisarImagem(arquivo.bytes, arquivo.tipo, texto, controle.signal);
         if (controle.signal.aborted) return;
         orcamento.consumir('tokens', resultado.tokens_entrada + resultado.tokens_saida);
@@ -706,6 +710,13 @@ export class Kernel {
           cache_lido: 0,
           ms: Date.now() - inicio,
         });
+        // QUEM respondeu de fato — mesma disciplina de `vocalizar()`: fato
+        // relevante para depuração de custo/latência, sem campo próprio no
+        // snapshot (a mesma lacuna que `RACIOCINIO_CONCLUIDO` já tem para
+        // texto: nenhum apelido de provedor atravessa até a projeção).
+        console.log(
+          JSON.stringify({ canal: 'visao', provedor: resultado.provedor, procedencia: resultado.procedencia }),
+        );
 
         b.publicar({
           tipo: 'TAREFA_CONCLUIDA',

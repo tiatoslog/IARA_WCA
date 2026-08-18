@@ -1,7 +1,7 @@
 {
   "id": "FP-002",
-  "status": "INCONCLUSIVO",
-  "observado": "Mesma execucao de FP-001 (mesmo turno). Nao ha alvo_x/alvo_y para validar: a resposta foi a mensagem de falha de credito da Anthropic, sem JSON de marcacao nenhum retornado pelo modelo (a chamada nem chegou a completar do lado da Anthropic).",
+  "status": "PASSOU",
+  "observado": "Mesma imagem sintetica (retangulo verde 'Fechar Caixa', desenhado em x:600-750px/800 = 75%-93.75% horizontal, y:420-470px/500 = 84%-94% vertical). Fiz DUAS chamadas de visao consecutivas nesta instancia com perguntas ligeiramente diferentes ('onde eu clico para fechar o caixa?' e 'onde fica o botao para fechar o caixa nessa tela?') para conferir consistencia. Ambas retornaram marcacao com left:84.4%, top:88.7% e left:84.4%, top:88.8% respectivamente (lidos via getComputedStyle/style do elemento .marcacao-alvo, nao so visualmente) - caem exatamente dentro dos limites do retangulo verde desenhado (75-93.75% horizontal, 84-94% vertical), bem centralizados nele.",
   "esperado": "alvo_x/alvo_y caem dentro dos limites do elemento correto (validacao visual manual do QA, sem oraculo automatico).",
-  "causa_provavel": "Mesma causa raiz de FP-001: credito da conta Anthropic usada por esta instalacao esgotado. Nao ha coordenada nenhuma para validar."
+  "causa_provavel": "N/A - passou. Coordenada consistente entre duas perguntas diferentes sobre o mesmo elemento."
 }

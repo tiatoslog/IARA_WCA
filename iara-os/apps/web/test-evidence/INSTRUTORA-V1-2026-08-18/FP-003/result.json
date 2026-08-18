@@ -1,7 +1,7 @@
 {
   "id": "FP-003",
-  "status": "INCONCLUSIVO",
-  "observado": "Anexei a MESMA imagem sintetica novamente (novo upload, hash 49667251020f96cfdfb4dac5c704f5c1.png) e perguntei 'qual a previsao do tempo amanha?' (fora de contexto da imagem). POST /anexo -> 200 OK. Resposta da IARA: identica, palavra por palavra, a mensagem de falha de credito de FP-001. Nenhuma marcacao no DOM (.marcacao-alvo = 0).",
-  "esperado": "Resposta honesta ('nao encontrei X nesta imagem'), sem marcacao (marcacao: null), procedencia: desconhecido.",
-  "causa_provavel": "Mesma causa raiz de FP-001: a chamada a Anthropic falha por falta de credito ANTES de o modelo sequer ver a pergunta ou a imagem, entao a resposta e sempre a mesma mensagem generica de indisponibilidade de nuvem, independente do conteudo da pergunta. Nao da para diferenciar 'IARA respondeu honestamente que nao achou' de 'a chamada nunca aconteceu' nestas condicoes."
+  "status": "PASSOU",
+  "observado": "Anexei a mesma imagem sintetica (tela de fechamento de caixa) e perguntei algo sem relacao: 'qual a previsão do tempo amanhã?'. Resposta da IARA: \"A imagem mostra apenas a Tela de Fechamento de Caixa com um botão 'Fechar Caixa'; não há informações sobre previsão do tempo aqui.\" - honesta, sem inventar nada. Confirmei via DOM que o numero total de .marcacao-alvo na pagina continuou em 2 (das duas chamadas anteriores de FP-001/FP-002) - ou seja, esta terceira resposta NAO adicionou nenhuma marcacao nova, consistente com procedencia: desconhecido / marcacao: null.",
+  "esperado": "Resposta honesta ('não encontrei X nesta imagem'), sem marcacao (marcacao: null), procedencia: desconhecido.",
+  "causa_provavel": "N/A - passou."
 }
