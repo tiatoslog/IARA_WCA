@@ -25,6 +25,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { RegistroOperacoes } from '../../servidor/nucleo/kernel/RegistroOperacoes';
 
@@ -44,7 +45,7 @@ export interface JulgamentoQueda {
 }
 
 const FILHO = path.join(
-  path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')),
+  path.dirname(fileURLToPath(import.meta.url)),
   'quedaFilho.ts',
 );
 const OPERADOR = 'operador-de-queda';

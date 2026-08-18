@@ -27,13 +27,14 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { CATALOGO } from '../../servidor/nucleo/kernel/habilidades';
 import { INTEGRACOES } from '../../servidor/nucleo/kernel/integracoes';
 import { BATERIAS } from './registro';
 
 const ARQUIVO_DECLARADO = path.join(
-  path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')),
+  path.dirname(fileURLToPath(import.meta.url)),
   'superficie-declarada.json',
 );
 
