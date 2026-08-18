@@ -13,6 +13,7 @@ import path from 'node:path';
 import { buscarNaWeb } from './BuscaWeb';
 import { supabase } from './ClienteSupabase';
 import { localDe, registrarCidade } from './LocalOperador';
+import { instantePorExtenso } from './kernel/Quando';
 import { contar } from './texto';
 
 export interface ResultadoAcao {
@@ -582,15 +583,25 @@ export class OrquestradorAcoes {
     }
   }
 
+  /**
+   * A HORA DO OPERADOR, NUNCA A DO SERVIDOR (operadora, 18/08/2026).
+   *
+   * Esta função respondeu "São 18:29 de terça-feira" quando eram 15:31 — três
+   * horas exatas, o fuso do Brasil. Ela formatava com `toLocaleTimeString('pt-BR')`
+   * sem `timeZone`, e o locale decide o FORMATO, nunca o fuso: sem ele vale o do
+   * sistema, que é o Brasil na máquina de quem desenvolve e UTC no Railway. O
+   * defeito era invisível em desenvolvimento por construção.
+   *
+   * O relógio do servidor estava certo o tempo todo — o carimbo ISO do jornal
+   * conferia com o UTC real. Só a apresentação mentia, e é a pior forma de
+   * mentir: bem formatada, em português, com o dia da semana correto.
+   *
+   * A formatação mora em `Quando.instantePorExtenso` para poder ser MEDIDA
+   * contra um instante conhecido — ver `testes/hora-correta.test.ts`. Um relógio
+   * que só lê `new Date()` por dentro não tem como ser testado, e foi essa
+   * ausência que deixou o erro chegar à produção.
+   */
   private informarRelogio(): string {
-    const agora = new Date();
-    const data = agora.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
-    const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    return `São ${hora} de ${data}.`;
+    return `São ${instantePorExtenso()}.`;
   }
 }

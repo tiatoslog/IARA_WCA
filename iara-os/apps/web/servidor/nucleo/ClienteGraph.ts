@@ -31,6 +31,8 @@
  * JSON cru da Graph. Mesma disciplina do `RagHistorico`: resumo, não despejo.
  */
 
+import { FUSO_OPERACAO } from './kernel/Quando';
+
 const BASE = 'https://graph.microsoft.com/v1.0';
 const TEMPO_LIMITE_MS = 10_000;
 
@@ -331,7 +333,16 @@ function dataCurta(iso: string | undefined): string {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  /* `timeZone` explícito, pela mesma razão do relógio (18/08/2026): sem ele
+     vale o fuso do sistema — UTC no Railway —, e um e-mail recebido às 15:00
+     aparecia carimbado como 18:00. Errado de um jeito que ninguém confere. */
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: FUSO_OPERACAO,
+  });
 }
 
 /**

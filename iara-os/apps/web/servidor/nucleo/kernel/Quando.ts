@@ -24,6 +24,49 @@
  * errado, porque o "às 8h" da mesma frase continuava sendo lido.
  */
 
+/**
+ * O FUSO DA OPERAÇÃO — e por que ele precisa ser explícito em todo lugar.
+ *
+ * O DEFEITO QUE ISTO FECHA (operadora, 18/08/2026): a IARA respondeu "São 18:29
+ * de terça-feira" quando eram 15:31. Três horas exatas de erro — UTC. A função
+ * do relógio usava `toLocaleTimeString('pt-BR', …)` sem `timeZone`, e o locale
+ * decide o FORMATO, nunca o fuso: sem `timeZone` vale o do sistema, que na
+ * máquina de quem desenvolve é o do Brasil e no Railway é UTC. O bug é
+ * invisível em desenvolvimento por construção, e só aparece em produção.
+ *
+ * É a categoria mais perigosa de resposta errada: plausível, bem formatada e
+ * dita com confiança total. Um "não sei" o operador confere; um "são 18:29" ele
+ * usa para marcar uma coleta.
+ *
+ * A constante existe porque a string já estava escrita à mão em dois clientes
+ * de calendário — e duas cópias de uma regra divergem, é questão de quando.
+ */
+export const FUSO_OPERACAO = 'America/Sao_Paulo';
+
+/**
+ * "15:31 de terça-feira, 18 de agosto de 2026" — o instante como a operadora o
+ * lê, no fuso da operação, nunca no fuso do servidor.
+ *
+ * Recebe `agora` para poder ser medido: um relógio que só lê `new Date()` por
+ * dentro não tem como ser testado contra um instante conhecido, e foi essa
+ * ausência que deixou o erro de três horas passar até a produção.
+ */
+export function instantePorExtenso(agora: Date = new Date()): string {
+  const data = agora.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    timeZone: FUSO_OPERACAO,
+  });
+  const hora = agora.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: FUSO_OPERACAO,
+  });
+  return `${hora} de ${data}`;
+}
+
 /** Sem acento, minúsculo, espaços colapsados. */
 function normalizar(bruto: string): string {
   return bruto
