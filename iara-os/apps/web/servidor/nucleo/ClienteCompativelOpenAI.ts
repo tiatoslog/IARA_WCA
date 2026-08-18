@@ -304,29 +304,61 @@ export class ClienteCompativelOpenAI implements ProvedorRaciocinio {
     let entrada = 0;
     let saida = 0;
 
+    const processar = (linha: string): void => {
+      const lida = interpretarLinhaOpenAI(linha);
+      if (!lida) return;
+      if (lida.erro) throw new ProvedorIndisponivel(`${this.apelido}: ${lida.erro}`);
+      if (lida.pedaco) {
+        texto += lida.pedaco;
+        pedido.aoReceberTexto(lida.pedaco);
+      }
+      if (lida.final) {
+        entrada = lida.final.tokens_entrada;
+        saida = lida.final.tokens_saida;
+      }
+    };
+
     try {
       for (;;) {
         const { done, value } = await leitor.read();
-        if (done) break;
+        if (done) {
+          /**
+           * O FIM DO STREAM TAMBÉM É UM SEPARADOR — defeito medido em produção
+           * (18/08/2026).
+           *
+           * A operadora perguntou o que a IARA consegue fazer e recebeu
+           * "...cargas, faturamento, motoristas, cent" — cortado no meio da
+           * palavra, para sempre, sem erro nenhum: o provedor tinha respondido
+           * com SUCESSO. `raciocinio_falhas` ficou vazio, o console limpo, o
+           * jornal sem nada. Não era falha, era AUSÊNCIA.
+           *
+           * O laço abaixo devolve ao buffer a última parte de cada leitura,
+           * porque ela pode estar cortada no meio de um pacote — isso está
+           * certo. O que faltava era o fim: `if (done) break` saía com o buffer
+           * cheio. Quando o servidor fecha sem `\n` depois do último `data:` —
+           * conexão interrompida, proxy impaciente, resposta sem `[DONE]` — o
+           * último pedaço de texto morria ali.
+           *
+           * `decode()` sem argumento esvazia o decodificador: um caractere
+           * multibyte partido entre duas leituras fica pendente até completar, e
+           * sem esta chamada o último acento some. Em português isso não é caso
+           * de borda.
+           *
+           * É pior que um erro. Falha o operador vê e reporta; frase cortada no
+           * meio ele lê como resposta.
+           */
+          restante += decodificador.decode();
+          if (restante.trim()) processar(restante);
+          restante = '';
+          break;
+        }
         restante += decodificador.decode(value, { stream: true });
 
         const linhas = restante.split('\n');
         /* A última pode estar cortada no meio — volta para o buffer. */
         restante = linhas.pop() ?? '';
 
-        for (const linha of linhas) {
-          const lida = interpretarLinhaOpenAI(linha);
-          if (!lida) continue;
-          if (lida.erro) throw new ProvedorIndisponivel(`${this.apelido}: ${lida.erro}`);
-          if (lida.pedaco) {
-            texto += lida.pedaco;
-            pedido.aoReceberTexto(lida.pedaco);
-          }
-          if (lida.final) {
-            entrada = lida.final.tokens_entrada;
-            saida = lida.final.tokens_saida;
-          }
-        }
+        for (const linha of linhas) processar(linha);
       }
     } finally {
       void leitor.cancel().catch(() => undefined);

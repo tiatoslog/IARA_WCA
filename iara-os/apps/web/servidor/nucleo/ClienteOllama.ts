@@ -297,6 +297,12 @@ export class ClienteOllama implements ProvedorRaciocinio {
         quebra = sobra.indexOf('\n');
       }
     }
+    /* `decode()` sem argumento esvazia o decodificador: um caractere multibyte
+       partido entre dois blocos fica pendente até completar, e sem esta chamada
+       o último acento some. A sobra já era consumida aqui — este cliente sempre
+       fechou a linha final; era o `ClienteCompativelOpenAI` que não fechava, e o
+       corte chegou à operadora em 18/08/2026. */
+    sobra += decodificador.decode();
     if (sobra) consumirLinha(sobra);
 
     // Stream completo é a prova de alcançabilidade mais barata que existe —
