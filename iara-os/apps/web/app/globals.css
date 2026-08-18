@@ -1269,6 +1269,53 @@ ol.plano {
   color: var(--c-tinta-3);
 }
 
+/* Screenshot dentro do balão — o print que o operador mandou, ou o mesmo
+   print com a marcação da IARA por cima. */
+.balao-imagem {
+  position: relative;
+  display: block;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--c-linha);
+  line-height: 0;
+}
+
+.balao-imagem img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  width: auto;
+}
+
+/* ONDE A IARA APONTA — coordenada normalizada (0..1) virando posição CSS.
+   Nunca vermelho saturado (invariante do repositório): o alerta e o destaque
+   são a mesma família coral, só a intensidade muda. */
+.marcacao-alvo {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  margin-top: -11px;
+  border-radius: 50%;
+  border: 2.5px solid var(--luz-alerta, #e2876b);
+  box-shadow: 0 0 0 4px rgba(226, 135, 107, 0.25);
+  pointer-events: none;
+  animation: marcacao-pulsar 1.6s ease-in-out infinite;
+}
+
+@keyframes marcacao-pulsar {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
 @keyframes surgir {
   from {
     opacity: 0;
@@ -2122,6 +2169,51 @@ ol.plano {
   align-items: center;
   gap: 8px;
   margin-top: 10px;
+}
+
+/* O input de arquivo nunca é visto — o botão `.cb` de anexar é a interface. */
+.anexo-input {
+  display: none;
+}
+
+/* A prévia do que vai ser enviado, entre o histórico e o campo de texto. */
+.anexo-pendente {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.anexo-pendente img {
+  height: 48px;
+  width: auto;
+  border-radius: 8px;
+  border: 1px solid var(--c-linha);
+}
+
+.anexo-remover {
+  font-family: inherit;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-tinta-2);
+  background: var(--c-superficie);
+  border: 1px solid var(--c-linha);
+  border-radius: 50%;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.anexo-remover:hover {
+  color: var(--c-tinta);
+  border-color: var(--c-linha-forte);
+}
+
+.anexo-erro {
+  font-size: var(--t-micro);
+  color: var(--luz-alerta, #e2876b);
 }
 
 /* Botão circular de controle — microfone, vigília, voz, interromper. */

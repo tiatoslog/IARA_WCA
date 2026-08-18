@@ -108,7 +108,7 @@ export class CompiladorSnapshot {
   private absorver(e: EventoKernel): void {
     switch (e.tipo) {
       case 'MENSAGEM_RECEBIDA':
-        this.pergunta = { id: e.id_mensagem, texto: e.texto };
+        this.pergunta = { id: e.id_mensagem, texto: e.texto, imagem: e.anexo ?? null };
         this.passosConcluidos.clear();
         this.falhou.clear();
         this.passoCorrente = -1;
@@ -231,6 +231,10 @@ export class CompiladorSnapshot {
           // O compilador nunca preenche `voz`: áudio é do mundo HTTP, e quem
           // anexa é a `PonteProjecao`. Aqui é sempre null.
           voz: null,
+          // Trecho parcial nunca carrega marcação: a análise visual desta
+          // versão é uma chamada única, não incremental — a marcação só
+          // existe quando a resposta está pronta, em TAREFA_CONCLUIDA.
+          marcacao: null,
         };
         break;
 
@@ -263,6 +267,7 @@ export class CompiladorSnapshot {
           latencia_ms: e.ms,
           cache_lido: this.telemetria.cache_lido,
           voz: null,
+          marcacao: e.marcacao ?? null,
         };
         break;
 

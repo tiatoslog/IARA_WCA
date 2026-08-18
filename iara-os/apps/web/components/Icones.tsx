@@ -127,3 +127,16 @@ export function IconeInterromper(p: Props) {
     </Base>
   );
 }
+
+/** Anexar screenshot — moldura de imagem com um pico de montanha, não um
+ *  clipe de papel: o que entra aqui é sempre uma imagem, nunca um arquivo
+ *  qualquer. */
+export function IconeAnexarImagem(p: Props) {
+  return (
+    <Base {...p}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="m5 17 4.5-4.5a2 2 0 0 1 2.8 0L15 15.2l1-1a2 2 0 0 1 2.8 0L21 16.5" />
+    </Base>
+  );
+}

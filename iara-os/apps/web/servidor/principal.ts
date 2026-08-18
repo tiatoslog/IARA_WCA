@@ -42,6 +42,7 @@ import { provedoresDeclarados } from './nucleo/FabricaRaciocinio';
 import { ehRotaWhatsapp, tratarWhatsapp } from './canais/PortaWhatsapp';
 import { diagnosticoWhatsapp } from './canais/WhatsApp';
 import { audioPorHash, diagnosticoVoz } from './nucleo/Voz';
+import { MAX_BYTES_IMAGEM, ROTA_ANEXO, extensaoDeImagem, guardar, porHashDeArquivo } from './nucleo/AnexoImagem';
 import { iniciarRenovacaoAutomaticaGraph, pararRenovacaoAutomaticaGraph } from './nucleo/ClienteGraph';
 import { estadoDaChave } from './nucleo/kernel/Prova';
 import { conferirAmbiente } from './nucleo/kernel/Configuracao';
@@ -150,6 +151,14 @@ const textoDe = (v: unknown, padrao: string): string =>
  * e aqui o cuidado importa mais, porque áudio é grande por natureza e um
  * `Content-Length` mentiroso viraria megabytes de memória do motor à disposição
  * de quem mandasse. `null` significa "estourou o teto", nunca "quase lá".
+ *
+ * `req.destroy()` ANTES de devolver — achado em QA (18/08/2026, bateria da
+ * INSTRUTORA-V1): sair do `for await` com `return` para de LER o corpo, mas
+ * não fecha o socket. O cliente continua empurrando os megabytes restantes, e
+ * como HTTP/1.1 sobre o mesmo socket não processa a resposta enquanto o
+ * request ainda está sendo escrito, o 413 ficava preso atrás de um upload de
+ * dezenas de MB — minutos de conexão pendurada em vez de uma recusa rápida.
+ * Destruir o socket é o que de fato interrompe o cliente e libera a resposta.
  */
 async function lerCorpoBinario(req: IncomingMessage, maxBytes: number): Promise<Buffer | null> {
   const pedacos: Buffer[] = [];
@@ -157,7 +166,10 @@ async function lerCorpoBinario(req: IncomingMessage, maxBytes: number): Promise<
   for await (const pedaco of req) {
     const b = pedaco as Buffer;
     total += b.length;
-    if (total > maxBytes) return null;
+    if (total > maxBytes) {
+      req.destroy();
+      return null;
+    }
     pedacos.push(b);
   }
   return Buffer.concat(pedacos);
@@ -235,6 +247,64 @@ async function tratarTranscricao(
     return;
   }
   responderJson(res, 200, { texto: r.texto, ms: r.ms });
+}
+
+/**
+ * ANEXO — o navegador manda o screenshot, o motor guarda em memória e devolve
+ * a URL. MESMO PADRÃO de `tratarTranscricao`: rota HTTP fora do WS (o
+ * WebSocket tem `maxPayload` de 256 KB e `lerPacoteCliente` tem teto de 8000
+ * caracteres — nenhum dos dois comporta uma imagem), corpo binário cru com
+ * teto contado em voo, mesma trava de origem, mesma autenticação por Bearer
+ * quando `autenticacaoAtiva()`.
+ *
+ * A rota devolve só a URL. Ela não fala com o Kernel, não abre turno, não
+ * dispara análise — quem decide o que fazer com a imagem é a mensagem `tipo:
+ * 'mensagem'` que o cliente manda em seguida pelo barramento, exatamente como
+ * a transcrição vira texto digitado.
+ */
+async function tratarAnexo(
+  req: IncomingMessage,
+  res: import('node:http').ServerResponse,
+): Promise<void> {
+  if (req.method !== 'POST') {
+    responderJson(res, 405, { erro: 'use POST' });
+    return;
+  }
+  if (!origemPermitida(req)) {
+    responderJson(res, 403, { erro: 'origem não autorizada' });
+    return;
+  }
+  if (autenticacaoAtiva()) {
+    const cabecalho = req.headers.authorization ?? '';
+    const token = cabecalho.startsWith('Bearer ') ? cabecalho.slice(7).trim() : undefined;
+    if (!(await verificarToken(token))) {
+      responderJson(res, 401, { erro: 'sessão inválida' });
+      return;
+    }
+  }
+
+  const tipo = (req.headers['content-type'] ?? '').split(';')[0].trim();
+  if (!extensaoDeImagem(tipo)) {
+    responderJson(res, 415, { erro: `formato de imagem não suportado: ${tipo || '(ausente)'}` });
+    return;
+  }
+
+  const bytes = await lerCorpoBinario(req, MAX_BYTES_IMAGEM);
+  if (!bytes) {
+    responderJson(res, 413, { erro: 'imagem grande demais' });
+    return;
+  }
+  if (bytes.length === 0) {
+    responderJson(res, 400, { erro: 'corpo vazio' });
+    return;
+  }
+
+  const v = guardar(bytes, tipo);
+  if (!v.ok) {
+    responderJson(res, 400, { erro: v.motivo });
+    return;
+  }
+  responderJson(res, 200, { url: v.url });
 }
 
 async function tratarPareamento(
@@ -548,6 +618,40 @@ async function subir(): Promise<void> {
         console.warn(`[iara] transcrição: ${e.message}`);
         if (!res.headersSent) responderJson(res, 500, { erro: 'falha interna' });
       });
+      return;
+    }
+
+    if (caminho === '/anexo') {
+      void tratarAnexo(req, res).catch((e: Error) => {
+        console.warn(`[iara] anexo: ${e.message}`);
+        if (!res.headersSent) responderJson(res, 500, { erro: 'falha interna' });
+      });
+      return;
+    }
+
+    const arquivoAnexo = ROTA_ANEXO.exec(caminho);
+    if (arquivoAnexo) {
+      const anexo = porHashDeArquivo(arquivoAnexo[1]);
+      if (!anexo) {
+        res.writeHead(404).end();
+        return;
+      }
+      // Mesma disciplina de CORS do áudio: sem `*`, origem só se estiver na
+      // allowlist. O hash na URL é a única coisa que protege o conteúdo — ver
+      // SEC-003 em `docs/prd/test-plan.md`.
+      const origemAnexo = req.headers.origin;
+      const cabecalhosAnexo: Record<string, string | number> = {
+        'Content-Type': anexo.tipo,
+        'Content-Length': anexo.bytes.length,
+        'Cache-Control': 'private, max-age=86400, immutable',
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+      };
+      if (origemAnexo && origemPermitida(req)) {
+        cabecalhosAnexo['Access-Control-Allow-Origin'] = origemAnexo;
+        cabecalhosAnexo.Vary = 'Origin';
+      }
+      res.writeHead(200, cabecalhosAnexo);
+      res.end(anexo.bytes);
       return;
     }
 

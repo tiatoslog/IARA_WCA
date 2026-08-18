@@ -1,0 +1,15 @@
+[
+  {"seq":"136096.88","method":"POST","url":"/anexo","status":200,"nota":"FP-001: anexo sintetico 18285 bytes, tela-fechamento.png"},
+  {"seq":"136096.89","method":"GET","url":"/anexo/34c60be846e0af69b1cc58842e9623e8.png","status":200},
+  {"seq":"136096.94","method":"GET","url":"/voz/044029ccc8549939e1ee1a2993683f86.mp3","status":200,"nota":"audio gerado mesmo para a resposta de falha de credito (FP-001)"},
+  {"seq":"136096.95","method":"POST","url":"/anexo","status":200,"nota":"FP-003: mesmo anexo sintetico, pergunta fora de contexto"},
+  {"seq":"136096.96","method":"GET","url":"/anexo/49667251020f96cfdfb4dac5c704f5c1.png","status":200},
+  {"seq":"136096.101","method":"GET","url":"/voz/...mp3","status":206,"nota":"replay do audio (Partial Content)"},
+  {"seq":"136096.102","method":"POST","url":"/anexo","status":"FAILED net::ERR_CONNECTION_RESET","nota":"EC-001 via UI: anexo de 34MB (3000x3000 PNG ruido). Ficou pendente por MINUTOS (sem 413, sem qualquer resposta) ate finalmente cair com ERR_CONNECTION_RESET, muito depois de outros testes terem rodado. Nao e o 413 rapido esperado."},
+  {"seq":"136096.103-105","method":"POST","url":"/anexo","status":"FAILED net::ERR_ABORTED","nota":"3 tentativas isoladas via fetch() direto (fora da UI) de 34MB/8MB/7MB, cada uma com AbortController: abortaram em 12s, 25s e >30s (timeout do proprio javascript_tool) sem NENHUMA resposta do servidor. Reproducao limpa e isolada do bug de EC-001."},
+  {"seq":"136096.106","method":"POST","url":"/anexo","status":200,"nota":"EC-002 (variante servidor): 4000 bytes de texto puro com Content-Type: image/png (header mentiroso). Servidor ACEITOU (200), devolveu URL /anexo/<hash>.png valida. NAO valida conteudo real, so confia no header declarado — contradiz o resultado esperado de EC-002."},
+  {"seq":"136096.107","method":"POST","url":"/anexo","status":200,"nota":"EC-005: anexo sintetico enviado com campo de duvida VAZIO. Servidor aceitou (200); IARA tentou processar (recebeu a mesma falha de credito da Anthropic ao tentar responder)."},
+  {"seq":"136096.108","method":"GET","url":"/anexo/294c79e824c68bf1cb7c131564a23d3d.png","status":200},
+  {"nota_geral":"EC-002 tentativa 1 (via UI, DataTransfer com File real de text/plain, nome x.png): NUNCA gerou request de rede — bloqueada no cliente por createImageBitmap() antes do fetch (useIaraSocket.ts:552-559). So a tentativa 2, direto por fetch() ao servidor, revelou que o SERVIDOR aceita conteudo nao-imagem quando o Content-Type declarado mente."},
+  {"nota_geral_2":"REG-001: mensagem de texto pura 'oi, tudo bem?', sem imagem, recebeu a MESMA mensagem de falha de credito da nuvem ('A cota da nuvem desta instalacao acabou') que FP-001/FP-003 — ou seja, a falta de credito bloqueia TODO o raciocinio de nuvem (texto E visao), nao so a visao."}
+]

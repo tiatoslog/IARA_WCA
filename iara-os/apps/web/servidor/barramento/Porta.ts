@@ -623,15 +623,17 @@ export function conectarOperador(socket: WebSocket): void {
        * turno de quem reescreveu e ENFILEIRAR o de quem é outra tela, em vez de
        * matar os dois casos com a mesma regra — ver o CC-01 em `Kernel.processar`.
        */
-      void kernel.processar(pacote.texto, pacote.id_local, minhaSessao?.id).finally(() => {
-        /**
-         * Religa APENAS o ciclo que ainda é o do residente. Se a última tela
-         * fechou durante o turno, o close já fez `ciclo = null` — religar a
-         * instância capturada criaria um timer de 15 s órfão, sem nenhuma
-         * referência viva capaz de pará-lo, acumulando um por desconexão.
-         */
-        if (r.sessoes.size > 0) r.ciclo?.iniciar();
-      });
+      void kernel
+        .processar(pacote.texto, pacote.id_local, minhaSessao?.id, undefined, pacote.anexo)
+        .finally(() => {
+          /**
+           * Religa APENAS o ciclo que ainda é o do residente. Se a última tela
+           * fechou durante o turno, o close já fez `ciclo = null` — religar a
+           * instância capturada criaria um timer de 15 s órfão, sem nenhuma
+           * referência viva capaz de pará-lo, acumulando um por desconexão.
+           */
+          if (r.sessoes.size > 0) r.ciclo?.iniciar();
+        });
     }
   });
 

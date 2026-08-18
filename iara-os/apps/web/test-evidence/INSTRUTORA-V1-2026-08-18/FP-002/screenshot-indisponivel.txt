@@ -1,0 +1,13 @@
+screenshot.png NAO PODE SER GERADO NESTA SESSAO DE QA (2a rodada).
+
+Tentei novamente conforme pedido pelo coordenador: computer(action=screenshot) foi chamado
+de novo apos a instancia ser recriada com NEXT_PUBLIC_IARA_MODO_LOCAL=1, e retornou o MESMO
+erro de todas as tentativas da rodada anterior:
+  "Screenshot timed out after 5s: the Browser pane is not displayed, so the page is not
+   compositing frames. Display the pane and retry."
+
+Confirmado: nao e transitorio, e uma limitacao persistente do ambiente de automacao deste
+QA (o painel do navegador nao compoe frame nesta maquina/sessao), independente do estado da
+aplicacao sob teste. Mantida a mesma solucao alternativa: evidencia textual via
+read_page/get_page_text/javascript_tool (DOM real, texto real da conversa, status real de
+rede), que e verificavel e sem ambiguidade, ainda que nao seja uma imagem.

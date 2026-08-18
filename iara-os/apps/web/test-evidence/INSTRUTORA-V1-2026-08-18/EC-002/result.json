@@ -1,0 +1,7 @@
+{
+  "id": "EC-002",
+  "status": "PASSOU",
+  "observado": "Revalidado na instancia nova (http://127.0.0.1:3097, apos o conserto em servidor/nucleo/AnexoImagem.ts:guardar() para validar o magic number real). Enviei, direto ao servidor via fetch (fora do gate do createImageBitmap do navegador, para testar a validacao do SERVIDOR de verdade), 4000 bytes de texto puro (nao comeca com a assinatura PNG 89 50 4E 47 0D 0A 1A 0A) com header Content-Type: image/png (mentiroso). Resposta: 400 Bad Request, body {\"erro\":\"o conteúdo não é um png de verdade (assinatura não bate)\"} - a mensagem cita explicitamente a assinatura, exatamente como o coordenador descreveu a correcao. Confirmei tambem que um PNG real e valido (100x100, 598 bytes, gerado por canvas.toBlob) continua sendo aceito normalmente (200 OK, URL de anexo valida) - sem regressao no caminho feliz. Via UI (DataTransfer com File text/plain nomeado x.png), o navegador continua bloqueando antes mesmo de chegar ao servidor (createImageBitmap falha primeiro) - camada de defesa adicional que ja existia e continua funcionando.",
+  "esperado": "Recusado (415) por validacao de conteudo real, nao so extensao/header declarado.",
+  "causa_provavel": "N/A - passou. Nota: o status retornado foi 400, nao 415 como o test-plan original sugeria como exemplo ('ou equivalente') - a mensagem de erro e clara e especifica ('assinatura não bate'), o que atende ao espirito do caso (recusa por validacao de conteudo real). Nao considero isso uma divergencia relevante, mas registro para quem decide o veredito."
+}

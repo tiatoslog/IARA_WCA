@@ -75,3 +75,10 @@ export function urlVoz(caminho: string): string {
   if (/^https?:\/\//.test(caminho)) return caminho;
   return `${origemMotor()}${caminho}`;
 }
+
+/** `/anexo/<hash>.png` → URL absoluta, mesma razão de `urlVoz`: o snapshot
+ *  carrega caminho, não endereço — quem sabe onde o motor mora é esta camada. */
+export function urlAnexo(caminho: string): string {
+  if (/^https?:\/\//.test(caminho)) return caminho;
+  return `${origemMotor()}${caminho}`;
+}

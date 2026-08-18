@@ -15,6 +15,7 @@ import type { EstadoConexao, Fala } from '../hooks/useIaraSocket';
 import { useEscuta } from '../hooks/useEscuta';
 import { useDeteccaoVocal } from '../hooks/useDeteccaoVocal';
 import {
+  IconeAnexarImagem,
   IconeEncerrar,
   IconeEnviar,
   IconeInterromper,
@@ -28,6 +29,11 @@ import type { EstagioCognitivo } from '../lib/estado';
 import type { MaquinaDoOperador } from '../lib/execucao';
 import type { PreferenciasOperador } from '../lib/perfil';
 import type { SnapshotCognitivo } from '../lib/snapshot';
+import { urlAnexo } from '../lib/supabaseNavegador';
+
+/** O que sobe pelo botão de anexar — mesma forma que `useIaraSocket.enviar`
+ *  aceita e que `PerguntaProjetada.imagem` carrega. */
+type AnexoImagem = { url: string; largura: number; altura: number };
 import { Automacao } from './Automacao';
 import { Dispositivos } from './Dispositivos';
 import { FichaOperador, fichaDoSnapshot } from './FichaOperador';
@@ -66,7 +72,9 @@ interface Props {
   motivoDesconexao?: string | null;
   /** Religa depois de uma recusa terminal (sessão expirada, limite de telas). */
   onReligar?: () => void;
-  onEnviar: (texto: string) => boolean;
+  onEnviar: (texto: string, anexo?: AnexoImagem) => boolean;
+  /** Sobe o screenshot; `null` em qualquer falha (motivo já foi para o log). */
+  onEnviarImagem?: (arquivo: File) => Promise<AnexoImagem | null>;
   onInterromper: () => void;
   /** A voz (áudio do servidor ou síntese local) está soando agora. */
   vozFalando?: boolean;
@@ -114,6 +122,7 @@ export function PainelConversa({
   motivoDesconexao = null,
   onReligar,
   onEnviar,
+  onEnviarImagem,
   onInterromper,
   vozFalando = false,
   vozLigada = true,
@@ -136,6 +145,12 @@ export function PainelConversa({
 }: Props) {
   const [rascunho, setRascunho] = useState('');
   const [gaveta, setGaveta] = useState<Gaveta>('nenhuma');
+  /** O screenshot escolhido, já enviado ao motor, esperando o Enter/clique de
+   *  envio — a IMAGEM chega antes do turno começar, não junto do texto. */
+  const [anexoPendente, setAnexoPendente] = useState<AnexoImagem | null>(null);
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  const [erroAnexo, setErroAnexo] = useState<string | null>(null);
+  const arquivoRef = useRef<HTMLInputElement | null>(null);
 
   /** O QR só poupa dois gestos: abrir a gaveta certa e digitar o código. */
   useEffect(() => {
@@ -219,14 +234,33 @@ export function PainelConversa({
 
   const sugestoes = sugerir(historicoPerguntas, SUGESTOES);
 
-  const enviarContando = (texto: string): boolean => {
-    const aceitou = onEnviar(texto);
-    if (aceitou) contarPergunta(texto);
+  const enviarContando = (texto: string, anexo?: AnexoImagem): boolean => {
+    const aceitou = onEnviar(texto, anexo);
+    if (aceitou && texto.trim()) contarPergunta(texto);
     return aceitou;
   };
 
   const submeter = () => {
-    if (enviarContando(rascunho)) setRascunho('');
+    if (enviarContando(rascunho, anexoPendente ?? undefined)) {
+      setRascunho('');
+      setAnexoPendente(null);
+      setErroAnexo(null);
+    }
+  };
+
+  const aoEscolherArquivo = async (arquivo: File | undefined) => {
+    if (!arquivo || !onEnviarImagem) return;
+    setErroAnexo(null);
+    setEnviandoAnexo(true);
+    try {
+      const resultado = await onEnviarImagem(arquivo);
+      // `null` já foi explicado no console técnico por `useIaraSocket` — aqui
+      // só se garante que a tentativa fica visível perto do botão também.
+      setAnexoPendente(resultado);
+      if (!resultado) setErroAnexo('Não foi possível anexar essa imagem.');
+    } finally {
+      setEnviandoAnexo(false);
+    }
   };
 
   /**
@@ -482,24 +516,48 @@ export function PainelConversa({
           </div>
         )}
 
-        {falas.map((f) => (
-          <div
-            key={f.id}
-            className={
-              f.papel === 'operador'
-                ? f.na_fila
-                  ? 'balao operador esperando'
-                  : 'balao operador'
-                : 'balao iara'
-            }
-          >
-            {f.texto || <span className="reticencias">…</span>}
-            {/* A ESPERA DITA COM TODAS AS LETRAS. Sem isto, um pedido atrás do
-                pedido de outra tela é indistinguível de um pedido lento — e a
-                pessoa não sabe se ainda dá tempo de desistir. */}
-            {f.na_fila && <span className="balao-espera">esperando a vez</span>}
-          </div>
-        ))}
+        {falas.map((f) => {
+          /**
+           * A imagem que esta fala da IARA marca é a da PERGUNTA que ela
+           * responde — nunca uma imagem própria: a IARA nunca gera mídia
+           * nova, só aponta sobre a que o operador mandou (ver ADR-4 em
+           * `docs/prd/test-plan.md`).
+           */
+          const imagemDaPergunta =
+            f.papel === 'iara' && f.responde_a
+              ? falas.find((x) => x.id === f.responde_a)?.imagem
+              : null;
+          return (
+            <div
+              key={f.id}
+              className={
+                f.papel === 'operador'
+                  ? f.na_fila
+                    ? 'balao operador esperando'
+                    : 'balao operador'
+                  : 'balao iara'
+              }
+            >
+              {(f.imagem || imagemDaPergunta) && (
+                <div className="balao-imagem">
+                  <img src={urlAnexo((f.imagem ?? imagemDaPergunta)!.url)} alt="Screenshot anexado" />
+                  {f.marcacao && (
+                    <span
+                      className="marcacao-alvo"
+                      style={{ left: `${f.marcacao.alvo_x * 100}%`, top: `${f.marcacao.alvo_y * 100}%` }}
+                      title={f.marcacao.elemento}
+                    />
+                  )}
+                </div>
+              )}
+              {f.texto || <span className="reticencias">…</span>}
+              {/* A ESPERA DITA COM TODAS AS LETRAS. Sem isto, um pedido atrás do
+                  pedido de outra tela é indistinguível de um pedido lento — e a
+                  pessoa não sabe se ainda dá tempo de desistir. */}
+              {f.na_fila && <span className="balao-espera">esperando a vez</span>}
+            </div>
+          );
+        })}
         <div ref={fim} />
       </div>
       )}
@@ -559,6 +617,27 @@ export function PainelConversa({
             nenhum. Verifique o dispositivo de entrada do Windows — o Chrome usa o{' '}
             <strong>dispositivo de comunicação padrão</strong>, que é outro campo, no painel antigo
             de Som.
+          </div>
+        )}
+
+        {(anexoPendente || enviandoAnexo || erroAnexo) && (
+          <div className="anexo-pendente">
+            {enviandoAnexo && <span className="reticencias">enviando imagem…</span>}
+            {anexoPendente && !enviandoAnexo && (
+              <>
+                <img src={urlAnexo(anexoPendente.url)} alt="Screenshot a anexar" />
+                <button
+                  type="button"
+                  className="anexo-remover"
+                  onClick={() => setAnexoPendente(null)}
+                  aria-label="Remover imagem anexada"
+                  title="Remover imagem"
+                >
+                  ×
+                </button>
+              </>
+            )}
+            {erroAnexo && !enviandoAnexo && <span className="anexo-erro">{erroAnexo}</span>}
           </div>
         )}
 
@@ -635,10 +714,37 @@ export function PainelConversa({
           >
             <IconeInterromper />
           </button>
+          {onEnviarImagem && (
+            <>
+              <input
+                ref={arquivoRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="anexo-input"
+                onChange={(e) => {
+                  const arquivo = e.target.files?.[0];
+                  // Some do DOM assim que lido: escolher o MESMO arquivo duas
+                  // vezes seguidas não dispara `onChange` sem isto, e "tentei
+                  // de novo" é exatamente o caso de quem viu o primeiro falhar.
+                  e.target.value = '';
+                  void aoEscolherArquivo(arquivo);
+                }}
+              />
+              <button
+                className={anexoPendente ? 'cb ativo' : 'cb'}
+                onClick={() => arquivoRef.current?.click()}
+                disabled={!conectado || enviandoAnexo}
+                title="Anexar um screenshot"
+                aria-label="Anexar um screenshot"
+              >
+                <IconeAnexarImagem />
+              </button>
+            </>
+          )}
           <button
             className="cb-enviar"
             onClick={submeter}
-            disabled={!conectado || !rascunho.trim()}
+            disabled={!conectado || (!rascunho.trim() && !anexoPendente)}
             title="Enviar"
             aria-label="Enviar"
           >

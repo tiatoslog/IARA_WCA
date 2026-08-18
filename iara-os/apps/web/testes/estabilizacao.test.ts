@@ -566,7 +566,7 @@ test('comando reconhecido que falha ao enviar não pode travar a escuta em silê
     'aoConcluirFala precisa devolver o resultado de enviarContando, não só chamá-lo',
   );
   assert.ok(
-    /const aceitou = onEnviar\(texto\);[\s\S]{0,200}return aceitou;/.test(painel),
+    /const aceitou = onEnviar\(texto(?:,\s*\w+)?\);[\s\S]{0,200}return aceitou;/.test(painel),
     'enviarContando precisa propagar o booleano de onEnviar — é ele que devolve a escuta para "ouvindo"',
   );
 });

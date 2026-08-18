@@ -22,7 +22,7 @@ import type { NivelLog, PacoteCliente, PacoteServidor } from '../lib/protocolo';
 import { ESPACO_VAZIO, EXPRESSAO_NEUTRA, TELEMETRIA_ZERO, type SnapshotCognitivo } from '../lib/snapshot';
 import { LEITURA_INICIAL, LUZES_APAGADAS, METRICAS_INICIAIS } from '../lib/estado';
 import type { PreferenciasOperador } from '../lib/perfil';
-import { enderecoBarramento } from '../lib/supabaseNavegador';
+import { enderecoBarramento, origemMotor } from '../lib/supabaseNavegador';
 
 export interface Fala {
   id: string;
@@ -50,6 +50,10 @@ export interface Fala {
   voz?: string | null;
   /** O servidor vai mandar áudio desta fala (Convai ligada) — espere por ele. */
   voz_prevista?: boolean;
+  /** Para bolhas do operador: o screenshot anexado a esta pergunta, se houver. */
+  imagem?: { url: string; largura: number; altura: number } | null;
+  /** Para falas da IARA: onde ela aponta na imagem da pergunta que respondeu. */
+  marcacao?: { alvo_x: number; alvo_y: number; elemento: string } | null;
   /**
    * `performance.now()` do instante em que o turno abriu. É o relógio que a
    * boca da projeção 3D usa para articular — precisa ser monotônico, então
@@ -197,6 +201,7 @@ export function useIaraSocket(credencial: Credencial) {
           texto: p.texto,
           concluida: true,
           iniciada_em: performance.now(),
+          imagem: p.imagem ?? null,
         },
       ];
       return proximo.length > MAX_FALAS ? proximo.slice(-MAX_FALAS) : proximo;
@@ -219,6 +224,7 @@ export function useIaraSocket(credencial: Credencial) {
         cache_lido: f.cache_lido,
         voz: f.voz,
         voz_prevista: f.voz_prevista,
+        marcacao: f.marcacao ?? null,
         tokens_entrada: s.telemetria.tokens_entrada,
         tokens_saida: s.telemetria.tokens_saida,
         // Carimbado uma vez, na abertura do turno, e PRESERVADO nas
@@ -258,7 +264,8 @@ export function useIaraSocket(credencial: Credencial) {
       if (
         antes[i].texto === nova.texto &&
         antes[i].concluida === nova.concluida &&
-        antes[i].voz === nova.voz
+        antes[i].voz === nova.voz &&
+        antes[i].marcacao === nova.marcacao
       ) {
         return antes;
       }
@@ -483,10 +490,12 @@ export function useIaraSocket(credencial: Credencial) {
   }, [idUsuario, nome, token, aplicar, chaveReligar]);
 
   const enviar = useCallback(
-    (texto: string) => {
+    (texto: string, anexo?: { url: string; largura: number; altura: number }) => {
       const limpo = texto.trim();
       const socket = socketRef.current;
-      if (!limpo) return false;
+      // Sem texto SÓ é inválido sem anexo — a imagem é o pedido quando não há
+      // pergunta escrita. Ver `lib/protocolo.ts#lerPacoteCliente`.
+      if (!limpo && !anexo) return false;
       if (!socket || socket.readyState !== WebSocket.OPEN) {
         // Falha de envio nunca é silenciosa: some da caixa sem explicação é o
         // que faz o operador achar que a IARA travou.
@@ -511,14 +520,66 @@ export function useIaraSocket(credencial: Credencial) {
             texto: limpo,
             concluida: true,
             iniciada_em: performance.now(),
+            imagem: anexo ?? null,
           },
         ];
         return proximo.length > MAX_FALAS ? proximo.slice(-MAX_FALAS) : proximo;
       });
-      socket.send(JSON.stringify({ tipo: 'mensagem', texto: limpo, id_local: idLocal }));
+      socket.send(
+        JSON.stringify({
+          tipo: 'mensagem',
+          texto: limpo,
+          id_local: idLocal,
+          ...(anexo ? { anexo } : {}),
+        }),
+      );
       return true;
     },
     [registrarLog],
+  );
+
+  /**
+   * Sobe o screenshot por `POST /anexo` (fora do WebSocket — ver
+   * `docs/prd/test-plan.md`, ADR-3) e devolve a URL + dimensões prontas para
+   * `enviar(texto, anexo)`. `null` em qualquer falha; o motivo já foi para o
+   * log.
+   */
+  const enviarImagem = useCallback(
+    async (arquivo: File): Promise<{ url: string; largura: number; altura: number } | null> => {
+      let largura = 0;
+      let altura = 0;
+      try {
+        const bitmap = await createImageBitmap(arquivo);
+        largura = bitmap.width;
+        altura = bitmap.height;
+        bitmap.close();
+      } catch {
+        registrarLog('alerta', 'Não consegui ler essa imagem.');
+        return null;
+      }
+
+      try {
+        const resposta = await fetch(`${origemMotor()}/anexo`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': arquivo.type,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: arquivo,
+        });
+        if (!resposta.ok) {
+          const corpo = (await resposta.json().catch(() => ({}))) as { erro?: string };
+          registrarLog('alerta', `Não foi possível enviar a imagem: ${corpo.erro ?? resposta.status}`);
+          return null;
+        }
+        const corpo = (await resposta.json()) as { url: string };
+        return { url: corpo.url, largura, altura };
+      } catch (erro) {
+        registrarLog('alerta', `Não foi possível enviar a imagem: ${(erro as Error).message}`);
+        return null;
+      }
+    },
+    [token, registrarLog],
   );
 
   const interromper = useCallback(() => {
@@ -652,6 +713,7 @@ export function useIaraSocket(credencial: Credencial) {
     conexao,
     motivoDesconexao,
     enviar,
+    enviarImagem,
     interromper,
     religar,
     salvarPreferencias,

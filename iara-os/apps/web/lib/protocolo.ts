@@ -79,7 +79,19 @@ export type PacoteCliente =
    * aparelho que digitou reconheça a si mesmo e os outros espelhos acrescentem
    * a frase. Opcional: cliente antigo não manda, e o servidor gera um id.
    */
-  | { tipo: 'mensagem'; texto: string; id_local?: string }
+  | {
+      tipo: 'mensagem';
+      texto: string;
+      id_local?: string;
+      /**
+       * Screenshot que o operador anexou, já enviado por `POST /anexo` — o
+       * WebSocket nunca carrega bytes de imagem (payload de 256 KB, protocolo
+       * de texto). `url` é o caminho que `GET /anexo/<hash>.<ext>` serve;
+       * `largura`/`altura` vêm do próprio arquivo lido no navegador, só para a
+       * marcação renderizar sobre a imagem certa depois do resize da tela.
+       */
+      anexo?: { url: string; largura: number; altura: number };
+    }
   | { tipo: 'interromper' }
   /**
    * A ficha do operador. Não carrega `id_usuario`: o shard de destino é
@@ -188,7 +200,30 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
   }
   if (obj.tipo === 'mensagem') {
     const texto = typeof obj.texto === 'string' ? obj.texto : '';
-    if (!texto.trim()) return null;
+    /**
+     * A URL do anexo aceita SÓ o formato que `GET /anexo/<hash>.<ext>` serve —
+     * nunca uma URL arbitrária. Um `anexo` com URL fora desse formato é
+     * descartado (o pacote continua válido se tiver texto; vira `undefined`).
+     */
+    const anexoObj =
+      typeof obj.anexo === 'object' && obj.anexo !== null
+        ? (obj.anexo as Record<string, unknown>)
+        : null;
+    const url = typeof anexoObj?.url === 'string' ? anexoObj.url : '';
+    const largura = typeof anexoObj?.largura === 'number' ? anexoObj.largura : NaN;
+    const altura = typeof anexoObj?.altura === 'number' ? anexoObj.altura : NaN;
+    const anexoValido =
+      /^\/anexo\/[0-9a-f]{16,64}\.(png|jpg|jpeg|webp)$/.test(url) &&
+      Number.isFinite(largura) &&
+      Number.isFinite(altura) &&
+      largura > 0 &&
+      largura <= 20000 &&
+      altura > 0 &&
+      altura <= 20000;
+    const anexo = anexoValido ? { url, largura, altura } : undefined;
+    // Mensagem sem texto só é válida quando carrega um anexo — a imagem É o
+    // pedido; sem nenhum dos dois não há o que perceber.
+    if (!texto.trim() && !anexo) return null;
     /**
      * O id do cliente é ACEITO, nunca confiado: ele volta para as telas do
      * mesmo operador e para lugar nenhum além disso. Limitado no tamanho e
@@ -202,6 +237,7 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
       tipo: 'mensagem',
       texto: texto.slice(0, 8000),
       ...(idLocal ? { id_local: idLocal } : {}),
+      ...(anexo ? { anexo } : {}),
     };
   }
   if (obj.tipo === 'interromper') {

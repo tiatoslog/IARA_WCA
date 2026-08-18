@@ -1,0 +1,7 @@
+{
+  "id": "EC-005",
+  "status": "INCONCLUSIVO",
+  "observado": "Anexei a imagem sintetica sem digitar NADA no campo de texto e cliquei Enviar. O sistema ACEITOU o envio (nao bloqueou, nao pediu confirmacao): POST /anexo -> 200 OK, a bolha do operador mostrou '…' como placeholder do texto vazio, e o turno foi enviado para a IARA processar. A resposta voltou como a mesma mensagem generica de falha de credito da Anthropic (ver FP-001) - ou seja, o sistema TENTOU de fato processar a imagem sem pergunta (o codigo do prompt em AnaliseVisual.ts linha 131 tem inclusive um texto padrao para esse caso: '(nada escrito — descreva o que vê e sugira o próximo passo óbvio)'), mas a chamada real falhou por falta de credito antes de retornar qualquer descricao.",
+  "esperado": "Recusado ou tratado como 'descreva o que precisa' - decisao explicita na implementacao, nao silencio.",
+  "causa_provavel": "A DECISAO de design em si (aceitar e pedir para a IARA descrever livremente, em vez de recusar) PODE ser observada com clareza - o codigo-fonte confirma que essa e a intencao (AnaliseVisual.ts:131). O que nao pode ser confirmado nesta instancia e o RESULTADO final dessa decisao (a descricao real que a IARA daria), porque a chamada a Anthropic falhou por falta de credito, a mesma causa raiz de FP-001."
+}

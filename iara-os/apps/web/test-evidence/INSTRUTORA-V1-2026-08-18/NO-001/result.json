@@ -1,0 +1,7 @@
+{
+  "id": "NO-001",
+  "status": "PASSOU",
+  "observado": "Durante o upload de um anexo grande (34MB, ver EC-001), o texto 'enviando imagem…' apareceu no corpo da pagina enquanto o POST /anexo estava em voo (confirmado via javascript_tool lendo document.body.innerText logo apos disparar o anexo, antes de qualquer resposta de rede). Os botoes e o campo de texto ('Fale ou escreva para a IARA…') permaneceram presentes e habilitados no DOM durante todo o periodo (varios minutos) em que o upload ficou pendente - nao foram desabilitados nem bloqueados.",
+  "esperado": "Indicador de carregamento no botao de anexar; campo de texto continua utilizavel.",
+  "causa_provavel": "N/A - passou. Observacao lateral (nao afeta o veredito deste caso): o indicador ficou preso indefinidamente porque a propria requisicao nunca resolveu (ver EC-001, que FALHOU) - o indicador em si funcionou como projetado, o problema esta no que ele estava esperando."
+}

@@ -226,6 +226,17 @@ export interface FalaProjetada {
    * cima da outra, porque o áudio chega sempre um instante depois do texto.
    */
   readonly voz_prevista?: boolean;
+
+  /**
+   * ONDE A IARA APONTA, quando esta fala responde a uma pergunta com imagem
+   * anexada — coordenada NORMALIZADA (0.0–1.0) do centro do elemento, sobre a
+   * MESMA imagem de `PerguntaProjetada.imagem` que esta fala responde (achada
+   * via `responde_a`). Nunca pixel absoluto: sobrevive a redimensionamento e
+   * zoom do lado do operador. `null` quando não há imagem envolvida OU quando
+   * a IARA não conseguiu identificar um elemento (procedência `desconhecido`,
+   * ver `Verdade.ts`) — a ausência de marcação nunca é inventada.
+   */
+  readonly marcacao?: { readonly alvo_x: number; readonly alvo_y: number; readonly elemento: string } | null;
 }
 
 /**
@@ -256,6 +267,13 @@ export interface PerguntaProjetada {
    */
   readonly id: string;
   readonly texto: string;
+  /**
+   * O screenshot que o operador anexou a esta pergunta, se houver. Só a URL
+   * servida por `GET /anexo/<hash>.<ext>` e as dimensões que o navegador leu
+   * do próprio arquivo — nunca bytes dentro do snapshot, mesma disciplina de
+   * `FalaProjetada.voz`.
+   */
+  readonly imagem?: { readonly url: string; readonly largura: number; readonly altura: number } | null;
 }
 
 export interface SnapshotCognitivo {

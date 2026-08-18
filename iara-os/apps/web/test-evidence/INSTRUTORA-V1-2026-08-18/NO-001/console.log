@@ -1,0 +1,9 @@
+[info] React DevTools hint (irrelevante)
+[warn] onnxruntime-web critical dependency (pre-existente, nao relacionado a mudanca)
+[warn] WebSocket connection to 'ws://127.0.0.1:3098/barramento' failed: WebSocket is closed before the connection is established.
+   -> ocorreu uma vez logo apos o operador selecionar "Daiane" no seletor local (que faz window.location.reload()); a conexao seguinte teve sucesso ("barramento aberto" ficou visivel na UI depois).
+[info] [voz] metadados / som saindo / baixado — logs de latencia do player de audio, todos < 250ms, para cada resposta falada (inclusive as respostas de falha de credito, que TAMBEM sao faladas em voz alta).
+[error] Failed to load resource: net::ERR_CONNECTION_RESET
+   -> a requisicao POST /anexo de 34MB (teste EC-001 via UI) finalmente rompeu a conexao depois de ficar pendurada por minutos, sem nunca ter devolvido 413 nem qualquer corpo de resposta.
+
+Nenhum outro erro de runtime JS foi observado (sem excecao nao tratada, sem crash de render).

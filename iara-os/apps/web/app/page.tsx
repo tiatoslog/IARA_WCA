@@ -26,6 +26,7 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
     conexao,
     motivoDesconexao,
     enviar,
+    enviarImagem,
     interromper,
     religar,
     salvarPreferencias,
@@ -140,6 +141,7 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         motivoDesconexao={motivoDesconexao}
         onReligar={religar}
         onEnviar={enviar}
+        onEnviarImagem={enviarImagem}
         onInterromper={interromperTudo}
         vozFalando={voz.tocando}
         vozLigada={voz.vozLigada}

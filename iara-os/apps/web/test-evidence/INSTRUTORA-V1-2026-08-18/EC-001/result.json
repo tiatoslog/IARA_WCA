@@ -1,0 +1,7 @@
+{
+  "id": "EC-001",
+  "status": "PASSOU",
+  "observado": "Revalidado na instancia nova (http://127.0.0.1:3097, apos o conserto em servidor/principal.ts:lerCorpoBinario para chamar req.destroy() ao estourar o teto). Fetch isolado direto ao servidor: upload de 34MB rejeitado em 51ms (TypeError: Failed to fetch / net::ERR_CONNECTION_RESET); repeti com 7MB e rejeitou em 49ms, mesmo padrao. Via UI real (DataTransfer no input .anexo-input, PNG sintetico de ruido 3000x3000 = 36141777 bytes): a requisicao POST /anexo falhou quase imediatamente com net::ERR_CONNECTION_RESET (nao mais minutos pendurado) e a interface mostrou a mensagem de erro 'Não foi possível anexar essa imagem.' de forma limpa, sem travar o campo de texto nem o resto da UI. Confirmei tambem que um PNG valido pequeno (598 bytes) continua sendo aceito normalmente (200 OK) - sem regressao no caminho feliz.",
+  "esperado": "Recusado com mensagem clara ANTES de gastar chamada de visao; teto exato a definir na implementacao - Response 413 (ou equivalente) + nenhuma chamada Anthropic no log.",
+  "causa_provavel": "N/A - passou. Nota: a rejeicao chega como erro de conexao abrupta (net::ERR_CONNECTION_RESET / TypeError: Failed to fetch) em vez de um 413 JSON limpo, porque req.destroy() fecha o socket em vez de permitir uma resposta HTTP formal. O coordenador confirmou que esse comportamento e aceitavel e esperado para este conserto - o requisito essencial (nao travar, rejeitar em segundos) foi atendido. Nenhuma chamada a Anthropic foi observada nos logs/rede para os uploads grandes."
+}

@@ -1,0 +1,7 @@
+{
+  "id": "FP-002",
+  "status": "INCONCLUSIVO",
+  "observado": "Mesma execucao de FP-001 (mesmo turno). Nao ha alvo_x/alvo_y para validar: a resposta foi a mensagem de falha de credito da Anthropic, sem JSON de marcacao nenhum retornado pelo modelo (a chamada nem chegou a completar do lado da Anthropic).",
+  "esperado": "alvo_x/alvo_y caem dentro dos limites do elemento correto (validacao visual manual do QA, sem oraculo automatico).",
+  "causa_provavel": "Mesma causa raiz de FP-001: credito da conta Anthropic usada por esta instalacao esgotado. Nao ha coordenada nenhuma para validar."
+}

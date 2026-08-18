@@ -103,7 +103,13 @@ export type EventoKernel =
    * de resposta identificam a frase da IARA. É o que o compilador projeta em
    * `SnapshotCognitivo.pergunta` para os espelhos que não digitaram nada.
    */
-  | (EventoBase & { tipo: 'MENSAGEM_RECEBIDA'; texto: string; id_mensagem: string })
+  | (EventoBase & {
+      tipo: 'MENSAGEM_RECEBIDA';
+      texto: string;
+      id_mensagem: string;
+      /** Screenshot anexado a esta pergunta, se houver — ver `lib/protocolo.ts`. */
+      anexo?: { url: string; largura: number; altura: number };
+    })
   | (EventoBase & { tipo: 'PERCEPCAO_CONCLUIDA'; percepcao: Percepcao })
   | (EventoBase & {
       tipo: 'DECISAO_TOMADA';
@@ -171,6 +177,12 @@ export type EventoKernel =
       rota: string;
       ms: number;
       responde_a: string | null;
+      /**
+       * Onde a IARA aponta, quando esta resposta veio de `analisarImagem`.
+       * `null` = sabe que não sabe (nenhum elemento identificado); ausente =
+       * turno sem imagem envolvida. Ver `lib/snapshot.ts#FalaProjetada.marcacao`.
+       */
+      marcacao?: { alvo_x: number; alvo_y: number; elemento: string } | null;
     })
   | (EventoBase & { tipo: 'TAREFA_CANCELADA'; motivo: string })
   /**

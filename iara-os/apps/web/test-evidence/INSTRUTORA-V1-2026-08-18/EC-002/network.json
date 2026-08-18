@@ -1,0 +1,8 @@
+[
+  {"instancia":"http://127.0.0.1:3097 (nova, pos-conserto)","teste":"EC-001 isolado","metodo":"POST","url":"/anexo","corpo":"34MB ruido, Content-Type image/png","resultado":"TypeError: Failed to fetch (net::ERR_CONNECTION_RESET)","tempo_ms":51},
+  {"teste":"EC-001 isolado (2a)","metodo":"POST","url":"/anexo","corpo":"7MB ruido, Content-Type image/png","resultado":"TypeError: Failed to fetch (net::ERR_CONNECTION_RESET)","tempo_ms":49},
+  {"teste":"EC-001 via UI","metodo":"POST","url":"/anexo","corpo":"36141777 bytes, PNG sintetico 3000x3000 via DataTransfer real","resultado":"net::ERR_CONNECTION_RESET (rapido, UI mostrou 'Não foi possível anexar essa imagem.' sem travar)"},
+  {"teste":"EC-002 (variante servidor)","metodo":"POST","url":"/anexo","corpo":"4000 bytes texto puro, Content-Type: image/png mentiroso","resultado":"400 Bad Request","body":"{\"erro\":\"o conteúdo não é um png de verdade (assinatura não bate)\"}","tempo_ms":11},
+  {"teste":"EC-002 controle positivo","metodo":"POST","url":"/anexo","corpo":"PNG real 100x100 (598 bytes)","resultado":"200 OK","body":"{\"url\":\"/anexo/47b8cfe6f05a673378ad07502b3bef7c.png\"}","tempo_ms":10},
+  {"teste":"FP-001 retry (so verificacao de credito)","metodo":"WS mensagem + POST /anexo","resultado":"credito da Anthropic AINDA esgotado - mesma mensagem 'A cota da nuvem desta instalação acabou' de FP-001/FP-003/REG-001 da rodada anterior"}
+]

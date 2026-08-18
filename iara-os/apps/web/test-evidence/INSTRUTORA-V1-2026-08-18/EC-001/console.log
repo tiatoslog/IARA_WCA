@@ -1,0 +1,6 @@
+[warn] WebSocket connection to 'ws://127.0.0.1:3097/barramento' failed: WebSocket is closed before the connection is established.
+   -> transitorio, reconexao teve sucesso em seguida ("barramento aberto" visivel depois).
+[error] Failed to load resource: net::ERR_CONNECTION_RESET   (x varias, todas dos uploads >6MB do EC-001, agora rapidas - dezenas de ms, nao mais minutos)
+[error] Failed to load resource: the server responded with a status of 400 (Bad Request)   (EC-002, resposta correta do novo guard de assinatura)
+
+Nenhum outro erro de runtime JS. Nenhuma chamada a Anthropic apareceu associada aos uploads grandes/invalidos (consistente com "recusar antes de gastar chamada de visao").

@@ -56,6 +56,8 @@ import type { Operacao, SemanticaEfeito } from './Operacao';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
 import type { DestinoCognitivo, EstagioCognitivo, OrigemRaciocinio } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
+import { analisarImagem } from '../AnaliseVisual';
+import { porUrl as anexoPorUrl } from '../AnexoImagem';
 
 /**
  * O que se sabe sobre UM passo depois de tentar executá-lo.
@@ -142,6 +144,14 @@ interface PedidoNaFila {
    * diferentes para o mesmo pedido.
    */
   readonly id: string;
+  readonly anexo?: AnexoMensagem;
+}
+
+/** Screenshot anexado a uma mensagem — ver `lib/protocolo.ts`. */
+export interface AnexoMensagem {
+  readonly url: string;
+  readonly largura: number;
+  readonly altura: number;
 }
 
 /**
@@ -513,7 +523,7 @@ export class Kernel {
        pessoa ainda veria "esperando a vez" sobre um pedido que já entrou. */
     this.publicarFila();
     try {
-      await this.processar(proximo.texto, proximo.idLocal, proximo.origem, proximo.id);
+      await this.processar(proximo.texto, proximo.idLocal, proximo.origem, proximo.id, proximo.anexo);
     } catch (erro) {
       /* `processar` já trata as próprias falhas; o que chega aqui é o que
          escapou do `finally` dele. Deixar subir mataria a drenagem e os
@@ -541,6 +551,8 @@ export class Kernel {
     origem: string = ORIGEM_SEM_TELA,
     /** Só a drenagem da fila passa isto: o pedido já ganhou id ao entrar nela. */
     idJaAtribuido?: string,
+    /** Screenshot anexado pelo operador — ver `AnexoMensagem`. */
+    anexo?: AnexoMensagem,
   ): Promise<void> {
     /**
      * O prefixo `op:` é o que garante que um id vindo da rede nunca colida com
@@ -579,7 +591,7 @@ export class Kernel {
     if (this.emAndamento && this.origemEmAndamento !== origem) {
       const jaEspera = this.fila.findIndex((x) => x.origem === origem);
       if (jaEspera >= 0) {
-        this.fila[jaEspera] = { texto, idLocal, origem, id: idDaPergunta };
+        this.fila[jaEspera] = { texto, idLocal, origem, id: idDaPergunta, anexo };
         this.publicarFila();
         return;
       }
@@ -596,7 +608,7 @@ export class Kernel {
         });
         return;
       }
-      this.fila.push({ texto, idLocal, origem, id: idDaPergunta });
+      this.fila.push({ texto, idLocal, origem, id: idDaPergunta, anexo });
       this.publicarFila();
       return;
     }
@@ -640,7 +652,79 @@ export class Kernel {
         tipo: 'MENSAGEM_RECEBIDA',
         texto,
         id_mensagem: idDaPergunta,
+        anexo,
       });
+
+      /**
+       * ANÁLISE VISUAL — short-circuit no mesmo estilo do bloco `esclarecer`
+       * logo abaixo: decisão determinística, sem plano, sem habilidade. Uma
+       * imagem anexada não é um pedido a decompor pelo planejador — é uma
+       * pergunta sobre o que está na tela, e quem responde é a visão do
+       * Claude, chamada direto (nenhuma habilidade do catálogo fala com a
+       * LLM; ver `AnaliseVisual.ts` e ADR-2 em `docs/prd/test-plan.md`).
+       */
+      if (anexo) {
+        await this.registrarSemQuebrar('operador', texto || '(imagem anexada, sem pergunta escrita)');
+        if (controle.signal.aborted) return;
+        await this.dep.estado.transicionar('pensando', null);
+
+        const idMensagem = randomUUID();
+        const concluirVisual = async (motivo: string, destino: DestinoCognitivo): Promise<void> => {
+          b.publicar({
+            tipo: 'TAREFA_CONCLUIDA',
+            id_mensagem: idMensagem,
+            texto: motivo,
+            rota: 'analise_visual',
+            ms: Date.now() - inicio,
+            responde_a: idDaPergunta,
+            marcacao: null,
+          });
+          await this.registrarSemQuebrar('iara', motivo, destino);
+        };
+
+        const permissao = orcamento.consumir('chamada_modelo');
+        if (!permissao.permitido) {
+          this.avisarOrcamento(permissao, 'análise visual');
+          await concluirVisual(permissao.motivo, 'sistema_local');
+          return;
+        }
+
+        const arquivo = anexoPorUrl(anexo.url);
+        if (!arquivo) {
+          await concluirVisual('Não encontrei mais essa imagem — pode anexar de novo?', 'sistema_local');
+          return;
+        }
+
+        b.publicar({ tipo: 'RACIOCINIO_INICIADO', modelo: 'claude (visão)', origem: 'nuvem' });
+        const resultado = await analisarImagem(arquivo.bytes, arquivo.tipo, texto, controle.signal);
+        if (controle.signal.aborted) return;
+        orcamento.consumir('tokens', resultado.tokens_entrada + resultado.tokens_saida);
+        b.publicar({
+          tipo: 'RACIOCINIO_CONCLUIDO',
+          tokens_entrada: resultado.tokens_entrada,
+          tokens_saida: resultado.tokens_saida,
+          cache_lido: 0,
+          ms: Date.now() - inicio,
+        });
+
+        b.publicar({
+          tipo: 'TAREFA_CONCLUIDA',
+          id_mensagem: idMensagem,
+          texto: resultado.texto,
+          rota: 'analise_visual',
+          ms: Date.now() - inicio,
+          responde_a: idDaPergunta,
+          marcacao: resultado.alvo
+            ? { alvo_x: resultado.alvo.x, alvo_y: resultado.alvo.y, elemento: resultado.alvo.elemento }
+            : null,
+        });
+        await this.registrarSemQuebrar('iara', resultado.texto, 'claude_nuvem');
+        await this.dep.estado.aplicarIntencao({
+          campo: 'afinidade',
+          delta: TeoriaDaMente.GANHO_POR_TROCA,
+        });
+        return;
+      }
 
       // --- 1. Percepção -----------------------------------------------------
       const p = this.percepcao.perceber(texto);
