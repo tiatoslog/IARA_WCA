@@ -90,6 +90,30 @@ function argumento(nome: string, padrao: string): string {
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : padrao;
 }
 
+/**
+ * `--porta` RESERVA TRÊS PORTAS, NÃO UMA: `PORTA`, `PORTA+1` (recuperação) e
+ * `PORTA+2` (degradação). Duas campanhas simultâneas precisam de pelo menos 3 de
+ * distância — na prática, use 10.
+ *
+ * ISSO JÁ DESTRUIU EVIDÊNCIA, em 18/08/2026. Três campanhas subiram em paralelo
+ * nas portas 3090, 3091 e 3092 para comparar provedores. As faixas se
+ * sobrepuseram inteiras, e `limparMotoresEsquecidos` — que MATA o que estiver
+ * escutando nas três portas antes de começar — fez uma campanha derrubar o motor
+ * da outra. Duas consequências, e nenhuma parece um erro de porta ao ler o
+ * relatório:
+ *
+ *   · a rodada da Groq acusou um FALSO_POSITIVO em DG-01. A missão de degradação
+ *     existe para provar que a IARA recusa sem cérebro, e o cliente dela conectou
+ *     em 3092 — que naquele instante era o motor da campanha da ANTHROPIC, com
+ *     cérebro vivo. A IARA respondeu bem, e o oráculo, corretamente, chamou de
+ *     falso positivo. O defeito acusado era do harness.
+ *   · a rodada do OpenRouter registrou nove `ERRO_DE_CAMPANHA` com
+ *     `ECONNREFUSED`: o motor dela tinha sido morto pela campanha vizinha.
+ *
+ * Um relatório assim é PIOR que nenhum: ele atribui a um provedor um defeito que
+ * pertence à disposição das portas, e é exatamente o tipo de conclusão que esta
+ * campanha existe para impedir.
+ */
 const PORTA = Number(argumento('porta', '3071'));
 const VOLTAS = Math.max(1, Number(argumento('voltas', '1')));
 const FAMILIAS = argumento('so', '')
@@ -197,11 +221,16 @@ const ARVORE_NA_SUBIDA = (() => {
 const CEREBRO_PEDIDO = argumento('cerebro', '').trim().toLowerCase();
 
 /**
- * O que vai no ambiente do motor. Vazio quando ninguém pede: aí vale o padrão da
+ * O que vai para o `subirMotor`. Vazio quando ninguém pede: aí vale o padrão da
  * campanha, que é o Ollama local de custo zero — ver `MotorSandbox`.
+ *
+ * VAI COMO `cerebro`, E NÃO COMO `IARA_PROVEDOR` NO AMBIENTE, e a diferença foi
+ * medida: trocar só o seletor deixa a credencial do provedor zerada pela
+ * campanha, e o motor sobe com um cérebro que não pensa. `MotorSandbox` é quem
+ * sabe quais chaves ele zera, então é lá que mora a exceção.
  */
-const AMBIENTE_CEREBRO: Record<string, string> = CEREBRO_PEDIDO
-  ? { IARA_PROVEDOR: CEREBRO_PEDIDO }
+const CEREBRO_DO_MOTOR: { cerebro?: string } = CEREBRO_PEDIDO
+  ? { cerebro: CEREBRO_PEDIDO }
   : {};
 
 /** Preenchido quando o primeiro motor sobe, lendo o banner dele. */
@@ -432,7 +461,7 @@ async function faseRecuperacao(porta: number): Promise<ResultadoMissao> {
   const idUsuario = `${PREFIXO_ID}-recuperacao`;
   let motor: MotorVivo | null = null;
   try {
-    motor = await subirMotor({ porta, rotulo: 'recup', ambiente: AMBIENTE_CEREBRO });
+    motor = await subirMotor({ porta, rotulo: 'recup', ...CEREBRO_DO_MOTOR });
     observarCerebro(motor.saida);
     const cliente = new ClienteBarramento({ url: motor.url_ws, id_usuario: idUsuario });
     await cliente.conectar();
@@ -1002,7 +1031,7 @@ async function principal(): Promise<number> {
 
   let motor: MotorVivo | null = null;
   try {
-    motor = await subirMotor({ porta: PORTA, rotulo: 'principal', ambiente: AMBIENTE_CEREBRO });
+    motor = await subirMotor({ porta: PORTA, rotulo: 'principal', ...CEREBRO_DO_MOTOR });
     observarCerebro(motor.saida);
     anotar(`motor vivo (pid ${motor.pid}) — sandbox ${motor.sandbox.raiz}`);
     notas.push(`sandbox da rodada: ${motor.sandbox.raiz}`);

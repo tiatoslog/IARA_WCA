@@ -114,9 +114,47 @@ export function criarProvedorRaciocinio(ambiente: Ambiente = process.env): Prove
  * indistinguível de um saudável até alguém pedir alguma coisa. Sem cérebro,
  * idem.
  */
+/**
+ * A variável que torna cada escolha UTILIZÁVEL — a mesma que a cadeia consulta
+ * logo abaixo. Existe para que "declarar um provedor" e "ter esse provedor" não
+ * sejam a mesma afirmação.
+ */
+const VARIAVEL_DA_ESCOLHA: Record<Exclude<Escolha, 'auto'>, string> = {
+  anthropic: 'ANTHROPIC_API_KEY',
+  ollama: 'OLLAMA_URL',
+  groq: GROQ.variavelChave,
+  gemini: GEMINI.variavelChave,
+  openrouter: OPENROUTER.variavelChave,
+};
+
 export function provedoresDeclarados(ambiente: Ambiente = process.env): string[] {
   const escolha = escolhaDeclarada(ambiente);
-  if (escolha !== 'auto') return [escolha];
+  /**
+   * FORÇAR UM PROVEDOR NÃO O TORNA UTILIZÁVEL, e esta conferência custou uma
+   * campanha inteira em 18/08/2026.
+   *
+   * Antes, a escolha declarada era ECOADA sem checagem: com `IARA_PROVEDOR=groq`
+   * e nenhuma `GROQ_API_KEY` no ambiente, o banner de subida e o `/saude`
+   * anunciavam `groq` enquanto o Kernel respondia, no mesmo processo, "a camada
+   * de raciocínio está desligada". A campanha CO subiu com esse carimbo, mediu
+   * doze segundos de recusa honesta, e o relatório teria chamado isso de
+   * resultado da Groq.
+   *
+   * É O INCIDENTE DE 15/08 OUTRA VEZ — um diagnóstico verde sobre um processo
+   * sem cérebro — reaberto no único caminho que ninguém checava: o do provedor
+   * forçado. O comentário acima já dizia que divergir da cadeia faria "o
+   * diagnóstico apontar um cérebro e a IARA usar outro"; o `if` que devolvia a
+   * escolha crua era essa divergência, escrita duas linhas antes do aviso.
+   *
+   * A FÁBRICA CONTINUA INSTANCIANDO o provedor forçado mesmo sem chave, e isso é
+   * de propósito: lá, o cliente indisponível é quem diz em voz alta que está
+   * indisponível, com a mensagem certa. O que não pode é o RELATO afirmar que
+   * existe cérebro. Devolver lista vazia aqui faz o banner imprimir "NENHUM
+   * provedor declarado", que é a verdade.
+   */
+  if (escolha !== 'auto') {
+    return configUtilizavel(VARIAVEL_DA_ESCOLHA[escolha], ambiente) ? [escolha] : [];
+  }
 
   /* A MESMA ORDEM DA CADEIA, e não uma lista qualquer: quem lê `/saude` está
      lendo quem responde primeiro. Divergir daqui faria o diagnóstico apontar um

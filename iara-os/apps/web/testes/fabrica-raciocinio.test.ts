@@ -141,17 +141,33 @@ test('UN-211. auto com Groq + Anthropic: a GRATUITA vem primeiro, a paga depois'
       assert.ok(provedor instanceof CadeiaDeRaciocinio);
       /* O primeiro elo responde pelo retrato enquanto ninguém falhou — e é
          justamente por isso que ele serve de asserção da ordem. */
-      assert.equal(provedor.modelo, 'llama-3.3-70b-versatile');
+      assert.equal(provedor.modelo, 'openai/gpt-oss-120b');
       assert.equal(provedor.disponivel, true);
     },
   );
 });
 
 /**
- * O OPENROUTER É GRATUITO MAS NÃO É O MAIS FORTE — um Nemotron de 55B ativos contra os
- * 70B da Groq. Este teste trava as duas metades da decisão: ele entra DEPOIS das
- * gratuitas melhores e ANTES da paga. Sem ele, alguém reordena por ordem de
- * chegada e a IARA passa a responder pelo modelo menor sem nada ficar vermelho.
+ * A ORDEM ENTRE AS GRATUITAS ESTÁ EM ABERTO, e o teste trava o que É hoje — não
+ * o que deveria ser.
+ *
+ * A justificativa original desta posição era de tamanho: "um Nemotron de 55B
+ * ativos contra os 70B da Groq". Ela caducou em 18/08/2026 junto com o modelo:
+ * a Groq descomissionou o `llama-3.3-70b-versatile` e o substituto declarado é
+ * `openai/gpt-oss-120b` — 120B totais, mas MoE com ~5,1B ATIVOS. Pelo critério
+ * que a própria ordem invoca, o Nemotron (55B ativos) passou à frente.
+ *
+ * E a medição do mesmo dia aponta para o mesmo lado por outra razão: a camada
+ * gratuita da Groq tem teto de 8.000 tokens por minuto e o prompt da IARA custa
+ * ~5.000, então ela entrega ~uma chamada a cada 40 s. O OpenRouter aceitou três
+ * chamadas de 5.600 tokens em oito segundos sem 429.
+ *
+ * NÃO REORDENEI AQUI, e a abstenção é deliberada: a campanha CO contra o
+ * OpenRouter ainda não produziu rodada limpa (a primeira foi contaminada por
+ * sondas concorrentes na mesma chave), e trocar o primeiro elo da cadeia de
+ * produção é decisão de operação, com latência medida na mão. Este comentário
+ * existe para que a ordem atual seja lida como PENDENTE de revisão, e não como
+ * conclusão — que é o estado em que ela de fato está.
  */
 test('UN-211d. OpenRouter entra depois das gratuitas melhores e antes da paga', async () => {
   await comProcessEnv({ IARA_PROVEDOR: undefined }, () => {
@@ -168,7 +184,7 @@ test('UN-211d. OpenRouter entra depois das gratuitas melhores e antes da paga', 
       OPENROUTER_API_KEY: CHAVE_OPENROUTER,
     });
     assert.ok(comGroq instanceof CadeiaDeRaciocinio);
-    assert.equal(comGroq.modelo, 'llama-3.3-70b-versatile');
+    assert.equal(comGroq.modelo, 'openai/gpt-oss-120b');
 
     /* Com a paga presente, o gratuito ainda vem primeiro — é o ponto da troca
        de 18/08: dinheiro só se gasta quando o de graça falhou. */
@@ -195,7 +211,7 @@ test('UN-211b. auto com Groq + Gemini (sem Anthropic): cadeia das duas gratuitas
         GEMINI_API_KEY: CHAVE_GEMINI,
       });
       assert.ok(provedor instanceof CadeiaDeRaciocinio);
-      assert.equal(provedor.modelo, 'llama-3.3-70b-versatile');
+      assert.equal(provedor.modelo, 'openai/gpt-oss-120b');
     },
   );
 });
@@ -260,10 +276,61 @@ test('provedoresDeclarados: a lista que o /saude mostra, em ordem e sem segredo'
        indistinguível de um deploy saudável. */
     assert.deepEqual(provedoresDeclarados({}), []);
 
-    /* Provedor forçado: só ele, como na fábrica. */
+    /* Provedor forçado E utilizável: só ele, como na fábrica. */
     assert.deepEqual(
-      provedoresDeclarados({ IARA_PROVEDOR: 'groq', ANTHROPIC_API_KEY: CHAVE_VALIDA }),
+      provedoresDeclarados({
+        IARA_PROVEDOR: 'groq',
+        GROQ_API_KEY: CHAVE_GROQ,
+        ANTHROPIC_API_KEY: CHAVE_VALIDA,
+      }),
       ['groq'],
     );
+
+    /**
+     * PROVEDOR FORÇADO E SEM CHAVE: nada. E esta asserção substitui a que estava
+     * aqui, que afirmava `['groq']` para EXATAMENTE este ambiente — o teste
+     * fixava o defeito.
+     *
+     * Em 18/08/2026 uma campanha inteira subiu assim: `--cerebro groq` trocava o
+     * seletor, a chave continuava zerada pelo `MotorSandbox`, e o banner do motor
+     * anunciava "groq" enquanto o Kernel respondia "a camada de raciocínio está
+     * desligada" no mesmo processo. Doze segundos de recusa honesta que o
+     * relatório teria chamado de resultado da Groq.
+     *
+     * É o incidente de 15/08 — diagnóstico verde sobre processo sem cérebro —
+     * pela porta que ninguém checava. A chave da Anthropic presente no ambiente
+     * está aqui de propósito: ela NÃO salva a lista, porque forçar um provedor
+     * desliga a cadeia, e é isso que torna o relato vazio a verdade.
+     */
+    assert.deepEqual(
+      provedoresDeclarados({ IARA_PROVEDOR: 'groq', ANTHROPIC_API_KEY: CHAVE_VALIDA }),
+      [],
+    );
+
+    /* Vale para todas as escolhas, e `ollama` entra pela URL, não por chave. */
+    assert.deepEqual(provedoresDeclarados({ IARA_PROVEDOR: 'anthropic' }), []);
+    assert.deepEqual(provedoresDeclarados({ IARA_PROVEDOR: 'openrouter' }), []);
+    assert.deepEqual(provedoresDeclarados({ IARA_PROVEDOR: 'ollama' }), []);
+    assert.deepEqual(
+      provedoresDeclarados({ IARA_PROVEDOR: 'ollama', OLLAMA_URL: 'http://127.0.0.1:11434' }),
+      ['ollama'],
+    );
+  });
+});
+
+/**
+ * A FÁBRICA CONTINUA INSTANCIANDO O PROVEDOR FORÇADO SEM CHAVE, e a assimetria
+ * com o teste acima é deliberada — não é descuido de cobertura.
+ *
+ * Quem instancia devolve um cliente INDISPONÍVEL, que diz em voz alta que está
+ * indisponível e com a mensagem certa; é o modo honesto da casa e não deve
+ * mudar. Quem RELATA não pode afirmar que existe cérebro. As duas coisas juntas
+ * são o comportamento correto, e separá-las foi o conserto.
+ */
+test('forçar provedor sem chave instancia o cliente, mas ele nasce indisponível', async () => {
+  await comProcessEnv({ IARA_PROVEDOR: 'groq', GROQ_API_KEY: undefined }, () => {
+    const p = criarProvedorRaciocinio({ IARA_PROVEDOR: 'groq' });
+    assert.equal(p.disponivel, false, 'sem chave, o provedor forçado não pode se dizer disponível');
+    assert.deepEqual(provedoresDeclarados({ IARA_PROVEDOR: 'groq' }), [], 'e o relato não o anuncia');
   });
 });

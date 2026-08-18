@@ -106,9 +106,59 @@ export const GROQ: PerfilProvedorAberto = {
   base: 'https://api.groq.com/openai/v1',
   variavelChave: 'GROQ_API_KEY',
   variavelModelo: 'GROQ_MODELO',
-  /* 70B na camada gratuita: a maior qualidade disponível sem custo, e ordens
-     de grandeza acima de um 3B local. */
-  modeloPadrao: 'llama-3.3-70b-versatile',
+  /**
+   * `llama-3.3-70b-versatile` SAIU DO CATÁLOGO DA GROQ, e a IARA passou a 404 no
+   * primeiro elo da cadeia — em produção, em todo turno.
+   *
+   * Descoberto em 18/08/2026 pela campanha CO, na primeira rodada que de fato
+   * chegou à Groq: dez das treze missões voltaram com
+   * `groq respondeu 404: The model llama-3.3-70b-versatile does not exist`.
+   * Não era limitação do modelo, era ausência dele. Consultada, a API lista
+   * hoje: `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.6-27b`,
+   * `groq/compound` — e nenhum llama.
+   *
+   * UM MODELO FIXADO NO CÓDIGO É UM PRAZO DE VALIDADE QUE NINGUÉM ANOTOU. A
+   * cadeia mascara isto de propósito (o elo morto cede a vez ao próximo desde
+   * 5c5ac94), então a IARA continua respondendo — pelo elo seguinte, sem o
+   * gratuito, e ninguém percebe até alguém medir. `GROQ_MODELO` no ambiente
+   * continua vencendo, que é a saída sem deploy quando isto acontecer de novo.
+   *
+   * `openai/gpt-oss-120b` E NÃO O `qwen`, e a escolha foi MEDIDA, não deduzida
+   * do tamanho: o Qwen despeja o bloco `<think>` dentro de `content`, e este
+   * cliente lê `delta.content` — o pensamento dele viraria fala da IARA. O
+   * gpt-oss entrega `content: "OK"` com o raciocínio num campo `reasoning`
+   * separado, que é justamente o que o leitor de stream ignora. 120B MoE,
+   * ~0,7 s no teste, gratuito.
+   *
+   * ------------------------------------------------------------------------
+   * O TETO DA GROQ GRATUITA NÃO CABE NA IARA, e isto vale mais que a escolha do
+   * modelo acima. Medido em 18/08/2026, cabeçalhos `x-ratelimit` da própria API:
+   *
+   *     openai/gpt-oss-120b    TPM  8.000    RPM 1.000
+   *     openai/gpt-oss-20b     TPM  8.000    RPM 1.000
+   *     qwen/qwen3.6-27b       TPM  8.000    RPM 1.000
+   *     groq/compound          TPM 70.000    RPM   250
+   *
+   * O prompt de sistema da IARA — persona, camada global e catálogo — custa
+   * ~5.000 tokens de ENTRADA por chamada. Contra um teto de 8.000 por minuto,
+   * isso é UMA chamada a cada ~40 s. Um turno de `plano_cognitivo` faz duas
+   * (decompõe, depois responde), então a segunda 429 por construção. Medido:
+   * cinco chamadas seguidas → 1 ok, 4 `429 … Limit 8000, Used 5036`.
+   *
+   * O limite é da ORGANIZAÇÃO e do minuto, não do modelo: trocar de modelo
+   * dentro da Groq gratuita não resolve, porque os três de chat dividem o mesmo
+   * teto. Groq gratuita é elo de RESERVA, não cérebro primário — e a cadeia já
+   * a trata assim desde 5c5ac94, cedendo a vez ao próximo elo no 429.
+   *
+   * `groq/compound` TEM 8,75× MAIS TETO E MESMO ASSIM ESTÁ FORA. Sondado no
+   * mesmo dia com "Qual o preço do diesel hoje?": ele foi SOZINHO à internet,
+   * devolveu `executed_tools: [{type: "search", …}]` e citou a fonte. Alcançar o
+   * mundo por fora do Porteiro, do jornal e do orçamento é exatamente o que o
+   * invariante "quem raciocina não alcança o mundo" proíbe, e o resultado é uma
+   * afirmação sem `Procedencia` que a IARA repassaria como se fosse dela. Teto
+   * maior não compra essa troca.
+   */
+  modeloPadrao: 'openai/gpt-oss-120b',
 };
 
 /**
