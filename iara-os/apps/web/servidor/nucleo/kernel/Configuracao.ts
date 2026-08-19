@@ -232,6 +232,35 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
   IARA_ORCAMENTO_EFEITOS: { natureza: 'numero', papel: 'teto de efeitos no mundo por turno' },
   IARA_ORCAMENTO_TOKENS: { natureza: 'numero', papel: 'teto de tokens acumulados por turno' },
   IARA_ORCAMENTO_TEMPO_MS: { natureza: 'numero', papel: 'teto de tempo de parede por turno' },
+  /**
+   * O PRAZO DE FALA — e ele NÃO é o teto de tempo acima, apesar de os dois
+   * contarem milissegundos do mesmo turno.
+   *
+   * `IARA_ORCAMENTO_TEMPO_MS` é controle de CUSTO: 15 min, dimensionado pelo
+   * provedor local de ~263 s por chamada, e existe para cortar o turno
+   * patológico antes que ele gaste demais. Está certo no que faz.
+   *
+   * Este aqui é a paciência de uma PESSOA. Não corta nada, não gasta nada e não
+   * decide nada — só garante que a tela mude antes de o operador concluir que
+   * travou. Ter um número só para as duas coisas foi o defeito medido em
+   * 18/08/2026: seis de catorze turnos passaram 90 s sem mostrar coisa alguma,
+   * dentro do orçamento, sem erro nenhum, e do lado de cá é indistinguível de
+   * um sistema morto.
+   */
+  IARA_PRAZO_FALA_MS: {
+    natureza: 'numero',
+    papel: 'quanto o operador espera antes de a IARA avisar que ainda está nisto',
+  },
+  /**
+   * Quanto um elo da cadeia tem para enviar o PRIMEIRO PEDAÇO antes de ser
+   * abandonado. Não é teto de resposta: depois que o texto começa a sair, o
+   * turno é daquele elo. Ver `CadeiaDeRaciocinio.PRAZO_PRIMEIRO_PEDACO_PADRAO_MS`
+   * para os números medidos que fixaram o padrão em 10 s.
+   */
+  IARA_PRAZO_PROVEDOR_MS: {
+    natureza: 'numero',
+    papel: 'prazo do primeiro pedaço antes de a cadeia trocar de elo',
+  },
   IARA_ADMINS: { natureza: 'lista', papel: 'operadores administradores' },
   IARA_CIDADE: { natureza: 'texto', papel: 'cidade padrão' },
   IARA_LATITUDE: { natureza: 'texto', papel: 'latitude padrão' },

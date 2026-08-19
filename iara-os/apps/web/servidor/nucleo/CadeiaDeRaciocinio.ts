@@ -20,12 +20,68 @@
  * `mensagemHumanaDeFalha` traduz para a operadora.
  */
 
+import { lerConfig } from './kernel/Configuracao';
 import {
   ProvedorIndisponivel,
   type PedidoRaciocinio,
   type ProvedorRaciocinio,
   type RespostaRaciocinio,
 } from './ProvedorRaciocinio';
+
+/**
+ * O ELO DEMOROU DEMAIS PARA COMEÇAR — e por isso foi abandonado.
+ *
+ * Classe própria porque o abandono precisa ser distinguível de duas coisas
+ * parecidas e de consequência oposta: do operador cancelando (que NÃO merece
+ * outro cérebro) e de um erro do provedor (que já tem classificação). Sem tipo
+ * próprio, o `AbortError` do abandono cairia em `cancelado` e mataria o turno
+ * exatamente quando ele deveria seguir para o próximo elo.
+ */
+export class EloDemorouDemais extends Error {
+  constructor(
+    readonly apelido: string,
+    readonly prazoMs: number,
+  ) {
+    super(`${apelido} não enviou o primeiro pedaço em ${prazoMs} ms`);
+    this.name = 'EloDemorouDemais';
+  }
+}
+
+/**
+ * DEZ SEGUNDOS PARA O PRIMEIRO PEDAÇO, e o número saiu de medição.
+ *
+ * Medido em 18/08/2026, prompt de 10.226 tokens, três voltas por provedor:
+ *
+ *   anthropic   1º pedaço em 1,4 s / 1,7 s / 1,9 s — respondeu 3/3
+ *   openrouter  429 (cota diária gratuita esgotada) em 46–390 ms
+ *   groq        413 (o prompt não cabe no tier) em 121–1656 ms
+ *   gemini      503 (high demand) em 5,2 s · 21,9 s · **43,6 s**
+ *
+ * O gemini não é lento a responder: é lento a FALHAR. E a cadeia paga essa
+ * espera antes de chegar a quem funciona — vezes duas ou três chamadas de
+ * modelo por turno. Foi essa soma que produziu turnos de 70 segundos com a tela
+ * parada, e nenhum teto do sistema a via: o orçamento de tempo é de 15 minutos
+ * e só é conferido entre passos, nunca dentro de uma chamada de rede.
+ *
+ * Dez segundos deixa folga de 5× sobre o elo saudável mais lento que se mediu, e
+ * corta o 503 de 43 s em 10. Um prazo apertado demais abandonaria provedor bom
+ * em dia ruim, que é trocar lentidão por burrice.
+ *
+ * VALE PARA O PRIMEIRO PEDAÇO, NUNCA PARA A RESPOSTA INTEIRA. Depois que o texto
+ * começou a sair, o turno é daquele elo — cortar no meio jogaria fora uma
+ * resposta que já estava chegando e duplicaria a fala se o próximo respondesse.
+ * É a mesma regra que já governa `comecouAFalar`.
+ */
+export const PRAZO_PRIMEIRO_PEDACO_PADRAO_MS = 10_000;
+
+export function prazoDoPrimeiroPedaco(): number {
+  const bruto = lerConfig('IARA_PRAZO_PROVEDOR_MS');
+  if (bruto === null) return PRAZO_PRIMEIRO_PEDACO_PADRAO_MS;
+  const n = Number(bruto);
+  /* Zero ou negativo desligaria o abandono em silêncio. Quem quiser desligar
+     declara um número grande, que aparece no diagnóstico como o número que é. */
+  return Number.isInteger(n) && n > 0 ? n : PRAZO_PRIMEIRO_PEDACO_PADRAO_MS;
+}
 
 /**
  * POR QUE O CÉREBRO FALHOU — uma escala só, e ela é esta.
@@ -67,6 +123,19 @@ export type ClasseFalhaProvedor =
   | 'outra';
 
 export function classificarFalhaProvedor(erro: unknown, sinal?: AbortSignal): ClasseFalhaProvedor {
+  /**
+   * O ABANDONO POR DEMORA VEM ANTES DE TUDO, inclusive de `cancelado`.
+   *
+   * Um elo que não começou a falar no prazo está, para efeito deste turno,
+   * fora do ar — e a carência de `servico_fora` (2 min) é exatamente a que se
+   * quer: ele não é tentado de novo enquanto está ruim, e volta sozinho depois.
+   *
+   * A conferência é por TIPO e não por texto. Com `IARA_PRAZO_PROVEDOR_MS=15000`
+   * a mensagem conteria "15000", e o `/5\d{2}/` de `servico_fora` lá embaixo
+   * casaria com "500" no meio do número — a classe certa pelo motivo errado, que
+   * é o tipo de acerto que some no dia em que alguém mexer no prazo.
+   */
+  if (erro instanceof EloDemorouDemais) return 'servico_fora';
   if (sinal?.aborted) return 'cancelado';
   if (erro instanceof Error && erro.name === 'AbortError') return 'cancelado';
 
@@ -337,18 +406,53 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
        */
       let comecouAFalar = false;
 
+      /**
+       * O ABANDONO POR DEMORA. Sinal próprio, combinado com o do turno: o do
+       * turno é do operador e mata tudo; este é da cadeia e só descarta ESTE elo.
+       *
+       * Combinar em vez de substituir é obrigatório — passar só o nosso deixaria
+       * um cancelamento do operador sem efeito dentro da chamada de rede, e a
+       * IARA continuaria pensando depois de mandarem parar.
+       */
+      const abandono = new AbortController();
+      const prazoElo = prazoDoPrimeiroPedaco();
+      const relogioDoElo = setTimeout(() => {
+        if (!comecouAFalar) abandono.abort(new EloDemorouDemais(elo.apelido, prazoElo));
+      }, prazoElo);
+
       try {
         this.atual = elo;
         const resposta = await elo.raciocinar({
           ...pedido,
+          /* `pedido.sinal` é obrigatório no contrato e há chamador que não o
+             passa — a bateria de roteamento é um deles. `AbortSignal.any`
+             levanta com `undefined` na lista, e uma cadeia que explode por falta
+             de sinal seria pior que a demora que ela veio consertar. */
+          sinal: AbortSignal.any([pedido.sinal, abandono.signal].filter(Boolean)),
           aoReceberTexto: (pedaco) => {
+            /* Começou a falar: o prazo morre aqui. Daqui em diante o turno é
+               deste elo, dê no que der — cortar no meio duplicaria a fala. */
+            if (!comecouAFalar) clearTimeout(relogioDoElo);
             comecouAFalar = true;
             pedido.aoReceberTexto(pedaco);
           },
         });
         registrarSucessoProvedor(elo.apelido);
         return resposta;
-      } catch (erro) {
+      } catch (erroBruto) {
+        /**
+         * O ABANDONO CHEGA AQUI COMO `AbortError`, e é preciso desmascará-lo
+         * ANTES de classificar: `classificarFalhaProvedor` manda todo abort para
+         * `cancelado`, e `cancelado` não merece outro cérebro. Sem esta troca, o
+         * abandono mataria o turno exatamente quando deveria adiantá-lo.
+         *
+         * A conferência é pelo sinal do ABANDONO e não pelo do turno: se o
+         * operador cancelou, quem venceu foi ele, e aí `cancelado` está certo.
+         */
+        const erro =
+          abandono.signal.aborted && !pedido.sinal?.aborted
+            ? new EloDemorouDemais(elo.apelido, prazoElo)
+            : erroBruto;
         ultimoErro = erro;
         /**
          * REGISTRAR AQUI É O PONTO INTEIRO. O elo que falhou e foi substituído
@@ -363,6 +467,8 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
         /* Segue para o próximo elo. O motivo deste não se perde: se todos
            falharem, o último sobe — e os anteriores já foram vistos por quem
            acompanha o console técnico. */
+      } finally {
+        clearTimeout(relogioDoElo);
       }
     }
 

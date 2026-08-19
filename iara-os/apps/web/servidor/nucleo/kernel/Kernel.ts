@@ -54,6 +54,7 @@ import { INTEGRACOES } from './integracoes';
 // que carimba a fonte da prova é o tipo de colisão que compila e mente.
 import type { Operacao, SemanticaEfeito } from './Operacao';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
+import { armarAvisoDeEspera } from './PrazoDeFala';
 import type { DestinoCognitivo, EstagioCognitivo, OrigemRaciocinio } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
 import { analisarImagem } from '../AnaliseVisual';
@@ -642,6 +643,24 @@ export class Kernel {
      */
     const orcamento = new OrcamentoDoTurno(this.dep.tetosOrcamento ?? tetosDoAmbiente());
 
+    /**
+     * A PACIÊNCIA DE UMA PESSOA, que é coisa diferente do orçamento acima.
+     *
+     * O orçamento pergunta "este turno já custou demais?" e responde em 15 min.
+     * Este pergunta "esta pessoa já esperou demais?" e responde em ~20 s. Ter um
+     * número só para as duas foi o defeito medido em 18/08/2026: turnos de 46 s,
+     * 62 s e 90 s sem NADA na tela, dentro do orçamento, sem erro nenhum — e do
+     * lado de cá indistinguível de um sistema morto.
+     *
+     * Ele não aborta, não gasta e não decide. Só avisa. Ver `PrazoDeFala.ts`
+     * para por que abortar seria trocar silêncio por `FALSO_NEGATIVO`.
+     */
+    const avisoDeEspera = armarAvisoDeEspera({
+      barramento: b,
+      idDaPergunta,
+      tentativasDeProvedor: () => orcamento.gasto('tentativa_provedor'),
+    });
+
     /* `idDaPergunta` nasceu lá em cima, antes da fila. Ele tem três
        consumidores: a bolha do operador (`MENSAGEM_RECEBIDA`), o endereço de
        toda fala deste turno (`responde_a`), e a projeção da fila enquanto o
@@ -997,6 +1016,12 @@ export class Kernel {
         responde_a: idDaPergunta,
       });
     } finally {
+      /* PRIMEIRO no `finally`, e por um motivo estreito: tudo abaixo daqui faz
+         E/S (jornal, transição de estado, drenar fila). Um turno que respondeu
+         em dois segundos e depois demorasse a fechar dispararia o aviso DEPOIS
+         de já ter falado — a IARA avisando que está pensando sobre uma resposta
+         que a pessoa já leu. */
+      avisoDeEspera.cancelar();
       if (this.emAndamento === controle) {
         this.emAndamento = null;
         this.origemEmAndamento = null;
