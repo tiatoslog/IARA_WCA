@@ -29,9 +29,52 @@ function paraISOLocal(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function paraDDMM(iso: string): string {
+/**
+ * A DATA COMO GENTE FALA — pedido da operadora, 19/08/2026:
+ *
+ *   "me incomoda o jeito que ela fala data, '18 do oito' poderia ser 18 de
+ *    agosto"
+ *
+ * Ela está certa e o defeito é de origem: `18/08` é notação de PLANILHA. A IARA
+ * lê planilha, mas conversa com uma pessoa — e a pessoa lê "dezoito barra zero
+ * oito" em voz alta como "dezoito do oito", que é o que soava artificial.
+ *
+ * Vale duas vezes aqui, porque este rótulo também é FALADO: a voz neural lê o
+ * mesmo texto que a tela mostra. Uma barra no meio de uma data é onde a
+ * naturalidade morre primeiro.
+ */
+const MESES = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+] as const;
+
+function porExtenso(iso: string): string {
   const [, m, dia] = iso.split('-');
-  return `${dia}/${m}`;
+  return `${Number(dia)} de ${MESES[Number(m) - 1]}`;
+}
+
+/**
+ * UM INTERVALO NÃO REPETE O MÊS quando ele é o mesmo.
+ *
+ * "17 de agosto a 21 de agosto" é como um formulário preenche; "17 a 21 de
+ * agosto" é como alguém diz. Quando o intervalo atravessa o mês, os dois lados
+ * voltam por inteiro — aí a repetição não é redundante, é informação.
+ */
+function intervaloPorExtenso(inicio: string, fim: string): string {
+  const [, mi] = inicio.split('-');
+  const [, mf] = fim.split('-');
+  if (mi === mf) return `${Number(inicio.split('-')[2])} a ${porExtenso(fim)}`;
+  return `${porExtenso(inicio)} a ${porExtenso(fim)}`;
 }
 
 function comDias(agora: Date, deslocamento: number): Date {
@@ -63,17 +106,17 @@ export function interpretarPeriodo(bruto: string, agora = new Date()): Periodo |
 
   if (/\bhoje\b|\bagora\b/.test(t)) {
     const iso = paraISOLocal(comDias(agora, 0));
-    return { inicio: iso, fim: iso, rotulo: `hoje (${paraDDMM(iso)})` };
+    return { inicio: iso, fim: iso, rotulo: `hoje (${porExtenso(iso)})` };
   }
 
   if (/\bdepois de amanha\b/.test(t)) {
     const iso = paraISOLocal(comDias(agora, 2));
-    return { inicio: iso, fim: iso, rotulo: `depois de amanhã (${paraDDMM(iso)})` };
+    return { inicio: iso, fim: iso, rotulo: `depois de amanhã (${porExtenso(iso)})` };
   }
 
   if (/\bamanha\b/.test(t)) {
     const iso = paraISOLocal(comDias(agora, 1));
-    return { inicio: iso, fim: iso, rotulo: `amanhã (${paraDDMM(iso)})` };
+    return { inicio: iso, fim: iso, rotulo: `amanhã (${porExtenso(iso)})` };
   }
 
   /**
@@ -97,14 +140,14 @@ export function interpretarPeriodo(bruto: string, agora = new Date()): Periodo |
       return {
         inicio,
         fim,
-        rotulo: `os últimos ${dias} dia${dias === 1 ? '' : 's'} (${paraDDMM(inicio)} a ${paraDDMM(fim)})`,
+        rotulo: `os últimos ${dias} dia${dias === 1 ? '' : 's'} (${intervaloPorExtenso(inicio, fim)})`,
       };
     }
   }
 
   if (/\bontem\b/.test(t)) {
     const iso = paraISOLocal(comDias(agora, -1));
-    return { inicio: iso, fim: iso, rotulo: `ontem (${paraDDMM(iso)})` };
+    return { inicio: iso, fim: iso, rotulo: `ontem (${porExtenso(iso)})` };
   }
 
   if (/\b(semana que vem|proxima semana|semana seguinte)\b/.test(t)) {
@@ -112,7 +155,7 @@ export function interpretarPeriodo(bruto: string, agora = new Date()): Periodo |
     const sex = comDias(seg, 4);
     const inicio = paraISOLocal(seg);
     const fim = paraISOLocal(sex);
-    return { inicio, fim, rotulo: `semana que vem (${paraDDMM(inicio)} a ${paraDDMM(fim)})` };
+    return { inicio, fim, rotulo: `semana que vem (${intervaloPorExtenso(inicio, fim)})` };
   }
 
   if (/\b(semana passada|semana anterior)\b/.test(t)) {
@@ -120,7 +163,7 @@ export function interpretarPeriodo(bruto: string, agora = new Date()): Periodo |
     const sex = comDias(seg, 4);
     const inicio = paraISOLocal(seg);
     const fim = paraISOLocal(sex);
-    return { inicio, fim, rotulo: `semana passada (${paraDDMM(inicio)} a ${paraDDMM(fim)})` };
+    return { inicio, fim, rotulo: `semana passada (${intervaloPorExtenso(inicio, fim)})` };
   }
 
   /**
@@ -144,7 +187,7 @@ export function interpretarPeriodo(bruto: string, agora = new Date()): Periodo |
     const sex = comDias(seg, 4);
     const inicio = paraISOLocal(seg);
     const fim = paraISOLocal(sex);
-    return { inicio, fim, rotulo: `essa semana (${paraDDMM(inicio)} a ${paraDDMM(fim)})` };
+    return { inicio, fim, rotulo: `essa semana (${intervaloPorExtenso(inicio, fim)})` };
   }
 
   // Data explícita: "17/08", "17/08/2026". Ano ausente assume o ano corrente.
@@ -160,7 +203,7 @@ export function interpretarPeriodo(bruto: string, agora = new Date()): Periodo |
     // conferir se o dia sobreviveu à volta é o que pega isso.
     if (d.getDate() !== dia || d.getMonth() !== mes - 1) return null;
     const iso = paraISOLocal(d);
-    return { inicio: iso, fim: iso, rotulo: paraDDMM(iso) };
+    return { inicio: iso, fim: iso, rotulo: porExtenso(iso) };
   }
 
   return null;
