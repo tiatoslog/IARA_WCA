@@ -555,6 +555,15 @@ export function PainelConversa({
                   pedido de outra tela é indistinguível de um pedido lento — e a
                   pessoa não sabe se ainda dá tempo de desistir. */}
               {f.na_fila && <span className="balao-espera">esperando a vez</span>}
+              {/* A ENTREGA NÃO CONFIRMADA, dita na própria bolha. O log rola
+                  para fora da vista; a conversa fica. Sem isto, a mensagem que
+                  se perdeu numa reconexão fica indistinguível da que chegou —
+                  foi o OBS-1 de 19/08/2026. Ver `VigiaDoEco`. */}
+              {f.sem_confirmacao && (
+                <span className="balao-espera" title="O motor não devolveu o eco desta mensagem dentro do prazo">
+                  sem confirmação de entrega
+                </span>
+              )}
               {/*
                 A HORA, como no WhatsApp: pequena, no canto, depois do texto.
                 Formatada no fuso de quem lê — o carimbo chega em ISO do
