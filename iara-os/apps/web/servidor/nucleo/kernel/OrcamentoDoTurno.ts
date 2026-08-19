@@ -30,9 +30,14 @@
  *    `AbortController` do turno é quem faz isso). O teto de token pergunta "já
  *    gastei demais para começar a PRÓXIMA?". É teto de acumulado, e o pior caso
  *    real é um estouro do tamanho de uma chamada.
- *  · CUSTO EM DINHEIRO não é contado aqui. Preço por token varia por provedor e
- *    por modelo, e essa tabela não existe no repositório — inventá-la produziria
- *    um número que parece dinheiro e não é. Token é a unidade honesta hoje.
+ *  · CUSTO EM DINHEIRO passou a ser contado em 19/08/2026, e a ressalva que
+ *    estava aqui continua valendo por baixo: preço não se inventa. As camadas
+ *    gratuitas têm zero declarado porque isso é fato da instalação; a paga só
+ *    tem custo quando alguém declara o preço no ambiente, e sem declaração o
+ *    turno registra `null` — que NÃO é zero. Ver `PrecoDoRaciocinio.ts`.
+ *    O teto de dinheiro nasce sem valor pelo mesmo motivo: um limite cuja
+ *    unidade ninguém declarou bloquearia turno por um número que ninguém
+ *    escolheu.
  *  · PARALELISMO não tem teto porque não há paralelismo: o Kernel serializa
  *    turnos e passos. No dia em que houver, o teto entra aqui.
  */
@@ -53,6 +58,15 @@ export type RecursoOrcado =
   | 'efeito_externo'
   /** Soma de tokens de entrada e saída. Contado DEPOIS, gate na próxima. */
   | 'tokens'
+  /**
+   * DINHEIRO, em micro-centavos. Não é o mesmo recurso que `tokens`, e a
+   * diferença é o preço: três chamadas de tokens iguais custam zero na camada
+   * gratuita e custam de verdade na paga. Um teto de tokens não vê isso.
+   *
+   * REGISTRADO DEPOIS, como `tokens`: ninguém sabe o custo antes de pagar. O
+   * teto atua na chamada seguinte.
+   */
+  | 'custo'
   /** Tempo de parede do turno. Global: estourado, bloqueia todo o resto. */
   | 'tempo';
 
@@ -63,6 +77,19 @@ export interface TetosDoTurno {
   readonly efeitos_externos: number;
   readonly tokens: number;
   readonly tempo_ms: number;
+  /**
+   * TETO DE DINHEIRO POR TURNO, em micro-centavos.
+   *
+   * O PADRÃO É "SEM TETO", e é a única escolha honesta hoje: um limite de
+   * dinheiro cuja unidade ninguém declarou bloquearia turno com base num número
+   * que ninguém escolheu. O custo passa a ser SEMPRE medido e registrado; quem
+   * conhece a própria conta declara o teto em `IARA_ORCAMENTO_CUSTO_CENTAVOS`.
+   *
+   * `Number.MAX_SAFE_INTEGER` e não `Infinity`: o orçamento compara e soma
+   * inteiros, e um `Infinity` no meio da aritmética viraria `NaN` na primeira
+   * subtração.
+   */
+  readonly custo_micro_centavos: number;
 }
 
 /**
@@ -81,6 +108,7 @@ export const TETOS_PADRAO: TetosDoTurno = {
   efeitos_externos: 4,
   tokens: 120_000,
   tempo_ms: 900_000,
+  custo_micro_centavos: Number.MAX_SAFE_INTEGER,
 };
 
 export type VeredictoOrcamento =
@@ -96,6 +124,7 @@ export type VeredictoOrcamento =
 
 const ROTULO: Readonly<Record<RecursoOrcado, string>> = {
   passo: 'passos executados',
+  custo: 'custo',
   chamada_modelo: 'chamadas ao modelo',
   tentativa_provedor: 'tentativas de provedor',
   efeito_externo: 'efeitos no mundo',
@@ -110,6 +139,7 @@ export class OrcamentoDoTurno {
     tentativa_provedor: 0,
     efeito_externo: 0,
     tokens: 0,
+    custo: 0,
     tempo: 0,
   };
 
@@ -136,6 +166,8 @@ export class OrcamentoDoTurno {
         return this.tetos.efeitos_externos;
       case 'tokens':
         return this.tetos.tokens;
+      case 'custo':
+        return this.tetos.custo_micro_centavos;
       case 'tempo':
         return this.tetos.tempo_ms;
     }
@@ -208,6 +240,25 @@ export class OrcamentoDoTurno {
     const decorrido = this.decorrido();
     if (decorrido > this.tetos.tempo_ms) return this.recusa('tempo', decorrido);
 
+    /**
+     * OS RECURSOS QUE SÓ SE REGISTRAM SÃO CONFERIDOS AQUI — e a falta disto era
+     * um teto que não existia.
+     *
+     * `tokens` e `custo` não podem ser pedidos ANTES da chamada: ninguém sabe o
+     * tamanho nem o preço até pagar. Por isso eles entram por `registrar`, e o
+     * cabeçalho sempre disse que "o teto atua na chamada seguinte". Só que a
+     * chamada seguinte pede `chamada_modelo`, e o laço abaixo confere apenas os
+     * recursos PEDIDOS — então nada nunca olhava o acumulado. Auditoria de
+     * 19/08/2026: `consumir('tokens')` não existe em lugar nenhum do servidor, e
+     * o teto de 120.000 era um número que nada lia.
+     *
+     * São globais como o tempo, e pelo mesmo motivo: um turno que já gastou
+     * demais não pode continuar "porque ainda tem passo sobrando".
+     */
+    for (const r of ['tokens', 'custo'] as const) {
+      if (this.gastos[r] > this.tetoDe(r)) return this.recusa(r, this.gastos[r]);
+    }
+
     for (const p of pedidos) {
       const q = p.quantidade ?? 1;
       if (this.gastos[p.recurso] + q > this.tetoDe(p.recurso)) {
@@ -251,6 +302,8 @@ export class OrcamentoDoTurno {
 // A fronteira com o ambiente
 // ---------------------------------------------------------------------------
 
+import { MICRO_CENTAVOS_POR_CENTAVO } from '../PrecoDoRaciocinio';
+
 const numero = (variavel: string, padrao: number): number => {
   /* `lerConfig` LEVANTA em valor contaminado, e é o comportamento certo: um teto
      de orçamento colado errado no painel do host não pode virar "sem teto" nem
@@ -275,5 +328,11 @@ export function tetosDoAmbiente(): TetosDoTurno {
     efeitos_externos: numero('IARA_ORCAMENTO_EFEITOS', TETOS_PADRAO.efeitos_externos),
     tokens: numero('IARA_ORCAMENTO_TOKENS', TETOS_PADRAO.tokens),
     tempo_ms: numero('IARA_ORCAMENTO_TEMPO_MS', TETOS_PADRAO.tempo_ms),
+    /* Declarado em CENTAVOS, guardado em micro-centavos: quem configura pensa
+       em dinheiro, a aritmética interna pensa em inteiro. */
+    custo_micro_centavos:
+      numero('IARA_ORCAMENTO_CUSTO_CENTAVOS', 0) > 0
+        ? numero('IARA_ORCAMENTO_CUSTO_CENTAVOS', 0) * MICRO_CENTAVOS_POR_CENTAVO
+        : TETOS_PADRAO.custo_micro_centavos,
   };
 }

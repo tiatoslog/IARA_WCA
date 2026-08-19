@@ -137,6 +137,7 @@ async function turno(o: {
             efeitos_externos: 4,
             tokens: 120_000,
             tempo_ms: 900_000,
+            custo_micro_centavos: Number.MAX_SAFE_INTEGER,
           },
         }
       : {}),

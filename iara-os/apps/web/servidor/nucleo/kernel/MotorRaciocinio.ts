@@ -74,6 +74,15 @@ export class MotorRaciocinio {
     return this.provedor.origem;
   }
 
+  /**
+   * QUEM respondeu — e na cadeia é o elo que atendeu por último, não a cadeia.
+   * É o que o custo precisa saber: preço é por provedor, e a cadeia inteira não
+   * tem preço nenhum.
+   */
+  get apelido(): string {
+    return this.provedor.apelido;
+  }
+
   /** Sonda ativa do provedor, quando ele tem uma (Ollama). Chamada na abertura
    *  da sessão para o snapshot nascer com a origem certa. */
   async preparar(): Promise<void> {

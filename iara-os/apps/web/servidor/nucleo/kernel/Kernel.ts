@@ -55,6 +55,7 @@ import { INTEGRACOES } from './integracoes';
 import type { Operacao, SemanticaEfeito } from './Operacao';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
 import { armarAvisoDeEspera } from './PrazoDeFala';
+import { custoDaChamada } from '../PrecoDoRaciocinio';
 import { decidirEscalada, textoDegradado } from './EscaladaDoTurno';
 import { RAIZ_DO_APP, VerificadorDeterministico, fontesDesligadas } from './VerificacaoRuntime';
 import type { PortaVerificacaoRuntime } from '../../../lib/verificacao/contrato';
@@ -2289,6 +2290,29 @@ export class Kernel {
        acumulado, com pior caso do tamanho de uma chamada. Está declarado no
        cabeçalho de `OrcamentoDoTurno`. */
     orcamento.registrar('tokens', r.tokens_entrada + r.tokens_saida);
+
+    /**
+     * O CUSTO DA CHAMADA, quando ele é conhecido.
+     *
+     * `null` significa que ninguém declarou o preço deste cérebro, e `null` NÃO
+     * vira zero: um provedor de preço desconhecido registrado como grátis faria
+     * o teto de dinheiro aprovar exatamente o turno mais caro da casa. O
+     * desconhecimento vai para a auditoria em voz alta.
+     */
+    const custo = custoDaChamada(this.raciocinio.apelido, r.tokens_entrada, r.tokens_saida);
+    if (custo === null) {
+      this.auditoria.registrar({
+        instante: new Date().toISOString(),
+        sessao: this.dep.sessao,
+        id_usuario: this.dep.idUsuario,
+        traco: b.tracoAtual,
+        acao: 'custo_desconhecido',
+        detalhe: `sem preço declarado para "${this.raciocinio.apelido}" — o turno não sabe quanto custou`,
+        permitido: true,
+      });
+    } else {
+      orcamento.registrar('custo', custo);
+    }
 
     const textoDaLLM = r.texto || acumulado;
 

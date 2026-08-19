@@ -261,6 +261,15 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
     natureza: 'numero',
     papel: 'prazo do primeiro pedaço antes de a cadeia trocar de elo',
   },
+  /**
+   * TETO DE DINHEIRO POR TURNO, em centavos. Ausente = sem teto, de propósito:
+   * um limite cuja unidade ninguém declarou bloquearia turno por um número que
+   * ninguém escolheu. O custo é sempre medido; o teto é opt-in.
+   */
+  IARA_ORCAMENTO_CUSTO_CENTAVOS: {
+    natureza: 'numero',
+    papel: 'teto de custo por turno, em centavos',
+  },
   IARA_ADMINS: { natureza: 'lista', papel: 'operadores administradores' },
   IARA_CIDADE: { natureza: 'texto', papel: 'cidade padrão' },
   IARA_LATITUDE: { natureza: 'texto', papel: 'latitude padrão' },
