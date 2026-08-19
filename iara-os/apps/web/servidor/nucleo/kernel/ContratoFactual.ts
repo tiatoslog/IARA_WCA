@@ -64,7 +64,9 @@ export type OperacaoFactual =
   | 'AVG'
   | 'GROUP_BY'
   /** Quem a operação conhece e NÃO apareceu na janela. Ver `semMovimentoNaJanela`. */
-  | 'SEM_MOVIMENTO';
+  | 'SEM_MOVIMENTO'
+  /** Receita da carga menos custo do trecho. Ver `MargemOperacional`. */
+  | 'MARGEM';
 
 /** A métrica no vocabulário do catálogo — o que vai no parâmetro da habilidade. */
 export type MetricaFactual =
@@ -72,7 +74,8 @@ export type MetricaFactual =
   | 'distintos'
   | 'valor_total'
   | 'valor_medio'
-  | 'sem_movimento';
+  | 'sem_movimento'
+  | 'margem';
 
 /**
  * O CONTRATO. Tudo que a pergunta significa, sem uma palavra de texto livre.
@@ -164,6 +167,54 @@ const DIMENSOES: ReadonlyArray<{
 
 /** O fato contável: a carga. */
 const CARGA = /\b(carga|cargas|oci|ocis)\b/;
+
+/**
+ * A OPERAÇÃO NOMEADA — o outro jeito de dizer "estou falando da planilha".
+ *
+ * "Qual a margem da operação?" não cita carga nem dimensão, e é uma das
+ * perguntas mais óbvias que existem aqui. Sem isto ela cairia fora do contrato
+ * por falta de substantivo, o que seria recusar por formalidade.
+ *
+ * Fica ESTREITO de propósito: `operacao` e `luft`, mais nada. Uma palavra a mais
+ * aqui e o contrato começa a sequestrar frase que não é dele.
+ */
+const OPERACAO_NOMEADA = /\b(operacao|operacoes|luft)\b/;
+
+/**
+ * A frase está falando da planilha de cargas?
+ *
+ * MARGEM CONTA COMO CONTEXTO, e a falta disso foi um defeito real (REL-0007,
+ * achado no navegador em 19/08/2026): "qual a margem por central?" caía FORA do
+ * contrato e a IARA respondia *"se você confirmar, eu rodo a consulta"* —
+ * pedindo autorização para uma leitura de custo zero, exatamente como no
+ * REL-0005. E "qual a margem por posto?" funcionava, o que torna o defeito ainda
+ * pior: a mesma pergunta, com a outra ponta, dava resposta e teatro.
+ *
+ * A causa: a frase não diz "carga" nem "operação", e `central` exige contexto de
+ * carga por causa da colisão com o cadastro do Supabase. Sem margem na porta, a
+ * pergunta não tinha como entrar.
+ *
+ * Margem, NESTE produto, só existe para esta operação — não há margem de erro
+ * nem margem de página no catálogo. Então ela abre a porta com o mesmo direito
+ * que "carga".
+ */
+const contextoDaOperacao = (t: string): boolean =>
+  CARGA.test(t) || OPERACAO_NOMEADA.test(t) || VERBO_DE_MARGEM.test(t);
+
+/**
+ * PERGUNTA POR MARGEM — a única família que cruza duas fontes.
+ *
+ * A receita vem da carga e o custo vem do tabelário de trechos (aba `TABELA`).
+ * O cruzamento foi medido antes de existir (`testes/gate/cobertura-tabela.mjs`,
+ * 19/08/2026): 117 trechos, zero chaves ambíguas, e cobertura por CARGA de 100%
+ * em 2026, 94,4% em 2025 e 88,1% em 2024.
+ *
+ * `resultado` sozinho fica de FORA. É palavra genérica demais — "qual o
+ * resultado da busca", "o resultado ficou estranho" — e a lição de `frota` e de
+ * `tempo` neste repositório é que palavra genérica em âncora custa caro.
+ */
+const VERBO_DE_MARGEM =
+  /\b(margem|margens|lucro|lucratividade|rentabilidade|resultado bruto|quanto sobra|quanto sobrou)\b/;
 
 /**
  * DIMENSÕES QUE A FONTE NÃO TEM — a regra de "dado ausente" da auditoria.
@@ -461,13 +512,15 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
    * caminho de sempre.
    */
   const falaDaOperacao =
-    CARGA.test(t) || DIMENSOES.some((d) => d.re.test(t) && (!d.exigeCarga || CARGA.test(t)));
+    contextoDaOperacao(t) ||
+    DIMENSOES.some((d) => d.re.test(t) && (!d.exigeCarga || contextoDaOperacao(t)));
   if (!falaDaOperacao) return { tipo: 'fora' };
 
   const pedeConta =
     VERBO_DE_CONTAGEM.test(t) ||
     VERBO_DE_SOMA.test(t) ||
     VERBO_DE_MEDIA.test(t) ||
+    VERBO_DE_MARGEM.test(t) ||
     ehRanking(t);
   if (!pedeConta) return { tipo: 'fora' };
 
@@ -482,8 +535,23 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
   const periodo = periodoDaFrase(t);
   /* `central` só é dimensão da planilha quando a frase fala de carga — senão a
      pergunta é sobre o CADASTRO de centrais, que tem fonte própria. */
-  const dim = DIMENSOES.find((d) => d.re.test(t) && (!d.exigeCarga || CARGA.test(t))) ?? null;
+  const dim = DIMENSOES.find((d) => d.re.test(t) && (!d.exigeCarga || contextoDaOperacao(t))) ?? null;
   const explicito = agrupamentoExplicito(t);
+
+  /**
+   * 0-A. MARGEM — antes de ranking e de contagem, porque "qual central tem maior
+   * margem?" casa as três e só uma delas é a pergunta.
+   *
+   * A dimensão é a que a frase nomear; sem nenhuma, é a margem do universo do
+   * recorte. "Qual a margem da operação?" e "qual a margem por central?" são o
+   * mesmo contrato com `dimensao` diferente, que é exatamente o que um contrato
+   * semântico existe para deixar visível.
+   */
+  if (VERBO_DE_MARGEM.test(t)) {
+    const alvo = explicito ?? (dim ? dim.dimensao : 'nenhum');
+    const entidade = alvo === 'nenhum' ? 'operacao' : (DIMENSOES.find((d) => d.dimensao === alvo)?.entidade ?? alvo);
+    return { tipo: 'contrato', contrato: montar('MARGEM', entidade, alvo, 'margem', periodo) };
+  }
 
   /* 0. QUEM PAROU — antes de tudo, porque a frase também casa "contar". */
   if (VERBO_DE_AUSENCIA.test(t) && dim && periodo.tipo === 'explicito') {

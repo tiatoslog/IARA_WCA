@@ -21,6 +21,7 @@ import {
   contarCargas,
   contarDistintos,
   semMovimentoNaJanela,
+  tabelaDeTrechos,
   suspeitasDeIdentidade,
   planilhaOcisDisponivel,
   todasAsCargas,
@@ -28,6 +29,7 @@ import {
   type AgruparPor,
 } from '../../ClientePlanilhaOcis';
 import { interpretarPeriodo } from '../PeriodoOperacional';
+import { calcularMargem, margemMediaDasRotas, margemPorDimensao } from '../../MargemOperacional';
 import { DIMENSOES_SEM_COLUNA, LACUNAS_DE_COLUNA, SAIDA_DA_LACUNA } from '../ContratoFactual';
 
 const formatarReal = (v: number): string =>
@@ -118,6 +120,12 @@ const SINONIMOS_METRICA: Readonly<Record<string, Metrica>> = {
   inativos: 'sem_movimento',
   sem_carga: 'sem_movimento',
   sem_movimentacao: 'sem_movimento',
+  /* A familia da margem — ver a metrica `margem`. */
+  margem_bruta: 'margem',
+  margens: 'margem',
+  lucro: 'margem',
+  resultado: 'margem',
+  rentabilidade: 'margem',
 };
 
 /**
@@ -164,7 +172,7 @@ const NOME_DA_DIMENSAO: Readonly<Record<AgruparPor, { um: string; varios: string
   nenhum: { um: 'registro', varios: 'registros' },
 };
 
-const METRICAS = ['contagem', 'valor_total', 'valor_medio', 'distintos', 'sem_movimento'] as const;
+const METRICAS = ['contagem', 'valor_total', 'valor_medio', 'distintos', 'sem_movimento', 'margem'] as const;
 type Metrica = (typeof METRICAS)[number];
 
 /**
@@ -451,6 +459,132 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       idade_s: r.fonte?.idade_s ?? 0,
       deterministico: true,
     };
+
+    /**
+     * MARGEM — a única métrica que CRUZA duas fontes, e por isso a única que
+     * carrega cobertura na resposta.
+     *
+     * A receita vem da CARGA (`valor`, o que foi faturado) e o custo vem da
+     * `TABELA` (`VALOR MOT`, o que se paga a quem dirige). O cruzamento é por
+     * `origem → destino`, medido em 19/08/2026 antes de escrever isto:
+     *
+     *   trechos únicos 117 · chaves ambíguas 0 · fórmula confere 117/117
+     *   cobertura por CARGA — 2026: 100%   2025: 94,4%   2024: 88,1%
+     *
+     * A COBERTURA SAI JUNTO COM O NÚMERO, sempre que não for total. "A margem da
+     * operação é 32%" dita sobre 88% das cargas é uma afirmação sobre um
+     * universo que quem lê acha que é outro — e é o tipo de erro que ninguém
+     * confere, porque o número está certo para o que ele mediu.
+     *
+     * O PERCENTUAL É AGREGADO, e não a média das margens das rotas. `(Σreceita −
+     * Σcusto) / Σreceita` pondera cada carga pelo que ela faturou; a média
+     * simples trata uma rota de 1 carga igual a uma de 437. As duas contas são
+     * verdadeiras e respondem perguntas diferentes — ver `margemMediaDasRotas`.
+     */
+    if (metrica === 'margem') {
+      const t = await tabelaDeTrechos();
+      if (!t.ok) {
+        return {
+          texto:
+            `Não consigo calcular margem agora: ${t.texto} ` +
+            'A margem depende do tabelário de trechos (a aba TABELA), que é de onde vem o custo. ' +
+            'Sem ele eu teria só a receita, e receita sozinha não é margem.',
+          detalhe: proveniencia({ ...baseProveniencia, operacao: 'MARGEM', resultado: 'tabelario_indisponivel' }),
+          resolveu: false,
+        };
+      }
+
+      const dizerCobertura = (c: { cargas: number; com_preco: number; sem_preco: number; ambiguas: number; sem_valor: number; percentual: number | null; rotas_sem_preco: readonly { rota: string; cargas: number }[] }): string => {
+        if (c.sem_preco === 0 && c.ambiguas === 0 && c.sem_valor === 0) return '';
+        const partes: string[] = [];
+        if (c.sem_preco > 0) {
+          const topo = c.rotas_sem_preco.slice(0, 3).map((r) => `${r.rota} (${r.cargas})`).join(', ');
+          partes.push(
+            `${c.sem_preco} carga${c.sem_preco === 1 ? '' : 's'} sem preço de trecho na tabela${topo ? `, as maiores em ${topo}` : ''}`,
+          );
+        }
+        if (c.ambiguas > 0) partes.push(`${c.ambiguas} em trecho com dois preços diferentes, que eu não escolho por conta própria`);
+        if (c.sem_valor > 0) partes.push(`${c.sem_valor} sem valor lançado`);
+        /**
+         * ARREDONDA PARA BAIXO, e não é preciosismo. 2687 de 2688 cargas dá
+         * 99,96%, e `toFixed(1)` transforma isso em "100.0%" — a frase passaria
+         * a dizer que cobre tudo logo antes de listar o que ficou de fora.
+         * Cobertura é o número que autoriza confiar no resto da resposta; ele
+         * nunca pode arredondar na direção otimista.
+         */
+        const cobre = Math.floor((c.percentual ?? 0) * 10) / 10;
+        return `\n\nA conta cobre ${cobre.toFixed(1)}% das cargas do recorte: ${partes.join('; ')}.`;
+      };
+
+      if (agruparPor === 'nenhum') {
+        const m = calcularMargem(cargas, t.tabela);
+        if (m.percentual_bruto === null) {
+          return {
+            texto: `${rotuloPeriodo}: nenhuma carga com receita lançada e preço de trecho, então não há margem a calcular.${dizerCobertura(m.cobertura)}`,
+            detalhe: proveniencia({ ...baseProveniencia, operacao: 'MARGEM', resultado: 'sem_base' }),
+            resolveu: true,
+          };
+        }
+        const media = margemMediaDasRotas(cargas, t.tabela);
+        return {
+          texto:
+            `${rotuloPeriodo}: margem bruta de ${formatarReal(m.resultado_bruto)}, ` +
+            `que é ${m.percentual_bruto.toFixed(1)}% sobre ${formatarReal(m.receita)} faturados. ` +
+            `Descontando o pedágio de ida, sobram ${formatarReal(m.resultado_com_pedagio)} ` +
+            `(${(m.percentual_com_pedagio ?? 0).toFixed(1)}%).` +
+            (media === null
+              ? ''
+              : `\n\nEssa é a margem do VOLUME, ponderada pelo que cada carga faturou. A margem da rota típica é outra conta e dá ${media.toFixed(1)}% — as duas estão certas e respondem coisas diferentes.`) +
+            dizerCobertura(m.cobertura),
+          detalhe: proveniencia({
+            ...baseProveniencia,
+            operacao: 'MARGEM',
+            receita: Math.round(m.receita),
+            custo: Math.round(m.custo),
+            resultado: Math.round(m.resultado_bruto),
+            percentual: m.percentual_bruto.toFixed(2),
+            cobertura_pct: (m.cobertura.percentual ?? 0).toFixed(1),
+          }),
+          resolveu: true,
+        };
+      }
+
+      const rotuloM = NOME_DA_DIMENSAO[agruparPor];
+      const grupos = margemPorDimensao(cargas, t.tabela, agruparPor);
+      if (grupos.length === 0) {
+        return {
+          texto: `${rotuloPeriodo}: nenhum ${rotuloM.um} com margem calculável.`,
+          detalhe: proveniencia({ ...baseProveniencia, operacao: 'MARGEM', dimensao: agruparPor, grupos: 0 }),
+          resolveu: true,
+        };
+      }
+      const TOPO_MARGEM = 15;
+      const linhasM = grupos
+        .slice(0, TOPO_MARGEM)
+        .map(
+          (g, i) =>
+            `${i + 1}. ${g.chave}: ${formatarReal(g.margem.resultado_bruto)} de margem` +
+            (g.margem.percentual_bruto === null ? '' : ` (${g.margem.percentual_bruto.toFixed(1)}%)`) +
+            `, sobre ${g.margem.cobertura.com_preco} carga${g.margem.cobertura.com_preco === 1 ? '' : 's'}`,
+        );
+      const geral = calcularMargem(cargas, t.tabela);
+      const cortados = grupos.length - linhasM.length;
+      return {
+        texto:
+          `${rotuloPeriodo}, margem por ${rotuloM.um} (do maior resultado para o menor):\n${linhasM.join('\n')}` +
+          (cortados > 0 ? `\n\nA lista para no ${TOPO_MARGEM}º. Ficaram outros ${cortados} de fora.` : '') +
+          `\n\nOrdenei pelo RESULTADO, não pelo percentual: ${rotuloM.um} com margem alta sobre pouco volume rende menos que ${rotuloM.um} com margem menor sobre muito. Se quiser a lista por percentual, é só pedir.` +
+          dizerCobertura(geral.cobertura),
+        detalhe: proveniencia({
+          ...baseProveniencia,
+          operacao: 'MARGEM',
+          dimensao: agruparPor,
+          grupos: grupos.length,
+          cobertura_pct: (geral.cobertura.percentual ?? 0).toFixed(1),
+        }),
+        resolveu: true,
+      };
+    }
 
     if (agruparPor === 'nenhum') {
       /**

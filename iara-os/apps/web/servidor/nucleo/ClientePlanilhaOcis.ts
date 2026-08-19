@@ -687,6 +687,160 @@ export async function todasAsCargas(): Promise<ResultadoTodasAsCargas> {
 }
 
 // ---------------------------------------------------------------------------
+// O TABELÁRIO DE TRECHOS — a aba "TABELA", que é de onde vem o custo
+// ---------------------------------------------------------------------------
+
+/**
+ * O preço de um trecho. É o que a `TABELA` guarda por `origem → destino`.
+ *
+ * `valor_logistico` é o preço de tabela e `valor_motorista` é o que se paga a
+ * quem dirige — a diferença entre os dois é a margem. Medido em 19/08/2026: o
+ * `valor` de cada carga é IDÊNTICO ao `valor_logistico` do trecho em 2687 de
+ * 2687 cargas com valor. Mesmo assim a receita é lida da CARGA e não daqui: é o
+ * que foi de fato faturado, e no dia em que alguém editar uma carga a margem
+ * daquela carga tem de mudar.
+ *
+ * As duas margens DECLARADAS vêm junto de propósito. Elas são o oráculo interno
+ * do tabelário: se a conta feita a partir das colunas divergir do que a planilha
+ * já traz pronto, quem está errado é o código — e `margem-operacional.test.ts`
+ * cobra isso.
+ */
+export interface PrecoDoTrecho {
+  readonly origem: string;
+  readonly destino: string;
+  readonly valor_motorista: number;
+  readonly valor_logistico: number;
+  /** O que a coluna "MARGEM COM PEDAGIO" usa. Medido: IDA, nunca ida+volta. */
+  readonly pedagio_ida: number;
+  readonly pedagio_ida_volta: number;
+  readonly margem_bruta_declarada: number;
+  readonly margem_com_pedagio_declarada: number;
+}
+
+export interface TabelaDeTrechos {
+  readonly preco: ReadonlyMap<string, PrecoDoTrecho>;
+  /**
+   * Trechos com DUAS linhas de preços diferentes. Hoje são zero — e é por isso
+   * que o conjunto precisa existir: para o dia em que deixarem de ser. Escolher
+   * uma das duas seria inventar a margem daquele trecho.
+   */
+  readonly ambiguas: ReadonlySet<string>;
+}
+
+/**
+ * A CHAVE DO CRUZAMENTO. Só formatação é normalizada — trim, caixa, espaço
+ * duplo, acento. Nada de distância de edição, nada de prefixo: "POSTO A" nunca
+ * vira "POSTO B" por parecer.
+ *
+ * Medido em 19/08/2026: com esta chave, 100% das rotas de 2026 casam de forma
+ * EXATA (`NORMALIZED_EXACT` = 0 nos três anos). A normalização não foi nem
+ * necessária — ela fica como rede de proteção contra um espaço a mais digitado
+ * amanhã, não como ponte sobre nomes diferentes.
+ */
+export function chaveDoTrecho(origem: string, destino: string): string {
+  const n = (v: string) =>
+    v
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toUpperCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+  return `${n(origem)} > ${n(destino)}`;
+}
+
+const ABA_TABELA = 'TABELA';
+/** Índices medidos por `testes/gate/mapear-abas.mjs` em 19/08/2026. */
+const COL_TABELA = {
+  origem: 2,
+  destino: 3,
+  mot: 4,
+  log: 5,
+  pedagioIdaVolta: 6,
+  ida: 7,
+  margemBruta: 8,
+  margemPedagio: 9,
+} as const;
+
+function paraTabela(linhas: readonly unknown[][]): TabelaDeTrechos {
+  const preco = new Map<string, PrecoDoTrecho>();
+  const ambiguas = new Set<string>();
+  const num = (v: unknown) => (typeof v === 'number' ? v : 0);
+
+  for (const l of linhas) {
+    const origem = String(l[COL_TABELA.origem] ?? '').trim();
+    const destino = String(l[COL_TABELA.destino] ?? '').trim();
+    if (!origem || !destino) continue;
+    const k = chaveDoTrecho(origem, destino);
+    const p: PrecoDoTrecho = {
+      origem,
+      destino,
+      valor_motorista: num(l[COL_TABELA.mot]),
+      valor_logistico: num(l[COL_TABELA.log]),
+      pedagio_ida: num(l[COL_TABELA.ida]),
+      pedagio_ida_volta: num(l[COL_TABELA.pedagioIdaVolta]),
+      margem_bruta_declarada: num(l[COL_TABELA.margemBruta]),
+      margem_com_pedagio_declarada: num(l[COL_TABELA.margemPedagio]),
+    };
+    const antigo = preco.get(k);
+    if (!antigo) {
+      preco.set(k, p);
+    } else if (antigo.valor_motorista !== p.valor_motorista || antigo.valor_logistico !== p.valor_logistico) {
+      ambiguas.add(k);
+    }
+  }
+  return { preco, ambiguas };
+}
+
+/**
+ * Trinta minutos, e não cinco como o das cargas: preço de trecho muda por
+ * negociação, não por operação do dia. A coluna "ALTERAÇÃO LOG" da própria
+ * planilha mostra datas de meses atrás.
+ */
+const CACHE_TABELA_TTL_MS = 30 * 60 * 1000;
+let cacheTabela: { tabela: TabelaDeTrechos; buscadoEm: number } | null = null;
+
+export function _esquecerCacheTabelaParaTeste(): void {
+  cacheTabela = null;
+}
+
+export interface ResultadoTabela {
+  readonly ok: boolean;
+  readonly texto: string;
+  readonly tabela: TabelaDeTrechos;
+}
+
+const TABELA_VAZIA: TabelaDeTrechos = { preco: new Map(), ambiguas: new Set() };
+
+/**
+ * Lê a aba `TABELA`. São 117 linhas — ordens de grandeza menor que a aba de
+ * cargas, então vai direto pelo `range` da API sem o caminho de download.
+ */
+export async function tabelaDeTrechos(): Promise<ResultadoTabela> {
+  const t = token();
+  if (!t || !urlPlanilha()) {
+    return { ok: false, texto: 'planilha de cargas desligada — sem tabelário de trechos.', tabela: TABELA_VAZIA };
+  }
+  if (cacheTabela && Date.now() - cacheTabela.buscadoEm < CACHE_TABELA_TTL_MS) {
+    return { ok: true, texto: `${cacheTabela.tabela.preco.size} trechos com preço.`, tabela: cacheTabela.tabela };
+  }
+
+  const loc = await resolverItem(t);
+  if (!loc.ok) return { ok: false, texto: loc.motivo, tabela: TABELA_VAZIA };
+
+  /* A aba tem 117 linhas de dado e 18 colunas; A1:R400 cobre com folga o
+     crescimento de anos sem virar leitura pesada. */
+  const dados = await lerRange(t, loc.loc, ABA_TABELA, 'A2:R400');
+  if (!dados.ok) return { ok: false, texto: dados.motivo, tabela: TABELA_VAZIA };
+
+  const tabela = paraTabela(dados.valores);
+  if (tabela.preco.size === 0) {
+    return { ok: false, texto: `a aba "${ABA_TABELA}" veio sem nenhum trecho legível.`, tabela: TABELA_VAZIA };
+  }
+  cacheTabela = { tabela, buscadoEm: Date.now() };
+  return { ok: true, texto: `${tabela.preco.size} trechos com preço.`, tabela };
+}
+
+// ---------------------------------------------------------------------------
 // Agregação — a parte "cálculo" do Analytics Engine, pura e sem I/O
 // ---------------------------------------------------------------------------
 
