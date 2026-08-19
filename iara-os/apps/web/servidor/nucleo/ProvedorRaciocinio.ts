@@ -84,6 +84,27 @@ export interface ProvedorRaciocinio {
   readonly apelido: string;
   /** 'nuvem' (Anthropic, Groq, Gemini) ou 'local' (Ollama) — telemetria e snapshot. */
   readonly origem: 'nuvem' | 'local';
+  /**
+   * A CAMADA DE CAPACIDADE — para onde a escalada por verificação aponta.
+   *
+   * `origem` responde "roda aqui ou na nuvem", que é pergunta de infraestrutura.
+   * Esta responde "vale gastar mais por uma resposta melhor", que é pergunta de
+   * qualidade — e são coisas diferentes: o Ollama é local e fraco, a Groq é
+   * nuvem e barata, a Anthropic é nuvem e cara.
+   *
+   * Ausente significa `padrao`. Só quem é declaradamente premium recebe a
+   * escalada; sem isso a IARA "escalaria" para um cérebro igual e gastaria
+   * orçamento para receber o mesmo erro.
+   */
+  readonly camada?: 'padrao' | 'premium';
+  /**
+   * Existe camada premium utilizável AGORA? Opcional porque um provedor único
+   * não tem para onde escalar — e `undefined` é a resposta honesta ali, não
+   * `false` disfarçado de política.
+   */
+  premiumSaudavel?(): boolean;
+  /** Refaz o pedido no elo premium. Só a cadeia implementa. */
+  raciocinarNoPremium?(pedido: PedidoRaciocinio): Promise<RespostaRaciocinio>;
   readonly modelo: string;
   readonly disponivel: boolean;
   /**

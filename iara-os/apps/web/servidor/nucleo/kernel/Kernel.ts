@@ -55,6 +55,9 @@ import { INTEGRACOES } from './integracoes';
 import type { Operacao, SemanticaEfeito } from './Operacao';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
 import { armarAvisoDeEspera } from './PrazoDeFala';
+import { decidirEscalada, textoDegradado } from './EscaladaDoTurno';
+import { RAIZ_DO_APP, VerificadorDeterministico, fontesDesligadas } from './VerificacaoRuntime';
+import type { PortaVerificacaoRuntime } from '../../../lib/verificacao/contrato';
 import type { DestinoCognitivo, EstagioCognitivo, OrigemRaciocinio } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
 import { analisarImagem } from '../AnaliseVisual';
@@ -196,6 +199,14 @@ export interface DependenciasKernel {
    */
   raciocinio?: MotorRaciocinio;
   /**
+   * QUEM CONFERE O VALOR DA RESPOSTA — e não é quem a produziu.
+   *
+   * Injetável para o teste poder pôr um verificador que contesta sempre, e
+   * `null` explícito desliga a verificação. Ausente vale o determinístico
+   * padrão, que reconhece poucas perguntas e diz `inconclusivo` no resto.
+   */
+  verificacao?: PortaVerificacaoRuntime | null;
+  /**
    * Habilidades ACRESCENTADAS ao catálogo real. Nunca substituem nada.
    *
    * Mesma justificativa de `raciocinio`, e a mesma disciplina: existe para
@@ -333,10 +344,22 @@ export class Kernel {
    * Duas instâncias seriam duas réguas que um dia divergem.
    */
   private readonly descoberta: DescobertaCapacidades;
+  /** Quem confere o valor da resposta. `null` desliga a verificação em runtime. */
+  private readonly verificacao: PortaVerificacaoRuntime | null;
 
   constructor(private readonly dep: DependenciasKernel) {
     this.papel = dep.papel ?? 'operador';
     this.raciocinio = dep.raciocinio ?? new MotorRaciocinio();
+    /* `undefined` vale o padrão; `null` desliga. A diferença importa: um teste
+       que passa `null` está declarando que não quer verificação, e isso é outra
+       coisa de "esqueci de configurar". */
+    this.verificacao =
+      dep.verificacao === undefined
+        ? new VerificadorDeterministico({
+            raiz: RAIZ_DO_APP,
+            fontesAusentes: () => fontesDesligadas(),
+          })
+        : dep.verificacao;
     /**
      * O jornal COMPARTILHADO do processo, não um por kernel. Um kernel por
      * sessão significa dois kernels para o mesmo operador (navegador e
@@ -2116,13 +2139,24 @@ export class Kernel {
      * pessoa mandou FAZER algo, nada foi feito, e não há o que afirmar.
      */
     const comandoSemPasso = execucao.passos.length === 0 && percepcao.tipo === 'comando';
-    const travaArmada = (execucao.passos.length > 0 && !alcancouOMundo) || comandoSemPasso;
+    /**
+     * A PERGUNTA TEM ORÁCULO? Decidido ANTES da chamada porque é isto que retém
+     * a fala: verificar depois de streamar deixaria o número errado aparecer na
+     * tela e ser trocado meio segundo depois, que é a tela mentindo e se
+     * corrigindo. `reconhece` é estreito de propósito — cada `true` a mais tira
+     * a digitação ao vivo de um turno que não precisava.
+     */
+    const verificavel = this.verificacao?.reconhece(percepcao.bruto) ?? false;
+    const travaArmada =
+      (execucao.passos.length > 0 && !alcancouOMundo) || comandoSemPasso || verificavel;
 
     const inicio = Date.now();
     let acumulado = '';
     let abriu = false;
 
-    const r = await this.raciocinio.responder({
+    /* Guardado numa variável porque a ESCALADA refaz este mesmo pedido no pool
+       premium quando o verificador contesta o valor. Ver `EscaladaDoTurno.ts`. */
+    const pedidoDeSintese = {
       enunciado: percepcao.bruto,
       historico: historico.slice(0, -1),
       overridePersona,
@@ -2176,7 +2210,7 @@ export class Kernel {
          modelo contaria 1 no orçamento e custaria quatro idas à rede — que é
          exatamente o multiplicador que um teto de chamadas não vê. */
       aoTentarProvedor: () => orcamento.consumir('tentativa_provedor').permitido,
-      aoReceberTexto: (pedaco) => {
+      aoReceberTexto: (pedaco: string) => {
         if (controle.signal.aborted) return;
         acumulado += pedaco;
         /* Trava armada: acumula e não publica. A sala continua em "pensando"
@@ -2188,7 +2222,9 @@ export class Kernel {
         }
         b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto: acumulado, responde_a: respondeA });
       },
-    });
+    };
+
+    const r = await this.raciocinio.responder(pedidoDeSintese);
 
     b.publicar({
       tipo: 'RACIOCINIO_CONCLUIDO',
@@ -2205,6 +2241,33 @@ export class Kernel {
     orcamento.registrar('tokens', r.tokens_entrada + r.tokens_saida);
 
     const textoDaLLM = r.texto || acumulado;
+
+    /**
+     * A VERIFICAÇÃO EM RUNTIME, e o lugar dela é este: a resposta existe e
+     * NINGUÉM a leu ainda. Conferir depois de streamar não serviria de nada — o
+     * operador já teria lido o número errado.
+     *
+     * PRECEDÊNCIA: vem antes da trava de afirmação-sem-efeito logo abaixo porque
+     * as duas tratam turnos de forma diferente — aquela é sobre COMANDO que não
+     * aconteceu, esta sobre PERGUNTA respondida com valor errado. Na prática não
+     * se cruzam; quando cruzarem, contestar o valor é o achado mais específico.
+     *
+     * `reconhece` foi perguntado lá em cima e é o que armou a trava: sem isso,
+     * chegar aqui com o texto já na tela tornaria a escalada decorativa.
+     */
+    if (verificavel) {
+      const verificado = await this.verificarEEscalar({
+        texto: textoDaLLM,
+        pergunta: percepcao.bruto,
+        inicio,
+        pedido: pedidoDeSintese,
+        orcamento,
+        b,
+        idMensagem,
+        respondeA,
+      });
+      if (verificado !== null) return verificado;
+    }
 
     if (travaArmada) {
       const leitura = lerAfirmacaoDeFeito(textoDaLLM);
@@ -2283,6 +2346,149 @@ export class Kernel {
     });
 
     return r.texto || acumulado;
+  }
+
+  /**
+   * VERIFICA A RESPOSTA E, SE FOR O CASO, ESCALA UMA VEZ.
+   *
+   * Devolve o texto a entregar, ou `null` quando não há veredito que mude o
+   * caminho — aí o fluxo normal da síntese segue como sempre seguiu.
+   *
+   * O LAÇO TEM NO MÁXIMO DUAS VOLTAS, e isso é estrutural, não convenção:
+   * `ja_escalou` vira `true` na primeira e `decidirEscalada` degrada em toda
+   * situação contestada com ele ligado. Uma escalada por TURNO — não por
+   * provedor, não por verificação.
+   */
+  private async verificarEEscalar(a: {
+    texto: string;
+    pergunta: string;
+    inicio: number;
+    pedido: Parameters<MotorRaciocinio['responder']>[0];
+    orcamento: OrcamentoDoTurno;
+    b: BarramentoEventos;
+    idMensagem: string;
+    respondeA: string | null;
+  }): Promise<string | null> {
+    const porta = this.verificacao;
+    if (!porta) return null;
+
+    let texto = a.texto;
+    let jaEscalou = false;
+
+    for (let volta = 0; volta < 2; volta += 1) {
+      const resultado = porta.verificar(texto, {
+        pergunta: a.pergunta,
+        inicio_ms: a.inicio,
+        fim_ms: Date.now(),
+      });
+
+      /* O ORÇAMENTO É O DONO DO LAÇO — perguntado sem debitar, para que avaliar
+         a escalada não gaste a chamada que talvez não aconteça. */
+      const cabe = a.orcamento.podeGastar([
+        { recurso: 'chamada_modelo' },
+        { recurso: 'tentativa_provedor' },
+      ]);
+
+      const decisao = decidirEscalada({
+        resultado,
+        ja_escalou: jaEscalou,
+        orcamento_permite: cabe,
+        premium_saudavel: this.raciocinio.premiumSaudavel,
+      });
+
+      this.auditoria.registrar({
+        instante: new Date().toISOString(),
+        sessao: this.dep.sessao,
+        id_usuario: this.dep.idUsuario,
+        traco: a.b.tracoAtual,
+        acao: `verificacao:${resultado.status}:${decisao.acao}`,
+        detalhe: decisao.porque,
+        permitido: decisao.acao !== 'degradar',
+      });
+
+      if (decisao.acao === 'entregar') {
+        /* Nada a corrigir. `null` na primeira volta devolve o turno ao fluxo
+           normal; depois de uma escalada, o texto premium é o que sai. */
+        if (!jaEscalou) return null;
+        await this.dep.estado.transicionar('falando', 'raciocinio');
+        a.b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: a.idMensagem,
+          texto,
+          responde_a: a.respondeA,
+        });
+        return texto;
+      }
+
+      if (decisao.acao === 'degradar') {
+        /**
+         * O DESCARTE É DITO. Uma verificação que corrige em silêncio ensina que
+         * a IARA às vezes muda de assunto sozinha — e no dia em que ELA errar,
+         * ninguém terá como saber que foi ela. Mesma regra da trava da fala.
+         */
+        this.trabalho.registrarErro();
+        a.b.publicar({
+          tipo: 'FALHA',
+          modulo: 'verdade',
+          mensagem: `Valor contestado por fonte independente: ${decisao.porque}`,
+        });
+        const honesto = textoDegradado(resultado);
+        await this.dep.estado.transicionar('falando', 'raciocinio');
+        a.b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: a.idMensagem,
+          texto: honesto,
+          responde_a: a.respondeA,
+        });
+        return honesto;
+      }
+
+      /* ---- ESCALAR. Debita ANTES de gastar a rede. -------------------- */
+      const debito = a.orcamento.consumirVarios([
+        { recurso: 'chamada_modelo' },
+        { recurso: 'tentativa_provedor' },
+      ]);
+      if (!debito.permitido) {
+        /* A janela entre perguntar e debitar. Não deveria acontecer num turno
+           de uma linha de execução só, e mesmo assim degrada em vez de seguir:
+           gastar rede sem orçamento é o defeito que o teto existe para impedir. */
+        const honesto = textoDegradado(resultado);
+        a.b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: a.idMensagem,
+          texto: honesto,
+          responde_a: a.respondeA,
+        });
+        return honesto;
+      }
+
+      jaEscalou = true;
+      try {
+        const premium = await this.raciocinio.responderNoPremium(a.pedido, decisao.porque);
+        texto = premium.texto;
+      } catch (erro) {
+        /* O premium não respondeu. Isso é falha de PROVEDOR, não valor
+           contestado — e a resposta honesta continua sendo a degradação, nunca o
+           número que a fonte desmentiu. */
+        a.b.publicar({
+          tipo: 'FALHA',
+          modulo: 'escalada',
+          mensagem: `a escalada ao premium falhou: ${(erro as Error).message}`,
+        });
+        const honesto = textoDegradado(resultado);
+        a.b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: a.idMensagem,
+          texto: honesto,
+          responde_a: a.respondeA,
+        });
+        return honesto;
+      }
+    }
+
+    /* Inalcançável: a segunda volta sempre termina em `entregar` ou `degradar`,
+       porque `ja_escalou` está ligado. Fica como rede, não como caminho. */
+    return texto;
   }
 
   /**

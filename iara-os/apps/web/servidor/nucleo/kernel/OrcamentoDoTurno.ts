@@ -175,6 +175,27 @@ export class OrcamentoDoTurno {
   }
 
   /**
+   * CABERIA? — a mesma conferência de `consumirVarios`, sem debitar.
+   *
+   * Existe para a ESCALADA POR VERIFICAÇÃO: a decisão de escalar precisa saber
+   * se há orçamento ANTES de decidir, e `decidirEscalada` é função pura que
+   * recebe a resposta pronta. Perguntar consumindo faria o simples ato de
+   * avaliar a escalada gastar a chamada que talvez não fosse usada.
+   *
+   * NÃO SUBSTITUI `consumir`. Quem escala pergunta aqui e debita lá — e o débito
+   * confere de novo, que é o que mantém esta função como consulta e não como
+   * autorização.
+   */
+  podeGastar(
+    pedidos: readonly { readonly recurso: RecursoOrcado; readonly quantidade?: number }[],
+  ): boolean {
+    if (this.decorrido() > this.tetos.tempo_ms) return false;
+    return pedidos.every(
+      (p) => this.gastos[p.recurso] + (p.quantidade ?? 1) <= this.tetoDe(p.recurso),
+    );
+  }
+
+  /**
    * Vários recursos na mesma decisão, com TUDO OU NADA.
    *
    * Existe porque um passo de escrita gasta duas coisas (`passo` e

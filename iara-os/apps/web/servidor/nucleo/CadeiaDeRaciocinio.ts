@@ -373,6 +373,46 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
     return algum;
   }
 
+  /**
+   * O POOL PREMIUM: os elos declaradamente de maior capacidade, fora de
+   * carência. Vazio é resposta legítima — significa "não há para onde escalar",
+   * e a escalada degrada honestamente em vez de fingir que tentou.
+   */
+  private premiumVivos(): ProvedorRaciocinio[] {
+    return this.elos.filter(
+      (e) => e.camada === 'premium' && e.disponivel && !emCarencia(e.apelido),
+    );
+  }
+
+  premiumSaudavel(): boolean {
+    return this.premiumVivos().length > 0;
+  }
+
+  /**
+   * REFAZ O PEDIDO NO PREMIUM — e não é retentativa.
+   *
+   * A diferença está no gatilho: retentativa acontece porque o resultado não
+   * chegou a existir; isto acontece porque ele existe e um verificador
+   * independente o contestou. Ver `EscaladaDoTurno.ts`.
+   *
+   * Não passa por `ordenarPorSaude` nem percorre a fila inteira: escalar é ir a
+   * UM lugar específico. Se o premium falhar aqui, o erro sobe — não se cai de
+   * volta para o barato que já errou.
+   */
+  async raciocinarNoPremium(pedido: PedidoRaciocinio): Promise<RespostaRaciocinio> {
+    const premium = this.premiumVivos()[0];
+    if (!premium) throw new ProvedorIndisponivel('não há camada premium para escalar');
+    this.atual = premium;
+    try {
+      const r = await premium.raciocinar(pedido);
+      registrarSucessoProvedor(premium.apelido);
+      return r;
+    } catch (erro) {
+      registrarFalhaProvedor(premium.apelido, erro, pedido.sinal);
+      throw erro;
+    }
+  }
+
   async raciocinar(pedido: PedidoRaciocinio): Promise<RespostaRaciocinio> {
     const candidatos = this.elos.filter((e) => e.disponivel);
     /**

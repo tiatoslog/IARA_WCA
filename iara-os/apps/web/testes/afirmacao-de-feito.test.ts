@@ -127,5 +127,11 @@ test('F. a condição no Kernel é a que este arquivo descreve', () => {
     /const comandoSemPasso = execucao\.passos\.length === 0 && percepcao\.tipo === 'comando';/,
     'a condição do turno sem passo mudou no Kernel — atualize o caso E junto',
   );
-  assert.match(fonte, /const travaArmada =[\s\S]{0,120}comandoSemPasso;/);
+  /**
+   * A trava ganhou um TERCEIRO motivo em 19/08/2026: `verificavel`, que retém a
+   * fala quando existe oráculo determinístico para a pergunta. Sem reter, a
+   * verificação em runtime seria decorativa — o operador leria o número errado e
+   * o veria ser trocado meio segundo depois. Ver `VerificacaoRuntime.ts`.
+   */
+  assert.match(fonte, /const travaArmada =[\s\S]{0,200}comandoSemPasso \|\| verificavel;/);
 });

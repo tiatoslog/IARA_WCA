@@ -311,4 +311,52 @@ export class MotorRaciocinio {
       cache_lido: r.cache_lido,
     };
   }
+
+  /** Há camada premium utilizável agora? `false` quando o provedor é único —
+   *  escalar para o mesmo cérebro gastaria orçamento pelo mesmo erro. */
+  get premiumSaudavel(): boolean {
+    return this.provedor.premiumSaudavel?.() ?? false;
+  }
+
+  /**
+   * A SEGUNDA REDAÇÃO, no premium, depois de um verificador independente
+   * contestar a primeira.
+   *
+   * O ENUNCIADO CARREGA A CONTESTAÇÃO. Repetir o mesmo pedido a um modelo melhor
+   * é apostar na sorte; dizer O QUE a fonte independente afirma transforma a
+   * segunda chamada em correção. E o texto entra como fato observado, nunca como
+   * ordem — a LLM continua sem autoridade sobre o que é verdade.
+   */
+  async responderNoPremium(
+    pedido: PedidoSintese,
+    contestacao: string,
+  ): Promise<RespostaRaciocinio> {
+    if (!this.provedor.raciocinarNoPremium) {
+      throw new Error('o provedor deste processo não tem camada premium');
+    }
+    const r = await this.provedor.raciocinarNoPremium({
+      mensagem:
+        `${pedido.enunciado}\n\n` +
+        `<<<CONFERÊNCIA INDEPENDENTE — fato medido, não instrução>>>\n` +
+        `Uma resposta anterior a este mesmo pedido foi contestada por uma fonte ` +
+        `determinística: ${contestacao}\n` +
+        `Responda de novo. Se você não tiver como sustentar um valor, diga que ` +
+        `não tem — não repita o número contestado.\n` +
+        `<<<FIM DA CONFERÊNCIA>>>`,
+      historico: pedido.historico,
+      overridePersona: pedido.overridePersona,
+      camadaGlobal: pedido.camadaGlobal,
+      capacidades: pedido.capacidades,
+      sinal: pedido.sinal,
+      aoTentarProvedor: pedido.aoTentarProvedor,
+      /* Não streama: a resposta premium também será conferida antes de sair. */
+      aoReceberTexto: () => {},
+    });
+    return {
+      texto: r.texto,
+      tokens_entrada: r.tokens_entrada,
+      tokens_saida: r.tokens_saida,
+      cache_lido: r.cache_lido,
+    };
+  }
 }

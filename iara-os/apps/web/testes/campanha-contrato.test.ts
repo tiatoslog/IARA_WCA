@@ -328,6 +328,32 @@ test('V16. o oráculo não dá verde por coincidência: o número tem de estar c
   assert.equal(enganosa.confere, false, 'o número certo aparece, mas não é a alegação');
 });
 
+test('V18. o oráculo da campanha e o do runtime chegam ao MESMO número', async () => {
+  /**
+   * PARIDADE, e é o mesmo desenho do teste D1 (selo do jornal contra `Prova.ts`).
+   *
+   * Desde 19/08/2026 existem DUAS implementações do relógio: `lib/verificacao`,
+   * que o Kernel usa para decidir escalada em runtime, e `OraculoRelogio`, que a
+   * campanha usa para julgar a rodada. A duplicação é DELIBERADA — se a campanha
+   * importasse o núcleo do runtime, um defeito no núcleo ficaria invisível para
+   * os dois lados, e a campanha deixaria de ser segunda opinião para virar eco.
+   *
+   * O preço da duplicação é este teste. No dia em que divergirem, o aviso vem da
+   * suíte, não de uma madrugada em que a IARA escalou por engano.
+   */
+  const { horaDeParede: doNucleo } = await import('../lib/verificacao/oraculos');
+  const instantes = [
+    '2026-08-18T18:29:00.000Z', // o incidente real
+    '2026-01-15T03:00:00.000Z', // virada de dia no fuso de operação
+    '2026-12-31T23:59:00.000Z', // virada de ano
+    '2026-06-01T12:00:00.000Z',
+  ];
+  for (const iso of instantes) {
+    const t = new Date(iso);
+    assert.equal(doNucleo(t), horaDeParede(t), `divergiram em ${iso}`);
+  }
+});
+
 test('V17. toda missão de `valor` no catálogo tem oráculo — senão é ERRO_DE_CAMPANHA silencioso', () => {
   const semOraculo = CATALOGO.filter((m) => m.expectativa === 'valor' && !m.conferir);
   assert.deepEqual(

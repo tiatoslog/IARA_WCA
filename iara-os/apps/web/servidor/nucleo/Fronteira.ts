@@ -122,6 +122,18 @@ export const ESTADO_INTERNO: readonly string[] = [
   'servidor/nucleo/EstadoAtomico.ts',
   'servidor/nucleo/kernel/MemoriaTrabalho.ts',
   'servidor/nucleo/kernel/RegistroErros.ts',
+  /**
+   * O VERIFICADOR DE RUNTIME. Abre `node:fs` para LER a base determinística e
+   * comparar com o que a IARA afirmou — leitura, e só.
+   *
+   * A tentação de classificá-lo como efeito existe porque ele participa da
+   * decisão de gastar dinheiro (a escalada ao pool premium). Mas o gasto não
+   * nasce aqui: este módulo devolve `valido | invalido | inconclusivo`, e quem
+   * decide é `EscaladaDoTurno` contra o `OrcamentoDoTurno`. Um verificador que
+   * passasse pelo portal também seria um verificador que a LLM poderia propor
+   * — e o portal existe justamente para o que a LLM propõe.
+   */
+  'servidor/nucleo/kernel/VerificacaoRuntime.ts',
 ];
 
 /**
