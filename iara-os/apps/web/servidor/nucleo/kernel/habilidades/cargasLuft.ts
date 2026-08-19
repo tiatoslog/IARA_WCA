@@ -20,6 +20,7 @@ import {
   cargasNoPeriodo,
   contarCargas,
   contarDistintos,
+  suspeitasDeIdentidade,
   planilhaOcisDisponivel,
   todasAsCargas,
   valorMedio,
@@ -464,8 +465,32 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
         d.ausentes > 0
           ? ` — ${d.ausentes} carga${d.ausentes === 1 ? '' : 's'} sem ${agruparPor} preenchido, fora dessa conta`
           : '';
+      /**
+       * A SUSPEITA SAI JUNTO COM O NÚMERO — regra da operadora, 19/08/2026.
+       *
+       * O detector ACUSA e não decide: grafias sem marca estrutural que podem
+       * ser a mesma pessoa viram pergunta, nunca fusão. Dizer isto aqui, colado
+       * à contagem, é o que dá à operadora a chance de confirmar — um detector
+       * que só grava no log é um detector que ninguém lê.
+       *
+       * Só para `motorista`: é a dimensão onde a mesma entidade aparece com
+       * grafias diferentes. Rota e destino vêm de célula padronizada.
+       */
+      const suspeitas = agruparPor === 'motorista' ? suspeitasDeIdentidade(cargas) : [];
+      const aviso =
+        suspeitas.length === 0
+          ? ''
+          : `\n\nPode haver repetição de pessoa nessa contagem — ${suspeitas.length} caso${
+              suspeitas.length === 1 ? '' : 's'
+            } a conferir:\n` +
+            suspeitas
+              .slice(0, 5)
+              .map((s) => `· ${s.provavel} / ${s.variantes.join(' / ')} — ${s.cargas} cargas`)
+              .join('\n') +
+            '\nSe forem a mesma pessoa, me diga e eu passo a contar como uma.';
+
       return {
-        texto: `${rotuloPeriodo}: ${d.distintos} ${agruparPor}${d.distintos === 1 ? '' : 's'} diferente${d.distintos === 1 ? '' : 's'}${ressalva}.`,
+        texto: `${rotuloPeriodo}: ${d.distintos} ${agruparPor}${d.distintos === 1 ? '' : 's'} diferente${d.distintos === 1 ? '' : 's'}${ressalva}.${aviso}`,
         detalhe: proveniencia({
           ...baseProveniencia,
           operacao: 'COUNT_DISTINCT',

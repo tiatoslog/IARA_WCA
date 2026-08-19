@@ -757,6 +757,78 @@ export interface ContagemDistinta {
   readonly ausentes: number;
 }
 
+/**
+ * GRAFIAS QUE PODEM SER A MESMA PESSOA — e a IARA ACUSA, nunca funde.
+ *
+ * A REGRA (operadora, 19/08/2026): ela precisa identificar esses casos sozinha,
+ * inclusive os que aparecerem depois — o mapa escrito à mão envelhece.
+ *
+ * DUAS METADES, E A SEGUNDA É A QUE PROTEGE. O que tem marca ESTRUTURAL (sufixo
+ * depois de " - ", parênteses) já é unido por `identidadeDeMotorista`, sozinho,
+ * para qualquer nome futuro. O que NÃO tem marca — `CLAUDINEI` contra
+ * `CLAUDINEI DE SOUZA` — não pode ser decidido por código: vira SUSPEITA, a
+ * operadora confirma, e a confirmação entra no mapa declarado. O mapa passa a
+ * crescer por confirmação, nunca por palpite.
+ *
+ * A ARMADILHA, e ela é absoluta: `LUIZ ANTONIO` (5 cargas) e `LUIZ PAULO` (88)
+ * têm o mesmo primeiro nome e são pessoas DIFERENTES. Sumir com uma pessoa real
+ * é pior que contá-la duas vezes. Por isso o critério é PREFIXO DE PALAVRAS
+ * INTEIRAS — "CLAUDINEI" é o começo completo de "CLAUDINEI DE SOUZA", enquanto
+ * nem "LUIZ ANTONIO" nem "LUIZ PAULO" é começo do outro. Compartilhar o primeiro
+ * nome não basta, e é justamente essa a diferença entre as duas famílias.
+ *
+ * É a mesma disciplina de `Detectar não é executar` que já governa o `Vigia`.
+ */
+export interface SuspeitaDeIdentidade {
+  /** A grafia mais curta — a candidata a nome canônico. */
+  readonly provavel: string;
+  /** As grafias mais longas que começam por ela. */
+  readonly variantes: readonly string[];
+  /** Quantas cargas estão em jogo, somando todas as grafias. */
+  readonly cargas: number;
+}
+
+export function suspeitasDeIdentidade(
+  cargas: readonly CargaCompleta[],
+): readonly SuspeitaDeIdentidade[] {
+  const porIdentidade = new Map<string, number>();
+  for (const c of cargas) {
+    if (dimensaoAusente(c.motorista)) continue;
+    const id = identidadeDeMotorista(c.motorista);
+    porIdentidade.set(id, (porIdentidade.get(id) ?? 0) + 1);
+  }
+
+  const nomes = [...porIdentidade.keys()].sort((a, b) => a.length - b.length);
+  const jaAgrupado = new Set<string>();
+  const achados: SuspeitaDeIdentidade[] = [];
+
+  for (const curto of nomes) {
+    if (jaAgrupado.has(curto)) continue;
+    const palavras = curto.split(' ');
+    const variantes = nomes.filter((outro) => {
+      if (outro === curto || jaAgrupado.has(outro)) return false;
+      const dele = outro.split(' ');
+      if (dele.length <= palavras.length) return false;
+      /* Prefixo de PALAVRAS INTEIRAS: "CLAUDINEI" começa "CLAUDINEI DE SOUZA",
+         mas "LUIZ ANTONIO" não começa "LUIZ PAULO". */
+      return palavras.every((p, i) => dele[i] === p);
+    });
+    if (variantes.length === 0) continue;
+
+    jaAgrupado.add(curto);
+    for (const v of variantes) jaAgrupado.add(v);
+    achados.push({
+      provavel: curto,
+      variantes,
+      cargas: [curto, ...variantes].reduce((s, n) => s + (porIdentidade.get(n) ?? 0), 0),
+    });
+  }
+
+  /* Maior impacto primeiro: a suspeita que move mais cargas é a que a operadora
+     deve olhar antes. */
+  return achados.sort((a, b) => b.cargas - a.cargas);
+}
+
 export function contarDistintos(
   cargas: readonly CargaCompleta[],
   dimensao: 'motorista' | 'origem' | 'destino' | 'uf_origem' | 'uf_destino' | 'status',
