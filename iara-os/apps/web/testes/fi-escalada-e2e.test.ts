@@ -6,31 +6,28 @@
  * substituída por um modelo de maior capacidade, e essa segunda resposta também
  * passa por verificação antes de ser liberada.
  *
- * O QUE É FALSO AQUI, declarado sem eufemismo — são DUAS coisas, não uma:
+ * O QUE É FALSO AQUI: o texto que o modelo devolve. Nada além disso no FI-014 e
+ * FI-015; nos demais, também o roteamento pergunta→oráculo — e a diferença tem
+ * história.
  *
- *  1. **O texto que o modelo devolve.** É o ponto do fault injection.
- *  2. **O roteamento pergunta→oráculo.** E esta merece explicação, porque a
- *     Regra 10 pede que só o provedor seja falso.
+ * A auditoria de 19/08/2026 mediu que NENHUMA pergunta de produção era, ao mesmo
+ * tempo, de rota cognitiva e portadora de oráculo escalável: "quantas centrais
+ * ativas existem?" ia para `plano_local` e a síntese sequer era chamada;
+ * "quantas cargas existem na base?" ia para a cognitiva mas devolvia
+ * `escalavel: false`, porque modelo melhor não inventa menos sem fonte. O ramo
+ * `invalido → escalar` era inalcançável, e os FI-001 a FI-013 supriram o
+ * roteamento para poder exercitar o mecanismo.
  *
- * A auditoria de 19/08/2026 mediu que NENHUMA pergunta de produção é, ao mesmo
- * tempo, de rota cognitiva e portadora de oráculo escalável:
+ * O Ciclo A fechou essa lacuna no mesmo dia: com `contarDistintos` e a trava de
+ * autoridade, "quantos motoristas temos?" passou a ser cognitiva E escalável —
+ * um número operacional afirmado num turno que não executou nada não tem
+ * procedência, e isso VALE a pena escalar. O FI-014 usa essa pergunta com o
+ * `VerificadorDeterministico` de produção, sem roteamento suprido.
  *
- *      "quantas centrais ativas existem?"  → plano_local, e a síntese
- *                                            sequer é chamada (medido)
- *      "quantas cargas existem na base?"   → plano_cognitivo, mas o veredito
- *                                            é `escalavel: false` — modelo
- *                                            melhor não inventa menos sem fonte
- *
- * Logo o ramo `invalido → escalar` é INALCANÇÁVEL em produção hoje, e nenhum
- * arranjo de perguntas reais o exercita. Fechar essa lacuna exige dar oráculo de
- * valor a uma pergunta cognitiva — o `contar_distintos` do Ciclo A, fora do
- * escopo desta fatia.
- *
- * Então o roteamento é suprido pelo teste. O que NÃO é suprido: os oráculos são
- * os de `lib/verificacao/oraculos` — código de produto, sem cópia — e todo o
- * resto do caminho é real: Kernel real, `CadeiaDeRaciocinio` real,
- * `EscaladaDoTurno` real, `OrcamentoDoTurno` real, `raciocinarNoPremium` real,
- * segunda verificação real, barramento real.
+ * Em todos: Kernel real, `CadeiaDeRaciocinio` real (é ela que implementa
+ * `premiumSaudavel` e `raciocinarNoPremium`), retenção real, `OrcamentoDoTurno`
+ * real, `EscaladaDoTurno` real, segunda verificação real, barramento real. Os
+ * oráculos são os de `lib/verificacao/oraculos`, importados sem cópia.
  */
 
 import test from 'node:test';
@@ -48,6 +45,7 @@ import type {
   PortaVerificacaoRuntime,
   ResultadoVerificacao,
 } from '../lib/verificacao/contrato';
+import { VerificadorDeterministico, RAIZ_DO_APP } from '../servidor/nucleo/kernel/VerificacaoRuntime';
 import { ProvedorDeFalha, type RoteiroDoProvedor } from './apoio/ProvedorDeFalha';
 
 /** A fonte determinística do experimento. 73, como manda o roteiro FI. */
@@ -411,6 +409,89 @@ test('FI-012. premium fora do ar degrada; não devolve o número contestado', as
 // ===========================================================================
 // Sem pool premium declarado
 // ===========================================================================
+// ===========================================================================
+// FI-014 — a propriedade com o VERIFICADOR DE PRODUÇÃO, sem roteamento suprido
+// ===========================================================================
+test('FI-014. "quantos motoristas temos?" — verificador real, só o modelo é falso', async () => {
+  /**
+   * O TESTE QUE FECHA A LACUNA DA REGRA 10. Nos FI acima, o roteamento
+   * pergunta→oráculo era do teste, porque nenhuma pergunta de produção era ao
+   * mesmo tempo cognitiva e escalável. Com o Ciclo A e a trava de autoridade,
+   * uma passou a ser — e aqui ela é usada inteira:
+   *
+   *   · a pergunta é a do operador, literal;
+   *   · o verificador é o `VerificadorDeterministico` de produção, com o
+   *     `reconhece` dele e o `verificar` dele;
+   *   · o oráculo é `conferirExecucaoNoTurno`, de produto;
+   *   · a única coisa falsa é o texto que o modelo devolve.
+   *
+   * O CENÁRIO É O INCIDENTE REAL de 19/08/2026: "quantos motoristas temos?" →
+   * *"75 motoristas diferentes — mesma contagem que te dei agora há pouco"*. São
+   * 53. Ela repetiu o próprio histórico sem chamar ferramenta nenhuma.
+   */
+  const barato = new ProvedorDeFalha({
+    apelido: 'barato',
+    texto: () => 'Temos 75 motoristas diferentes — mesma contagem que te dei agora há pouco.',
+  });
+  const premium = new ProvedorDeFalha({
+    apelido: 'premium',
+    camada: 'premium',
+    texto: () => 'Não tenho como afirmar sem contar; a listagem não foi executada neste turno.',
+  });
+  const barramento = new BarramentoEventos('s-fi14');
+  const kernel = new Kernel({
+    sessao: 's-fi14',
+    idUsuario: 'u-fi14',
+    outrosOperadores: [],
+    estado: new EstadoAtomico(),
+    memoria: memoriaFalsa(),
+    barramento,
+    raciocinio: new MotorRaciocinio(new CadeiaDeRaciocinio([barato, premium])),
+    /* Verificador DE PRODUÇÃO. `fontesAusentes: []` porque a planilha está no ar
+       — é assim que o ramo de cardinalidade vence o de fonte-desligada. */
+    verificacao: new VerificadorDeterministico({ raiz: RAIZ_DO_APP, fontesAusentes: () => [] }),
+  });
+
+  const exposicoes: string[] = [];
+  barramento.assinarTudo((e) => {
+    if (e.tipo === 'RESPOSTA_TRECHO' || e.tipo === 'TAREFA_CONCLUIDA') exposicoes.push(e.texto);
+  });
+  await kernel.processar('quantos motoristas temos?');
+
+  assert.equal(premium.chamadas.length, 1, 'a escalada não disparou com o verificador real');
+  assert.ok(
+    !exposicoes.some((t) => /\b75\b/.test(t)),
+    'o número sem procedência chegou à superfície do operador',
+  );
+});
+
+test('FI-015. o mesmo turno, tendo executado a contagem, NÃO escala', async () => {
+  /* O simétrico e o que protege o caminho bom: número com procedência não é
+     contestado. Sem este par, a trava poderia estar reprovando tudo. */
+  const barato = new ProvedorDeFalha({
+    apelido: 'barato',
+    texto: () => 'Temos 53 motoristas diferentes.',
+  });
+  const premium = new ProvedorDeFalha({ apelido: 'premium', camada: 'premium', texto: () => 'x' });
+  const barramento = new BarramentoEventos('s-fi15');
+  const verificador = new VerificadorDeterministico({
+    raiz: RAIZ_DO_APP,
+    fontesAusentes: () => [],
+  });
+  /* Turno que executou: o oráculo de procedência se cala e a fala passa. É o
+     `conferirExecucaoNoTurno` recebendo uma operação, exatamente como o Kernel
+     o alimenta quando um passo alcança o mundo. */
+  const r = verificador.verificar('Temos 53 motoristas diferentes.', {
+    pergunta: 'quantos motoristas temos?',
+    inicio_ms: 0,
+    fim_ms: 0,
+    operacoes_do_turno: ['contar_motoristas_distintos'],
+  });
+  assert.equal(r.status, 'inconclusivo', 'turno que executou não pode ser contestado por procedência');
+  assert.equal(premium.chamadas.length, 0);
+  barramento.assinarTudo(() => {});
+});
+
 test('FI-013. sem elo premium na cadeia, contesta e degrada sem tentar ninguém', async () => {
   const r = await turno({ barato: respondeu('Temos 1234 cargas.') });
   assert.equal(r.premiumChamadas, 0);

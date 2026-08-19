@@ -118,13 +118,39 @@ function cerebrosPedidos(cerebro: string | undefined): readonly string[] {
     .filter((c) => c.length > 0);
 }
 
-/** As zeradas desta corrida: todas, menos as dos cérebros explicitamente pedidos. */
-function credenciaisZeradas(cerebro: string | undefined): readonly string[] {
+/**
+ * FONTES DE LEITURA que uma corrida pode pedir de volta, por apelido.
+ *
+ * Existe para a prova de produção da cardinalidade: "quantos motoristas temos?"
+ * só tem resposta se a planilha da LUFT estiver alcançável, e no sandbox ela
+ * está zerada por padrão — que continua sendo o certo para as campanhas
+ * noturnas.
+ *
+ * SÓ LEITURA. `MS_GRAPH_CAIXA` (enviar e-mail) fica de fora de propósito: a
+ * exceção é para conseguir CONFERIR um número, não para a IARA alcançar
+ * terceiros durante um teste. WhatsApp e Supabase seguem zerados.
+ *
+ * O VALOR DO SEGREDO NÃO PASSA POR AQUI — o mesmo mecanismo do `cerebro`: a
+ * variável apenas deixa de ser sobrescrita por string vazia, e o `dotenv` do
+ * filho a repõe do `.env.local`. Nada é lido, copiado ou repassado.
+ */
+const FONTES_LIBERAVEIS: Readonly<Record<string, readonly string[]>> = {
+  graph: ['MS_GRAPH_TOKEN', 'MS_GRAPH_CLIENT_ID', 'MS_GRAPH_TENANT_ID', 'MS_GRAPH_CLIENT_SECRET', 'MS_GRAPH_OCI_URL'],
+};
+
+/** As zeradas desta corrida: todas, menos as dos cérebros e fontes pedidos. */
+function credenciaisZeradas(
+  cerebro: string | undefined,
+  fontes: readonly string[] = [],
+): readonly string[] {
   const liberadas = new Set(
     cerebrosPedidos(cerebro)
       .map((c) => CREDENCIAL_DO_CEREBRO[c])
       .filter((v): v is string => Boolean(v)),
   );
+  for (const apelido of fontes) {
+    for (const v of FONTES_LIBERAVEIS[apelido.trim().toLowerCase()] ?? []) liberadas.add(v);
+  }
   return CREDENCIAIS_NEUTRALIZADAS.filter((n) => !liberadas.has(n));
 }
 
@@ -179,6 +205,12 @@ export interface OpcoesMotor {
   readonly cerebro?: string;
   /** Teto para a subida. Ollama frio já levou 20 s para o primeiro turno. */
   readonly prazo_subida_ms?: number;
+  /**
+   * Fontes de LEITURA devolvidas a este filho, por apelido (`graph`). Padrão é
+   * nenhuma — o sandbox segue cego para o mundo, que é o que permite a campanha
+   * rodar de madrugada. Ver `FONTES_LIBERAVEIS`.
+   */
+  readonly liberar?: readonly string[];
 }
 
 export interface MotorVivo {
@@ -351,7 +383,7 @@ export async function subirMotor(opcoes: OpcoesMotor): Promise<MotorVivo> {
      */
     OLLAMA_MODELO: process.env.OLLAMA_MODELO ?? 'llama3.2:3b',
     IARA_ORIGENS: '',
-    ...Object.fromEntries(credenciaisZeradas(opcoes.cerebro).map((n) => [n, ''])),
+    ...Object.fromEntries(credenciaisZeradas(opcoes.cerebro, opcoes.liberar).map((n) => [n, ''])),
     /* Depois das zeradas de propósito: pedir cérebro é justamente sobrepor o
        `IARA_PROVEDOR: 'ollama'` fixado acima. */
     ...seletorDeProvedor(opcoes.cerebro),

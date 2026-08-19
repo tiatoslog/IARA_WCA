@@ -47,6 +47,8 @@ const cerebro = {
 } as unknown as MotorRaciocinio;
 
 const PERGUNTAS = [
+  'quantos motoristas temos?',
+  'quantos motoristas diferentes rodaram em 2026?',
   'quantas centrais ativas existem?',
   'compare o número de centrais ativas com o do mês passado e diga se cresceu',
   'faça um resumo executivo e diga quantas centrais ativas temos',
