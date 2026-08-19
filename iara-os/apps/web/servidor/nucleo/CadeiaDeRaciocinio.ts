@@ -195,6 +195,8 @@ export function mereceOutroProvedor(erro: unknown, sinal?: AbortSignal): boolean
  *  no ambiente" e "a chave funcionou da última vez que foi usada". */
 export interface FalhaObservada {
   readonly classe: ClasseFalhaProvedor;
+  /** Quantas vezes SEGUIDAS este elo falhou pela mesma causa. Ver a carência. */
+  readonly seguidas?: number;
   readonly detalhe: string;
   readonly instante: string;
 }
@@ -221,7 +223,25 @@ export function registrarFalhaProvedor(apelido: string, erro: unknown, sinal?: A
   /* `cancelado` não se registra: o operador desistir não diz nada sobre a saúde
      do cérebro, e gravá-lo pintaria de vermelho um provedor são. */
   if (classe === 'cancelado') return;
+  const anterior = observacoes.get(apelido);
+  /**
+   * A REINCIDÊNCIA CONTA — e a carência dobra com ela.
+   *
+   * Medido em 18 e 19/08/2026: o Gemini devolveu `503` três vezes seguidas, em
+   * corridas diferentes, levando 5,2 s, 21,9 s e 43,6 s para dizer que estava
+   * fora. Entre elas a carência de dois minutos expirava e ele voltava para a
+   * frente da fila — para cair de novo, pelo mesmo motivo, cobrando a mesma
+   * espera. Carência de tamanho fixo trata a terceira queda como se fosse a
+   * primeira.
+   *
+   * Só a MESMA CLASSE acumula: um `503` depois de um `rate_limit` é outro
+   * problema, e herdar o recuo do anterior puniria o elo por um defeito que
+   * não é o dele. Sucesso zera — `registrarSucessoProvedor` apaga a observação
+   * inteira.
+   */
+  const seguidas = anterior?.classe === classe ? (anterior.seguidas ?? 1) + 1 : 1;
   observacoes.set(apelido, {
+    seguidas,
     classe,
     detalhe: (erro instanceof Error ? erro.message : String(erro)).slice(0, 200),
     instante: new Date().toISOString(),
@@ -495,10 +515,24 @@ export const CARENCIA_MS: Record<ClasseFalhaProvedor, number> = {
 };
 
 /** Este cérebro falhou faz pouco tempo? */
+/**
+ * O RECUO EFETIVO — a carência da classe, dobrada a cada reincidência.
+ *
+ * Teto de oito vezes a base: sem ele, um provedor fora do ar por um dia sairia
+ * da fila por semanas, e voltar a tentá-lo é justamente como o sistema descobre
+ * que ele voltou. `ordenarPorSaude` reordena em vez de remover pela mesma razão.
+ */
+export function carenciaEfetiva(falha: FalhaObservada): number {
+  const base = CARENCIA_MS[falha.classe];
+  if (base <= 0) return 0;
+  const fator = Math.min(2 ** Math.max(0, (falha.seguidas ?? 1) - 1), 8);
+  return base * fator;
+}
+
 export function emCarencia(apelido: string, agora: number = Date.now()): boolean {
   const falha = observacoes.get(apelido);
   if (!falha) return false;
-  const carencia = CARENCIA_MS[falha.classe];
+  const carencia = carenciaEfetiva(falha);
   if (carencia <= 0) return false;
   return agora - Date.parse(falha.instante) < carencia;
 }
@@ -756,7 +790,9 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
              passa — a bateria de roteamento é um deles. `AbortSignal.any`
              levanta com `undefined` na lista, e uma cadeia que explode por falta
              de sinal seria pior que a demora que ela veio consertar. */
-          sinal: AbortSignal.any([pedido.sinal, abandono.signal].filter(Boolean)),
+          sinal: AbortSignal.any(
+            [pedido.sinal, abandono.signal].filter((x): x is AbortSignal => x !== undefined),
+          ),
           aoReceberTexto: (pedaco) => {
             /* Começou a falar: o prazo morre aqui. Daqui em diante o turno é
                deste elo, dê no que der — cortar no meio duplicaria a fala. */

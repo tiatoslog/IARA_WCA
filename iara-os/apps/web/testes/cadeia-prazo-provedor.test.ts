@@ -49,7 +49,7 @@ function eloLento(apelido: string, esperaMs: number, texto = 'ok'): ProvedorRaci
     async raciocinar(pedido) {
       await new Promise((r, rejeitar) => {
         const t = setTimeout(r, esperaMs);
-        pedido.sinal.addEventListener('abort', () => {
+        pedido.sinal?.addEventListener('abort', () => {
           clearTimeout(t);
           const e = new Error('abortado');
           e.name = 'AbortError';
@@ -153,7 +153,7 @@ test('C4. o operador cancelando encerra o turno — a cadeia não tenta o próxi
     async raciocinar(p) {
       tentados.push(apelido);
       await new Promise((r, rej) => {
-        p.sinal.addEventListener('abort', () => {
+        p.sinal?.addEventListener('abort', () => {
           const e = new Error('abortado');
           e.name = 'AbortError';
           rej(e);

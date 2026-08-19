@@ -213,7 +213,7 @@ export class ClienteOllama implements ProvedorRaciocinio {
           this.alcancavel = false;
         }
         const podeTentarDeNovo =
-          !pedido.sinal.aborted &&
+          !pedido.sinal?.aborted &&
           !algumTextoChegou &&
           this.ehErroTransitorio(erro) &&
           tentativa < MAX_TENTATIVAS;
@@ -288,7 +288,7 @@ export class ClienteOllama implements ProvedorRaciocinio {
     };
 
     for await (const bloco of resposta.body as unknown as AsyncIterable<Uint8Array>) {
-      if (pedido.sinal.aborted) break;
+      if (pedido.sinal?.aborted) break;
       sobra += decodificador.decode(bloco, { stream: true });
       let quebra = sobra.indexOf('\n');
       while (quebra >= 0) {

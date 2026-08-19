@@ -56,6 +56,7 @@ import type { Operacao, SemanticaEfeito } from './Operacao';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
 import { armarAvisoDeEspera } from './PrazoDeFala';
 import { custoDaChamada } from '../PrecoDoRaciocinio';
+import { apararHistorico, tetoDeContexto } from './OrcamentoDeContexto';
 import { decidirEscalada, textoDegradado } from './EscaladaDoTurno';
 import { RAIZ_DO_APP, VerificadorDeterministico, fontesDesligadas } from './VerificacaoRuntime';
 import type { PortaVerificacaoRuntime } from '../../../lib/verificacao/contrato';
@@ -2049,9 +2050,35 @@ export class Kernel {
 
     // Histórico enriquece o prompt; a ausência dele degrada a resposta, não
     // impede. Persistência fora não pode calar o raciocínio.
-    const historico = await this.dep.memoria
+    const historicoBruto = await this.dep.memoria
       .historico(this.dep.idUsuario, 20)
       .catch(() => [] as Awaited<ReturnType<typeof this.dep.memoria.historico>>);
+
+    /**
+     * O ORÇAMENTO DE CONTEXTO — o histórico era limitado por CONTAGEM, nunca por
+     * tamanho. Vinte mensagens de cinquenta caracteres não são nada; vinte de
+     * quatro mil são ~20 mil tokens, mais que a janela inteira da camada
+     * gratuita. Bastava alguém colar um trecho de planilha para todo turno
+     * seguinte daquela conversa nascer grande demais.
+     *
+     * O CORTE É DITO. Uma IARA que esquece parte da conversa sem avisar é uma
+     * IARA que às vezes muda de assunto sozinha.
+     */
+    const aparado = apararHistorico(historicoBruto, tetoDeContexto());
+    const historico = aparado.mantidos;
+    if (aparado.descartados > 0) {
+      this.auditoria.registrar({
+        instante: new Date().toISOString(),
+        sessao: this.dep.sessao,
+        id_usuario: this.dep.idUsuario,
+        traco: b.tracoAtual,
+        acao: 'contexto_aparado',
+        detalhe:
+          `${aparado.descartados} registro(s) antigos ficaram fora do pedido ` +
+          `(teto ${tetoDeContexto()} tokens; ficaram ${aparado.tokens})`,
+        permitido: true,
+      });
+    }
     const camadaGlobal = await this.dep.memoria.carregarGlobal().catch(() => '');
 
     /**

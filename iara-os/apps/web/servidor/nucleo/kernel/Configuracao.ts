@@ -270,6 +270,15 @@ export const REGISTRO: Readonly<Record<string, DefinicaoConfig>> = {
     natureza: 'numero',
     papel: 'teto de custo por turno, em centavos',
   },
+  /**
+   * Quanto do HISTÓRICO cabe no pedido, em tokens. O padrão de 2.000 sai de
+   * aritmética sobre medição — ver `OrcamentoDeContexto`. Quem só tem provedor
+   * de janela grande aumenta e paga em tokens o que ganha em memória.
+   */
+  IARA_ORCAMENTO_CONTEXTO_TOKENS: {
+    natureza: 'numero',
+    papel: 'teto de tokens de histórico por pedido',
+  },
   IARA_ADMINS: { natureza: 'lista', papel: 'operadores administradores' },
   IARA_CIDADE: { natureza: 'texto', papel: 'cidade padrão' },
   IARA_LATITUDE: { natureza: 'texto', papel: 'latitude padrão' },

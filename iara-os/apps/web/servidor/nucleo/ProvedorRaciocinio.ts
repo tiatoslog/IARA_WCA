@@ -23,13 +23,34 @@ export class ProvedorIndisponivel extends Error {}
  *  dentro do snapshot, e `lib/` não pode importar de `servidor/`. */
 export type { OrigemRaciocinio } from '../../lib/estado';
 
+/**
+ * O PEDIDO AO CÉREBRO.
+ *
+ * TRÊS CAMPOS SÃO OPCIONAIS AQUI E ERAM OBRIGATÓRIOS ATÉ 19/08/2026 — a mudança
+ * fecha uma classe de defeito, não afrouxa um contrato.
+ *
+ * `historico`, `overridePersona` e `camadaGlobal` estavam declarados
+ * obrigatórios e havia chamador que não os passava (a bateria de roteamento,
+ * entre outros). O tipo dizia uma coisa e o mundo fazia outra, e TODA peça nova
+ * que lesse esses campos tropeçava — três vezes na mesma semana, sempre com o
+ * mesmo formato de acidente:
+ *
+ *   `AbortSignal.any([pedido.sinal, ...])`   → ERR_INVALID_ARG_TYPE, 6 cenários
+ *   `pedido.historico.reduce(...)`            → Cannot read properties, 6 cenários
+ *   `apelido.toUpperCase()`                   → TypeError, 8 cenários
+ *
+ * Cada uma foi consertada no consumidor, defensivamente, e a quarta viria. O
+ * conserto que mata a classe é este: o tipo passa a dizer a verdade, e o
+ * compilador passa a cobrar o tratamento de ausência de quem lê.
+ */
 export interface PedidoRaciocinio {
   mensagem: string;
-  historico: RegistroMemoria[];
+  /** Ausente = conversa sem passado. Ver o cabeçalho: era obrigatório e não era. */
+  historico?: RegistroMemoria[];
   /** Anexado ao system DEPOIS do breakpoint de cache. */
-  overridePersona: string;
+  overridePersona?: string;
   /** Fatos públicos da empresa. Parte do prefixo estável. */
-  camadaGlobal: string;
+  camadaGlobal?: string;
   /**
    * O catálogo de habilidades, já redigido pelo `GerenciadorHabilidades`.
    *
@@ -53,7 +74,11 @@ export interface PedidoRaciocinio {
    * Ausente significa `resposta`, que é o caso comum e o mais tolerante.
    */
   tarefa?: 'plano' | 'resposta';
-  sinal: AbortSignal;
+  /**
+   * O sinal do turno. Opcional pelo mesmo motivo dos três acima: quem chama fora
+   * de um turno (sonda, diagnóstico) não tem um, e a cadeia já trata a ausência.
+   */
+  sinal?: AbortSignal;
   /**
    * O ORÇAMENTO DO TURNO, PERGUNTADO — não importado.
    *
@@ -150,10 +175,10 @@ export interface ProvedorRaciocinio {
  * `user` (registro da própria mensagem já gravado), funde em vez de duplicar.
  */
 export function normalizarHistorico(
-  historico: RegistroMemoria[],
+  historico: RegistroMemoria[] | undefined,
   mensagem: string,
 ): Array<{ role: 'user' | 'assistant'; content: string }> {
-  const brutas = historico.map((r) => ({
+  const brutas = (historico ?? []).map((r) => ({
     role: r.papel === 'operador' ? ('user' as const) : ('assistant' as const),
     content: r.texto,
   }));

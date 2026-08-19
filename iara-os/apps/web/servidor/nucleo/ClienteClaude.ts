@@ -161,7 +161,7 @@ export class ClienteClaude implements ProvedorRaciocinio {
           { signal: pedido.sinal },
         );
         for await (const evento of stream) {
-          if (pedido.sinal.aborted) break;
+          if (pedido.sinal?.aborted) break;
           if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') {
             texto += evento.delta.text;
             algumTextoChegou = true;
@@ -172,7 +172,7 @@ export class ClienteClaude implements ProvedorRaciocinio {
         return { texto, final };
       } catch (erro) {
         const podeTentarDeNovo =
-          !pedido.sinal.aborted &&
+          !pedido.sinal?.aborted &&
           !algumTextoChegou &&
           this.ehErroTransitorio(erro) &&
           tentativa < MAX_TENTATIVAS;
