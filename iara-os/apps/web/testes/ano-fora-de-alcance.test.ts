@@ -86,6 +86,39 @@ test('as quatro habilidades de carga consultam o alcance antes de contar', async
   }
 });
 
+/**
+ * O ANO VIVO NÃO PODE VIRAR FILTRO DE PERÍODO.
+ *
+ * Medido em produção logo depois da porta de ano entrar: "qual o valor total
+ * faturado nas cargas de 2026?" devolveu *"Não entendi '2026' como período"*. A
+ * LLM fez o certo repassando o ano, o ano ERA o que o sistema lê, e mesmo assim
+ * a resposta foi recusa. A aba inteira já é 2026 — citar o ano não filtra nada.
+ */
+test('o ano vivo some da expressão de período em vez de virar filtro', async () => {
+  const { readFileSync } = await import('node:fs');
+  const fonte = readFileSync(
+    new URL('../servidor/nucleo/kernel/habilidades/cargasLuft.ts', import.meta.url),
+    'utf8',
+  );
+  assert.ok(
+    /tirarOAnoVivo\(String\(ctx\.parametros\.periodo/.test(fonte),
+    'a expressão de período chega ao interpretador com o ano vivo dentro — ' +
+      'e ele não entende ano, então recusa uma pergunta que sabia responder',
+  );
+
+  /* A função em si: "de 2026" vira universo inteiro; mês sobrevive para o
+     interpretador decidir (e recusar com honestidade, que é o certo hoje). */
+  const mod = await import('../servidor/nucleo/kernel/habilidades/cargasLuft');
+  const tirar = (mod as unknown as { _tirarOAnoVivoParaTeste?: (s: string) => string })
+    ._tirarOAnoVivoParaTeste;
+  if (tirar) {
+    assert.equal(tirar('2026'), '');
+    assert.equal(tirar('de 2026'), '');
+    assert.equal(tirar('em 2026'), '');
+    assert.equal(tirar('janeiro de 2026'), 'janeiro');
+  }
+});
+
 /** O rótulo que o operador lê precisa dizer o ano — foi a sua ausência que
  *  transformou "2681 de 2026" em "2681 no total". */
 test('o rótulo do universo sem período nomeia o ano', async () => {

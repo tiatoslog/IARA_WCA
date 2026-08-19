@@ -110,6 +110,35 @@ const METRICAS = ['contagem', 'valor_total', 'valor_medio'] as const;
 type Metrica = (typeof METRICAS)[number];
 
 /**
+ * O ANO VIVO NÃO É UM PERÍODO — É A ABA INTEIRA.
+ *
+ * O DEFEITO (produção, 18/08/2026, na mesma sessão que fechou o ano fora de
+ * alcance): "qual o valor total faturado nas cargas de 2026?" devolveu *"Não
+ * entendi '2026' como período"*. A LLM tinha feito o certo — repassou o ano que
+ * o operador disse —, o ano ERA o que o sistema lê, e mesmo assim a resposta foi
+ * recusa. `interpretarPeriodo` entende "hoje", "essa semana" e datas; ano não
+ * está no vocabulário dele, e não deveria estar: para esta leitura, o ano vivo
+ * não filtra nada, porque a aba inteira já é aquele ano.
+ *
+ * Então some daqui em vez de virar filtro. "de 2026" fica vazio (universo
+ * inteiro, que é a resposta certa); "janeiro de 2026" continua devolvendo
+ * "janeiro", que o interpretador ainda não entende e recusa com honestidade —
+ * uma lacuna declarada é melhor que um filtro inventado.
+ *
+ * Só o ano VIVO: qualquer outro já foi barrado por `recusaPorAno` antes daqui.
+ */
+function tirarOAnoVivo(frase: string): string {
+  return frase
+    .replace(new RegExp(`\\b${ANO_VIVO}\\b`, 'g'), ' ')
+    .replace(/\b(em|de|do|da|no|na|ano|o|a)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Só para o portão de regressão — ver `testes/ano-fora-de-alcance.test.ts`. */
+export const _tirarOAnoVivoParaTeste = tirarOAnoVivo;
+
+/**
  * ANO FORA DO ALCANCE — a recusa vem ANTES de qualquer conta, nas QUATRO
  * habilidades desta folha.
  *
@@ -276,7 +305,8 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     return planilhaOcisDisponivel() ? null : 'falta MS_GRAPH_TOKEN ou MS_GRAPH_OCI_URL no ambiente';
   },
   async executar(ctx) {
-    const frasePeriodo = String(ctx.parametros.periodo ?? '').trim();
+    /* "de 2026" some: a aba inteira já é 2026. Ver `tirarOAnoVivo`. */
+    const frasePeriodo = tirarOAnoVivo(String(ctx.parametros.periodo ?? '').trim());
     const agruparPor = String(ctx.parametros.agrupar_por ?? 'nenhum') as AgruparPor;
     const metrica = String(ctx.parametros.metrica ?? 'contagem') as Metrica;
 
