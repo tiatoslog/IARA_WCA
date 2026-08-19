@@ -113,8 +113,19 @@ export function anoForaDoAlcance(frase: string): string | null {
      miolo de um número de OCI — "191597" não cita 2015. */
   const achados = frase.match(/\b(20[12]\d)\b/g);
   if (!achados) return null;
-  const fora = achados.find((a) => a !== ANO_VIVO);
+  /* O alcance passou a ser TRÊS abas em 19/08/2026. Antes era só o ano vivo, e
+     a lista era um `!== ANO_VIVO` — o tipo de comparação que se torna mentira
+     silenciosa no dia em que a leitura cresce. */
+  const fora = achados.find((a) => !ANOS_LIDOS.includes(a as AnoLido));
   return fora ?? null;
+}
+
+/** O ano citado na frase, quando ele é um dos que a leitura alcança. */
+export function anoCitado(frase: string): AnoLido | null {
+  const achados = frase.match(/\b(20[12]\d)\b/g);
+  if (!achados) return null;
+  const dentro = achados.find((a) => ANOS_LIDOS.includes(a as AnoLido));
+  return (dentro as AnoLido) ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -266,6 +277,7 @@ async function lerRange(
 async function baixarEParsearArquivo(
   t: string,
   loc: LocalizacaoItem,
+  aba: AnoLido = ABA_VIVA,
 ): Promise<{ ok: true; linhas: unknown[][] } | { ok: false; motivo: string }> {
   try {
     const resposta = await fetchComRetentativa(
@@ -279,8 +291,8 @@ async function baixarEParsearArquivo(
     }
     const buffer = Buffer.from(await resposta.arrayBuffer());
     const pasta = XLSX.read(buffer, { type: 'buffer' });
-    const folha = pasta.Sheets[ABA_VIVA];
-    if (!folha) return { ok: false, motivo: `o arquivo baixado não tem a aba "${ABA_VIVA}"` };
+    const folha = pasta.Sheets[aba];
+    if (!folha) return { ok: false, motivo: `o arquivo baixado não tem a aba "${aba}"` };
 
     // `raw: true` mantém data como serial numérico (igual a Graph) em vez de
     // converter para `Date` — as duas fontes precisam produzir o MESMO
@@ -307,25 +319,26 @@ export type ViaLeitura = 'api' | 'download';
 async function buscarLinhasReaisViaApi(
   t: string,
   loc: LocalizacaoItem,
+  aba: AnoLido = ABA_VIVA,
 ): Promise<{ ok: true; linhas: unknown[][] } | { ok: false; motivo: string }> {
-  const enc = encodeURIComponent(ABA_VIVA);
+  const enc = encodeURIComponent(aba);
   const dimensoes = await fetchComRetentativa(
     `${GRAPH}/drives/${loc.driveId}/items/${loc.itemId}/workbook/worksheets('${enc}')` +
       `/usedRange?$select=address,rowCount,columnCount`,
     { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) },
   ).catch((erro: Error) => erro);
   if (dimensoes instanceof Error) {
-    return { ok: false, motivo: `Não consegui ler o tamanho da aba "${ABA_VIVA}": ${dimensoes.message}` };
+    return { ok: false, motivo: `Não consegui ler o tamanho da aba "${aba}": ${dimensoes.message}` };
   }
   if (!dimensoes.ok) {
     const corpo = await dimensoes.text().catch(() => '');
-    return { ok: false, motivo: `Graph recusou o tamanho da aba "${ABA_VIVA}" (HTTP ${dimensoes.status}): ${corpo.slice(0, 200)}` };
+    return { ok: false, motivo: `Graph recusou o tamanho da aba "${aba}" (HTTP ${dimensoes.status}): ${corpo.slice(0, 200)}` };
   }
   const { rowCount, columnCount } = (await dimensoes.json()) as { rowCount: number; columnCount: number };
   if (rowCount < PRIMEIRA_LINHA_DE_DADO) return { ok: true, linhas: [] };
 
   const endereco = `A${PRIMEIRA_LINHA_DE_DADO}:${letraColuna(columnCount - 1)}${rowCount}`;
-  const dados = await lerRange(t, loc, ABA_VIVA, endereco);
+  const dados = await lerRange(t, loc, aba, endereco);
   if (!dados.ok) return { ok: false, motivo: dados.motivo };
 
   return { ok: true, linhas: dados.valores.filter(linhaReal) };
@@ -342,11 +355,12 @@ async function buscarLinhasReaisViaApi(
 async function buscarLinhasReais(
   t: string,
   loc: LocalizacaoItem,
+  aba: AnoLido = ABA_VIVA,
 ): Promise<{ ok: true; linhas: unknown[][]; via: ViaLeitura } | { ok: false; motivo: string }> {
-  const viaApi = await buscarLinhasReaisViaApi(t, loc);
+  const viaApi = await buscarLinhasReaisViaApi(t, loc, aba);
   if (viaApi.ok) return { ok: true, linhas: viaApi.linhas, via: 'api' };
 
-  const viaDownload = await baixarEParsearArquivo(t, loc);
+  const viaDownload = await baixarEParsearArquivo(t, loc, aba);
   if (viaDownload.ok) {
     const linhas = viaDownload.linhas.filter(linhaReal);
     console.warn(
@@ -684,6 +698,71 @@ export async function todasAsCargas(): Promise<ResultadoTodasAsCargas> {
   const buscadoEm = Date.now();
   cacheTodas = { cargas, buscadoEm, via: resultado.via };
   return { ok: true, texto: `${cargas.length} cargas cadastradas.`, cargas, fonte: fonteDe(buscadoEm, false, resultado.via) };
+}
+
+/**
+ * AS ABAS ANTIGAS — 2025 e 2024, que existem no mesmo arquivo.
+ *
+ * O QUE BLOQUEAVA ISSO POR TRÊS MESES era um comentário afirmando que as abas
+ * antigas têm "outro desenho de colunas (VALOR na 17; nas antigas, na 25)".
+ * Medido em 19/08/2026 por `testes/gate/mapear-abas.mjs`, o desenho é quase o
+ * MESMO: OCI, origem, destino, motorista e as três datas estão nos mesmos
+ * índices nos três anos. Diverge só o que vem depois do bloco AGENDAMENTO —
+ * VALOR (23 contra 24) e status (existe em 2026, não existe nas antigas). E
+ * nenhum dos números do comentário existia na planilha.
+ *
+ * O bloqueio era muito maior que o obstáculo: ler as antigas custa um mapa de
+ * duas linhas por ano, que é o que `MAPA_DA_ABA` guarda.
+ *
+ * CACHE POR ANO, e não um só: 2026 muda o dia inteiro e as antigas não mudam
+ * mais. Um cache compartilhado obrigaria a reler três abas para atualizar uma.
+ */
+const cachePorAno = new Map<AnoLido, { cargas: readonly CargaCompleta[]; buscadoEm: number; via: ViaLeitura }>();
+
+export function _esquecerCachePorAnoParaTeste(): void {
+  cachePorAno.clear();
+}
+
+/**
+ * As cargas de UM ano. Para o ano vivo delega a `todasAsCargas`, que já tem o
+ * cache quente que o resto do sistema usa — dois caminhos para a mesma aba
+ * dariam dois números para a mesma pergunta conforme quem perguntou primeiro.
+ */
+export async function cargasDoAno(ano: AnoLido): Promise<ResultadoTodasAsCargas> {
+  if (ano === ABA_VIVA) return todasAsCargas();
+
+  const t = token();
+  if (!t) return { ok: false, texto: 'MS_GRAPH_TOKEN não configurado — planilha de cargas desligada.', cargas: [], fonte: null };
+  if (!urlPlanilha()) {
+    return { ok: false, texto: 'MS_GRAPH_OCI_URL não configurado — não sei qual planilha ler.', cargas: [], fonte: null };
+  }
+
+  const emCache = cachePorAno.get(ano);
+  /* Ano fechado não muda: uma hora de cache, contra os 5 min do ano vivo. */
+  if (emCache && Date.now() - emCache.buscadoEm < 60 * 60 * 1000) {
+    return {
+      ok: true,
+      texto: `${emCache.cargas.length} cargas em ${ano}.`,
+      cargas: emCache.cargas,
+      fonte: fonteDe(emCache.buscadoEm, true, emCache.via),
+    };
+  }
+
+  const loc = await resolverItem(t);
+  if (!loc.ok) return { ok: false, texto: loc.motivo, cargas: [], fonte: null };
+
+  const resultado = await buscarLinhasReais(t, loc.loc, ano);
+  if (!resultado.ok) return { ok: false, texto: `${resultado.motivo}.`, cargas: [], fonte: null };
+
+  const cargas = resultado.linhas.map((l) => paraCargaCompleta(l, ano));
+  const buscadoEm = Date.now();
+  cachePorAno.set(ano, { cargas, buscadoEm, via: resultado.via });
+  return {
+    ok: true,
+    texto: `${cargas.length} cargas em ${ano}.`,
+    cargas,
+    fonte: fonteDe(buscadoEm, false, resultado.via),
+  };
 }
 
 // ---------------------------------------------------------------------------

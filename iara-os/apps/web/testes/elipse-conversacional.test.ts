@@ -136,17 +136,45 @@ test('"e por central?" usa o vocabulário da operação e cai em destino', () =>
 });
 
 /**
- * O ANO É PERÍODO, e herdá-lo é o que faz "e em 2025?" chegar à porta que sabe
- * tratá-lo. Sem isto a frase volta ao raciocínio livre — e foi de lá que saiu
+ * O ANO TROCA A ABA — e desde 19/08/2026 ele tem resposta, porque 2025 e 2024
+ * passaram a ser lidas.
+ *
+ * Antes esta herança existia só para a frase chegar à porta que sabia RECUSAR o
+ * ano com honestidade. Agora ela chega à porta que sabe LER. Nos dois casos o
+ * que importa é a frase não voltar ao raciocínio livre — foi de lá que saiu
  * "preciso que você autorize a leitura desse arquivo", um portão inventado.
+ *
+ * E TROCAR O ANO LIMPA O PERÍODO: "quantas cargas essa semana" seguido de "e em
+ * 2024?" não quer dizer "esta semana de 2024" — essa semana é deste ano. Manter
+ * o prazo devolveria zero com procedência impecável.
  */
-test('"e em 2025?" herda como período, para a porta do ano decidir', () => {
+test('"e em 2025?" herda trocando a ABA, não o período', () => {
   const antes = contratoDe('quantas cargas temos?');
   const depois = herdarContrato('e em 2025?', antes);
   assert.ok(depois);
   if (!depois) return;
-  assert.equal(depois.periodo.tipo, 'explicito');
-  assert.equal(depois.periodo.expressao, '2025');
+  assert.equal(depois.ano, '2025');
+  assert.equal(depois.parametros.ano, '2025');
+  assert.equal(depois.metrica, antes.metrica, 'a métrica se perdeu na troca de ano');
+});
+
+test('trocar o ano limpa o prazo — "essa semana de 2024" não é uma coisa', () => {
+  const antes = contratoDe('quantas cargas essa semana?');
+  assert.equal(antes.periodo.expressao, 'essa semana');
+  const depois = herdarContrato('e em 2024?', antes);
+  assert.ok(depois);
+  if (!depois) return;
+  assert.equal(depois.ano, '2024');
+  assert.equal(depois.periodo.tipo, 'implicito', 'o prazo do ano vivo sobreviveu à troca de ano');
+});
+
+test('trocar o PRAZO preserva o ano — o inverso da regra acima', () => {
+  const de2025 = herdarContrato('e em 2025?', contratoDe('quantas cargas temos?'))!;
+  const depois = herdarContrato('e ontem?', de2025);
+  assert.ok(depois);
+  if (!depois) return;
+  assert.equal(depois.ano, '2025', 'a troca de prazo derrubou o ano');
+  assert.equal(depois.periodo.expressao, 'ontem');
 });
 
 test('elipse sem slot reconhecível não herda nada', () => {

@@ -132,10 +132,15 @@ test('a pergunta do incidente vira COUNT_DISTINCT(motorista) com ausência exclu
   assert.equal(l.contrato.periodo.tipo, 'implicito');
   assert.equal(l.contrato.fonte, 'cargas_luft');
   assert.equal(l.contrato.habilidade, 'consultar_estatisticas_cargas_luft');
+  /* `ano` vazio = a aba viva. O slot entrou em 19/08/2026, quando 2025 e 2024
+     passaram a ser lidas; vazio continua significando "o universo padrão", que
+     a resposta declara. */
+  assert.equal(l.contrato.ano, '');
   assert.deepEqual(l.contrato.parametros, {
     periodo: '',
     agrupar_por: 'motorista',
     metrica: 'distintos',
+    ano: '',
   });
 });
 
@@ -152,6 +157,7 @@ test('e o plano que sai dela é determinístico, com a habilidade e os parâmetr
     periodo: '',
     agrupar_por: 'motorista',
     metrica: 'distintos',
+    ano: '',
   });
   /* A descrição do passo é o TRACE semântico — quem audita o jornal lê a
      pergunta que o sistema entendeu, sem reconstruí-la do texto da resposta. */

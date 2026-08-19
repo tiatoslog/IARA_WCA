@@ -29,10 +29,29 @@ import assert from 'node:assert/strict';
 
 import { ANO_VIVO, anoForaDoAlcance } from '../servidor/nucleo/ClientePlanilhaOcis';
 
+/**
+ * O ALCANCE CRESCEU EM 19/08/2026 — 2025 e 2024 passaram a ser lidas.
+ *
+ * O que este teste guarda NÃO mudou: ano que a leitura não alcança tem de ser
+ * devolvido para virar recusa honesta. Mudou QUAIS anos são esses, e a lista
+ * saiu de um `!== ANO_VIVO` (que vira mentira silenciosa quando a leitura
+ * cresce) para `ANOS_LIDOS`.
+ */
 test('cita ano que a leitura não alcança → devolve o ano citado', () => {
-  assert.equal(anoForaDoAlcance('quantas cargas em 2025?'), '2025');
-  assert.equal(anoForaDoAlcance('compare 2024 com 2026'), '2024');
-  assert.equal(anoForaDoAlcance('qual motorista fez mais cargas em 2024?'), '2024');
+  assert.equal(anoForaDoAlcance('quantas cargas em 2023?'), '2023');
+  assert.equal(anoForaDoAlcance('compare 2019 com 2026'), '2019');
+  assert.equal(anoForaDoAlcance('qual motorista fez mais cargas em 2027?'), '2027');
+});
+
+test('os três anos lidos NÃO são recusados', () => {
+  for (const frase of [
+    'quantas cargas em 2026?',
+    'quantas cargas em 2025?',
+    'qual motorista fez mais cargas em 2024?',
+    'compare 2024 com 2026',
+  ]) {
+    assert.equal(anoForaDoAlcance(frase), null, `"${frase}" foi recusada, e a aba existe`);
+  }
 });
 
 test('o ano vivo e as perguntas sem ano passam', () => {
@@ -88,16 +107,26 @@ test('toda habilidade que lê a planilha consulta o alcance antes de contar', as
   );
 
   const executares = fonte.split('async executar(ctx)').slice(1);
-  const queLeem = executares.filter((c) => /\b(todasAsCargas|cargasNoPeriodo)\(/.test(c));
+  const queLeem = executares.filter((c) => /\b(todasAsCargas|cargasNoPeriodo|cargasDoAno)\(/.test(c));
   assert.ok(
     queLeem.length >= 4,
     `só ${queLeem.length} habilidade(s) leem a planilha — eram 4 em 18/08/2026; reveja o portão`,
   );
 
   for (const [i, corpo] of queLeem.entries()) {
-    /* A porta tem de vir no COMEÇO: depois da primeira leitura da planilha já é
-       tarde, porque a conta que ela deveria impedir já aconteceu. */
-    const antesDaConta = corpo.slice(0, corpo.indexOf('todasAsCargas') + 1 || 400);
+    /**
+     * A porta tem de vir no COMEÇO: depois da primeira leitura da planilha já é
+     * tarde, porque a conta que ela deveria impedir já aconteceu.
+     *
+     * O CORTE PROCURA QUALQUER LEITURA, e não um nome fixo. A versão anterior
+     * procurava só `todasAsCargas`; quando a habilidade de estatísticas passou a
+     * chamar `cargasDoAno`, o `indexOf` devolveu -1, o corte caiu para os
+     * primeiros 400 caracteres e o portão reprovou uma habilidade que estava
+     * certa. Portão que depende do nome de UMA função quebra na primeira
+     * refatoração — e reprovar por engano ensina a ignorar o portão.
+     */
+    const leitura = corpo.search(/\b(todasAsCargas|cargasNoPeriodo|cargasDoAno)\(/);
+    const antesDaConta = corpo.slice(0, leitura >= 0 ? leitura : 400);
     assert.ok(
       /recusaPorAno\(ctx\.enunciado\)/.test(antesDaConta),
       `a habilidade #${i + 1} conta sem consultar o alcance do ano primeiro`,
@@ -150,5 +179,10 @@ test('o rótulo do universo sem período nomeia o ano', async () => {
     !/'todas as cargas cadastradas'/.test(fonte),
     'o rótulo voltou a omitir o ano — é a frase que fez a IARA chamar 2681 de "total"',
   );
-  assert.ok(/todas as cargas de \$\{ANO_VIVO\}/.test(fonte), 'o rótulo precisa nomear o ano');
+  /* Desde 19/08/2026 o rótulo nomeia a ABA QUE RESPONDEU, e não a constante:
+     carimbar 2026 numa resposta de 2025 seria o defeito de 18/08 invertido. */
+  assert.ok(
+    /todas as cargas de \$\{anoPedido\}/.test(fonte),
+    'o rótulo precisa nomear o ano que de fato respondeu',
+  );
 });

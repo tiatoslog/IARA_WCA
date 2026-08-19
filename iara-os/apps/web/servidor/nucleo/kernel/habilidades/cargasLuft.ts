@@ -15,8 +15,12 @@
 import type { Habilidade } from '../Habilidade';
 import {
   ANO_VIVO,
+  ANOS_LIDOS,
   agregarCargas,
+  anoCitado,
   anoForaDoAlcance,
+  cargasDoAno,
+  type AnoLido,
   cargasNoPeriodo,
   contarCargas,
   contarDistintos,
@@ -28,6 +32,7 @@ import {
   valorMedio,
   type AgruparPor,
 } from '../../ClientePlanilhaOcis';
+import { deCoberturaDeJoin } from '../Cobertura';
 import { interpretarPeriodo } from '../PeriodoOperacional';
 import { calcularMargem, margemMediaDasRotas, margemPorDimensao } from '../../MargemOperacional';
 import { DIMENSOES_SEM_COLUNA, LACUNAS_DE_COLUNA, SAIDA_DA_LACUNA } from '../ContratoFactual';
@@ -404,6 +409,13 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
         sinonimos: SINONIMOS_AGRUPAMENTO,
       },
       metrica: { tipo: 'texto', padrao: 'contagem', dentre: METRICAS, sinonimos: SINONIMOS_METRICA },
+      /**
+       * QUAL ABA LER. Vazio = a aba viva, que é o universo padrão e continua
+       * sendo declarado na resposta. Um ano fora da lista é recusado pelo
+       * esquema antes de qualquer conta — e `recusaPorAno` continua barrando o
+       * que a frase citar sem passar por aqui.
+       */
+      ano: { tipo: 'texto', padrao: '', dentre: ['', ...ANOS_LIDOS] },
     },
   },
   indisponivelPorque() {
@@ -432,11 +444,26 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       };
     }
 
-    const r = await todasAsCargas();
+    /**
+     * QUAL ABA RESPONDE — e a frase crua vale mais que o parâmetro.
+     *
+     * O ano vem do `ano` quando a LLM o passou, e da FRASE quando ela o largou
+     * pelo caminho. A precedência é essa porque o caso perigoso sempre foi o
+     * segundo: "quantas cargas em 2025?" chegando sem nada, o universo do ano
+     * vivo respondendo, e o número saindo rotulado como se fosse de 2025.
+     *
+     * Sem ano em lugar nenhum, o universo continua sendo a aba viva — e a
+     * resposta continua DIZENDO isso. Mudar o padrão para "os três anos juntos"
+     * trocaria o significado de toda resposta já verificada sem ninguém pedir.
+     */
+    const anoPedido =
+      (String(ctx.parametros.ano ?? '').trim() as AnoLido | '') || anoCitado(ctx.enunciado) || ANO_VIVO;
+
+    const r = await cargasDoAno(anoPedido);
     if (!r.ok) {
       return {
         texto: r.texto,
-        detalhe: proveniencia({ fonte: 'planilha LUFT', resultado: 'indisponivel', cache_usado: String(r.fonte?.cache ?? false) }),
+        detalhe: proveniencia({ fonte: 'planilha LUFT', aba: anoPedido, resultado: 'indisponivel', cache_usado: String(r.fonte?.cache ?? false) }),
         resolveu: false,
       };
     }
@@ -447,12 +474,16 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     /* O RÓTULO NOMEIA O ANO. "todas as cargas cadastradas" fez a IARA responder
        "2681 cargas no total" quando 2681 é o total de 2026 e a planilha tem
        10.777 — o ano estava na procedência e não na fala. Ver `ANO_VIVO`. */
-    const rotuloPeriodo = periodo ? periodo.rotulo : `todas as cargas de ${ANO_VIVO}`;
+    const rotuloPeriodo = periodo
+      ? `${periodo.rotulo}${anoPedido === ANO_VIVO ? '' : ` de ${anoPedido}`}`
+      : `todas as cargas de ${anoPedido}`;
 
     /** Comum às duas saídas (agregada e detalhada) — a mesma proveniência, os mesmos campos. */
     const baseProveniencia = {
-      fonte: '2026',
-      universo: 'todasAsCargas',
+      /* A ABA QUE RESPONDEU, e não a constante. Carimbar '2026' numa resposta
+         de 2025 seria o mesmo defeito de 18/08 com o sinal trocado. */
+      fonte: anoPedido,
+      universo: `cargasDoAno(${anoPedido})`,
       registros_lidos: r.cargas.length,
       registros_usados: cargas.length,
       cache: r.fonte?.cache ?? false,
@@ -526,7 +557,42 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
           };
         }
         const media = margemMediaDasRotas(cargas, t.tabela);
+        /**
+         * O MESMO FATO, DUAS VEZES — e de propósito.
+         *
+         * `dizerCobertura` acima escreve a cobertura para o operador ler;
+         * `evidencias` a entrega TIPADA para o kernel contestar. Parece
+         * duplicação e não é: a frase é redação, e redação não pode ser
+         * consultada por código. Enquanto a cobertura existia só como string,
+         * o kernel não tinha como saber que ela era 88% e portanto não tinha
+         * como recusar uma afirmação sobre a operação inteira, calcular
+         * confiança ou se abster. Ver `MotorCritica`.
+         *
+         * A procedência é `fato` e não `fato_verificado`: a planilha é base
+         * determinística da casa (`Verdade.ts`), mas ninguém conferiu este
+         * número contra o mundo depois de calculá-lo.
+         */
+        const recorteDaMargem = [
+          {
+            dimensao: 'periodo',
+            valor: periodo ? `${periodo.inicio}..${periodo.fim}` : `ano ${ANO_VIVO}`,
+          },
+        ];
+        const coberturaDaMargem = deCoberturaDeJoin(m.cobertura, recorteDaMargem);
+        const instanteDaMargem = new Date().toISOString();
+        const evidenciaBase = {
+          fonte: 'planilha_luft+tabela_trechos',
+          procedencia: 'fato' as const,
+          relevancia: 'direta' as const,
+          instante: instanteDaMargem,
+          cobertura: coberturaDaMargem,
+        };
         return {
+          evidencias: [
+            { ...evidenciaBase, metrica: 'margem_bruta_pct', valor: m.percentual_bruto, unidade: '%' },
+            { ...evidenciaBase, metrica: 'receita', valor: Math.round(m.receita), unidade: 'R$' },
+            { ...evidenciaBase, metrica: 'custo', valor: Math.round(m.custo), unidade: 'R$' },
+          ],
           texto:
             `${rotuloPeriodo}: margem bruta de ${formatarReal(m.resultado_bruto)}, ` +
             `que é ${m.percentual_bruto.toFixed(1)}% sobre ${formatarReal(m.receita)} faturados. ` +

@@ -100,6 +100,14 @@ export interface ContratoFactual {
    * `interpretarPeriodo` e as duas cópias divergiriam.
    */
   readonly periodo: { readonly tipo: 'implicito' | 'explicito'; readonly expressao: string };
+  /**
+   * A ABA que responde. Vazio = a aba viva, e a resposta DIZ qual é.
+   *
+   * Ano é slot próprio e não expressão de período porque as duas coisas se
+   * compõem: "quantas cargas essa semana em 2025" tem as duas. Enfiar o ano na
+   * expressão faria `interpretarPeriodo` receber "essa semana 2025" e recusar.
+   */
+  readonly ano: string;
   /** Ausência nunca é entidade. Ver `dimensaoAusente`. */
   readonly politica_nulo: 'excluir';
   readonly fonte: 'cargas_luft';
@@ -424,6 +432,25 @@ const EXCETO: ReadonlyArray<{ re: RegExp; porque: string }> = [
 
 const HABILIDADE = 'consultar_estatisticas_cargas_luft';
 
+/**
+ * O ANO CITADO, quando é um dos que a leitura alcança.
+ *
+ * Slot SEPARADO do período porque os dois se compõem: "quantas cargas essa
+ * semana em 2025" tem os dois, e enfiar o ano na expressão faria
+ * `interpretarPeriodo` receber "essa semana 2025" e recusar a frase inteira.
+ *
+ * Ano fora da lista NÃO é tratado aqui: continua indo para `recusaPorAno`
+ * dentro da habilidade, que já sabe dizer o que alcança e o que não. Uma
+ * segunda recusa aqui seria a mesma regra em dois lugares.
+ */
+const ANOS_QUE_A_LEITURA_ALCANCA = ['2026', '2025', '2024'] as const;
+
+function anoDaFrase(t: string): string {
+  const achados = t.match(/\b(20[12]\d)\b/g);
+  if (!achados) return '';
+  return achados.find((a) => (ANOS_QUE_A_LEITURA_ALCANCA as readonly string[]).includes(a)) ?? '';
+}
+
 function periodoDaFrase(t: string): { tipo: 'implicito' | 'explicito'; expressao: string } {
   const m = t.match(EXPRESSAO_DE_PERIODO);
   return m ? { tipo: 'explicito' as const, expressao: m[0] } : { tipo: 'implicito' as const, expressao: '' };
@@ -435,6 +462,7 @@ function montar(
   dimensao: AgruparPor,
   metrica: MetricaFactual,
   periodo: { tipo: 'implicito' | 'explicito'; expressao: string },
+  ano = '',
 ): ContratoFactual {
   return {
     operacao,
@@ -446,10 +474,12 @@ function montar(
     politica_nulo: 'excluir',
     fonte: 'cargas_luft',
     habilidade: HABILIDADE,
+    ano,
     parametros: {
       periodo: periodo.expressao,
       agrupar_por: dimensao,
       metrica,
+      ano,
     },
   };
 }
@@ -533,6 +563,7 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
   }
 
   const periodo = periodoDaFrase(t);
+  const ano = anoDaFrase(t);
   /* `central` só é dimensão da planilha quando a frase fala de carga — senão a
      pergunta é sobre o CADASTRO de centrais, que tem fonte própria. */
   const dim = DIMENSOES.find((d) => d.re.test(t) && (!d.exigeCarga || contextoDaOperacao(t))) ?? null;
@@ -550,14 +581,14 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
   if (VERBO_DE_MARGEM.test(t)) {
     const alvo = explicito ?? (dim ? dim.dimensao : 'nenhum');
     const entidade = alvo === 'nenhum' ? 'operacao' : (DIMENSOES.find((d) => d.dimensao === alvo)?.entidade ?? alvo);
-    return { tipo: 'contrato', contrato: montar('MARGEM', entidade, alvo, 'margem', periodo) };
+    return { tipo: 'contrato', contrato: montar('MARGEM', entidade, alvo, 'margem', periodo, ano) };
   }
 
   /* 0. QUEM PAROU — antes de tudo, porque a frase também casa "contar". */
   if (VERBO_DE_AUSENCIA.test(t) && dim && periodo.tipo === 'explicito') {
     return {
       tipo: 'contrato',
-      contrato: montar('SEM_MOVIMENTO', dim.entidade, dim.dimensao, 'sem_movimento', periodo),
+      contrato: montar('SEM_MOVIMENTO', dim.entidade, dim.dimensao, 'sem_movimento', periodo, ano),
     };
   }
 
@@ -565,7 +596,7 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
   if (VERBO_DE_MEDIA.test(t)) {
     return {
       tipo: 'contrato',
-      contrato: montar('AVG', 'valor', explicito ?? 'nenhum', 'valor_medio', periodo),
+      contrato: montar('AVG', 'valor', explicito ?? 'nenhum', 'valor_medio', periodo, ano),
     };
   }
   if (VERBO_DE_SOMA.test(t)) {
@@ -573,8 +604,8 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
     return {
       tipo: 'contrato',
       contrato: alvo
-        ? montar('GROUP_BY', 'valor', alvo, 'valor_total', periodo)
-        : montar('SUM', 'valor', 'nenhum', 'valor_total', periodo),
+        ? montar('GROUP_BY', 'valor', alvo, 'valor_total', periodo, ano)
+        : montar('SUM', 'valor', 'nenhum', 'valor_total', periodo, ano),
     };
   }
 
@@ -582,26 +613,26 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
   if (ehRanking(t) && dim) {
     return {
       tipo: 'contrato',
-      contrato: montar('GROUP_BY', dim.entidade, dim.dimensao, 'contagem', periodo),
+      contrato: montar('GROUP_BY', dim.entidade, dim.dimensao, 'contagem', periodo, ano),
     };
   }
 
   // 5. "quantas cargas por motorista" — GROUP BY dito com "por".
   if (explicito && CARGA.test(t)) {
-    return { tipo: 'contrato', contrato: montar('GROUP_BY', 'carga', explicito, 'contagem', periodo) };
+    return { tipo: 'contrato', contrato: montar('GROUP_BY', 'carga', explicito, 'contagem', periodo, ano) };
   }
 
   // 6. Contar uma DIMENSÃO é contar entidades distintas — a pergunta do incidente.
   if (VERBO_DE_CONTAGEM.test(t) && dim) {
     return {
       tipo: 'contrato',
-      contrato: montar('COUNT_DISTINCT', dim.entidade, dim.dimensao, 'distintos', periodo),
+      contrato: montar('COUNT_DISTINCT', dim.entidade, dim.dimensao, 'distintos', periodo, ano),
     };
   }
 
   // 7. Contar cargas é contar o fato.
   if (VERBO_DE_CONTAGEM.test(t) && CARGA.test(t)) {
-    return { tipo: 'contrato', contrato: montar('COUNT', 'carga', 'nenhum', 'contagem', periodo) };
+    return { tipo: 'contrato', contrato: montar('COUNT', 'carga', 'nenhum', 'contagem', periodo, ano) };
   }
 
   return { tipo: 'fora' };
@@ -709,30 +740,56 @@ const ANO_NA_ELIPSE = /\b20[12]\d\b/;
 export function herdarContrato(bruto: string, anterior: ContratoFactual): ContratoFactual | null {
   const t = normalizar(bruto).replace(/[?!.]+$/, '').trim();
 
-  /* Dimensão primeiro: "e por motorista?" troca o eixo, não o prazo. */
+  /* Dimensão primeiro: "e por motorista?" troca o eixo, não o prazo nem o ano. */
   const dimensao = agrupamentoExplicito(t);
   if (dimensao) {
     const entidade = DIMENSOES.find((d) => d.dimensao === dimensao)?.entidade ?? dimensao;
-    return montar(anterior.operacao, entidade, dimensao, anterior.metrica, anterior.periodo);
+    return montar(
+      anterior.operacao,
+      entidade,
+      dimensao,
+      anterior.metrica,
+      anterior.periodo,
+      anterior.ano,
+    );
   }
 
   const periodo = periodoDaFrase(t);
   if (periodo.tipo === 'explicito') {
-    return montar(anterior.operacao, anterior.entidade, anterior.dimensao, anterior.metrica, periodo);
+    /* Troca o prazo e PRESERVA o ano: "e essa semana?" depois de uma pergunta
+       sobre 2025 continua falando de 2025. */
+    return montar(
+      anterior.operacao,
+      anterior.entidade,
+      anterior.dimensao,
+      anterior.metrica,
+      periodo,
+      anterior.ano,
+    );
   }
 
   /**
-   * O ANO É PERÍODO, e herdá-lo é o que faz "e em 2025?" chegar à porta que
-   * sabe recusá-lo (ou respondê-lo, quando a aba for lida). Sem isto a frase
-   * volta para o raciocínio livre, e foi de lá que saiu "preciso que você
-   * autorize a leitura desse arquivo" — um portão inventado.
+   * O ANO TROCA A ABA, e desde 19/08/2026 ele tem resposta: 2025 e 2024 são
+   * lidas. Antes esta herança existia só para a frase chegar à porta que sabia
+   * RECUSAR o ano com honestidade — sem ela, "e em 2025?" voltava ao raciocínio
+   * livre e de lá saía "preciso que você autorize a leitura desse arquivo", um
+   * portão inventado.
+   *
+   * Trocar o ano LIMPA o período: "quantas cargas essa semana" seguido de "e em
+   * 2024?" não quer dizer "esta semana de 2024" — essa semana é deste ano, e a
+   * pergunta virou sobre o ano inteiro. Manter o prazo ali devolveria zero com
+   * procedência impecável.
    */
   const ano = t.match(ANO_NA_ELIPSE);
   if (ano) {
-    return montar(anterior.operacao, anterior.entidade, anterior.dimensao, anterior.metrica, {
-      tipo: 'explicito',
-      expressao: ano[0],
-    });
+    return montar(
+      anterior.operacao,
+      anterior.entidade,
+      anterior.dimensao,
+      anterior.metrica,
+      { tipo: 'implicito', expressao: '' },
+      ano[0],
+    );
   }
 
   return null;
@@ -754,6 +811,7 @@ export function assinaturaDoContrato(c: ContratoFactual): string {
     c.metrica,
     `distinto=${c.distinto}`,
     `periodo=${c.periodo.tipo}:${c.periodo.expressao}`,
+    `ano=${c.ano || 'vivo'}`,
     `nulo=${c.politica_nulo}`,
     c.fonte,
     c.habilidade,
