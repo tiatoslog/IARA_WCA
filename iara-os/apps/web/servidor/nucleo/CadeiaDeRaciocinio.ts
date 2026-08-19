@@ -329,6 +329,56 @@ export function ordenarPorSaude<T extends { apelido: string }>(
   return [...saudaveis, ...emEspera];
 }
 
+/**
+ * QUANTOS TOKENS ESTE PEDIDO CUSTA — estimativa, e declarada como tal.
+ *
+ * QUATRO CARACTERES POR TOKEN, e a escolha do número é sobre para que LADO
+ * errar. Português corrido fica perto de 3 chars/token, então dividir por 4
+ * SUBESTIMA — a cadeia vai achar o pedido menor do que ele é e tentar elos que
+ * talvez não caibam.
+ *
+ * É o erro certo. Subestimar custa o que já custa hoje: uma ida à rede que
+ * volta 413 em ~150 ms. Superestimar custaria pular um provedor gratuito que
+ * teria funcionado — perder um cérebro por causa de uma conta de padaria. Entre
+ * gastar 150 ms e perder um elo, gasta-se os 150 ms.
+ *
+ * A conta inclui o que o cliente REALMENTE manda: persona, camada global,
+ * catálogo de capacidades, histórico e a mensagem. Deixar o histórico de fora
+ * seria estimar o turno 1 e errar todos os seguintes.
+ */
+export function estimarTokensDoPedido(pedido: PedidoRaciocinio): number {
+  /**
+   * TUDO OPCIONAL NA LEITURA, mesmo o que o contrato declara obrigatório.
+   *
+   * `historico`, `overridePersona` e `camadaGlobal` são obrigatórios no tipo e
+   * há chamador que não os passa — a bateria de roteamento é um deles, e a
+   * primeira versão deste estimador derrubou seis cenários dela com
+   * `Cannot read properties of undefined`. É o mesmo defeito que o
+   * `AbortSignal.any([undefined])` cometeu no abandono por demora, e a lição é a
+   * mesma: uma ESTIMATIVA que explode é pior que uma que erra baixo. Errando
+   * baixo, o pior caso é o comportamento de hoje — tentar um elo que não cabe.
+   */
+  const tamanho = (v: unknown): number => (typeof v === 'string' ? v.length : 0);
+  const historico = Array.isArray(pedido.historico)
+    ? pedido.historico.reduce((n, r) => n + tamanho(r?.texto), 0)
+    : 0;
+  const caracteres =
+    tamanho(pedido.mensagem) +
+    tamanho(pedido.overridePersona) +
+    tamanho(pedido.camadaGlobal) +
+    tamanho(pedido.capacidades) +
+    historico;
+  return Math.ceil(caracteres / 4);
+}
+
+/**
+ * ESTE ELO CABE? `true` quando ele não declara limite — não medir não é motivo
+ * para recusar.
+ */
+export function eloComporta(elo: ProvedorRaciocinio, tokens: number): boolean {
+  return elo.limite_entrada_tokens === undefined || tokens <= elo.limite_entrada_tokens;
+}
+
 export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
   /** O elo que respondeu por último — é o que a telemetria e o snapshot mostram. */
   private atual: ProvedorRaciocinio;
@@ -420,7 +470,31 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
      * responde "ela funcionou da última vez". São perguntas diferentes, e era a
      * segunda que faltava — ver `CARENCIA_MS`.
      */
-    const fila = ordenarPorSaude(candidatos.length > 0 ? candidatos : this.elos);
+    const porSaude = ordenarPorSaude(candidatos.length > 0 ? candidatos : this.elos);
+
+    /**
+     * O ELO QUE NÃO CABE NÃO É TENTADO — o primeiro degrau do roteamento por
+     * modelo, e o único respondível ANTES de gastar a ida à rede.
+     *
+     * A Groq gratuita tem teto de 8.000 tokens por minuto e o prompt de sistema
+     * da IARA custa ~5.000; medido em 18/08/2026, cinco chamadas seguidas deram
+     * 1 ok e 4 `429 … Limit 8000, Used 5036`, e um pedido maior deu
+     * `413 Request too large … Requested 10226`. Tentar assim mesmo é uma ida à
+     * rede cuja resposta já se sabe.
+     *
+     * PULAR NÃO É FALHAR: nada é registrado contra o elo, e ele não entra em
+     * carência. Ele não foi tentado — a mesma regra do orçamento recusando
+     * tentativa, pelo mesmo motivo (marcar carência aqui rebaixaria um provedor
+     * saudável no turno seguinte).
+     *
+     * E SE NENHUM COUBER, a fila volta inteira. "Todos os elos são pequenos
+     * demais" não pode virar "a IARA não tem cérebro nenhum" — é o mesmo
+     * argumento de `ordenarPorSaude` reordenar em vez de remover: trocar uma
+     * recusa provável por uma recusa certa não é ganho.
+     */
+    const tokens = estimarTokensDoPedido(pedido);
+    const cabem = porSaude.filter((e) => eloComporta(e, tokens));
+    const fila = cabem.length > 0 ? cabem : porSaude;
     let ultimoErro: unknown = new ProvedorIndisponivel('nenhum provedor de raciocínio disponível');
     for (const elo of fila) {
       /**

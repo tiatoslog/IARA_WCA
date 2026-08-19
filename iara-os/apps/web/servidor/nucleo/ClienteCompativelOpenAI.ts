@@ -99,12 +99,32 @@ export interface PerfilProvedorAberto {
   readonly variavelChave: string;
   readonly variavelModelo: string;
   readonly modeloPadrao: string;
+  /**
+   * QUANTO CABE NUM PEDIDO, em tokens. `undefined` = não medido, e aí a cadeia
+   * tenta — ausência de medição nunca vira recusa.
+   *
+   * MEDIDO, NUNCA COPIADO DA DOCUMENTAÇÃO. O número que vale é o que a conta
+   * DESTA instalação encontra, e ele veio das duas recusas reais de 18/08/2026:
+   *
+   *   429 · "tokens per minute (TPM): Limit 8000, Used 7066, Requested 6448"
+   *   413 · "Request too large ... on tokens per minute (TPM): Limit 8000,
+   *          Requested 10226, please reduce your message size"
+   *
+   * É teto por MINUTO, e é por isso que ele funciona como teto por pedido aqui:
+   * um turno cognitivo faz duas ou três chamadas, então um pedido que já consome
+   * quase toda a janela condena as chamadas seguintes do mesmo turno. Tratar o
+   * limite por minuto como limite por pedido é conservador na direção certa.
+   */
+  readonly limite_entrada_tokens?: number;
 }
 
 export const GROQ: PerfilProvedorAberto = {
   apelido: 'groq',
   base: 'https://api.groq.com/openai/v1',
   variavelChave: 'GROQ_API_KEY',
+  /* 8000 TPM na conta gratuita desta instalação — medido pelas recusas 429 e
+     413 de 18/08/2026, não lido da documentação. */
+  limite_entrada_tokens: 8000,
   variavelModelo: 'GROQ_MODELO',
   /**
    * `llama-3.3-70b-versatile` SAIU DO CATÁLOGO DA GROQ, e a IARA passou a 404 no
@@ -227,11 +247,14 @@ export class ClienteCompativelOpenAI implements ProvedorRaciocinio {
   readonly origem = 'nuvem' as const;
   readonly modelo: string;
   readonly apelido: string;
+  /** Repassado do perfil — ver `PerfilProvedorAberto.limite_entrada_tokens`. */
+  readonly limite_entrada_tokens?: number;
   private readonly base: string;
   private readonly chave: string | null;
 
   constructor(perfil: PerfilProvedorAberto) {
     this.apelido = perfil.apelido;
+    this.limite_entrada_tokens = perfil.limite_entrada_tokens;
     this.base = perfil.base.replace(/\/+$/, '');
     this.chave = lerConfig(perfil.variavelChave);
     this.modelo = lerConfig(perfil.variavelModelo) ?? perfil.modeloPadrao;

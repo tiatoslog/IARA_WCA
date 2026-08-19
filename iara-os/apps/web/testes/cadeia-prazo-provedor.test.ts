@@ -22,8 +22,10 @@ import {
   prazoDoPrimeiroPedaco,
   PRAZO_PRIMEIRO_PEDACO_PADRAO_MS,
   registrarSucessoProvedor,
+  estimarTokensDoPedido,
 } from '../servidor/nucleo/CadeiaDeRaciocinio';
 import { ProvedorIndisponivel, type ProvedorRaciocinio } from '../servidor/nucleo/ProvedorRaciocinio';
+import { GROQ } from '../servidor/nucleo/ClienteCompativelOpenAI';
 
 const RESPOSTA = { tokens_entrada: 1, tokens_saida: 1, cache_lido: 0, recusado: false };
 
@@ -264,5 +266,97 @@ test('C13. chamador sem `sinal` não derruba a cadeia', async () => {
     aoReceberTexto: () => {},
   } as unknown as Parameters<typeof cadeia.raciocinar>[0];
   const r = await cadeia.raciocinar(semSinal);
+  assert.equal(r.texto, 'respondeu');
+});
+
+// ===========================================================================
+// ROTEAMENTO POR MODELO — degrau 1: o elo que não cabe não é tentado
+// ===========================================================================
+
+test('C14. elo pequeno demais é PULADO, e quem cabe responde', async () => {
+  /**
+   * Medido em 18/08/2026: a Groq gratuita tem teto de 8.000 tokens por minuto e
+   * o prompt de sistema da IARA custa ~5.000. Cinco chamadas seguidas deram 1 ok
+   * e 4 `429 … Limit 8000, Used 5036`; um pedido maior deu `413 Request too
+   * large … Requested 10226`. Tentar assim mesmo é ida à rede cuja resposta já
+   * se sabe — e ela era a PRIMEIRA da fila.
+   */
+  const pequeno = eloLento('pequeno', 1, 'não deveria responder');
+  const grande = eloLento('grande', 1, 'coube aqui');
+  const cadeia = new CadeiaDeRaciocinio([
+    { ...pequeno, limite_entrada_tokens: 100 } as ProvedorRaciocinio,
+    grande,
+  ]);
+  /* ~500 caracteres → ~125 tokens estimados: não cabe em 100, cabe no sem teto. */
+  const p = pedido(new AbortController().signal);
+  const gordo = { ...p, overridePersona: 'x'.repeat(500) };
+  const r = await cadeia.raciocinar(gordo);
+  assert.equal(r.texto, 'coube aqui');
+});
+
+test('C15. sem limite declarado o elo é tentado — não medir não é recusar', async () => {
+  const cadeia = new CadeiaDeRaciocinio([eloLento('sem-teto', 1, 'fui tentado')]);
+  const p = pedido(new AbortController().signal);
+  const r = await cadeia.raciocinar({ ...p, overridePersona: 'x'.repeat(100_000) });
+  assert.equal(r.texto, 'fui tentado');
+});
+
+test('C16. se NENHUM elo cabe, a fila volta inteira — recusa provável não vira certa', async () => {
+  /* "Todos os elos são pequenos demais" não pode virar "a IARA não tem cérebro
+     nenhum". Mesmo argumento de `ordenarPorSaude` reordenar em vez de remover. */
+  const cadeia = new CadeiaDeRaciocinio([
+    { ...eloLento('a', 1, 'tentei mesmo assim'), limite_entrada_tokens: 10 } as ProvedorRaciocinio,
+    { ...eloLento('b', 1, 'eu também'), limite_entrada_tokens: 10 } as ProvedorRaciocinio,
+  ]);
+  const p = pedido(new AbortController().signal);
+  const r = await cadeia.raciocinar({ ...p, overridePersona: 'x'.repeat(4_000) });
+  assert.equal(r.texto, 'tentei mesmo assim');
+});
+
+test('C17. a estimativa conta o histórico, não só a mensagem do turno', async () => {
+  /* Estimar só a mensagem acertaria o turno 1 e erraria todos os seguintes —
+     e é justamente ao longo da conversa que o pedido cresce até estourar. */
+  const base = pedido(new AbortController().signal);
+  const semHistorico = estimarTokensDoPedido(base);
+  const comHistorico = estimarTokensDoPedido({
+    ...base,
+    historico: [{ papel: 'operador', texto: 'y'.repeat(4_000) }] as never,
+  });
+  assert.ok(comHistorico > semHistorico + 900, 'o histórico não entrou na conta');
+});
+
+test('C18. a estimativa erra para o lado barato: subestima', () => {
+  /* Português corrido fica perto de 3 chars/token; dividir por 4 subestima de
+     propósito. Subestimar custa uma ida à rede de ~150 ms; superestimar custaria
+     perder um provedor gratuito que teria funcionado. */
+  const p = pedido(new AbortController().signal);
+  const texto = 'a'.repeat(1200);
+  assert.equal(estimarTokensDoPedido({ ...p, overridePersona: texto }), Math.ceil((1200 + p.mensagem.length) / 4));
+});
+
+test('C19. o teto medido da Groq está declarado no perfil', () => {
+  /* Se alguém apagar o número, a cadeia volta a tentar um elo que não cabe e
+     ninguém vai notar até medir de novo. */
+  assert.equal(GROQ.limite_entrada_tokens, 8000);
+});
+
+test('C20. pedido incompleto não derruba a estimativa', async () => {
+  /**
+   * `historico`, `overridePersona` e `camadaGlobal` são obrigatórios no contrato
+   * e há chamador que não os passa. A primeira versão do estimador derrubou seis
+   * cenários da bateria de roteamento com `Cannot read properties of undefined`
+   * — o mesmo defeito que o `AbortSignal.any([undefined])` cometeu no abandono
+   * por demora, no mesmo arquivo, dois dias antes.
+   *
+   * Estimativa que explode é pior que estimativa que erra baixo.
+   */
+  const cru = { mensagem: 'oi' } as never;
+  assert.equal(estimarTokensDoPedido(cru), 1);
+
+  const cadeia = new CadeiaDeRaciocinio([eloLento('unico', 1, 'respondeu')]);
+  const r = await cadeia.raciocinar({
+    mensagem: 'oi',
+    aoReceberTexto: () => {},
+  } as never);
   assert.equal(r.texto, 'respondeu');
 });

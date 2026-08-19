@@ -98,6 +98,16 @@ export interface ProvedorRaciocinio {
    */
   readonly camada?: 'padrao' | 'premium';
   /**
+   * QUANTO CABE NUM PEDIDO, em tokens. `undefined` = não medido — e aí a cadeia
+   * tenta, porque ausência de medição nunca pode virar recusa.
+   *
+   * É o primeiro degrau do roteamento por MODELO: hoje a cadeia escolhe por
+   * saúde ("funcionou da última vez") e por camada ("vale gastar mais"). Falta
+   * a pergunta mais barata das três, que é *cabe?* — e ela é a única
+   * respondível antes de gastar a ida à rede.
+   */
+  readonly limite_entrada_tokens?: number;
+  /**
    * Existe camada premium utilizável AGORA? Opcional porque um provedor único
    * não tem para onde escalar — e `undefined` é a resposta honesta ali, não
    * `false` disfarçado de política.
