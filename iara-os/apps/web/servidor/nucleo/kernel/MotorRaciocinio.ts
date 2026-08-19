@@ -19,6 +19,7 @@ import type { Plano, Passo, Percepcao } from './Evento';
 import type { ManifestoHabilidade } from './Habilidade';
 import { criarProvedorRaciocinio } from '../FabricaRaciocinio';
 import { ProvedorIndisponivel, type ProvedorRaciocinio } from '../ProvedorRaciocinio';
+import { registrarCapacidadeProvedor } from '../CadeiaDeRaciocinio';
 import { PorteiroAutorizacao } from './PorteiroAutorizacao';
 import type { RegistroMemoria } from '../../../lib/estado';
 
@@ -190,6 +191,8 @@ export class MotorRaciocinio {
         overridePersona:
           'MODO PLANEJADOR: responda somente com o JSON pedido. Sem saudação, sem explicação, sem markdown.',
         camadaGlobal: '',
+        /* Para o roteamento saber o que está sendo pedido — ver `TarefaDoModelo`. */
+        tarefa: 'plano' as const,
         sinal,
         aoTentarProvedor: orcamento?.aoTentarProvedor,
         aoReceberTexto: (p) => {
@@ -203,7 +206,26 @@ export class MotorRaciocinio {
       return null;
     }
 
-    return this.interpretarPlano(bruto, disponiveis);
+    /**
+     * O QUE SE OBSERVOU SOBRE SABER PLANEJAR — e a distinção que ela exige.
+     *
+     * Chegar aqui significa que o modelo RESPONDEU: os caminhos de provedor
+     * indisponível, cancelamento e erro já devolveram `null` lá em cima. Então
+     * um `null` daqui para baixo é sobre a FORMA do texto, não sobre a saúde do
+     * elo — foi ele que produziu algo que `interpretarPlano` não conseguiu usar.
+     *
+     * Medido em 19/08/2026, é justamente a distinção que faltava: as falhas de
+     * planejamento dos elos gratuitos vinham em 109–425 ms, rápidas demais para
+     * terem chegado ao modelo. Eram cota e 503, não formato. Contá-las como
+     * incapacidade condenaria elos bons por problema de conta.
+     *
+     * `bruto` vazio também não acusa: sem texto não houve tentativa de formato.
+     */
+    const plano = this.interpretarPlano(bruto, disponiveis);
+    if (bruto.trim().length > 0) {
+      registrarCapacidadeProvedor(this.provedor.apelido, 'plano', plano !== null);
+    }
+    return plano;
   }
 
   /**

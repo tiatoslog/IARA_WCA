@@ -29,9 +29,13 @@ import {
   registrarLatenciaProvedor,
   registrarFalhaProvedor,
   limparFalhasObservadas,
+  capacidadeObservada,
+  limparCapacidadesObservadas,
+  registrarCapacidadeProvedor,
 } from '../servidor/nucleo/CadeiaDeRaciocinio';
 import { ProvedorIndisponivel, type ProvedorRaciocinio } from '../servidor/nucleo/ProvedorRaciocinio';
 import { GROQ } from '../servidor/nucleo/ClienteCompativelOpenAI';
+import { MotorRaciocinio } from '../servidor/nucleo/kernel/MotorRaciocinio';
 
 const RESPOSTA = { tokens_entrada: 1, tokens_saida: 1, cache_lido: 0, recusado: false };
 
@@ -509,4 +513,176 @@ test('C28. saúde vence latência: rápido e quebrado continua quebrado', async 
   const r = await cadeia.raciocinar(pedido(new AbortController().signal));
   assert.equal(r.texto, 'eu respondo');
   limparFalhasObservadas();
+});
+
+// ===========================================================================
+// ROTEAMENTO POR MODELO — degrau 3: capacidade OBSERVADA por tarefa
+// ===========================================================================
+
+test('C29. quem já falhou em produzir plano desce na fila DE PLANO', () => {
+  limparLatenciasObservadas();
+  limparFalhasObservadas();
+  limparCapacidadesObservadas();
+  registrarCapacidadeProvedor('naoPlaneja', 'plano', false);
+  registrarCapacidadeProvedor('planeja', 'plano', true);
+
+  const fila = [{ apelido: 'naoPlaneja' }, { apelido: 'planeja' }];
+  assert.deepEqual(
+    ordenarPorLatencia(fila, 'plano').map((e) => e.apelido),
+    ['planeja', 'naoPlaneja'],
+  );
+});
+
+test('C30. a incapacidade é POR TAREFA — não contamina a outra', () => {
+  /* Um elo que não devolve JSON parseável pode redigir português muito bem. */
+  limparLatenciasObservadas();
+  limparFalhasObservadas();
+  limparCapacidadesObservadas();
+  registrarCapacidadeProvedor('naoPlaneja', 'plano', false);
+
+  const fila = [{ apelido: 'naoPlaneja' }, { apelido: 'outro' }];
+  assert.deepEqual(
+    ordenarPorLatencia(fila, 'resposta').map((e) => e.apelido),
+    ['naoPlaneja', 'outro'],
+    'a falha em planejar rebaixou o elo na fila de resposta',
+  );
+});
+
+test('C31. capacidade vence latência: rápido e inútil continua inútil', () => {
+  /* Um elo que não devolve JSON parseável não fica melhor por devolvê-lo
+     depressa — a chamada inteira vira token gasto do mesmo jeito. */
+  limparLatenciasObservadas();
+  limparFalhasObservadas();
+  limparCapacidadesObservadas();
+  registrarLatenciaProvedor('rapidoInutil', 200);
+  registrarLatenciaProvedor('lentoUtil', 4_000);
+  registrarCapacidadeProvedor('rapidoInutil', 'plano', false);
+  registrarCapacidadeProvedor('lentoUtil', 'plano', true);
+
+  assert.deepEqual(
+    ordenarPorLatencia([{ apelido: 'rapidoInutil' }, { apelido: 'lentoUtil' }], 'plano').map(
+      (e) => e.apelido,
+    ),
+    ['lentoUtil', 'rapidoInutil'],
+  );
+});
+
+test('C32. uma falha isolada não condena: rebaixa, nunca remove', () => {
+  /* Falha de formato pode ser sorteio de temperatura. Excluir por uma amostra
+     seria sobreajuste — mesma disciplina de `ordenarPorSaude`. */
+  limparCapacidadesObservadas();
+  registrarCapacidadeProvedor('oscilante', 'plano', false);
+  assert.equal(capacidadeObservada('oscilante', 'plano'), false);
+  registrarCapacidadeProvedor('oscilante', 'plano', true);
+  assert.equal(capacidadeObservada('oscilante', 'plano'), true, 'não voltou ao normal ao acertar');
+
+  const fila = [{ apelido: 'oscilante' }, { apelido: 'outro' }];
+  assert.equal(ordenarPorLatencia(fila, 'plano')[0].apelido, 'oscilante', 'foi removido da fila');
+});
+
+test('C33. sem observação, sem opinião — nem para plano nem para resposta', () => {
+  limparLatenciasObservadas();
+  limparFalhasObservadas();
+  limparCapacidadesObservadas();
+  assert.equal(capacidadeObservada('desconhecido', 'plano'), null);
+  const fila = [{ apelido: 'primeiro' }, { apelido: 'segundo' }];
+  assert.deepEqual(
+    ordenarPorLatencia(fila, 'plano').map((e) => e.apelido),
+    ['primeiro', 'segundo'],
+  );
+});
+
+test('C34. falha de PROVEDOR não vira incapacidade de planejar', async () => {
+  /**
+   * A DISTINÇÃO QUE SUSTENTA ESTA FATIA INTEIRA, e ela veio de medição:
+   * 19/08/2026, os elos gratuitos falharam em planejar em 109–425 ms — rápido
+   * demais para terem chegado ao modelo. Eram cota e 503, não formato. Contar
+   * isso como "não sabe planejar" condenaria elos bons por problema de conta, e
+   * o rebaixamento duraria o processo inteiro.
+   *
+   * Chegar ao registro exige que o modelo tenha RESPONDIDO algo.
+   */
+  limparCapacidadesObservadas();
+
+  const queExplode = {
+    apelido: 'caiu',
+    origem: 'nuvem' as const,
+    modelo: 'm',
+    disponivel: true,
+    async raciocinar() {
+      throw new Error('groq respondeu 429: rate limit exceeded');
+    },
+  };
+  const plano = await new MotorRaciocinio(queExplode).planejar(
+    { bruto: 'faça duas coisas', tipo: 'comando', confianca: 0.3, ancoras: [] } as never,
+    [] as never,
+    new AbortController().signal,
+  );
+  assert.equal(plano, null);
+  assert.equal(
+    capacidadeObservada('caiu', 'plano'),
+    null,
+    'a queda do provedor foi registrada como incapacidade de formato',
+  );
+});
+
+test('C35. texto que NÃO vira plano é registrado como incapacidade', async () => {
+  /* O simétrico: aqui o modelo respondeu, e o que ele respondeu não serve. */
+  limparCapacidadesObservadas();
+
+  const prosa = {
+    apelido: 'prosista',
+    origem: 'nuvem' as const,
+    modelo: 'm',
+    disponivel: true,
+    async raciocinar(p: { aoReceberTexto: (t: string) => void }) {
+      p.aoReceberTexto('Claro! Vou te ajudar com isso, sem problema nenhum.');
+      return {
+        texto: 'Claro! Vou te ajudar com isso, sem problema nenhum.',
+        tokens_entrada: 1,
+        tokens_saida: 1,
+        cache_lido: 0,
+        recusado: false,
+      };
+    },
+  };
+  const plano = await new MotorRaciocinio(prosa as never).planejar(
+    { bruto: 'faça duas coisas', tipo: 'comando', confianca: 0.3, ancoras: [] } as never,
+    [] as never,
+    new AbortController().signal,
+  );
+  assert.equal(plano, null);
+  assert.equal(capacidadeObservada('prosista', 'plano'), false);
+});
+
+test('C36. resposta VAZIA não é incapacidade — sem texto não houve tentativa de formato', async () => {
+  /**
+   * O caso que a guarda `bruto.trim().length > 0` protege, e que o C34 não
+   * alcança: o provedor não lança, ele devolve nada. Acontece com filtro de
+   * conteúdo e com truncamento. `interpretarPlano('')` devolve `null` como
+   * devolveria para prosa, e sem a guarda os dois virariam a mesma observação —
+   * "não sabe planejar" — sendo que num deles o modelo não chegou a tentar.
+   */
+  limparCapacidadesObservadas();
+
+  const mudo = {
+    apelido: 'mudo',
+    origem: 'nuvem' as const,
+    modelo: 'm',
+    disponivel: true,
+    async raciocinar() {
+      return { texto: '', tokens_entrada: 1, tokens_saida: 0, cache_lido: 0, recusado: false };
+    },
+  };
+  const plano = await new MotorRaciocinio(mudo as never).planejar(
+    { bruto: 'faça duas coisas', tipo: 'comando', confianca: 0.3, ancoras: [] } as never,
+    [] as never,
+    new AbortController().signal,
+  );
+  assert.equal(plano, null);
+  assert.equal(
+    capacidadeObservada('mudo', 'plano'),
+    null,
+    'silêncio do modelo foi contado como incapacidade de formato',
+  );
 });

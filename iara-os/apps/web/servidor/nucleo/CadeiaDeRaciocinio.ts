@@ -288,6 +288,60 @@ export function limparLatenciasObservadas(): void {
   latencias.clear();
 }
 
+
+/**
+ * SABE FAZER ESTE TIPO DE TRABALHO? — a capacidade OBSERVADA por tarefa.
+ *
+ * A tentação, ao falar em "escolher modelo por tarefa", é escrever no código que
+ * tal modelo planeja melhor. Isso seria opinião com cara de configuração, e
+ * envelheceria no dia em que o provedor trocasse o modelo por baixo — foi
+ * exatamente o que aconteceu com o `llama-3.3-70b-versatile` da Groq, fixado no
+ * código e descomissionado sem aviso.
+ *
+ * Então nada é declarado: registra-se o que se VIU. Um elo que devolveu texto e
+ * esse texto não virou plano é um elo que, para `plano`, falhou — e a próxima
+ * vez ele desce na fila daquela tarefa.
+ *
+ * SÓ CONTA QUANDO O MODELO RESPONDEU. Provedor que estourou cota não disse nada
+ * sobre saber planejar; contá-lo como incapaz condenaria um elo bom por um
+ * problema de conta. É a mesma linha que separa latência de falha rápida.
+ *
+ * REBAIXA, NUNCA REMOVE. Uma falha de formato pode ser sorteio de temperatura, e
+ * excluir por uma amostra é sobreajuste. O elo incapaz vai para o fim do grupo e
+ * continua sendo tentado quando os de cima falharem — mesma disciplina de
+ * `ordenarPorSaude`, pelo mesmo motivo.
+ */
+export type TarefaDoModelo = 'plano' | 'resposta';
+
+const capacidades = new Map<string, { ok: number; falhou: number }>();
+const chaveCapacidade = (apelido: string, tarefa: TarefaDoModelo): string => `${apelido}:${tarefa}`;
+
+export function registrarCapacidadeProvedor(
+  apelido: string,
+  tarefa: TarefaDoModelo,
+  conseguiu: boolean,
+): void {
+  const chave = chaveCapacidade(apelido, tarefa);
+  const atual = capacidades.get(chave) ?? { ok: 0, falhou: 0 };
+  if (conseguiu) atual.ok += 1;
+  else atual.falhou += 1;
+  capacidades.set(chave, atual);
+}
+
+/**
+ * `null` = nunca observado, e aí não há opinião. `false` = já falhou mais vezes
+ * do que acertou nesta tarefa.
+ */
+export function capacidadeObservada(apelido: string, tarefa: TarefaDoModelo): boolean | null {
+  const c = capacidades.get(chaveCapacidade(apelido, tarefa));
+  if (!c || c.ok + c.falhou === 0) return null;
+  return c.ok >= c.falhou;
+}
+
+export function limparCapacidadesObservadas(): void {
+  capacidades.clear();
+}
+
 /**
  * ORDENA POR LATÊNCIA DENTRO DA CAMADA — e o "dentro da camada" é a parte que
  * impede um estrago.
@@ -316,6 +370,7 @@ export function limparLatenciasObservadas(): void {
  */
 export function ordenarPorLatencia<T extends { apelido: string; camada?: 'padrao' | 'premium' }>(
   elos: readonly T[],
+  tarefa?: TarefaDoModelo,
 ): T[] {
   const fora = [...elos];
   /**
@@ -337,15 +392,42 @@ export function ordenarPorLatencia<T extends { apelido: string; camada?: 'padrao
   for (const g of grupos) {
     /* As POSIÇÕES ocupadas por elos medidos deste grupo. Só elas são
        reescritas — tudo o mais fica exatamente onde estava. */
+    /**
+     * "TER OPINIÃO" É LATÊNCIA **OU** CAPACIDADE, não só latência.
+     *
+     * A primeira versão coletava apenas quem tinha latência medida, e com isso a
+     * capacidade observada NUNCA era aplicada num elo que ainda não tinha
+     * respondido — que é exatamente o caso de quem só falhou em planejar. O
+     * teste C29 pegou: o elo que provadamente não devolve JSON continuava na
+     * frente porque ninguém sabia quanto ele demora.
+     */
+    const temOpiniao = (e: T): boolean =>
+      latenciaObservada(e.apelido) !== null ||
+      (tarefa !== undefined && capacidadeObservada(e.apelido, tarefa) !== null);
     const posicoes: number[] = [];
     for (const [i, e] of fora.entries()) {
-      if (chave(e) === g && latenciaObservada(e.apelido) !== null) posicoes.push(i);
+      if (chave(e) === g && temOpiniao(e)) posicoes.push(i);
     }
     if (posicoes.length < 2) continue;
 
+    /**
+     * CAPACIDADE ANTES DE LATÊNCIA, e a ordem entre as duas é a de sempre nesta
+     * casa: primeiro "serve?", depois "quanto custa esperar?". Um elo que não
+     * devolve JSON parseável não fica melhor por devolvê-lo depressa — a chamada
+     * inteira vira token gasto do mesmo jeito.
+     *
+     * Sem tarefa declarada ou sem observação, `incapaz` é 0 para todos e a
+     * ordenação recai inteiramente sobre a latência.
+     */
+    const incapaz = (e: T): number =>
+      tarefa && capacidadeObservada(e.apelido, tarefa) === false ? 1 : 0;
     const ordenados = posicoes
       .map((i) => fora[i])
-      .sort((a, b) => (latenciaObservada(a.apelido) ?? 0) - (latenciaObservada(b.apelido) ?? 0));
+      .sort(
+        (a, b) =>
+          incapaz(a) - incapaz(b) ||
+          (latenciaObservada(a.apelido) ?? 0) - (latenciaObservada(b.apelido) ?? 0),
+      );
     posicoes.forEach((pos, k) => {
       fora[pos] = ordenados[k];
     });
@@ -600,6 +682,7 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
      */
     const porSaude = ordenarPorLatencia(
       ordenarPorSaude(candidatos.length > 0 ? candidatos : this.elos),
+      pedido.tarefa,
     );
 
     /**

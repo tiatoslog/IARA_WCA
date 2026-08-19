@@ -42,6 +42,17 @@ export interface PedidoRaciocinio {
    * Vazio no modo planejador, que monta a própria lista com outro recorte.
    */
   capacidades?: string;
+  /**
+   * QUE TIPO DE TRABALHO ISTO É — e existe para o roteamento, não para o prompt.
+   *
+   * `plano` exige JSON parseável e nada mais: `interpretarPlano` descarta
+   * qualquer outra coisa e a chamada inteira vira token gasto. `resposta` exige
+   * português para gente ler. São exigências diferentes, e um elo pode atender
+   * uma e não a outra.
+   *
+   * Ausente significa `resposta`, que é o caso comum e o mais tolerante.
+   */
+  tarefa?: 'plano' | 'resposta';
   sinal: AbortSignal;
   /**
    * O ORÇAMENTO DO TURNO, PERGUNTADO — não importado.
