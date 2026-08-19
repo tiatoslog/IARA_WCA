@@ -118,6 +118,26 @@ export const ESTADO_INTERNO: readonly string[] = [
   'servidor/nucleo/Pareamento.ts',
   // O jornal das operações. É a AUDITORIA, não um executor — ver `Fase 3`.
   'servidor/nucleo/kernel/RegistroOperacoes.ts',
+  /**
+   * O LIVRO DA CAMADA PROATIVA — o que a IARA aprendeu sobre quando vale
+   * interromper ESTA pessoa: o que ela ignorou, o que ela rejeitou, a que horas
+   * ela trabalha, que procedimento ela repete.
+   *
+   * Passa nesta lista pela pergunta que decide todas as outras: alguém fora da
+   * IARA percebe? Não. Nada aqui manda mensagem, marca compromisso nem sai do
+   * processo — é a mesma resposta que classificou a `Agenda.ts` logo acima, e
+   * pelo mesmo raciocínio. Quando uma decisão do motor vira fala, quem fala é a
+   * própria IARA pelo canal de sempre.
+   *
+   * O que sustenta a classificação, e não é boa-fé: este módulo importa
+   * `node:fs/promises`, `node:path`, `node:crypto`, a trava, a identidade, a
+   * configuração e os tipos puros de `proativo/`. Não abre rede, não abre shell,
+   * não alcança o `AgenteLocal` e não conhece o portal — `G1` e `G2` provam isso
+   * pelo grafo, e é bom que provem: um módulo que decide falar sozinho é
+   * exatamente onde alguém, um dia, teria a ideia de fazê-lo também AGIR
+   * sozinho. Ver `DecisaoProativa.ts`, que recusa `agir` por construção.
+   */
+  'servidor/nucleo/proativo/LivroDeOcorrencias.ts',
   // Estado cognitivo em memória; nada atravessa o processo.
   'servidor/nucleo/EstadoAtomico.ts',
   'servidor/nucleo/kernel/MemoriaTrabalho.ts',

@@ -66,6 +66,22 @@ export type MedicaoDaMaquina = () => Promise<Medicao | null>;
 /** Chamado quando o vigia encontrou algo que vale interromper o operador. */
 export type AnuncioDeAviso = (aviso: Aviso) => void;
 
+/**
+ * O tique da camada proativa. Ver `proativo/MotorProativo.tique`.
+ *
+ * ENTRA COMO INJEÇÃO, e não como importação, pela mesma disciplina de `medir` e
+ * `anunciar`: o ciclo é metabolismo, e metabolismo não decide política de
+ * interrupção. Quem monta o ciclo (`Porta.ts`) é quem sabe qual operador é, onde
+ * fica o livro dele e por onde a fala sai.
+ *
+ * A CADÊNCIA É A DO TIQUE (15 s), e não a do vigia (10 min), porque este
+ * trabalho é aritmética sobre estado em memória — consolidar contadores, vencer
+ * uma pendência, agrupar assinaturas de passo. Ele só toca o disco quando há o
+ * que consolidar. Pendurá-lo na cadência do vigia faria uma proposta ignorada
+ * demorar dez minutos a mais para virar aprendizado, sem economizar nada.
+ */
+export type TiqueProativo = () => Promise<void>;
+
 export class CicloAutonomo {
   private timer: NodeJS.Timeout | null = null;
   private controle: AbortController | null = null;
@@ -90,6 +106,12 @@ export class CicloAutonomo {
      */
     private readonly medir: MedicaoDaMaquina | null = null,
     private readonly alertar: AnuncioDeAviso | null = null,
+    /**
+     * A camada proativa. Ausente = o ciclo simplesmente não a aciona — mesma
+     * escolha de `anunciar`, `medir` e `alertar`, e pela mesma razão: um ciclo
+     * sem proatividade é um ciclo que não é proativo, não um ciclo quebrado.
+     */
+    private readonly tiqueProativo: TiqueProativo | null = null,
   ) {}
 
   private readonly vigia = new Vigia();
@@ -131,6 +153,7 @@ export class CicloAutonomo {
 
       await this.entregarVencidos(sinal);
       await this.talvezVigiar(sinal);
+      await this.girarProatividade(sinal);
       await this.talvezConsolidar(sinal);
     } catch (erro) {
       if (!sinal.aborted) {
@@ -194,6 +217,25 @@ export class CicloAutonomo {
       if (aviso) this.alertar(aviso);
     } catch (erro) {
       console.warn(`[iara] vigia: ${(erro as Error).message}`);
+    }
+  }
+
+  /**
+   * O tique da camada proativa: consolidar o que foi observado e procurar
+   * oportunidade nos passos acumulados.
+   *
+   * O `catch` é o mesmo do vigia, e a razão é idêntica: este método roda ANTES
+   * da consolidação noturna, e deixar uma falha subir daqui cancelaria a
+   * consolidação da noite por causa de um disco ocupado. A camada proativa
+   * também já promete não lançar (`MotorProativo.tique`); esta é a segunda
+   * porta, para o dia em que alguém quebrar a primeira.
+   */
+  private async girarProatividade(sinal: AbortSignal): Promise<void> {
+    if (!this.tiqueProativo || sinal.aborted) return;
+    try {
+      await this.tiqueProativo();
+    } catch (erro) {
+      console.warn(`[iara] proatividade: ${(erro as Error).message}`);
     }
   }
 

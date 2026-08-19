@@ -33,6 +33,9 @@ import { lerManifestoBraco, manifestoAtualizacaoDisponivel } from '../../lib/exe
 import { papelDe } from '../nucleo/kernel/Papeis';
 import { LimiteVazao } from '../nucleo/kernel/Seguranca';
 import { esquecerLocal, registrarLocal } from '../nucleo/LocalOperador';
+import { MotorProativo } from '../nucleo/proativo/MotorProativo';
+import { livroDeOcorrencias } from '../nucleo/proativo/LivroDeOcorrencias';
+import { ocorrenciaDoVigia } from '../nucleo/proativo/DetectoresInternos';
 import {
   autenticacaoAtiva,
   identidadeLocal,
@@ -56,6 +59,13 @@ const MAX_ESPELHOS = 4;
 interface Residente {
   estado: EstadoAtomico;
   barramento: BarramentoEventos;
+  /**
+   * A camada proativa deste operador. Nasce com o primeiro espelho e vive
+   * enquanto o residente viver, como o ciclo — e pela mesma razão: ela guarda
+   * contadores e passos em memória entre um tique e outro, e um motor por tela
+   * aberta os fragmentaria em quatro contagens que nunca somam.
+   */
+  motorProativo: MotorProativo | null;
   compilador: CompiladorSnapshot | null;
   kernel: Kernel | null;
   ciclo: CicloAutonomo | null;
@@ -116,6 +126,7 @@ function residenteDe(idUsuario: string): Residente {
     r = {
       estado: new EstadoAtomico(),
       barramento: new BarramentoEventos(idUsuario),
+      motorProativo: null,
       compilador: null,
       kernel: null,
       ciclo: null,
@@ -299,6 +310,77 @@ export function conectarOperador(socket: WebSocket): void {
 
           if (!r.ciclo) {
             const dono = operador;
+
+            /**
+             * A CAMADA PROATIVA — montada aqui, com o ciclo, porque é aqui que
+             * as três coisas de que ela precisa existem ao mesmo tempo: a
+             * identidade resolvida, o barramento por onde a fala sai, e a ficha
+             * do operador no shard privado dele.
+             *
+             * `falar` publica `TAREFA_CONCLUIDA` com `responde_a: null` — o mesmo
+             * evento que o lembrete vencido e o aviso do vigia já usavam. Não é
+             * reaproveitamento por economia: é a afirmação honesta de que a IARA
+             * está falando por conta própria, e é o que impede a tela de encostar
+             * a frase embaixo de uma pergunta qualquer como se fosse a resposta
+             * dela. `rota: 'sistema_local'` e `ms: 0` continuam sendo a verdade —
+             * nasceu de política determinística, não gastou token nenhum.
+             */
+            const motor = new MotorProativo({
+              idUsuario: dono.id_usuario,
+              livro: livroDeOcorrencias,
+              preferencias: () => memoria.lerPreferencias(dono.id_usuario),
+              falar: (fala) => {
+                r.barramento.publicar({
+                  tipo: 'TAREFA_CONCLUIDA',
+                  id_mensagem: `proativo-${fala.id}`,
+                  texto: fala.texto,
+                  rota: 'sistema_local',
+                  ms: 0,
+                  responde_a: null,
+                });
+                /* Gravar no shard é o que faz a fala existir para a IARA no
+                   turno seguinte — mesma razão do lembrete: sem isto ela avisa
+                   e, trinta segundos depois, não faz ideia de que avisou. */
+                void memoria
+                  .registrar(dono.id_usuario, 'iara', fala.texto, 'sistema_local')
+                  .catch(() => undefined);
+              },
+            });
+            r.motorProativo = motor;
+
+            /**
+             * OS DOIS SINAIS QUE A CAMADA PROATIVA LÊ DO BARRAMENTO — e a razão
+             * de ela lê-los daqui em vez de ganhar um gancho dentro do `Kernel`.
+             *
+             * O barramento já carrega os dois fatos: a mensagem que o operador
+             * mandou e o passo que terminou. Pendurar um gancho no
+             * `Kernel.processar` para obter o que já passa por aqui seria criar
+             * um segundo caminho para o mesmo dado — e um caminho a mais dentro
+             * do método mais disputado do repositório, que está sendo reescrito
+             * para virar laço. Assinar o barramento é a forma que sobrevive a
+             * essa reescrita sem uma linha de conflito.
+             *
+             * Nenhum dos dois ouvintes pode derrubar quem publicou: o barramento
+             * já garante isso (`entregar` engole exceção de assinante), e os dois
+             * métodos do motor prometem não lançar por conta própria.
+             */
+            r.barramento.assinar('MENSAGEM_RECEBIDA', (evento) => {
+              void motor.observarMensagem(evento.texto);
+            });
+            /**
+             * `evento.traco` é a UNIDADE do detector de repetição, e passá-lo
+             * aqui não é zelo de auditoria: é o que impede o laço de agente de
+             * inflar a contagem quando ele entrar. Ver
+             * `DetectorDeRepeticao.RegistroPasso.traco`.
+             */
+            r.barramento.assinar('PASSO_CONCLUIDO', (evento) => {
+              motor.registrarPasso(
+                evento.passo.habilidade ?? 'raciocinio',
+                evento.passo.parametros,
+                evento.traco,
+              );
+            });
+
             r.ciclo = new CicloAutonomo(
               operador.id_usuario,
               r.estado,
@@ -361,27 +443,29 @@ export function conectarOperador(socket: WebSocket): void {
                 return relato.estado === 'sucesso' ? interpretarMedicao(relato.dados) : null;
               },
               /**
-               * O aviso sai pelo MESMO canal de qualquer outra fala da IARA,
-               * exatamente como o lembrete vencido — e pela mesma razão. Um
-               * alerta que só aparece no console técnico é um alerta não dado.
+               * O AVISO DO VIGIA PASSA A ENTRAR PELA CAMADA PROATIVA, e não mais
+               * direto no barramento.
                *
-               * `rota: 'sistema_local'` e `ms: 0` são a verdade: nasceu do
-               * vigia, não gastou token e não houve turno.
+               * O que muda, e é só isto: o aviso ganha as travas que ele não
+               * tinha — teto diário, carência global entre assuntos diferentes,
+               * janela de silêncio derivada da rotina desta pessoa, e o peso que
+               * ela demonstrou por este assunto ao longo do tempo. O vigia
+               * continua sendo quem decide que HÁ algo a dizer; a camada
+               * proativa decide se vale dizer AGORA, a esta pessoa.
+               *
+               * O que NÃO muda: as três travas do próprio vigia (autonomia,
+               * borda e carência do assunto) continuam antes de tudo isto. Um
+               * aviso barrado lá nunca chega aqui. As duas camadas são
+               * conjuntivas, e a nova só aperta.
+               *
+               * `perceber` nunca lança e nunca fala sozinho — quando decide
+               * falar, sai pelo `falar` montado logo acima, no mesmo evento
+               * `TAREFA_CONCLUIDA` de antes.
                */
               (aviso) => {
-                r.barramento.publicar({
-                  tipo: 'TAREFA_CONCLUIDA',
-                  id_mensagem: `vigia-${aviso.assunto}-${Date.now()}`,
-                  texto: aviso.texto,
-                  rota: 'sistema_local',
-                  ms: 0,
-                  /* Mesma razão do lembrete: o vigia fala por conta própria. */
-                  responde_a: null,
-                });
-                void memoria
-                  .registrar(dono.id_usuario, 'iara', aviso.texto, 'sistema_local')
-                  .catch(() => undefined);
+                void motor.perceber(ocorrenciaDoVigia(aviso));
               },
+              () => motor.tique(),
             );
             r.ciclo.iniciar();
           }

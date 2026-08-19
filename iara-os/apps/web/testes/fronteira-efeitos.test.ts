@@ -218,6 +218,25 @@ test('A4. shell e filesystem mutável continuam confinados ao AgenteLocal', () =
      * `AgenteLocal` — `G1` prova isso pelo grafo, não pela boa-fé desta linha.
      */
     path.join('servidor', 'nucleo', 'Agenda.ts'),
+    /**
+     * O LIVRO DA CAMADA PROATIVA. Escreve em `dados/proativo/`, do lado do
+     * motor, com a mesma forma dos dois acima: um arquivo por operador, caminho
+     * derivado do id canônico da SESSÃO, trava por operador e `rename` atômico.
+     *
+     * A pergunta que decide a isenção é a de sempre — alguém fora da IARA
+     * percebe? Não. O que ele guarda é o registro da IARA sobre si mesma: o que
+     * ela já disse a esta pessoa, o que a pessoa rejeitou, a que horas ela
+     * trabalha. Não abre `child_process`, não abre rede e não alcança o
+     * `AgenteLocal`; `G1` e `G2` provam isso pelo grafo, e não pela boa-fé desta
+     * linha.
+     *
+     * Vale registrar por que a isenção é MAIS delicada aqui do que nos outros:
+     * este é o único escritor do sistema acionado por um laço que roda sozinho,
+     * sem ninguém olhando. É por isso que toda coleção dele tem teto declarado e
+     * que `DecisaoProativa` recusa `agir` por construção — a preocupação certa
+     * não é que ele escreva, é que ele um dia decida.
+     */
+    path.join('servidor', 'nucleo', 'proativo', 'LivroDeOcorrencias.ts'),
     path.join('servidor', 'nucleo', 'kernel', 'RegistroOperacoes.ts'), // o próprio jornal
     /**
      * A DECLARAÇÃO da fronteira. Ela cita os nomes dos padrões proibidos dentro

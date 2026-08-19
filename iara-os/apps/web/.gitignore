@@ -25,6 +25,12 @@ dados/agenda/
 # PDFs que a extração de texto lê. Documento de cliente não entra na história do
 # repositório; a bancada de auditoria gera o dela e apaga.
 dados/documentos/
+# Livro da camada proativa: o que a IARA aprendeu sobre quando vale
+# interromper cada pessoa — o que ela ignorou, o que rejeitou, a que horas
+# trabalha. Mesma classe dos shards e da agenda; versionar isto publicaria o
+# comportamento de cada operador.
+dados/proativo/
+
 # gerados pelo beforeDevCommand do apps/desktop (ver copiar-bolha.mjs).
 # A fonte é public/marca/iara-esfera.png, essa sim versionada.
 public/bolha.html

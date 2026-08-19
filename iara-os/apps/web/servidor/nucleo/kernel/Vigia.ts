@@ -59,6 +59,23 @@ export interface Aviso {
   readonly severidade: Severidade;
   /** A frase, pronta para sair. Termina em oferta, nunca em ação. */
   readonly texto: string;
+  /**
+   * AS PARTES, e não só a frase montada.
+   *
+   * Acrescentadas quando a camada proativa passou a existir. O vigia compõe uma
+   * frase completa porque, quando ele nasceu, ele era o único que falava — e
+   * quem recebesse `texto` não teria como remontá-la. Agora existe um segundo
+   * consumidor (`MotorProativo`), que precisa do FATO e do NÚMERO separados: o
+   * resumo vira o resumo da ocorrência e a faixa vira evidência, e a frase final
+   * é composta lá conforme a decisão for alertar, sugerir ou perguntar.
+   *
+   * `texto` continua sendo a composição de sempre, byte por byte. Nada que já
+   * consumia o vigia muda — a alternativa (trocar `texto` por partes e obrigar
+   * cada consumidor a montar) teria quebrado `Porta.ts` e o teste de autonomia
+   * para ganhar simetria, que é um mau negócio.
+   */
+  readonly descricao: string;
+  readonly faixa_normal: string;
 }
 
 export class Vigia {
@@ -114,6 +131,8 @@ export class Vigia {
     return {
       assunto,
       severidade: dominante.severidade,
+      descricao: dominante.descricao,
+      faixa_normal: dominante.faixa_normal,
       /**
        * A FRASE TERMINA EM OFERTA. É a diferença entre um assistente e um
        * alarme: o vigia relata o que MEDIU (nunca uma causa — ele não
