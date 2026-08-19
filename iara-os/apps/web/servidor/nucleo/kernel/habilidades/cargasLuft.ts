@@ -38,6 +38,63 @@ const AGRUPAMENTOS: readonly AgruparPor[] = [
 ];
 
 /**
+ * COMO A OPERADORA E A LLM CHAMAM CADA AGRUPAMENTO.
+ *
+ * O DEFEITO (produção, 18/08/2026): "quantas cargas temos no total?" devolveu
+ * *"Não executei isso. (…) `agrupar_por` fora dos valores aceitos"*. A pergunta
+ * é a mais simples que existe neste domínio, e a resposta foi o nome de um
+ * parâmetro interno. O modelo tinha dito "total" — que É a palavra certa em
+ * português para "não agrupe nada" — e o enum só aceitava `nenhum`.
+ *
+ * Traduzir aqui e não afrouxar a validação: quem não estiver neste mapa
+ * continua sendo recusado, agora com o enum na mensagem. Ver
+ * `CampoEsquema.sinonimos`.
+ */
+const SINONIMOS_AGRUPAMENTO: Readonly<Record<string, AgruparPor>> = {
+  /* "sem agrupar" dito de todas as formas em que já foi dito. */
+  total: 'nenhum',
+  totais: 'nenhum',
+  nenhuma: 'nenhum',
+  none: 'nenhum',
+  null: 'nenhum',
+  geral: 'nenhum',
+  todos: 'nenhum',
+  todas: 'nenhum',
+  sem_agrupamento: 'nenhum',
+  'sem agrupamento': 'nenhum',
+  /* Plural e sinônimo de domínio — a operadora diz "por motoristas". */
+  motoristas: 'motorista',
+  condutor: 'motorista',
+  condutores: 'motorista',
+  rotas: 'rota',
+  origens: 'origem',
+  destinos: 'destino',
+  /* "cidade" sozinha é ambígua entre origem e destino: fica FORA do mapa de
+     propósito, para virar recusa com o enum na mensagem em vez de um palpite
+     que responde a pergunta errada. */
+  status_normalizada: 'status_normalizado',
+  situacao: 'status',
+  situacoes: 'status',
+};
+
+/** Mesma disciplina para a métrica: a LLM diz "soma", o enum diz `valor_total`. */
+const SINONIMOS_METRICA: Readonly<Record<string, Metrica>> = {
+  soma: 'valor_total',
+  total: 'valor_total',
+  valor: 'valor_total',
+  faturamento: 'valor_total',
+  soma_valor: 'valor_total',
+  media: 'valor_medio',
+  medio: 'valor_medio',
+  ticket_medio: 'valor_medio',
+  'ticket medio': 'valor_medio',
+  count: 'contagem',
+  quantidade: 'contagem',
+  numero: 'contagem',
+  cargas: 'contagem',
+};
+
+/**
  * Uma linha, densa, para o console técnico — `ResultadoHabilidade.detalhe`
  * é contratualmente "uma linha, nunca payload cru" (ver `Habilidade.ts`).
  * A proveniência cabe aqui como pares `chave=valor`, não como objeto
@@ -206,8 +263,13 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     idempotencia: 'leitura',
     esquema: {
       periodo: { tipo: 'texto', padrao: '' },
-      agrupar_por: { tipo: 'texto', padrao: 'nenhum', dentre: AGRUPAMENTOS },
-      metrica: { tipo: 'texto', padrao: 'contagem', dentre: METRICAS },
+      agrupar_por: {
+        tipo: 'texto',
+        padrao: 'nenhum',
+        dentre: AGRUPAMENTOS,
+        sinonimos: SINONIMOS_AGRUPAMENTO,
+      },
+      metrica: { tipo: 'texto', padrao: 'contagem', dentre: METRICAS, sinonimos: SINONIMOS_METRICA },
     },
   },
   indisponivelPorque() {

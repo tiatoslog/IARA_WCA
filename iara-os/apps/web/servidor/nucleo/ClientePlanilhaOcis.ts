@@ -51,6 +51,29 @@ const BAIXAR = 'baixar o arquivo da planilha de cargas';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const TEMPO_LIMITE_MS = 15_000;
+
+/**
+ * O TETO DA LEITURA EM MASSA — e por que não pode ser o mesmo dos metadados.
+ *
+ * O DEFEITO (produção, 18/08/2026): "quantas cargas estão cadastradas na
+ * planilha?" respondeu *"a consulta excedeu o tempo limite e não retornou o
+ * resultado"*. A mesma pergunta funcionara minutos antes — a diferença era o
+ * cache de 5 min ter expirado, o que troca uma leitura de memória por uma ida
+ * à rede.
+ *
+ * E as idas à rede daqui não são do mesmo tamanho. `driveItem` e `usedRange`
+ * devolvem alguns bytes de metadado; `range(address=…)` traz ~2700 linhas × 29
+ * colunas, e o caminho de `/content` baixa o ARQUIVO INTEIRO — 22 abas, três
+ * anos de operação. Governar as quatro com um teto só significa dimensionar o
+ * teto pela chamada leve e cortar a pesada no meio, que foi exatamente o que
+ * aconteceu.
+ *
+ * Sessenta segundos porque a alternativa, para quem pergunta, é não ter
+ * resposta: o cache expirado não vira número velho servido como novo (ver
+ * `falhaNaLeitura` — essa política fica de pé), vira ausência. Esperar meio
+ * minuto por um dado correto é pior que instantâneo e muito melhor que nada.
+ */
+const TEMPO_LIMITE_LEITURA_MS = 60_000;
 const ABA_VIVA = '2026';
 /** Linha 1 é cabeçalho; dado real começa na 5 (linhas 2-4 são sub-cabeçalho/resumo). */
 const PRIMEIRA_LINHA_DE_DADO = 5;
@@ -213,9 +236,11 @@ async function lerRange(
     `${GRAPH}/drives/${loc.driveId}/items/${loc.itemId}/workbook/worksheets('${encodeURIComponent(aba)}')` +
     `/range(address='${endereco}')?$select=values`;
   try {
+    /* Leitura em massa: ~2700 linhas × 29 colunas. Teto próprio — ver
+       `TEMPO_LIMITE_LEITURA_MS`. */
     const resposta = await fetchComRetentativa(caminho, {
       headers: { Authorization: `Bearer ${t}` },
-      signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
+      signal: AbortSignal.timeout(TEMPO_LIMITE_LEITURA_MS),
     });
     if (!resposta.ok) {
       return { ok: false, motivo: classificarStatusGraph(resposta.status, LER_ABA(aba)).frase };
@@ -245,7 +270,9 @@ async function baixarEParsearArquivo(
   try {
     const resposta = await fetchComRetentativa(
       `${GRAPH}/drives/${loc.driveId}/items/${loc.itemId}/content`,
-      { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_MS) },
+      /* Baixa o ARQUIVO INTEIRO — 22 abas, três anos. É a chamada mais pesada
+         do módulo; teto próprio, ver `TEMPO_LIMITE_LEITURA_MS`. */
+      { headers: { Authorization: `Bearer ${t}` }, signal: AbortSignal.timeout(TEMPO_LIMITE_LEITURA_MS) },
     );
     if (!resposta.ok) {
       return { ok: false, motivo: classificarStatusGraph(resposta.status, BAIXAR).frase };
