@@ -155,9 +155,11 @@ test(
       assert.equal(r.resolveu, true, r.texto);
       assert.match(r.texto, /Total cadastrado.*: 4 cargas/, `esperava 4 no total: "${r.texto}"`);
       assert.match(r.texto, /No período: 3 cargas/, `esperava 3 no período: "${r.texto}"`);
-      assert.match(r.texto, /1\. CICLANO — 2 cargas/, `esperava CICLANO no topo: "${r.texto}"`);
-      assert.match(r.texto, /FINALIZADO — 2/, `esperava status normalizado agregado: "${r.texto}"`);
-      assert.match(r.texto, /PAGO — 1/, `esperava PAGO só com a carga do período: "${r.texto}"`);
+      /* Dois-pontos, e não travessão: a operadora pediu em 19/08/2026 que a fala
+         parasse de soar artificial, e o travessão era o que mais aparecia. */
+      assert.match(r.texto, /1\. CICLANO: 2 cargas/, `esperava CICLANO no topo: "${r.texto}"`);
+      assert.match(r.texto, /FINALIZADO: 2/, `esperava status normalizado agregado: "${r.texto}"`);
+      assert.match(r.texto, /PAGO: 1/, `esperava PAGO só com a carga do período: "${r.texto}"`);
     } finally {
       globalThis.fetch = fetchOriginal;
     }

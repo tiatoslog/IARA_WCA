@@ -206,8 +206,8 @@ function recusaPorAno(
   return {
     texto:
       `Não consigo responder sobre ${anoFora}: eu leio só a aba "${ANO_VIVO}" da planilha. ` +
-      `A aba "${anoFora}" existe no mesmo arquivo, mas está fora do meu alcance nesta versão — ` +
-      `ela tem outro desenho de colunas, e lê-la com o mapa de ${ANO_VIVO} me faria devolver ` +
+      `A aba "${anoFora}" existe no mesmo arquivo, mas está fora do meu alcance nesta versão. ` +
+      `Ela tem outro desenho de colunas, e lê-la com o mapa de ${ANO_VIVO} me faria devolver ` +
       'número errado em vez de nenhum. ' +
       `Se a pergunta valer para ${ANO_VIVO}, é só me dizer.`,
     detalhe: proveniencia({
@@ -476,7 +476,7 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       const semValor = tudo ? tudo.contagem - tudo.com_valor : 0;
       const ressalvaMedia =
         semValor > 0
-          ? ` — ${semValor} carga${semValor === 1 ? ' ficou' : 's ficaram'} de fora por não ter valor lançado`
+          ? `. ${semValor} carga${semValor === 1 ? ' ficou' : 's ficaram'} de fora por não ter valor lançado`
           : '';
 
       const texto =
@@ -525,7 +525,7 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       const rotulo = NOME_DA_DIMENSAO[agruparPor];
       const ressalva =
         d.ausentes > 0
-          ? ` — ${d.ausentes} carga${d.ausentes === 1 ? '' : 's'} sem ${rotulo.um} preenchido, fora dessa conta`
+          ? `. Fora dessa conta ${d.ausentes === 1 ? 'ficou 1 carga' : `ficaram ${d.ausentes} cargas`} sem ${rotulo.um} preenchido`
           : '';
       /**
        * A SUSPEITA SAI JUNTO COM O NÚMERO — regra da operadora, 19/08/2026.
@@ -542,12 +542,12 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       const aviso =
         suspeitas.length === 0
           ? ''
-          : `\n\nPode haver repetição de pessoa nessa contagem — ${suspeitas.length} caso${
-              suspeitas.length === 1 ? '' : 's'
+          : `\n\nPode haver repetição de pessoa nessa contagem. ${
+              suspeitas.length === 1 ? 'Tem 1 caso' : `Tem ${suspeitas.length} casos`
             } a conferir:\n` +
             suspeitas
               .slice(0, 5)
-              .map((s) => `· ${s.provavel} / ${s.variantes.join(' / ')} — ${s.cargas} cargas`)
+              .map((s) => `· ${s.provavel} e ${s.variantes.join(', ')}, somando ${s.cargas} cargas`)
               .join('\n') +
             '\nSe forem a mesma pessoa, me diga e eu passo a contar como uma.';
 
@@ -583,9 +583,27 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
           : metrica === 'valor_medio'
             ? `${formatarReal(valorMedio)} por carga (${g.contagem} carga${g.contagem === 1 ? '' : 's'})`
             : `${g.contagem} carga${g.contagem === 1 ? '' : 's'}`;
-      return `${i + 1}. ${g.chave} — ${cauda}`;
+      return `${i + 1}. ${g.chave}: ${cauda}`;
     });
-    const resto = grupos.length > TOPO ? `\n… e mais ${grupos.length - TOPO} grupo(s).` : '';
+    /**
+     * O RODAPÉ DIZ QUE A LISTA FOI CORTADA, e diz de um jeito que ninguém some.
+     *
+     * Este rodapé tem história: em 18/08/2026 ele dizia "e mais 60 grupo(s)", a
+     * LLM somou 15 + 60 e a IARA respondeu "75 motoristas". Aritmética sobre
+     * texto truncado, e o resultado tinha toda a cara de um número apurado.
+     *
+     * O "grupo(s)" com o plural entre parênteses era o pior dos dois mundos:
+     * soava a formulário e ainda convidava à soma. Agora a frase diz que a lista
+     * está cortada e manda perguntar — quem quiser o número exato tem a métrica
+     * `distintos`, que conta de verdade.
+     */
+    const cortados = grupos.length - TOPO;
+    const resto =
+      cortados > 0
+        ? `\n\nA lista para no ${TOPO}º. ${
+            cortados === 1 ? 'Ficou mais 1 de fora' : `Ficaram outros ${cortados} de fora`
+          }, e somar este rodapé não dá o total certo. Se quiser a contagem exata, é só me pedir quantos existem.`
+        : '';
 
     return {
       texto: `${rotuloPeriodo}, por ${NOME_DA_DIMENSAO[agruparPor].um}:\n${linhas.join('\n')}${resto}`,
@@ -657,8 +675,8 @@ export const declararLacunaDeDado: Habilidade = {
     const motivo = LACUNAS_DE_COLUNA[dimensao];
     return {
       texto:
-        `Não tenho esse dado: ${motivo}. ` +
-        'Eu poderia agrupar por origem, destino, rota, motorista ou status — se algum desses servir, é só dizer. ' +
+        `Não tenho esse dado. ${motivo[0].toUpperCase()}${motivo.slice(1)}. ` +
+        'Eu poderia agrupar por origem, destino, rota, motorista ou status. Se algum desses servir, é só dizer. ' +
         'Para agrupar por essa dimensão de verdade, a coluna precisa passar a existir na planilha.',
       detalhe: proveniencia({
         fonte: 'planilha LUFT',
@@ -858,17 +876,17 @@ export const relatorioExecutivoLuft: Habilidade = {
     const porMotorista = [...agregarCargas(cargasPeriodo, 'motorista')].sort((a, b) => b.contagem - a.contagem);
     const linhasMotoristas =
       porMotorista.length > 0
-        ? porMotorista.slice(0, TOPO_MOTORISTAS).map((g, i) => `  ${i + 1}. ${g.chave} — ${g.contagem} carga${g.contagem === 1 ? '' : 's'}`)
+        ? porMotorista.slice(0, TOPO_MOTORISTAS).map((g, i) => `  ${i + 1}. ${g.chave}: ${g.contagem} carga${g.contagem === 1 ? '' : 's'}`)
         : ['  (nenhuma carga no período)'];
 
     const porStatus = [...agregarCargas(cargasPeriodo, 'status_normalizado')].sort((a, b) => b.contagem - a.contagem);
     const linhasStatus =
       porStatus.length > 0
-        ? porStatus.map((g) => `  ${g.chave} — ${g.contagem}`)
+        ? porStatus.map((g) => `  ${g.chave}: ${g.contagem}`)
         : ['  (nenhuma carga no período)'];
 
     const texto =
-      `Relatório executivo — ${periodo.rotulo}\n\n` +
+      `Relatório executivo, ${periodo.rotulo}\n\n` +
       `Total cadastrado (todas as datas): ${r.cargas.length} carga${r.cargas.length === 1 ? '' : 's'}.\n` +
       `No período: ${contagem} carga${contagem === 1 ? '' : 's'}, ${formatarReal(valorTotal)}.\n\n` +
       `Top motoristas no período:\n${linhasMotoristas.join('\n')}\n\n` +

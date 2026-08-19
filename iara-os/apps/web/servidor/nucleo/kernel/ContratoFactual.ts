@@ -150,9 +150,9 @@ const SEM_COLUNA: ReadonlyArray<{ re: RegExp; nome: LacunaDeColuna }> = [
  */
 export const LACUNAS_DE_COLUNA = {
   cliente:
-    'a planilha da operação LUFT não tem coluna de cliente — ela tem OCI, origem, destino, motorista, status, datas e valor',
+    'a planilha da operação LUFT não tem coluna de cliente. Ela tem OCI, origem, destino, motorista, status, datas e valor',
   veiculo:
-    'a planilha não tem coluna de veículo — a placa aparece colada ao nome do motorista, e contar dali seria contar anotação como se fosse cadastro',
+    'a planilha não tem coluna de veículo. A placa aparece colada ao nome do motorista, e contar dali seria contar anotação como se fosse cadastro',
 } as const;
 
 export type LacunaDeColuna = keyof typeof LACUNAS_DE_COLUNA;
@@ -196,7 +196,22 @@ const AGRUPADO_POR = /\b(?:por|para cada|agrupados? por|agrupadas? por|separados
  * um módulo que é puro de propósito.
  */
 const EXPRESSAO_DE_PERIODO =
-  /\b(depois de amanha|hoje|amanha|ontem|essa semana|esta semana|semana atual|semana que vem|proxima semana|semana seguinte|semana passada|semana anterior|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/;
+  /\b(depois de amanha|hoje|amanha|ontem|[dn]?essa semana|[dn]?esta semana|semana atual|semana que vem|proxima semana|semana seguinte|semana passada|semana anterior|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/;
+
+/**
+ * A CONTRAÇÃO COME A FRONTEIRA DE PALAVRA — `[dn]?` acima não é enfeite.
+ *
+ * "qual o valor total das cargas DESSA SEMANA?" devolveu o ano inteiro em
+ * 19/08/2026, na auditoria em navegador. `\bessa semana\b` não casa "dessa": o
+ * "essa" vem colado num "d" e a fronteira de palavra não existe ali. Sem
+ * período reconhecido, o contrato marcava `implicito` — que significa universo
+ * inteiro. O rótulo saiu honesto ("todas as cargas de 2026") e a pergunta era
+ * outra.
+ *
+ * A mesma letra foi corrigida em `interpretarPeriodo`. As duas pontas TÊM de
+ * mudar juntas, e o portão que cobra isso é o teste "o vocabulário de período do
+ * contrato não diverge de interpretarPeriodo".
+ */
 
 /**
  * O QUE O CONTRATO SE RECUSA A LER — e por que a recusa é a metade que protege.

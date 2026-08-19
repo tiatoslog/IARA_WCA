@@ -97,7 +97,23 @@ export function interpretarPeriodo(bruto: string, agora = new Date()): Periodo |
     return { inicio, fim, rotulo: `semana passada (${paraDDMM(inicio)} a ${paraDDMM(fim)})` };
   }
 
-  if (/\b(essa semana|esta semana|semana atual)\b/.test(t)) {
+  /**
+   * A CONTRAÇÃO COME A FRONTEIRA DE PALAVRA — e o período sumia por causa disso.
+   *
+   * O DEFEITO (auditoria em navegador real, 19/08/2026): "qual o valor total das
+   * cargas DESSA SEMANA?" devolveu *"todas as cargas de 2026: R$ 4.738.184,52
+   * (2688 cargas)"*. O ano inteiro, com rótulo honesto, para quem perguntou pela
+   * semana. Ninguém mentiu e ninguém respondeu a pergunta.
+   *
+   * A causa é uma letra. `\bessa semana\b` não casa "dessa semana": em "dessa",
+   * o "essa" vem colado num "d", e `\b` exige fronteira ali. Como o período não
+   * era reconhecido, ele virava vazio — que significa "universo inteiro".
+   *
+   * `de|em` + `essa|esta` é como a operadora fala: "dessa semana", "nessa
+   * semana", "desta semana", "nesta semana". O `d?` e o `n?` cobrem as quatro
+   * sem afrouxar nada: continuam sendo as mesmas duas expressões.
+   */
+  if (/\b[dn]?(essa|esta) semana\b|\bsemana atual\b/.test(t)) {
     const seg = segundaDaSemana(agora);
     const sex = comDias(seg, 4);
     const inicio = paraISOLocal(seg);
