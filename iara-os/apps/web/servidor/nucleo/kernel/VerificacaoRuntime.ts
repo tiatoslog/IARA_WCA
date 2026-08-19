@@ -15,50 +15,11 @@
  * ser o conferente.
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { lerConfig } from './Configuracao';
-
-/** `<app>/` — quatro níveis acima deste arquivo (`servidor/nucleo/kernel/`). */
-export const RAIZ_DO_APP = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-  '..',
-);
-
-/**
- * QUAIS FONTES ESTÃO DESLIGADAS AGORA.
- *
- * Lido do ambiente, e não de um catálogo de capacidades, porque a pergunta aqui
- * é estreita: existe credencial para esta integração? É a mesma conferência que
- * a IARA faz para dizer "falta MS_GRAPH_TOKEN" — só que aqui ela serve para o
- * verificador saber que QUALQUER número afirmado sobre essa fonte é invenção.
- *
- * Os apelidos são os que aparecem na pergunta do operador ("cargas da LUFT"),
- * não os nomes das variáveis.
- */
-export function fontesDesligadas(ambiente: NodeJS.ProcessEnv = process.env): string[] {
-  const fora: string[] = [];
-  const vazia = (nome: string): boolean => {
-    try {
-      return lerConfig(nome, ambiente) === null;
-    } catch {
-      /* Variável contaminada é problema de configuração e derruba a subida em
-         `conferirAmbiente`. Aqui ela conta como ausente: o que não dá para ler
-         não serve de fonte. */
-      return true;
-    }
-  };
-  if (vazia('MS_GRAPH_OCI_URL') || (vazia('MS_GRAPH_TOKEN') && vazia('MS_GRAPH_CLIENT_SECRET'))) {
-    fora.push('LUFT');
-  }
-  if (vazia('SUPABASE_URL') || vazia('SUPABASE_SERVICE_ROLE_KEY')) fora.push('Supabase');
-  return fora;
-}
-
 import {
   NAO_SEI_CONFERIR,
   type ContextoDaTarefa,
@@ -70,6 +31,78 @@ import {
   conferirHoraDeParede,
   conferirSemFonte,
 } from '../../../lib/verificacao/oraculos';
+
+
+/** `<app>/` — quatro níveis acima deste arquivo (`servidor/nucleo/kernel/`). */
+export const RAIZ_DO_APP = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+);
+
+/**
+ * COMO O OPERADOR CHAMA CADA FONTE — e é isto que faltava.
+ *
+ * A primeira versão casava o NOME da integração contra a pergunta, e o defeito
+ * apareceu na revisão de fechamento: ninguém pergunta "quantas cargas na LUFT?".
+ * Pergunta-se **"quantas cargas existem na base 2026?"**. Com o nome da
+ * integração como única chave, o caso exato que originou toda esta fatia — a
+ * IARA respondendo "temos 1234 cargas cadastradas" com Graph e Supabase
+ * zerados — não era reconhecido, e a verificação nunca dispararia nele.
+ *
+ * Os apelidos são o vocabulário de quem pergunta, não o de quem integra.
+ */
+interface FonteDeVerdade {
+  readonly nome: string;
+  readonly apelidos: RegExp;
+  readonly desligada: (vazia: (n: string) => boolean) => boolean;
+}
+
+const FONTES: readonly FonteDeVerdade[] = [
+  {
+    nome: 'LUFT',
+    /* O que a operação LUFT responde: cargas, quem as levou, por onde, e
+       quanto renderam. Se a planilha está fora, nenhum desses números existe. */
+    apelidos: /\b(luft|cargas?|motoristas?|fretes?|faturamento|rotas?)\b/i,
+    desligada: (vazia) =>
+      vazia('MS_GRAPH_OCI_URL') || (vazia('MS_GRAPH_TOKEN') && vazia('MS_GRAPH_CLIENT_SECRET')),
+  },
+  {
+    nome: 'Supabase',
+    apelidos: /\b(supabase|banco|base de dados|hist[óo]rico de incidentes)\b/i,
+    desligada: (vazia) => vazia('SUPABASE_URL') || vazia('SUPABASE_SERVICE_ROLE_KEY'),
+  },
+];
+
+/**
+ * QUAIS FONTES ESTÃO DESLIGADAS AGORA — lido do ambiente, não de um catálogo.
+ *
+ * A pergunta é estreita: existe credencial para esta integração? É a mesma
+ * conferência que a IARA já faz para dizer "falta MS_GRAPH_TOKEN". Aqui ela
+ * serve para o verificador saber que QUALQUER número afirmado sobre essa fonte
+ * é invenção — sem precisar saber qual seria o número certo.
+ */
+export function fontesDesligadas(ambiente: NodeJS.ProcessEnv = process.env): string[] {
+  const vazia = (nome: string): boolean => {
+    try {
+      return lerConfig(nome, ambiente) === null;
+    } catch {
+      /* Variável contaminada é problema de configuração e derruba a subida em
+         `conferirAmbiente`. Aqui ela conta como ausente: o que não dá para ler
+         não serve de fonte. */
+      return true;
+    }
+  };
+  return FONTES.filter((f) => f.desligada(vazia)).map((f) => f.nome);
+}
+
+/** A fonte desligada que esta pergunta invoca, se houver. */
+function fonteInvocada(pergunta: string, ausentes: readonly string[]): FonteDeVerdade | null {
+  return (
+    FONTES.find((f) => ausentes.includes(f.nome) && f.apelidos.test(pergunta)) ?? null
+  );
+}
 
 interface Central {
   readonly uf: string;
@@ -127,10 +160,20 @@ export class VerificadorDeterministico implements PortaVerificacaoRuntime {
    * toda conversa numa espera silenciosa para conferir algo que não havia.
    */
   reconhece(pergunta: string): boolean {
-    if (PERGUNTA_DE_HORA.test(pergunta) || PERGUNTA_DE_CENTRAIS.test(pergunta)) return true;
-    return (this.opcoes.fontesAusentes?.() ?? []).some((f) =>
-      new RegExp(`\\b${f}\\b`, 'i').test(pergunta),
-    );
+    /* O relógio não depende de arquivo nenhum: a fonte é aritmética. */
+    if (PERGUNTA_DE_HORA.test(pergunta)) return true;
+    /**
+     * A FONTE PRECISA EXISTIR PARA A PERGUNTA CONTAR COMO RECONHECIDA.
+     *
+     * Sem esta conferência, uma base ilegível fazia `reconhece` devolver `true`,
+     * a fala ficava retida, e `verificar` devolvia `inconclusivo` — o operador
+     * perdia a digitação ao vivo em troca de nada. Reconhecer é uma promessa de
+     * que existe veredito a dar, não um palpite sobre o assunto da frase.
+     */
+    if (PERGUNTA_DE_CENTRAIS.test(pergunta)) {
+      return existsSync(path.join(this.opcoes.raiz, 'dados', 'infraestrutura.json'));
+    }
+    return fonteInvocada(pergunta, this.opcoes.fontesAusentes?.() ?? []) !== null;
   }
 
   verificar(resposta: string, contexto: ContextoDaTarefa): ResultadoVerificacao {
@@ -161,14 +204,12 @@ export class VerificadorDeterministico implements PortaVerificacaoRuntime {
      * saber que não existe resposta. Vem por último porque é o mais largo: só
      * vale quando a pergunta menciona uma fonte que está fora.
      */
-    const ausentes = this.opcoes.fontesAusentes?.() ?? [];
-    for (const fonte of ausentes) {
-      if (new RegExp(`\\b${fonte}\\b`, 'i').test(pergunta)) {
-        /* O ano citado no pedido é ecoado na recusa ("a base 2026 está
-           desligada") e não é alegação de dado. */
-        const anos = [...pergunta.matchAll(/\b(19|20)\d{2}\b/g)].map((m) => Number(m[0]));
-        return conferirSemFonte(resposta, fonte, anos);
-      }
+    const fonte = fonteInvocada(pergunta, this.opcoes.fontesAusentes?.() ?? []);
+    if (fonte) {
+      /* O ano citado no pedido é ecoado na recusa ("a base 2026 está
+         desligada") e não é alegação de dado. */
+      const anos = [...pergunta.matchAll(/\b(19|20)\d{2}\b/g)].map((m) => Number(m[0]));
+      return conferirSemFonte(resposta, fonte.nome, anos);
     }
 
     return NAO_SEI_CONFERIR('nenhum oráculo determinístico reconhece esta pergunta');

@@ -291,6 +291,69 @@ test('E19. fonte desligada: número afirmado é invenção, e não é escalável
   }
 });
 
+test('E21. reconhece o VOCABULÁRIO DO OPERADOR, não o nome da integração', () => {
+  /**
+   * O BURACO QUE A REVISÃO DE FECHAMENTO ACHOU, e ele anulava a fatia inteira.
+   *
+   * A primeira versão casava o nome da fonte ("LUFT") contra a pergunta. Só que
+   * ninguém pergunta "quantas cargas na LUFT?" — pergunta-se **"quantas cargas
+   * existem na base 2026?"**. O caso exato que originou tudo isto — a IARA
+   * respondendo "temos 1234 cargas cadastradas" com Graph e Supabase zerados —
+   * NÃO era reconhecido, a fala não era retida, e a verificação nunca disparava.
+   *
+   * Um verificador que só entende o jargão de quem integra não protege quem
+   * pergunta.
+   */
+  const raiz = baseDeTeste([]);
+  try {
+    const v = new VerificadorDeterministico({ raiz, fontesAusentes: () => ['LUFT'] });
+    for (const p of [
+      'quantas cargas existem na base 2026?',
+      'qual motorista possui mais cargas?',
+      'e qual rota teve maior faturamento?',
+    ]) {
+      assert.equal(v.reconhece(p), true, `não reconheceu: ${p}`);
+    }
+    /* E continua estreito: conversa comum não pode reter a fala. */
+    assert.equal(v.reconhece('me explique como você funciona'), false);
+    assert.equal(v.reconhece('me conta uma piada'), false);
+  } finally {
+    rmSync(raiz, { recursive: true, force: true });
+  }
+});
+
+test('E22. reconhecer é PROMETER veredito: sem a fonte, não reconhece', () => {
+  /**
+   * O segundo critério da revisão. Reconhecer arma a trava da fala e custa a
+   * digitação ao vivo do turno. Fazer isso para depois devolver `inconclusivo`
+   * cobra o preço e não entrega nada — o runtime vira gargalo em troca de nada.
+   */
+  const semBase = new VerificadorDeterministico({ raiz: path.join(tmpdir(), 'nao-existe-mesmo') });
+  assert.equal(semBase.reconhece('quantas centrais ativas existem?'), false);
+
+  const comBase = baseDeTeste([{ uf: 'MT', ativa: true }]);
+  try {
+    assert.equal(
+      new VerificadorDeterministico({ raiz: comBase }).reconhece('quantas centrais ativas existem?'),
+      true,
+    );
+  } finally {
+    rmSync(comBase, { recursive: true, force: true });
+  }
+});
+
+test('E23. fonte LIGADA não arma verificação de procedência', () => {
+  /* Com a LUFT no ar, "quantas cargas?" é pergunta legítima com resposta
+     legítima — e reter a fala ali seria punir o caminho que funciona. */
+  const raiz = baseDeTeste([]);
+  try {
+    const v = new VerificadorDeterministico({ raiz, fontesAusentes: () => [] });
+    assert.equal(v.reconhece('quantas cargas existem na base 2026?'), false);
+  } finally {
+    rmSync(raiz, { recursive: true, force: true });
+  }
+});
+
 test('E20. o relógio é conferido pela janela do turno, não por instante', () => {
   const raiz = baseDeTeste([]);
   try {
