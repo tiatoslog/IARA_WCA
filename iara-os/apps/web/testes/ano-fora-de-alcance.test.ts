@@ -60,12 +60,27 @@ test('ano implausível não arma a recusa', () => {
 });
 
 /**
- * O PORTÃO DE REGRESSÃO, e é ele que fecha o defeito de 18/08: nenhuma das
- * quatro habilidades de carga pode chegar a uma conta sem passar pela porta.
- * Uma habilidade nova que esqueça a chamada volta a responder 2026 com rótulo
- * de 2025 — e esse teste é o que avisa.
+ * O PORTÃO DE REGRESSÃO, e é ele que fecha o defeito de 18/08: nenhuma
+ * habilidade de carga pode chegar a uma conta sem passar pela porta. Uma
+ * habilidade nova que esqueça a chamada volta a responder 2026 com rótulo de
+ * 2025 — e esse teste é o que avisa.
+ *
+ * O PORTÃO PASSOU A OLHAR PARA QUEM LÊ A PLANILHA, e não para o número de
+ * habilidades da folha (19/08/2026). Ele exigia exatamente quatro `executar`, e
+ * caiu quando entrou a quinta — `declarar_lacuna_de_dado`, que responde "a
+ * planilha não tem coluna de cliente" e **nunca conta nada**. Exigir a porta do
+ * ano dela seria cerimônia: não há conta para o ano errado contaminar.
+ *
+ * Contar habilidades media a coisa errada. O invariante nunca foi "são quatro";
+ * é "quem lê a planilha consulta o alcance antes". Assim escrito, o portão se
+ * mantém sozinho: habilidade nova que leia a fonte cai no laço, habilidade nova
+ * que não leia não precisa entrar em lista de exceção — e lista de exceção é
+ * exatamente onde alguém, um dia, colocaria uma que conta.
+ *
+ * O piso de quatro fica de pé para que apagar a leitura não vire jeito barato
+ * de silenciar o portão.
  */
-test('as quatro habilidades de carga consultam o alcance antes de contar', async () => {
+test('toda habilidade que lê a planilha consulta o alcance antes de contar', async () => {
   const { readFileSync } = await import('node:fs');
   const fonte = readFileSync(
     new URL('../servidor/nucleo/kernel/habilidades/cargasLuft.ts', import.meta.url),
@@ -73,9 +88,13 @@ test('as quatro habilidades de carga consultam o alcance antes de contar', async
   );
 
   const executares = fonte.split('async executar(ctx)').slice(1);
-  assert.equal(executares.length, 4, 'mudou o número de habilidades desta folha — reveja o portão');
+  const queLeem = executares.filter((c) => /\b(todasAsCargas|cargasNoPeriodo)\(/.test(c));
+  assert.ok(
+    queLeem.length >= 4,
+    `só ${queLeem.length} habilidade(s) leem a planilha — eram 4 em 18/08/2026; reveja o portão`,
+  );
 
-  for (const [i, corpo] of executares.entries()) {
+  for (const [i, corpo] of queLeem.entries()) {
     /* A porta tem de vir no COMEÇO: depois da primeira leitura da planilha já é
        tarde, porque a conta que ela deveria impedir já aconteceu. */
     const antesDaConta = corpo.slice(0, corpo.indexOf('todasAsCargas') + 1 || 400);

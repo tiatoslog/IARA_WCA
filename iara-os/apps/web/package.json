@@ -21,7 +21,8 @@
     "campanha": "node --import tsx testes/campanha/executar.ts",
     "superficie": "node --import tsx testes/validacao/superficieCLI.ts",
     "veredito": "node --import tsx testes/validacao/veredito.ts",
-    "bateria": "node --import tsx testes/validacao/executar.ts"
+    "bateria": "node --import tsx testes/validacao/executar.ts",
+    "confiabilidade": "node --import tsx testes/confiabilidade/executar.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

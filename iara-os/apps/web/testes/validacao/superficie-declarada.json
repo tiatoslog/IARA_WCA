@@ -22,6 +22,7 @@
     "consultar_planilha_generica|baixo|leitura|verificador=false",
     "criar_evento_calendario|alto|escrita_nao_idempotente|verificador=true",
     "criar_pasta|medio|escrita_idempotente|verificador=true",
+    "declarar_lacuna_de_dado|baixo|leitura|verificador=true",
     "descrever_planilha|baixo|leitura|verificador=false",
     "diagnosticar_qualidade_planilha|baixo|leitura|verificador=false",
     "diagnosticar_sistema|baixo|leitura|verificador=false",

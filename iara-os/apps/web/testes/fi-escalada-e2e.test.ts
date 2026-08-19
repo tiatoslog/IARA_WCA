@@ -47,12 +47,34 @@ import type {
 } from '../lib/verificacao/contrato';
 import { VerificadorDeterministico, RAIZ_DO_APP } from '../servidor/nucleo/kernel/VerificacaoRuntime';
 import { ProvedorDeFalha, type RoteiroDoProvedor } from './apoio/ProvedorDeFalha';
+import { interpretarContratoFactual } from '../servidor/nucleo/kernel/ContratoFactual';
+import { MotorPercepcao } from '../servidor/nucleo/kernel/Percepcao';
+import { Planejador } from '../servidor/nucleo/kernel/Planejador';
 
 /** A fonte determinística do experimento. 73, como manda o roteiro FI. */
 const VERDADE = 73;
 
-/** Pergunta de rota cognitiva. Não tem âncora determinística — medido. */
-const PERGUNTA = 'me diga, analisando a operação inteira, quantas cargas nós temos';
+/**
+ * Pergunta de rota cognitiva. Não tem âncora determinística — medido.
+ *
+ * A FRASE MUDOU EM 19/08/2026, e a razão é uma correção de produção, não um
+ * ajuste de teste. Até então esta era `"…quantas cargas nós temos"`, e ela
+ * servia porque NENHUMA pergunta de contagem sobre a operação tinha caminho
+ * determinístico — que era exatamente o defeito por trás do incidente dos
+ * motoristas. Com o `ContratoFactual`, contar cargas virou `plano_local`: a
+ * ferramenta e os parâmetros deixaram de passar por modelo nenhum.
+ *
+ * Este arquivo mede OUTRA coisa — a escalada quando o cérebro erra —, e para
+ * medi-la precisa de um turno que de fato chegue ao cérebro. O `mês a mês` é o
+ * que garante isso sem trapaça: é agrupamento temporal, o motor não tem, o
+ * contrato se declara incompetente de propósito (ver `EXCETO`) e a pergunta
+ * segue para a LLM como qualquer pergunta que a IARA ainda não sabe calcular.
+ *
+ * A mudança PRESERVA a propriedade que o arquivo testa e não afrouxa nada: a
+ * frase continua sendo cardinalidade operacional aos olhos do Kernel, que é o
+ * que arma a trava de autoridade.
+ */
+const PERGUNTA = 'me diga, analisando a operação inteira, quantas cargas nós tivemos mês a mês';
 
 const memoriaFalsa = () =>
   ({
@@ -217,7 +239,13 @@ test('FI-002. entidade sem oráculo é INCONCLUSIVO — não vira INVALID nem es
   /* "João Silva possui 237 cargas" tem um NOME inventado, e não existe oráculo
      de entidade. A Regra 17 é clara: não inventar conhecimento. O número 237
      ainda é conferível contra a fonte, então este caso mede a fronteira: o que
-     tem oráculo é julgado, o que não tem fica de fora. */
+     tem oráculo é julgado, o que não tem fica de fora.
+
+     O "em janeiro" entrou em 19/08/2026 pelo mesmo motivo do `PERGUNTA` no
+     topo: o ranking puro ("qual motorista possui mais cargas?") passou a ter
+     contrato determinístico e não chega mais a modelo nenhum. Agrupar por mês
+     o motor não sabe, então a frase segue para a LLM — que é onde este
+     experimento precisa dela. A propriedade medida não mudou. */
   const semOraculoDeEntidade: PortaVerificacaoRuntime & { vereditos: string[] } = {
     vereditos: [],
     reconhece: () => true,
@@ -231,7 +259,7 @@ test('FI-002. entidade sem oráculo é INCONCLUSIVO — não vira INVALID nem es
     barato: respondeu('João Silva possui 237 cargas.'),
     premium: premiumQue('outro'),
     verificacao: semOraculoDeEntidade,
-    pergunta: 'qual motorista possui mais cargas?',
+    pergunta: 'qual motorista teve mais cargas em janeiro?',
   });
 
   assert.deepEqual(r.vereditos, ['inconclusivo']);
@@ -429,6 +457,20 @@ test('FI-014. "quantos motoristas temos?" — verificador real, só o modelo é 
    * O CENÁRIO É O INCIDENTE REAL de 19/08/2026: "quantos motoristas temos?" →
    * *"75 motoristas diferentes — mesma contagem que te dei agora há pouco"*. São
    * 53. Ela repetiu o próprio histórico sem chamar ferramenta nenhuma.
+   *
+   * A FRASE LITERAL SAIU DAQUI NO MESMO DIA, e sair foi a prova de que o
+   * conserto pegou: com o `ContratoFactual`, "quantos motoristas temos?" não
+   * chega mais a modelo nenhum — o número vem de `COUNT_DISTINCT(motorista)`
+   * montado por código. Não há mais o que a trava intercepte nessa frase,
+   * porque não há mais modelo afirmando nada nela. Quem passou a guardar a
+   * frase literal é o FI-016, logo abaixo, e a garantia dele é mais forte:
+   * estrutural, não detectiva.
+   *
+   * O que continua precisando de trava é toda pergunta de contagem que o motor
+   * AINDA não sabe calcular — e é uma delas que roda aqui. A série mensal é
+   * exatamente esse caso: cardinalidade operacional aos olhos do Kernel, fora
+   * do contrato aos olhos do motor, LLM no caminho. A trava tem que pegar o
+   * número inventado ali igual pegava aqui.
    */
   const barato = new ProvedorDeFalha({
     apelido: 'barato',
@@ -457,7 +499,7 @@ test('FI-014. "quantos motoristas temos?" — verificador real, só o modelo é 
   barramento.assinarTudo((e) => {
     if (e.tipo === 'RESPOSTA_TRECHO' || e.tipo === 'TAREFA_CONCLUIDA') exposicoes.push(e.texto);
   });
-  await kernel.processar('quantos motoristas temos?');
+  await kernel.processar('quantos motoristas diferentes tivemos mês a mês?');
 
   assert.equal(premium.chamadas.length, 1, 'a escalada não disparou com o verificador real');
   assert.ok(
@@ -498,4 +540,41 @@ test('FI-013. sem elo premium na cadeia, contesta e degrada sem tentar ninguém'
   assert.equal(r.premiumChamadas, 0);
   assert.ok(!numerosExpostos(r.exposicoes).includes(1234));
   assert.match(r.fala, /não vou te dar esse número|não confirmei|não bateu/i);
+});
+
+/**
+ * FI-016. A FRASE DO INCIDENTE NÃO CHEGA MAIS A UM MODELO — a garantia
+ * estrutural que substituiu a detectiva.
+ *
+ * O FI-014 provava que a IARA era PEGA repetindo "75". Este prova algo que
+ * nenhuma trava a jusante consegue prover: que o número da frase do incidente
+ * não passa por lugar nenhum onde alguém possa inventá-lo. Ferramenta,
+ * dimensão, métrica e política de nulo saem de `interpretarContratoFactual`,
+ * que é código puro.
+ *
+ * Detecção se audita depois do estrago; estrutura não deixa o estrago
+ * acontecer. Os dois testes ficam: há perguntas que só a detecção alcança.
+ *
+ * NÃO roda o Kernel de propósito — a planilha não está no ar em ambiente de
+ * teste, e o que precisa ser provado aqui é anterior a qualquer leitura: é a
+ * DECISÃO. Executar a planilha mediria a fonte, não o caminho.
+ */
+test('FI-016. "quantos motoristas temos?" vira contrato determinístico, sem passar por modelo', () => {
+  const leitura = interpretarContratoFactual('quantos motoristas temos?');
+  assert.equal(leitura.tipo, 'contrato');
+  if (leitura.tipo !== 'contrato') return;
+
+  assert.equal(leitura.contrato.operacao, 'COUNT_DISTINCT');
+  assert.equal(leitura.contrato.dimensao, 'motorista');
+  assert.equal(leitura.contrato.politica_nulo, 'excluir', 'ausência voltaria a ser contada como pessoa');
+  assert.equal(leitura.contrato.habilidade, 'consultar_estatisticas_cargas_luft');
+
+  /* E o plano que sai disso é determinístico — nenhum passo de `raciocinio`. */
+  const percepcao = new MotorPercepcao().perceber('quantos motoristas temos?');
+  const plano = new Planejador().planejar(percepcao);
+  assert.equal(plano.origem, 'deterministico');
+  assert.deepEqual(
+    plano.passos.map((p) => p.habilidade),
+    ['consultar_estatisticas_cargas_luft'],
+  );
 });

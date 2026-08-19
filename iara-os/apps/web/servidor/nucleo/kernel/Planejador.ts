@@ -20,6 +20,7 @@ import { extrairAssuntoLembrete } from './Quando';
 import { planosPropostos } from './PlanosPropostos';
 import { passosExecutaveis } from './Investigacao';
 import { corrigirTypos } from '../texto';
+import { interpretarContratoFactual } from './ContratoFactual';
 
 function passo(
   indice: number,
@@ -63,6 +64,78 @@ export interface ContextoPlanejamento {
 }
 
 const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) => Plano> = {
+  /**
+   * A CONTAGEM DA OPERAÇÃO — o plano nasce do CONTRATO, não de um modelo.
+   *
+   * Esta é a receita que fecha `SAME_QUESTION_VARIANCE`. Antes dela, "quantos
+   * motoristas temos?" ia para `plano_cognitivo`: habilidade e parâmetros
+   * escolhidos por uma LLM, de novo, a cada execução. Agora os três campos que
+   * decidem o número — `agrupar_por`, `metrica`, `periodo` — vêm de
+   * `interpretarContratoFactual`, que é código puro e devolve o mesmo contrato
+   * para a mesma frase, sempre.
+   *
+   * A DESCRIÇÃO DO PASSO CARREGA O CONTRATO, e isso não é enfeite: é o trace
+   * semântico. Quem audita o jornal de operações lê `COUNT_DISTINCT(motorista)
+   * periodo=implicito nulo=excluir` e sabe qual pergunta o sistema entendeu —
+   * sem precisar reconstruir a intenção a partir do texto da resposta, que é
+   * exatamente o que não se pode fazer quando a resposta está errada.
+   *
+   * O RAMO `sem_dado` É A PARTE QUE SE RECUSA. Pergunta boa sobre coluna que
+   * não existe vira `declarar_lacuna_de_dado` — determinístico, com o motivo
+   * lido do esquema. Sem ele, a frase chegaria à LLM, que associaria destino a
+   * "cliente" e devolveria uma agregação real da coluna errada: número com
+   * procedência, e ninguém confere número com procedência.
+   *
+   * O `fora` NÃO DEVERIA ACONTECER — a âncora `contrato_factual` só existe
+   * quando o contrato existe (ver `Ancora.predicado`). Ele fica aqui como a
+   * degradação honesta do dia em que alguém mexer numa das duas pontas: cair no
+   * raciocínio livre é pior que o determinismo, e é muito melhor que executar
+   * um plano vazio.
+   */
+  contrato_factual: (p) => {
+    const leitura = interpretarContratoFactual(p.bruto);
+
+    if (leitura.tipo === 'contrato') {
+      const c = leitura.contrato;
+      const alvo = c.dimensao === 'nenhum' ? c.entidade : c.dimensao;
+      return {
+        objetivo: `Contar ${alvo} na operação LUFT (${c.operacao})`,
+        origem: 'deterministico',
+        passos: [
+          passo(
+            0,
+            `${c.operacao}(${alvo}) periodo=${c.periodo.tipo}${
+              c.periodo.expressao ? `:${c.periodo.expressao}` : ''
+            } nulo=${c.politica_nulo} fonte=${c.fonte}`,
+            c.habilidade,
+            c.parametros,
+          ),
+        ],
+      };
+    }
+
+    if (leitura.tipo === 'sem_dado') {
+      return {
+        objetivo: `Declarar que a planilha da operação não tem a dimensão "${leitura.dimensao}"`,
+        origem: 'deterministico',
+        passos: [
+          passo(
+            0,
+            `DATA_UNAVAILABLE(${leitura.dimensao}) fonte=cargas_luft`,
+            'declarar_lacuna_de_dado',
+            { dimensao: leitura.dimensao },
+          ),
+        ],
+      };
+    }
+
+    return {
+      objetivo: p.objetivo_provavel === 'indeterminado' ? 'Atender o pedido do operador' : p.objetivo_provavel,
+      origem: 'emergente',
+      passos: [passo(0, 'Raciocinar sobre o pedido', 'raciocinio', {})],
+    };
+  },
+
   clima: (p) => {
     const horizonte = extrairHorizonteClima(p.bruto);
     const cidade = extrairCidadeClima(p.bruto);

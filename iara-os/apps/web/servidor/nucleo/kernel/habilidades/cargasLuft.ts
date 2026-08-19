@@ -27,6 +27,7 @@ import {
   type AgruparPor,
 } from '../../ClientePlanilhaOcis';
 import { interpretarPeriodo } from '../PeriodoOperacional';
+import { DIMENSOES_SEM_COLUNA, LACUNAS_DE_COLUNA } from '../ContratoFactual';
 
 const formatarReal = (v: number): string =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -538,6 +539,89 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
   },
 };
 
+/**
+ * DECLARAR A LACUNA — a resposta certa para a pergunta que a fonte não pode
+ * responder.
+ *
+ * O DEFEITO DE CLASSE (auditoria de 19/08/2026): "quantas cargas por cliente?"
+ * é uma pergunta bem-formada sobre uma coluna que NÃO EXISTE em
+ * `CargaCompleta`. Sem esta habilidade ela chega à LLM, que tem duas saídas —
+ * admitir a lacuna, ou associar destino/rota a "cliente" e responder com cara
+ * de certeza. A segunda é gratuita para ela e cara para a operação, e nenhuma
+ * trava a jusante a pega: o número seria uma agregação real, só que da coluna
+ * errada.
+ *
+ * É habilidade e não caso especial no orquestrador pelo mesmo motivo de
+ * `recusar_por_sigilo`: assim a recusa entra na trilha de eventos como qualquer
+ * outra ação e fica auditável junto com o resto.
+ *
+ * O PARÂMETRO É UM ENUM FECHADO, e é isso que impede a habilidade de virar uma
+ * porta de invenção. Ela recebe só o NOME da dimensão ausente; o texto do
+ * motivo mora em `LACUNAS_DE_COLUNA` e não atravessa o plano. Uma habilidade
+ * que aceitasse o motivo como texto livre deixaria a LLM redigir a própria
+ * justificativa — exatamente o tipo de afirmação sem lastro que esta auditoria
+ * existe para fechar.
+ */
+export const declararLacunaDeDado: Habilidade = {
+  manifesto: {
+    id: 'declarar_lacuna_de_dado',
+    nome: 'Dimensão ausente na planilha da operação',
+    descricao:
+      'Declara, com o motivo, que a planilha da operação LUFT não tem a coluna que a pergunta pede. ' +
+      'Use quando o operador pedir agregação por CLIENTE ou por VEÍCULO/PLACA: esses campos não existem ' +
+      'na fonte, e qualquer número apresentado como se existissem viria da coluna errada. ' +
+      '"dimensao" é um de: ' +
+      DIMENSOES_SEM_COLUNA.join(', ') +
+      '.',
+    exemplos: [
+      'Quantas cargas por cliente?',
+      'Qual cliente teve mais cargas?',
+      'Quantas cargas por veículo?',
+      'Faturamento por placa',
+    ],
+    capacidades: ['declarar dimensão ausente na planilha da operação'],
+    dominio: 'operacoes',
+    capacidade: 'automacao',
+    permissoes: [],
+    timeout_ms: 500,
+    custo: 'zero',
+    risco: 'baixo',
+    idempotencia: 'leitura',
+    esquema: {
+      dimensao: { tipo: 'texto', obrigatorio: true, dentre: DIMENSOES_SEM_COLUNA },
+    },
+  },
+  async executar(ctx) {
+    const dimensao = String(ctx.parametros.dimensao ?? '') as keyof typeof LACUNAS_DE_COLUNA;
+    const motivo = LACUNAS_DE_COLUNA[dimensao];
+    return {
+      texto:
+        `Não tenho esse dado: ${motivo}. ` +
+        'Eu poderia agrupar por origem, destino, rota, motorista ou status — se algum desses servir, é só dizer. ' +
+        'Para agrupar por essa dimensão de verdade, a coluna precisa passar a existir na planilha.',
+      detalhe: proveniencia({
+        fonte: 'planilha LUFT',
+        resultado: 'dado_indisponivel',
+        dimensao_pedida: dimensao,
+        deterministico: true,
+      }),
+      /**
+       * `resolveu: true` — e a escolha é substantiva. O turno RESOLVEU: a
+       * pergunta foi respondida com a verdade disponível. `false` marcaria
+       * falha operacional e convidaria a escalada a gastar um modelo melhor
+       * para "tentar de novo" — e um modelo melhor não faz nascer uma coluna.
+       */
+      resolveu: true,
+    };
+  },
+  async verificar(resultado) {
+    return {
+      confirmado: resultado.resolveu,
+      evidencia: 'a ausência da coluna é lida do esquema da planilha, não da conversa',
+    };
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Fase 3 — comparação entre semanas e relatório executivo. Só o que compõe
 // dado já calculado por `todasAsCargas`/`agregarCargas`; nada aqui inventa
@@ -753,4 +837,5 @@ export const HABILIDADES_PLANILHA_OCIS: readonly Habilidade[] = [
   consultarEstatisticasCargasLuft,
   compararSemanasLuft,
   relatorioExecutivoLuft,
+  declararLacunaDeDado,
 ];

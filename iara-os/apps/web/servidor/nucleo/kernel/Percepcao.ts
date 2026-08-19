@@ -12,6 +12,7 @@
 import type { LeituraOperador } from '../../../lib/estado';
 import type { Percepcao, TipoEntrada, Urgencia } from './Evento';
 import { corrigirTypos, normalizar } from '../texto';
+import { ehPerguntaDeContratoFactual } from './ContratoFactual';
 import { TeoriaDaMente, type SinalTemporal } from '../TeoriaDaMente';
 import {
   ehPerguntaSobreResolver,
@@ -61,6 +62,35 @@ interface Ancora {
   readonly re: RegExp;
   readonly nome: string;
   readonly acionavel: boolean;
+  /**
+   * A ÂNCORA QUE NÃO CABE NUM REGEX — e por que ela não vira um regex daqui.
+   *
+   * `contrato_factual` reconhece a família inteira de perguntas de contagem
+   * sobre a operação LUFT, incluindo as EXCEÇÕES (mês, percentual, MIN/MAX)
+   * que o motor ainda não sabe responder e que precisam continuar indo para a
+   * LLM. Isso é uma decisão em camadas, não um casamento de palavras.
+   *
+   * Escrever aqui uma cópia aproximada dessa decisão seria repetir exatamente
+   * a falha que este repositório já pagou duas vezes: a mesma regra em
+   * `Percepcao` e no roteador, divergindo em silêncio.
+   *
+   * O PREDICADO É A DECISÃO INTEIRA — e a primeira versão errou justamente
+   * aqui. Ela mantinha `re` como "pré-filtro barato" (`quantos|quantas|total|
+   * faturamento|…`) e o predicado como refinamento. O portão bicondicional de
+   * `contrato-factual.test.ts` derrubou isso na hora: **"qual motorista fez
+   * mais cargas?"** tem contrato e não tem nenhuma daquelas palavras. A âncora
+   * não disparava, e a pergunta voltava para a LLM — a divergência silenciosa
+   * de sempre, reintroduzida pelo atalho de performance.
+   *
+   * Então quem tem `predicado` usa `/^/` como `re`: casa sempre, custo zero, e
+   * não existe segunda regra para divergir da primeira. O interpretador é
+   * regex pura com saída curta na primeira porta — a economia que o pré-filtro
+   * comprava não pagava o risco que ele criava.
+   *
+   * Quem tem `predicado` ignora `negavel`/`interrogavel`: perguntar quantos
+   * motoristas existem não é um efeito que a negação inverta.
+   */
+  readonly predicado?: (frase: string) => boolean;
   /** Casou `re`, mas casa isto também? Então não é esta âncora. */
   readonly exceto?: RegExp;
   /**
@@ -84,6 +114,30 @@ interface Ancora {
 }
 
 const ANCORAS: ReadonlyArray<Ancora> = [
+  /**
+   * A CONTAGEM DA OPERAÇÃO VEM PRIMEIRO — e a posição é a correção.
+   *
+   * MEDIDO EM 19/08/2026, antes desta âncora existir: as dez perguntas de
+   * contagem mais comuns da operação LUFT — "quantos motoristas temos?"
+   * inclusive, a frase do incidente — casavam âncora NENHUMA. Todas caíam em
+   * `plano_cognitivo`, quer dizer, com ferramenta e parâmetros escolhidos por
+   * um modelo estocástico a cada execução. E "me diga o número de motoristas"
+   * caía em `raciocinio_direto`, um ramo DIFERENTE do pipeline para a mesma
+   * pergunta.
+   *
+   * Antes de `infraestrutura` de propósito: aquela âncora contém "quantos
+   * veiculos", e a ordem é o que garante que perguntas de frota continuem
+   * indo para a frota. O contrato, por sua vez, se recusa a ler "veículo"
+   * quando a frase não fala da planilha — as duas metades da mesma trava.
+   */
+  {
+    /* `re` casa sempre: quem decide é o predicado, e uma segunda regra aqui só
+       teria como divergir da primeira. Ver `Ancora.predicado`. */
+    re: /^/,
+    predicado: ehPerguntaDeContratoFactual,
+    nome: 'contrato_factual',
+    acionavel: true,
+  },
   {
     re: /\b(chuva|chover|chovendo|tempo|clima|temperatura|previsao)\b/,
     nome: 'clima',
@@ -417,6 +471,10 @@ export class MotorPercepcao {
      */
     const encontradas = ANCORAS.filter((a) => {
       if (a.exceto?.test(tPropria)) return false;
+      /* O predicado é a decisão inteira — `re` casa sempre, ver `Ancora`.
+         Roda sobre a voz PRÓPRIA: "o e-mail diz: quantos motoristas temos"
+         cita a pergunta, não a faz. */
+      if (a.predicado) return a.predicado(tPropria);
       // "como faço para confirmar?" pergunta sobre a resolução; não resolve.
       // Este teste é da mensagem inteira: não existe "confirmar em parte".
       if (a.interrogavel && ehPerguntaSobreResolver(tPropria)) return false;
@@ -480,6 +538,7 @@ export class MotorPercepcao {
   }
 
   private supor(tipo: TipoEntrada, ancoras: readonly string[]): string {
+    if (ancoras.includes('contrato_factual')) return 'contagem determinística sobre a operação';
     if (ancoras.includes('incidente')) return 'retrospectiva de incidente';
     if (ancoras.includes('infraestrutura')) return 'consulta operacional';
     if (ancoras.includes('clima')) return 'condição externa';
