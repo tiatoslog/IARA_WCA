@@ -35,6 +35,26 @@ export interface Turno {
   readonly snapshot: SnapshotCognitivo | null;
   /** Pacotes `erro` chegados durante o turno. */
   readonly erros: readonly string[];
+  /**
+   * Pacotes `log` de nível `alerta` chegados durante o turno — o kernel
+   * relatando as próprias falhas, em canal TIPADO.
+   *
+   * ESTE CAMPO É FATO, NÃO JUÍZO: o cliente coleta e não interpreta. Quem
+   * decide o que uma falha de provedor significa é `contrato.ts`, e a separação
+   * é a mesma de sempre — o oráculo colhe, o contrato julga.
+   *
+   * EXISTE POR CAUSA DO PORTÃO CEGO DE 18/08/2026. A campanha CO contra a Groq
+   * saiu `GO` com oito dos treze turnos mortos por `429` de cota. Nenhum
+   * oráculo viu, porque a única evidência que a campanha lia era a FALA — e a
+   * fala de um turno assim ("não consegui concluir esse pedido agora") é
+   * indistinguível de uma recusa correta. As duas viravam `RECUSA_HONESTA`.
+   *
+   * O log estava chegando o tempo todo, no mesmo socket, e ninguém o guardava:
+   *
+   *     {"tipo":"log","nivel":"alerta",
+   *      "texto":"kernel: groq respondeu 429: … tokens per minute (TPM): Limit 8000"}
+   */
+  readonly alertas: readonly string[];
   readonly ms: number;
   /** `true` quando o prazo estourou antes de a fala se declarar concluída. */
   readonly truncado: boolean;
@@ -58,6 +78,7 @@ export class ClienteBarramento {
   private ultimoSnapshot: SnapshotCognitivo | null = null;
   private ultimaSeq = 0;
   private readonly errosPendentes: string[] = [];
+  private readonly alertasPendentes: string[] = [];
   private readonly ouvintes = new Set<(p: PacoteServidor) => void>();
   private fechadoPor: { codigo: number; motivo: string } | null = null;
 
@@ -170,6 +191,12 @@ export class ClienteBarramento {
       }
       if (pacote.tipo === 'snapshot') this.ultimoSnapshot = pacote.snapshot;
       if (pacote.tipo === 'erro') this.errosPendentes.push(pacote.texto);
+      /* Só `alerta`. `NivelLog` é `traco | info | alerta` e não tem grau acima —
+         guardar os outros dois seria guardar o log inteiro do motor. O que
+         interessa é o que o próprio kernel CLASSIFICOU como digno de alerta. */
+      if (pacote.tipo === 'log' && pacote.nivel === 'alerta') {
+        this.alertasPendentes.push(pacote.texto);
+      }
       for (const o of this.ouvintes) o(pacote);
     });
 
@@ -240,6 +267,7 @@ export class ClienteBarramento {
     const inicio = Date.now();
     const falaAnterior = this.ultimoSnapshot?.fala?.id ?? null;
     this.errosPendentes.length = 0;
+    this.alertasPendentes.length = 0;
 
     const idLocal = `camp${this.gravadas.length}`;
     /**
@@ -289,6 +317,7 @@ export class ClienteBarramento {
       cadeia: snap?.cadeia ?? null,
       snapshot: snap,
       erros: [...this.errosPendentes],
+      alertas: [...this.alertasPendentes],
       ms: Date.now() - inicio,
       truncado: !houve,
     };

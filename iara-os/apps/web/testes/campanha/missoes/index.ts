@@ -27,9 +27,15 @@ import { MISSOES_CONVERSA } from './conversa';
 import { MISSOES_FALHA } from './falha';
 import { MISSOES_LACUNA } from './lacunas';
 import { MISSOES_SEGURANCA } from './seguranca';
+import { MISSOES_VALOR } from './valor';
 import type { Missao } from './tipos';
 
 export const CATALOGO: readonly Missao[] = [
+  /* VALOR VEM PRIMEIRO, e pela mesma lógica que pôs `agente` na frente antes:
+     são as missões mais baratas do catálogo (uma fala, quase todas em rota
+     determinística) e medem a família de defeito mais silenciosa — a resposta
+     plausível e falsa. Numa noite ruim, é a última coisa que se pode perder. */
+  ...MISSOES_VALOR,
   ...MISSOES_AGENTE,
   ...MISSOES_SEGURANCA,
   ...MISSOES_FALHA,
@@ -39,6 +45,13 @@ export const CATALOGO: readonly Missao[] = [
   ...MISSOES_CONVERSA,
 ];
 
-export { MISSOES_AGENTE, MISSOES_CONVERSA, MISSOES_FALHA, MISSOES_LACUNA, MISSOES_SEGURANCA };
+export {
+  MISSOES_AGENTE,
+  MISSOES_CONVERSA,
+  MISSOES_FALHA,
+  MISSOES_LACUNA,
+  MISSOES_SEGURANCA,
+  MISSOES_VALOR,
+};
 export type { Missao };
 export * from './tipos';

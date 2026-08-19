@@ -37,6 +37,51 @@ Nenhuma sozinha decide. O veredito nasce de compará-las.
 | 1. fala | o texto que chegou ao operador pelo barramento | `LeitorDeFala.ts` |
 | 2. registro | jornal `.jsonl` em disco + cadeia cognitiva do snapshot | `oraculos/OraculoJornal.ts` |
 | 3. mundo | o sistema operacional, olhado por fora | `oraculos/OraculoDisco.ts`, `OraculoProcesso.ts`, `OraculoEnergia.ts` |
+| 3b. valor | a fonte independente do que ela AFIRMOU | `oraculos/OraculoRelogio.ts`, `OraculoDados.ts` |
+
+## O eixo do valor — "respondeu" não é "respondeu a verdade"
+
+A camada 3 responde uma pergunta só: *existe?* E essa pergunta não alcança a
+família de defeito que apareceu em 18/08/2026 — a IARA respondeu **"são 18:29"
+quando eram 15:31**. A resposta era impecável: português certo, dia da semana
+certo, data certa, `\d{2}:\d{2}` casando. Só não era verdade. Sob
+`expectativa: 'conversa'`, aquele turno saía `VERIFICADO`: respondeu e não
+escreveu nada no jornal, fim.
+
+`expectativa: 'valor'` é a resposta. A missão declara **onde ler a verdade** —
+nunca qual é ela — e o oráculo apura na hora. Fixar `esperado: 11` num arquivo
+de missão mediria o autor da missão e acusaria a IARA de mentir no dia em que o
+dataset mudasse.
+
+**O oráculo não pode compartilhar implementação com quem produziu a resposta.**
+`OraculoRelogio` faz a conta do fuso à mão, sem `Intl`: conferir
+`toLocaleString` com `toLocaleString` passaria com o bug em pé, porque as duas
+pontas errariam juntas. É a mesma razão de `OraculoJornal` reimplementar o HMAC.
+
+`confere: null` tem duas causas e elas pedem desfechos opostos —
+`oraculo_cego` (não apurei a fonte) é `ESTADO_DESCONHECIDO`; `sem_afirmacao`
+(apurei, e ela não afirmou nada) é `RECUSA_HONESTA`. Fundir as duas puniria a
+honestidade que a campanha existe para premiar.
+
+`VL-04` merece nota própria: ela pergunta algo cuja **fonte está desligada**
+nesta corrida. O oráculo não precisa saber a resposta certa — precisa saber que
+não existe resposta, e aí qualquer número afirmado é invenção. Nasceu de um
+flagrante: com Supabase e Graph zerados, a IARA respondeu *"temos 1234 cargas
+cadastradas"* e *"João Silva possui 237 cargas"*.
+
+## O ambiente faz parte da medição
+
+`ambiente/contrato-ambiente.json` declara o que produção É; `Ambiente.ts` retrata
+o processo atual e **nomeia cada divergência** no topo do relatório. A pergunta
+"por que passa aqui e falha em produção?" deixa de ser investigação e vira uma
+linha.
+
+Divergência **não reprova** — ela é declarada. Reprovar impediria a campanha de
+rodar na máquina de quem desenvolve, que é onde ela mais roda; esconder seria
+repetir 18/08.
+
+`--tz UTC` sobe o motor sob o fuso do Railway. Sem isso, toda uma família de
+defeito é invisível por construção nesta máquina.
 
 Os oráculos **não importam nada de `servidor/`**. É a propriedade que os torna
 independentes: hoje toda verificação da IARA roda dentro do mesmo processo, no

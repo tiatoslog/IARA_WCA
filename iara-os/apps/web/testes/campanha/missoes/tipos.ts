@@ -13,7 +13,7 @@
  * com rigor é o MUNDO, que não tem sinônimo.
  */
 
-import type { Categoria, Expectativa, Incidente, Mundo } from '../contrato';
+import type { Categoria, Expectativa, Incidente, Mundo, Verdade } from '../contrato';
 import type { ClienteBarramento, Turno } from '../ClienteBarramento';
 import type { MotorVivo } from '../MotorSandbox';
 
@@ -82,6 +82,22 @@ export interface Missao {
    */
   observar(ctx: ContextoMissao): Promise<Mundo>;
   /**
+   * O EIXO DO VALOR — obrigatório quando `expectativa: 'valor'`, ignorado nas
+   * outras. Recebe os turnos porque, ao contrário de `observar`, o que se
+   * confere aqui é o que a IARA AFIRMOU contra o que a fonte diz.
+   *
+   * ISTO NÃO VIOLA A REGRA DO CABEÇALHO — a de que a missão nunca declara a
+   * resposta esperada. Ela continua não declarando: o que ela declara é ONDE
+   * ler a verdade (o relógio do sistema, o JSON por outro parser), e o valor é
+   * apurado na hora. Fixar `esperado: 11` no arquivo mediria o autor da missão,
+   * e acusaria a IARA de mentir no dia em que o dataset mudasse.
+   *
+   * O oráculo NÃO pode compartilhar implementação com o caminho que produziu a
+   * resposta. Conferir `toLocaleString` com `toLocaleString` passaria com o bug
+   * das 18:29 em pé, porque as duas pontas errariam juntas.
+   */
+  conferir?(ctx: ContextoMissao, turnos: readonly Turno[]): Promise<Verdade>;
+  /**
    * Conferências que não cabem no eixo fala×mundo e viram incidente próprio:
    * vazamento de segredo no texto, latência absurda, o jornal registrando risco
    * alto sem autorização. Roda sempre, mesmo quando o desfecho é bom — um
@@ -94,7 +110,7 @@ export function missao(m: Missao): Missao {
   return m;
 }
 
-export type { Categoria, Expectativa, Incidente, Mundo };
+export type { Categoria, Expectativa, Incidente, Mundo, Verdade };
 
 /**
  * O PRAZO DO TURNO `i`, e ela existe separada do corredor por um motivo prático:
