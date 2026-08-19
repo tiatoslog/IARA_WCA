@@ -123,6 +123,54 @@ export const CARGAS_2026_COM_DUPLICATA: readonly CargaCompleta[] = [
 ];
 
 /**
+ * CONJUNTO ADVERSARIAL DE DUPLICIDADE — cinco linhas, três cargas.
+ *
+ * A planilha real de 18/08/2026 não tem OCI repetida (2681 distintas em 2681
+ * linhas, medido). Isso significa apenas que o defeito não é OBSERVÁVEL naquele
+ * conjunto — não que a implementação esteja certa. Este conjunto existe para
+ * medir a semântica sem depender da sorte do dado de produção.
+ *
+ *   A, A (repetida), B, C, C (repetida)  →  5 linhas, 3 cargas únicas
+ */
+export const CARGAS_DUPLICADAS: readonly CargaCompleta[] = [
+  c('OCI-A', 'LINO', 'SP', 'MT', 'FINALIZADO', '2026-01-05', 100),
+  c('OCI-A', 'LINO', 'SP', 'MT', 'FINALIZADO', '2026-01-05', 100),
+  c('OCI-B', 'LAUDIR', 'SP', 'GO', 'PAGO', '2026-01-06', 200),
+  c('OCI-C', 'MOLINA', 'MG', 'MT', 'FINALIZADO', '2026-01-07', 300),
+  c('OCI-C', 'MOLINA', 'MG', 'MT', 'FINALIZADO', '2026-01-07', 300),
+];
+
+/**
+ * CONJUNTO PARA A MÉDIA — o caso exato do enunciado: 100, 200 e ausente.
+ *
+ * Duas médias defensáveis: 300/2 = 150 (sobre o que existe) ou 300/3 = 100
+ * (ausência como zero). A decisão do produto é **150** — ver `valorMedio`.
+ */
+export const CARGAS_MEDIA: readonly CargaCompleta[] = [
+  c('OCI-M1', 'LINO', 'SP', 'MT', 'FINALIZADO', '2026-01-05', 100),
+  c('OCI-M2', 'LINO', 'SP', 'MT', 'FINALIZADO', '2026-01-06', 200),
+  c('OCI-M3', 'LINO', 'SP', 'MT', 'FINALIZADO', '2026-01-07', null),
+];
+
+/**
+ * AS FORMAS DE AUSÊNCIA DE MOTORISTA — e o que a fonte real usa.
+ *
+ * MEDIDO na aba 2026 (2681 linhas): a única forma é a célula VAZIA — 129 casos.
+ * Não há "N/A", não há "-", não há "SEM MOTORISTA". Este conjunto existe para
+ * travar essa decisão: só vazio e espaço em branco são ausência. Um dia em que
+ * alguém ensinar o sistema a tratar "N/A" como ausência por heurística, o teste
+ * abaixo cobra a evidência — e no dia em que a FONTE passar a usar "N/A", a
+ * medição volta e a regra muda com prova, não com palpite.
+ */
+export const CARGAS_AUSENCIA: readonly CargaCompleta[] = [
+  c('OCI-V1', '', 'SP', 'MT', 'FINALIZADO', '2026-01-05', 100), // vazio → ausência
+  c('OCI-V2', '   ', 'SP', 'MT', 'FINALIZADO', '2026-01-06', 100), // só espaços → ausência
+  c('OCI-V3', 'N/A', 'SP', 'MT', 'FINALIZADO', '2026-01-07', 100), // NÃO é ausência aqui
+  c('OCI-V4', '-', 'SP', 'MT', 'FINALIZADO', '2026-01-08', 100), // NÃO é ausência aqui
+  c('OCI-V5', 'LINO', 'SP', 'MT', 'FINALIZADO', '2026-01-09', 100),
+];
+
+/**
  * AS RESPOSTAS, CONTADAS À MÃO. Se alguma constante daqui precisar de código
  * para ser justificada, ela não é oráculo — é eco da implementação.
  */
@@ -170,4 +218,20 @@ export const ESPERADO = {
 
   // — comparação entre anos
   diferenca_2026_menos_2025: 4, // 12 − 8
+
+  /* — duplicidade adversarial (A, A, B, C, C): cinco linhas, três cargas. */
+  linhas_adversarial: 5,
+  cargas_unicas_adversarial: 3,
+  linhas_repetidas_adversarial: 2,
+
+  /* — média sobre 100, 200 e ausente. Decisão do produto: divide pelo que TEM
+     valor. 300/2 = 150, nunca 300/3 = 100. Ver `valorMedio`. */
+  media_sobre_valores_validos: 150,
+
+  /* — ausência: só vazio e espaço em branco. "N/A" e "-" são nomes aqui, porque
+     a fonte real não os usa para ausência (medido: 129 células vazias, zero
+     sentinelas em 2681 linhas). Dos cinco: vazio, espaços, "N/A", "-", "LINO"
+     → três distintos ("N/A", "-", "LINO") e duas ausências. */
+  motoristas_distintos_ausencia: 3,
+  ausencias_no_conjunto_ausencia: 2,
 } as const;

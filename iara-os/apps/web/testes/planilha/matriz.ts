@@ -20,11 +20,21 @@
 
 import {
   agregarCargas,
+  contarCargas,
+  contarDistintos,
+  valorMedio,
   type AgruparPor,
   type CargaCompleta,
 } from '../../servidor/nucleo/ClientePlanilhaOcis';
 import { interpretarPeriodo } from '../../servidor/nucleo/kernel/PeriodoOperacional';
-import { CARGAS_2026, CARGAS_2026_COM_DUPLICATA, ESPERADO } from './oraculo';
+import {
+  CARGAS_2026,
+  CARGAS_2026_COM_DUPLICATA,
+  CARGAS_AUSENCIA,
+  CARGAS_DUPLICADAS,
+  CARGAS_MEDIA,
+  ESPERADO,
+} from './oraculo';
 
 /**
  * Os estados. `SUPPORTED_PARTIAL` existe para a capacidade que responde mas
@@ -183,17 +193,37 @@ export const CASOS: readonly CasoCapacidade[] = [
   {
     id: 'AVG-001',
     categoria: 'agregação',
-    pergunta: 'Qual o valor médio por carga?',
+    pergunta: 'Qual o valor médio por carga? (100, 200 e um sem valor)',
     operacao: 'AVG(valor)',
-    /* Derivada, não nativa: total/contagem. Trata valor AUSENTE como zero, que
-       puxa a média para baixo — ver `SUPPORTED_PARTIAL`. */
+    /* O caso exato do enunciado. A decisão do produto é dividir pelo que TEM
+       valor: 300/2 = 150. Carga sem valor lançado não vale zero — contá-la no
+       divisor misturaria "vale pouco" com "não sabemos". */
+    medir: () => valorMedio(grupos(CARGAS_MEDIA, 'nenhum')[0]),
+    esperado: ESPERADO.media_sobre_valores_validos,
+    causa: 'nenhuma',
+  },
+  {
+    id: 'AVG-002',
+    categoria: 'agregação',
+    pergunta: 'Qual o valor médio quando nenhuma carga tem valor?',
+    operacao: 'AVG(valor) sobre conjunto sem valores',
+    /* Ausência, nunca zero: zero seria a afirmação de que as cargas não valem
+       nada. */
+    /* Devolve um RÓTULO, não `null`. No vocabulário desta matriz `null`
+       significa "a capacidade não existe"; aqui a ausência é a resposta CERTA, e
+       confundir as duas classificaria um acerto como lacuna. */
     medir: () => {
-      const g = grupos(CARGAS_2026, 'nenhum')[0];
-      return g.valor_total / g.contagem;
+      const m = valorMedio(
+        grupos(
+          CARGAS_MEDIA.map((c) => ({ ...c, valor: null })),
+          'nenhum',
+        )[0],
+      );
+      return m === null ? 'ausência declarada' : m;
     },
-    esperado: 15000 / 12,
-    causa: 'executor',
-    nota: 'derivada de total/contagem; a carga sem valor entra no divisor como zero',
+    esperado: 'ausência declarada',
+    causa: 'nenhuma',
+    nota: 'média de nada é ausência declarada, não zero',
   },
   {
     id: 'MAX-001',
@@ -271,23 +301,58 @@ export const CASOS: readonly CasoCapacidade[] = [
     categoria: 'distinct',
     pergunta: 'Quantas cargas únicas existem?',
     operacao: 'COUNT(DISTINCT oci)',
-    /* A duplicata entra no conjunto: 13 linhas, 12 OCIs. O motor conta LINHAS. */
-    medir: () => grupos(CARGAS_2026_COM_DUPLICATA, 'nenhum')[0].contagem,
+    /* A duplicata entra no conjunto: 13 linhas, 12 OCIs. */
+    medir: () => contarCargas(CARGAS_2026_COM_DUPLICATA).unicas,
     esperado: ESPERADO.ocis_unicas_2026_com_duplicata,
-    causa: 'executor',
-    nota: 'o motor conta linhas; não há COUNT DISTINCT — linha repetida vira carga a mais',
+    causa: 'nenhuma',
+  },
+  {
+    id: 'DIST-001b',
+    categoria: 'distinct',
+    pergunta: 'Quantas cargas únicas existem? (conjunto adversarial A,A,B,C,C)',
+    operacao: 'COUNT(DISTINCT oci)',
+    medir: () => contarCargas(CARGAS_DUPLICADAS).unicas,
+    esperado: ESPERADO.cargas_unicas_adversarial,
+    causa: 'nenhuma',
+  },
+  {
+    id: 'DIST-001c',
+    categoria: 'distinct',
+    pergunta: 'Quantas linhas repetidas existem?',
+    operacao: 'DUPLICATE_DETECTION',
+    medir: () => contarCargas(CARGAS_DUPLICADAS).repetidas,
+    esperado: ESPERADO.linhas_repetidas_adversarial,
+    causa: 'nenhuma',
   },
   {
     id: 'DIST-002',
     categoria: 'distinct',
     pergunta: 'Quantos motoristas diferentes temos?',
     operacao: 'COUNT(DISTINCT motorista)',
-    /* Derivável do número de grupos — menos o grupo do motorista ausente, que
-       não é um motorista. Essa subtração é o que ninguém faz hoje. */
-    medir: () => grupos(CARGAS_2026, 'motorista').length,
+    medir: () => contarDistintos(CARGAS_2026, 'motorista').distintos,
     esperado: ESPERADO.motoristas_distintos_2026,
-    causa: 'executor',
-    nota: 'o grupo do motorista ausente entra na contagem de motoristas distintos',
+    causa: 'nenhuma',
+  },
+  {
+    id: 'DIST-002b',
+    categoria: 'distinct',
+    pergunta: 'Quantas cargas estão sem motorista?',
+    operacao: 'COUNT(ausência)',
+    medir: () => contarDistintos(CARGAS_2026, 'motorista').ausentes,
+    esperado: ESPERADO.cargas_sem_motorista_2026,
+    causa: 'nenhuma',
+  },
+  {
+    id: 'DIST-002c',
+    categoria: 'distinct',
+    pergunta: 'Ausência é só célula vazia — "N/A" e "-" são nomes, não ausência',
+    operacao: 'COUNT(DISTINCT) + definição de ausência',
+    /* MEDIDO na fonte real: a única forma de ausência é a célula vazia (129
+       casos em 2681 linhas). "N/A" e "-" não ocorrem — tratá-los como ausência
+       por heurística transformaria nome legítimo em vazio. */
+    medir: () => contarDistintos(CARGAS_AUSENCIA, 'motorista').distintos,
+    esperado: ESPERADO.motoristas_distintos_ausencia,
+    causa: 'nenhuma',
   },
 
   // ═══ NÍVEL 5 — TEMPO ═══
@@ -422,9 +487,11 @@ export const CASOS: readonly CasoCapacidade[] = [
     categoria: 'qualidade',
     pergunta: 'Existem cargas duplicadas?',
     operacao: 'DUPLICATE_DETECTION',
-    medir: () => null,
-    esperado: null,
-    causa: 'executor',
+    /* Passou a existir no Ciclo A. Sobre o conjunto real de 2026 a resposta é
+       "não" — e "não" medido vale mais que "não sei". */
+    medir: () => (contarCargas(CARGAS_2026).repetidas > 0 ? 'sim' : 'não'),
+    esperado: 'não',
+    causa: 'nenhuma',
   },
 ];
 

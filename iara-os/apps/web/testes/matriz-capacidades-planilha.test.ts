@@ -22,8 +22,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { CASOS, rodarMatriz, type EstadoCapacidade } from './planilha/matriz';
-import { CARGAS_2026, CARGAS_2026_COM_DUPLICATA, ESPERADO } from './planilha/oraculo';
-import { agregarCargas } from '../servidor/nucleo/ClientePlanilhaOcis';
+import {
+  CARGAS_2026,
+  CARGAS_2026_COM_DUPLICATA,
+  CARGAS_AUSENCIA,
+  CARGAS_DUPLICADAS,
+  CARGAS_MEDIA,
+  ESPERADO,
+} from './planilha/oraculo';
+import {
+  agregarCargas,
+  contarCargas,
+  contarDistintos,
+  dimensaoAusente,
+  valorMedio,
+} from '../servidor/nucleo/ClientePlanilhaOcis';
 
 /**
  * O ESTADO DE CADA CAPACIDADE, medido em 18/08/2026. Escrito à mão a partir da
@@ -39,15 +52,22 @@ const ESTADO_MEDIDO: Readonly<Record<string, EstadoCapacidade>> = {
   'COUNT-006': 'UNSUPPORTED',
   'SUM-001': 'SUPPORTED_CORRECT',
   'SUM-002': 'SUPPORTED_CORRECT',
-  'AVG-001': 'SUPPORTED_PARTIAL',
+  /* Ciclo A: a média passou a dividir pelo que TEM valor. */
+  'AVG-001': 'SUPPORTED_CORRECT',
+  'AVG-002': 'SUPPORTED_CORRECT',
   'MAX-001': 'UNSUPPORTED',
   'MIN-001': 'UNSUPPORTED',
   'GROUP-001': 'SUPPORTED_CORRECT',
   'GROUP-002': 'SUPPORTED_CORRECT',
   'GROUP-003': 'UNSUPPORTED',
   'GROUP-004': 'UNSUPPORTED',
-  'DIST-001': 'WRONG_RESULT',
-  'DIST-002': 'WRONG_RESULT',
+  /* Ciclo A: os dois WRONG_RESULT da Fase 1, agora com semântica própria. */
+  'DIST-001': 'SUPPORTED_CORRECT',
+  'DIST-001b': 'SUPPORTED_CORRECT',
+  'DIST-001c': 'SUPPORTED_CORRECT',
+  'DIST-002': 'SUPPORTED_CORRECT',
+  'DIST-002b': 'SUPPORTED_CORRECT',
+  'DIST-002c': 'SUPPORTED_CORRECT',
   'DATE-001': 'SUPPORTED_CORRECT',
   'DATE-002': 'SUPPORTED_CORRECT',
   'DATE-003': 'UNSUPPORTED',
@@ -60,7 +80,7 @@ const ESTADO_MEDIDO: Readonly<Record<string, EstadoCapacidade>> = {
   'PCT-001': 'SUPPORTED_PARTIAL',
   'QUAL-001': 'SUPPORTED_CORRECT',
   'QUAL-002': 'UNSUPPORTED',
-  'QUAL-003': 'UNSUPPORTED',
+  'QUAL-003': 'SUPPORTED_CORRECT',
 };
 
 test('a matriz cobre todos os casos declarados, sem sobra nem falta', () => {
@@ -91,47 +111,91 @@ test('nenhuma capacidade mudou de estado sem a matriz ser regenerada', () => {
 // ---------------------------------------------------------------------------
 
 /**
- * LINHA REPETIDA VIRA CARGA A MAIS.
+ * DIST-001 FECHADO — contar cargas não é contar linhas.
  *
- * Na planilha real de 18/08/2026 não há OCI repetida em 2681 linhas — medido,
- * não suposto. Então isto é risco LATENTE, e é assim que fica registrado: o dia
- * em que alguém colar uma linha duas vezes, a contagem sobe e nada avisa.
+ * A identidade de uma carga é a OCI, PROVADA nos dados: 2681 OCIs distintas em
+ * 2681 linhas na aba real. Não foi escolhida pelo nome do campo.
+ *
+ * O grupo continua contando linhas de propósito — uma listagem por motorista
+ * mostra linhas. Quem responde "quantas cargas" é `contarCargas`, e a diferença
+ * entre os dois números sai declarada em vez de sumir.
  */
-test('DEFEITO · o motor conta linhas, não cargas únicas', () => {
-  const comDup = agregarCargas(CARGAS_2026_COM_DUPLICATA, 'nenhum')[0].contagem;
-  assert.equal(comDup, ESPERADO.linhas_2026_com_duplicata, 'o conjunto tem 13 linhas');
+test('DIST-001 · cargas únicas ≠ linhas, e a diferença é declarada', () => {
+  const r = contarCargas(CARGAS_2026_COM_DUPLICATA);
+  assert.equal(r.linhas, ESPERADO.linhas_2026_com_duplicata, 'treze linhas');
+  assert.equal(r.unicas, ESPERADO.ocis_unicas_2026_com_duplicata, 'doze cargas');
+  assert.equal(r.repetidas, 1, 'e uma repetição, dita e não escondida');
 
-  const ocisUnicas = new Set(CARGAS_2026_COM_DUPLICATA.map((c) => c.oci)).size;
-  assert.equal(ocisUnicas, ESPERADO.ocis_unicas_2026_com_duplicata, 'e 12 OCIs');
-
-  assert.notEqual(
-    comDup,
-    ocisUnicas,
-    'se passaram a bater, COUNT DISTINCT foi implementado — atualize a matriz',
-  );
+  /* O conjunto adversarial do enunciado: A, A, B, C, C. */
+  const adv = contarCargas(CARGAS_DUPLICADAS);
+  assert.equal(adv.linhas, ESPERADO.linhas_adversarial);
+  assert.equal(adv.unicas, ESPERADO.cargas_unicas_adversarial, 'três cargas, não cinco');
+  assert.equal(adv.repetidas, ESPERADO.linhas_repetidas_adversarial);
 });
 
 /**
- * O GRUPO DO MOTORISTA AUSENTE CONTA COMO MOTORISTA.
+ * DIST-002 FECHADO — contar grupos não é contar motoristas.
  *
- * Este é VIVO, não latente: na planilha real são 73 motoristas e 74 grupos,
- * porque 130 cargas estão sem motorista e formam um grupo próprio. "Quantos
- * motoristas temos?" responderia 74 — e 74 é plausível o bastante para ninguém
- * conferir.
+ * Era VIVO: na planilha real são 73 motoristas e 74 grupos, porque 130 cargas
+ * estão sem motorista e formam grupo próprio. "Quantos motoristas temos?"
+ * responderia 74 — plausível o bastante para ninguém conferir.
+ *
+ * O conserto NÃO é `grupos.length - 1`. Aquilo quebraria quando não houvesse
+ * ausência nenhuma, e não saberia dizer quantas cargas ficaram órfãs. A
+ * distinção é feita sobre o dado, e a ausência sai declarada.
  */
-test('DEFEITO · contar grupos não é contar motoristas', () => {
-  const gruposMotorista = agregarCargas(CARGAS_2026, 'motorista');
-  const motoristasReais = new Set(
-    CARGAS_2026.map((c) => c.motorista).filter((m) => m.trim() !== ''),
-  ).size;
+test('DIST-002 · motoristas distintos ignoram a ausência, e a ausência é dita', () => {
+  const r = contarDistintos(CARGAS_2026, 'motorista');
+  assert.equal(r.distintos, ESPERADO.motoristas_distintos_2026, 'três motoristas de verdade');
+  assert.equal(r.ausentes, ESPERADO.cargas_sem_motorista_2026, 'e uma carga órfã, declarada');
 
-  assert.equal(motoristasReais, ESPERADO.motoristas_distintos_2026, 'são três motoristas de verdade');
-  assert.equal(gruposMotorista.length, 4, 'e quatro grupos, porque o ausente forma o seu');
-  assert.notEqual(
-    gruposMotorista.length,
-    motoristasReais,
-    'se passaram a bater, o grupo do ausente saiu da contagem — atualize a matriz',
+  /* O agrupamento CONTINUA mostrando o grupo do ausente — sumir com ele seria o
+     defeito simétrico, e a listagem em produção depende disso. */
+  const gs = agregarCargas(CARGAS_2026, 'motorista');
+  assert.equal(gs.length, 4, 'a listagem segue com quatro grupos');
+  assert.ok(gs.some((g) => /sem motorista/i.test(g.chave)));
+});
+
+/**
+ * A DEFINIÇÃO DE AUSÊNCIA, TRAVADA CONTRA HEURÍSTICA.
+ *
+ * MEDIDO na fonte real (aba 2026, 2681 linhas): a única forma de ausência é a
+ * célula vazia — 129 casos. Não há "N/A", não há "-", não há "SEM MOTORISTA".
+ * Ensinar o sistema a tratar esses textos como ausência inventaria uma regra que
+ * a fonte não pede, e o preço seria transformar um nome legítimo em vazio.
+ *
+ * Se a fonte passar a usar sentinela, a medição volta e a regra muda com
+ * evidência — nunca por palpite.
+ */
+test('DIST-002c · só vazio é ausência; "N/A" e "-" são nomes', () => {
+  const r = contarDistintos(CARGAS_AUSENCIA, 'motorista');
+  assert.equal(r.distintos, ESPERADO.motoristas_distintos_ausencia, '"N/A", "-" e "LINO" são três');
+  assert.equal(r.ausentes, ESPERADO.ausencias_no_conjunto_ausencia, 'vazio e espaços são as duas');
+
+  assert.equal(dimensaoAusente(''), true);
+  assert.equal(dimensaoAusente('   '), true);
+  assert.equal(dimensaoAusente(null), true);
+  assert.equal(dimensaoAusente('N/A'), false, '"N/A" é um nome até a fonte dizer o contrário');
+  assert.equal(dimensaoAusente('-'), false);
+});
+
+/**
+ * A MÉDIA DIVIDE PELO QUE EXISTE — a decisão documentada, com o caso do
+ * enunciado: 100, 200 e ausente dão 150, nunca 100.
+ */
+test('AVG · o denominador é a quantidade de valores válidos', () => {
+  const [g] = agregarCargas(CARGAS_MEDIA, 'nenhum');
+  assert.equal(g.contagem, 3, 'três cargas');
+  assert.equal(g.com_valor, 2, 'duas com valor');
+  assert.equal(g.valor_total, 300);
+  assert.equal(valorMedio(g), ESPERADO.media_sobre_valores_validos, '300/2 = 150');
+
+  /* Sem nenhum valor: ausência, nunca zero. Zero afirmaria que não valem nada. */
+  const [vazio] = agregarCargas(
+    CARGAS_MEDIA.map((x) => ({ ...x, valor: null })),
+    'nenhum',
   );
+  assert.equal(valorMedio(vazio), null);
 });
 
 /**

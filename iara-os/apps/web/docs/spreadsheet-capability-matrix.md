@@ -22,11 +22,10 @@ interface real. As duas medições são necessárias e nenhuma substitui a outra
 
 | Estado | Quantidade |
 | --- | ---: |
-| SUPPORTED_CORRECT | 10 |
-| SUPPORTED_PARTIAL | 3 |
-| WRONG_RESULT | 2 |
-| UNSUPPORTED | 15 |
-| **Total** | **30** |
+| SUPPORTED_CORRECT | 19 |
+| SUPPORTED_PARTIAL | 2 |
+| UNSUPPORTED | 14 |
+| **Total** | **35** |
 
 ## A matriz
 
@@ -40,15 +39,20 @@ interface real. As duas medições são necessárias e nenhuma substitui a outra
 | COUNT-006 | contagem | Quantas cargas o cliente X fez? | `COUNT + FILTER(cliente)` | — | — | **UNSUPPORTED** | dados — a informação não está na fonte |
 | SUM-001 | agregação | Qual o faturamento total? | `SUM(valor)` | 15000 | 15000 | **SUPPORTED_CORRECT** | — |
 | SUM-002 | agregação | Quanto o LAUDIR faturou? | `SUM + FILTER(motorista)` | 7000 | 7000 | **SUPPORTED_CORRECT** | — |
-| AVG-001 | agregação | Qual o valor médio por carga? | `AVG(valor)` | 1250 | 1250 | **SUPPORTED_PARTIAL** | executor — o motor não sabe calcular |
+| AVG-001 | agregação | Qual o valor médio por carga? (100, 200 e um sem valor) | `AVG(valor)` | 150 | 150 | **SUPPORTED_CORRECT** | — |
+| AVG-002 | agregação | Qual o valor médio quando nenhuma carga tem valor? | `AVG(valor) sobre conjunto sem valores` | ausência declarada | ausência declarada | **SUPPORTED_CORRECT** | — |
 | MAX-001 | agregação | Qual foi a maior carga? | `MAX(valor)` | — | — | **UNSUPPORTED** | executor — o motor não sabe calcular |
 | MIN-001 | agregação | Qual foi a menor carga? | `MIN(valor)` | — | — | **UNSUPPORTED** | executor — o motor não sabe calcular |
 | GROUP-001 | agrupamento | Quantas cargas por motorista? | `GROUP_BY(motorista)` | 4 | 4 | **SUPPORTED_CORRECT** | — |
 | GROUP-002 | agrupamento | Quantas cargas por rota? | `GROUP_BY(rota)` | 4 | 4 | **SUPPORTED_CORRECT** | — |
 | GROUP-003 | agrupamento | Quantas cargas por mês? | `GROUP_BY(mês)` | — | — | **UNSUPPORTED** | executor — o motor não sabe calcular |
 | GROUP-004 | agrupamento | Quantas cargas por estado de destino? | `GROUP_BY(uf_destino)` | — | — | **UNSUPPORTED** | api — o contrato entre camadas não expressa |
-| DIST-001 | distinct | Quantas cargas únicas existem? | `COUNT(DISTINCT oci)` | 12 | 13 | **WRONG_RESULT** | executor — o motor não sabe calcular |
-| DIST-002 | distinct | Quantos motoristas diferentes temos? | `COUNT(DISTINCT motorista)` | 3 | 4 | **WRONG_RESULT** | executor — o motor não sabe calcular |
+| DIST-001 | distinct | Quantas cargas únicas existem? | `COUNT(DISTINCT oci)` | 12 | 12 | **SUPPORTED_CORRECT** | — |
+| DIST-001b | distinct | Quantas cargas únicas existem? (conjunto adversarial A,A,B,C,C) | `COUNT(DISTINCT oci)` | 3 | 3 | **SUPPORTED_CORRECT** | — |
+| DIST-001c | distinct | Quantas linhas repetidas existem? | `DUPLICATE_DETECTION` | 2 | 2 | **SUPPORTED_CORRECT** | — |
+| DIST-002 | distinct | Quantos motoristas diferentes temos? | `COUNT(DISTINCT motorista)` | 3 | 3 | **SUPPORTED_CORRECT** | — |
+| DIST-002b | distinct | Quantas cargas estão sem motorista? | `COUNT(ausência)` | 1 | 1 | **SUPPORTED_CORRECT** | — |
+| DIST-002c | distinct | Ausência é só célula vazia — "N/A" e "-" são nomes, não ausência | `COUNT(DISTINCT) + definição de ausência` | 3 | 3 | **SUPPORTED_CORRECT** | — |
 | DATE-001 | datas | …hoje | `DATE_RANGE` | entende | entende | **SUPPORTED_CORRECT** | — |
 | DATE-002 | datas | …essa semana | `DATE_RANGE` | entende | entende | **SUPPORTED_CORRECT** | — |
 | DATE-003 | datas | …em janeiro | `DATE_RANGE(mês nomeado)` | — | — | **UNSUPPORTED** | interpretador — a expressão não é entendida |
@@ -61,7 +65,7 @@ interface real. As duas medições são necessárias e nenhuma substitui a outra
 | PCT-001 | participação | Quanto o LINO representa do total? | `SHARE` | 41.67 | 41.67 | **SUPPORTED_PARTIAL** | executor — o motor não sabe calcular |
 | QUAL-001 | qualidade | Existem cargas sem motorista? | `COUNT(campo vazio)` | 1 | 1 | **SUPPORTED_CORRECT** | — |
 | QUAL-002 | qualidade | Existem cargas sem valor? | `COUNT(valor nulo)` | — | — | **UNSUPPORTED** | executor — o motor não sabe calcular |
-| QUAL-003 | qualidade | Existem cargas duplicadas? | `DUPLICATE_DETECTION` | — | — | **UNSUPPORTED** | executor — o motor não sabe calcular |
+| QUAL-003 | qualidade | Existem cargas duplicadas? | `DUPLICATE_DETECTION` | não | não | **SUPPORTED_CORRECT** | — |
 
 ## Lacunas por causa técnica
 
@@ -69,14 +73,12 @@ interface real. As duas medições são necessárias e nenhuma substitui a outra
 
 - COUNT-004 — Quantas cargas foram canceladas? *(CANCELADA cai em DESCONHECIDO; não há estado de cancelamento no normalizador)*
 - COUNT-005 — Quantas cargas foram feitas em janeiro? *(data_coleta existe em toda carga; o agrupamento por mês nunca foi escrito)*
-- AVG-001 — Qual o valor médio por carga? *(derivada de total/contagem; a carga sem valor entra no divisor como zero)*
 - MAX-001 — Qual foi a maior carga? *(GrupoAgregado carrega apenas contagem e valor_total)*
 - MIN-001 — Qual foi a menor carga?
 - GROUP-003 — Quantas cargas por mês?
 - CMP-002 — Qual o crescimento percentual?
 - PCT-001 — Quanto o LINO representa do total? *(derivável de dois números que já existem; não há métrica de participação)*
 - QUAL-002 — Existem cargas sem valor? *(valor nulo soma como zero e não é contado em lugar nenhum)*
-- QUAL-003 — Existem cargas duplicadas?
 
 ### dados — a informação não está na fonte
 

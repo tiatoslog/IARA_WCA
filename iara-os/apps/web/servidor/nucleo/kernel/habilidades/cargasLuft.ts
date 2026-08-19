@@ -18,8 +18,10 @@ import {
   agregarCargas,
   anoForaDoAlcance,
   cargasNoPeriodo,
+  contarCargas,
   planilhaOcisDisponivel,
   todasAsCargas,
+  valorMedio,
   type AgruparPor,
 } from '../../ClientePlanilhaOcis';
 import { interpretarPeriodo } from '../PeriodoOperacional';
@@ -356,14 +358,45 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     };
 
     if (agruparPor === 'nenhum') {
+      const [tudo] = agregarCargas(cargas, 'nenhum');
       const contagem = cargas.length;
-      const valorTotal = cargas.reduce((soma, c) => soma + (c.valor ?? 0), 0);
+      const valorTotal = tudo?.valor_total ?? 0;
+      /**
+       * A CONTAGEM DIZ QUANTAS CARGAS, NÃO QUANTAS LINHAS — defeito DIST-001.
+       *
+       * A identidade de uma carga é a OCI, provada nos dados. Hoje não há
+       * repetição na planilha real, então os dois números coincidem; no dia em
+       * que alguém colar uma linha duas vezes, é a diferença que precisa
+       * aparecer, e não o total inflado em silêncio.
+       */
+      const cargasContadas = contarCargas(cargas);
+      const avisoRepetidas =
+        cargasContadas.repetidas > 0
+          ? ` (${cargasContadas.repetidas} linha${cargasContadas.repetidas === 1 ? '' : 's'} repetida${cargasContadas.repetidas === 1 ? '' : 's'}, não contada${cargasContadas.repetidas === 1 ? '' : 's'} duas vezes)`
+          : '';
+      const n = cargasContadas.unicas;
+      const plural = n === 1 ? '' : 's';
+
+      /**
+       * A MÉDIA DIVIDE PELO QUE TEM VALOR — ver `valorMedio`. Carga sem valor
+       * lançado não vale zero: ela ainda não tem valor, e contá-la no divisor
+       * misturaria "vale pouco" com "não sabemos".
+       */
+      const media = tudo ? valorMedio(tudo) : null;
+      const semValor = tudo ? tudo.contagem - tudo.com_valor : 0;
+      const ressalvaMedia =
+        semValor > 0
+          ? ` — ${semValor} carga${semValor === 1 ? ' ficou' : 's ficaram'} de fora por não ter valor lançado`
+          : '';
+
       const texto =
         metrica === 'valor_total'
-          ? `${rotuloPeriodo}: ${formatarReal(valorTotal)} (${contagem} carga${contagem === 1 ? '' : 's'}).`
+          ? `${rotuloPeriodo}: ${formatarReal(valorTotal)} (${n} carga${plural})${avisoRepetidas}.`
           : metrica === 'valor_medio'
-            ? `${rotuloPeriodo}: ${formatarReal(contagem > 0 ? valorTotal / contagem : 0)} por carga (${contagem} carga${contagem === 1 ? '' : 's'}).`
-            : `${rotuloPeriodo}: ${contagem} carga${contagem === 1 ? '' : 's'}.`;
+            ? media === null
+              ? `${rotuloPeriodo}: nenhuma das ${n} carga${plural} tem valor lançado, então não há média a calcular.`
+              : `${rotuloPeriodo}: ${formatarReal(media)} por carga${ressalvaMedia}.`
+            : `${rotuloPeriodo}: ${n} carga${plural}${avisoRepetidas}.`;
       return {
         texto,
         detalhe: proveniencia({ ...baseProveniencia, operacao: metrica.toUpperCase(), agrupamento: 'nenhum' }),

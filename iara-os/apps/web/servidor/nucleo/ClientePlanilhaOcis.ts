@@ -647,6 +647,120 @@ export interface GrupoAgregado {
   readonly chave: string;
   readonly contagem: number;
   readonly valor_total: number;
+  /**
+   * Quantas cargas do grupo TÊM valor. Existe para a média poder estar certa.
+   *
+   * `valor_total / contagem` trata a carga sem valor como uma carga de zero
+   * reais e puxa o ticket médio para baixo. Com este campo, a média é sobre o
+   * que existe — e quem responde pode dizer quantas ficaram de fora, em vez de
+   * escondê-las no divisor.
+   */
+  readonly com_valor: number;
+}
+
+// ---------------------------------------------------------------------------
+// A semântica de COUNT — três operações que não são a mesma
+// ---------------------------------------------------------------------------
+
+/**
+ * AUSÊNCIA, E SÓ AUSÊNCIA — nada de sentinela por heurística.
+ *
+ * MEDIDO NA FONTE REAL (18/08/2026, aba 2026, 2681 linhas): a única forma de
+ * ausência de motorista é a célula vazia — 129 casos. Não existe "N/A", não
+ * existe "-", não existe "SEM MOTORISTA". Ensinar o sistema a tratar esses
+ * textos como ausência seria inventar uma regra que a fonte não pede, e o preço
+ * seria transformar um nome legítimo em vazio no dia em que alguém se chamar
+ * assim. Se a fonte mudar, a medição volta e a regra muda com evidência.
+ */
+export function dimensaoAusente(v: string | null | undefined): boolean {
+  return v === null || v === undefined || v.trim() === '';
+}
+
+/**
+ * CONTAR GRUPOS NÃO É CONTAR ENTIDADES — o defeito DIST-002.
+ *
+ * `agregarCargas(cargas, 'motorista')` devolve um grupo por motorista MAIS um
+ * grupo "(sem motorista)", porque uma listagem precisa mostrar as cargas órfãs
+ * — some-las seria pior. Mas quem pergunta "quantos motoristas temos?" não está
+ * perguntando quantos grupos existem: ausência não é uma pessoa.
+ *
+ * Medido na planilha real: 73 motoristas e 74 grupos, porque 130 cargas estão
+ * sem motorista. A resposta 74 é plausível o bastante para ninguém conferir —
+ * e esse é exatamente o perfil de erro mais caro desta auditoria.
+ *
+ * NÃO é `grupos.length - 1`. Aquilo seria um atalho que quebra quando não há
+ * ausência nenhuma (74 vira 72) e que não sabe dizer QUANTAS ficaram de fora.
+ * Aqui a distinção é feita na origem, sobre o dado.
+ */
+export interface ContagemDistinta {
+  /** Entidades distintas de verdade. Ausência nunca entra. */
+  readonly distintos: number;
+  /** Quantas cargas não têm a dimensão preenchida — declarado, nunca escondido. */
+  readonly ausentes: number;
+}
+
+export function contarDistintos(
+  cargas: readonly CargaCompleta[],
+  dimensao: 'motorista' | 'origem' | 'destino' | 'uf_origem' | 'uf_destino' | 'status',
+): ContagemDistinta {
+  const vistos = new Set<string>();
+  let ausentes = 0;
+  for (const c of cargas) {
+    const v = c[dimensao];
+    if (dimensaoAusente(v)) ausentes += 1;
+    else vistos.add(v.trim().toUpperCase());
+  }
+  return { distintos: vistos.size, ausentes };
+}
+
+/**
+ * QUANTAS CARGAS, E NÃO QUANTAS LINHAS — o defeito DIST-001.
+ *
+ * A identidade de uma carga é a OCI, e isso foi PROVADO nos dados, não
+ * escolhido pelo nome: na aba 2026 há 2681 OCIs distintas em 2681 linhas com
+ * OCI preenchida (as 24 linhas sem OCI já são descartadas antes, por
+ * `linhaReal`). Hoje não há repetição — então isto é risco LATENTE, e o dia em
+ * que alguém colar uma linha duas vezes a contagem sobe sem avisar ninguém.
+ *
+ * `repetidas` é a diferença, e sai declarada: uma planilha que ganha duplicata
+ * precisa acusar, não corrigir em silêncio.
+ */
+export interface ContagemDeCargas {
+  readonly linhas: number;
+  readonly unicas: number;
+  readonly repetidas: number;
+}
+
+export function contarCargas(cargas: readonly CargaCompleta[]): ContagemDeCargas {
+  const ocis = new Set<string>();
+  let semOci = 0;
+  for (const c of cargas) {
+    if (dimensaoAusente(c.oci)) semOci += 1;
+    else ocis.add(c.oci.trim().toUpperCase());
+  }
+  const linhas = cargas.length;
+  const unicas = ocis.size + semOci; /* linha sem OCI não é duplicata de ninguém */
+  return { linhas, unicas, repetidas: linhas - unicas };
+}
+
+/**
+ * A MÉDIA SOBRE O QUE EXISTE — a decisão, documentada.
+ *
+ * Três cargas valendo 100, 200 e ausente admitem duas médias: 300/2 = 150 ou
+ * 300/3 = 100. A escolha aqui é **150**: o denominador é a quantidade de
+ * valores VÁLIDOS.
+ *
+ * A razão é operacional, não estatística. "Qual o ticket médio?" pergunta
+ * quanto vale uma carga típica; uma carga cujo valor ainda não foi lançado não
+ * vale zero — ela ainda não tem valor. Contá-la no divisor mistura "vale pouco"
+ * com "não sabemos", e a operadora não tem como distinguir as duas coisas
+ * olhando o número.
+ *
+ * `null` quando não há nenhum valor válido: média de nada é ausência, nunca
+ * zero. Zero seria uma afirmação — a de que as cargas não valem nada.
+ */
+export function valorMedio(g: GrupoAgregado): number | null {
+  return g.com_valor > 0 ? g.valor_total / g.com_valor : null;
 }
 
 function chaveDoGrupo(c: CargaCompleta, agruparPor: AgruparPor): string {
@@ -677,12 +791,16 @@ export function agregarCargas(
   cargas: readonly CargaCompleta[],
   agruparPor: AgruparPor,
 ): readonly GrupoAgregado[] {
-  const grupos = new Map<string, { contagem: number; valor_total: number }>();
+  const grupos = new Map<string, { contagem: number; valor_total: number; com_valor: number }>();
   for (const c of cargas) {
     const chave = chaveDoGrupo(c, agruparPor);
-    const atual = grupos.get(chave) ?? { contagem: 0, valor_total: 0 };
+    const atual = grupos.get(chave) ?? { contagem: 0, valor_total: 0, com_valor: 0 };
     atual.contagem += 1;
     atual.valor_total += c.valor ?? 0;
+    /* Contado à parte para a média poder dividir pelo que existe — ver
+       `valorMedio`. A soma continua tratando ausente como zero, e ali está
+       certo: somar o que não existe não muda o total. */
+    if (c.valor !== null) atual.com_valor += 1;
     grupos.set(chave, atual);
   }
   return [...grupos.entries()].map(([chave, v]) => ({ chave, ...v }));
