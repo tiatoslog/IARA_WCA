@@ -39,7 +39,9 @@ import {
   contarDistintos,
   identidadeDeMotorista,
   suspeitasDeIdentidade,
+  valorDaDimensao,
   type CargaCompleta,
+  type DimensaoContavel,
 } from '../servidor/nucleo/ClientePlanilhaOcis';
 import { CARGAS_2026, ESPERADO } from './planilha/oraculo';
 
@@ -359,4 +361,107 @@ test('e o valor continua batendo com o oráculo independente', () => {
     contarDistintos(BASE, 'motorista').ausentes,
     ESPERADO.cargas_sem_motorista_2026,
   );
+});
+
+// ---------------------------------------------------------------------------
+// 5. REL-0002 e REL-0003 — achados pelo auditor em navegador real, 19/08/2026
+// ---------------------------------------------------------------------------
+
+/**
+ * REL-0002. "QUANTAS ROTAS DIFERENTES TEMOS?" RESPONDEU ZERO.
+ *
+ * A resposta na tela, com procedência completa:
+ *
+ *   "todas as cargas de 2026: 0 rotas diferentes — 2687 cargas sem rota
+ *    preenchido, fora dessa conta."
+ *
+ * `rota` é dimensão DERIVADA (`origem → destino`), não uma coluna. `c['rota']`
+ * era `undefined`, toda linha caía em `dimensaoAusente`, e o total inteiro ia
+ * para `ausentes`. Zero com fonte, com ano e com contagem de ausência — a
+ * resposta mais confiável de se ler, e errada.
+ *
+ * A causa não era a rota: `contarDistintos` falava um vocabulário mais estreito
+ * que `AgruparPor`, e a habilidade unia os dois com um cast que desligava
+ * exatamente a checagem capaz de acusar isso na compilação.
+ */
+test('REL-0002. rota é dimensão derivada e conta como as outras', () => {
+  const d = contarDistintos(BASE, 'rota');
+  const grupos = agregarCargas(BASE, 'rota').length;
+  assert.equal(d.distintos, grupos, 'a contagem distinta de rota divergiu do agrupamento');
+  assert.ok(d.distintos > 0, 'voltou a zero — o defeito REL-0002 renasceu');
+  assert.equal(d.ausentes, 0, 'linha com origem e destino preenchidos não é rota ausente');
+});
+
+test('REL-0002b. rota exige AS DUAS pontas — meia rota é rota desconhecida', () => {
+  const semDestino = { ...MOLDE, origem: 'SP', destino: '' };
+  const semOrigem = { ...MOLDE, origem: '', destino: 'MT' };
+  assert.equal(valorDaDimensao(semDestino, 'rota'), null);
+  assert.equal(valorDaDimensao(semOrigem, 'rota'), null);
+  const d = contarDistintos([...BASE, semDestino, semOrigem], 'rota');
+  assert.equal(d.distintos, contarDistintos(BASE, 'rota').distintos, 'meia rota criou entidade');
+  assert.equal(d.ausentes, 2, 'a rota desconhecida sumiu em vez de ser declarada');
+});
+
+/**
+ * REL-0003. `SEM_STATUS` ERA CONTADO COMO UM STATUS.
+ *
+ * Mais sutil que o REL-0002 e da mesma família do incidente: o campo EXISTE em
+ * `CargaCompleta`, então nada explodia — a contagem só somava um a mais.
+ * `SEM_STATUS` é o nome que o normalizador dá à célula vazia; é ausência com
+ * outro rótulo, e ausência nunca é entidade.
+ *
+ * O portão compara com a contagem sobre o texto CRU da célula, que já tratava
+ * vazio como ausência: as duas leituras da mesma coluna têm de concordar.
+ */
+test('REL-0003. SEM_STATUS é ausência, não um status', () => {
+  const norm = contarDistintos(BASE, 'status_normalizado');
+  const cru = contarDistintos(BASE, 'status');
+  assert.equal(norm.ausentes, cru.ausentes, 'as duas leituras da coluna discordam sobre a ausência');
+  assert.equal(norm.distintos, 3, 'FINALIZADO, PAGO e DESCONHECIDO — SEM_STATUS não é um deles');
+  for (const c of BASE) {
+    if (c.status_normalizado === 'SEM_STATUS') {
+      assert.equal(valorDaDimensao(c, 'status_normalizado'), null);
+    }
+  }
+});
+
+/**
+ * O PORTÃO QUE IMPEDE O PRÓXIMO REL-0002.
+ *
+ * Os dois defeitos nasceram do mesmo lugar: uma dimensão que `agregarCargas`
+ * sabia tratar e `contarDistintos` não. Enquanto existirem duas funções lendo
+ * dimensão, este teste cobra que elas cubram o MESMO conjunto — e não com um
+ * `as`, que foi justamente o que escondeu o buraco por três meses.
+ *
+ * `nenhum` fica de fora dos dois lados: agrupar por nada é o universo inteiro,
+ * contar "nenhum" distintos não é pergunta. O tipo `DimensaoContavel` já exclui.
+ */
+test('toda dimensão agrupável (exceto `nenhum`) é contável, e nenhuma devolve zero por acidente', () => {
+  const dimensoes: readonly DimensaoContavel[] = [
+    'motorista',
+    'rota',
+    'origem',
+    'destino',
+    'status',
+    'status_normalizado',
+    'uf_origem',
+    'uf_destino',
+  ];
+  for (const d of dimensoes) {
+    const r = contarDistintos(BASE, d);
+    assert.ok(
+      r.distintos + r.ausentes > 0,
+      `${d}: nem distintos nem ausentes — a dimensão não foi lida de jeito nenhum`,
+    );
+    assert.equal(
+      r.distintos + (r.ausentes > 0 ? 1 : 0) >= 1,
+      true,
+      `${d}: contagem vazia sobre base não vazia`,
+    );
+    /* O sinal exato do REL-0002: TUDO ausente sobre uma base que tem o dado. */
+    assert.ok(
+      !(r.distintos === 0 && r.ausentes === BASE.length),
+      `${d}: toda linha virou ausente — é a assinatura do REL-0002`,
+    );
+  }
 });

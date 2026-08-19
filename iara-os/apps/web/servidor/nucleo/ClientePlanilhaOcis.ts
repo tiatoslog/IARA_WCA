@@ -829,18 +829,90 @@ export function suspeitasDeIdentidade(
   return achados.sort((a, b) => b.cargas - a.cargas);
 }
 
+/**
+ * As dimensões que se pode CONTAR. É `AgruparPor` menos `nenhum` — porque
+ * "quantos nenhum diferentes existem" não é uma pergunta — mais os campos de UF,
+ * que agrupamento não oferece e contagem sim.
+ */
+export type DimensaoContavel =
+  | Exclude<AgruparPor, 'nenhum'>
+  | 'uf_origem'
+  | 'uf_destino';
+
+/**
+ * O VALOR DE UMA DIMENSÃO PARA EFEITO DE CONTAGEM — `null` quando não há valor.
+ *
+ * O DEFEITO QUE ISTO FECHA (auditoria em navegador real, 19/08/2026). Perguntada
+ * "quantas rotas diferentes temos?", a IARA respondeu, com procedência completa:
+ *
+ *   "todas as cargas de 2026: 0 rotas diferentes — 2687 cargas sem rota
+ *    preenchido, fora dessa conta."
+ *
+ * São 4 no fixture e dezenas na planilha real. `rota` é dimensão DERIVADA
+ * (`origem → destino`), não uma coluna: `c['rota']` é `undefined`, toda linha
+ * caía em `dimensaoAusente` e o total ia para `ausentes`. Zero com fonte, ano e
+ * contagem de ausência — a resposta mais confiável possível, e errada.
+ *
+ * A CAUSA NÃO ERA A ROTA. `contarDistintos` falava um vocabulário MAIS ESTREITO
+ * que `AgruparPor`, e a habilidade unia os dois com
+ * `agruparPor as Parameters<typeof contarDistintos>[1]`. O cast desligava
+ * exatamente a checagem que teria acusado isso na compilação. Dois vocabulários
+ * para a mesma ideia, ligados por um cast: é a mesma doença da regra duplicada
+ * que este repositório já pagou duas vezes, na versão tipada.
+ *
+ * O SEGUNDO DEFEITO, achado junto e mais sutil: `status_normalizado` EXISTE em
+ * `CargaCompleta`, então não explodia — devolvia 4 contando `SEM_STATUS` como se
+ * fosse um status. Ausência virando entidade, que é literalmente o defeito
+ * DIST-002 do incidente dos motoristas, vivo em outra dimensão porque a política
+ * de nulo estava escrita para uma dimensão de cada vez.
+ *
+ * Agora existe UM lugar que decide o que é ausência, para toda dimensão. Ele é o
+ * que `contarDistintos` usa, e é onde se lê a política inteira de uma vez.
+ *
+ * POR QUE `chaveDoGrupo` NÃO FOI UNIFICADO COM ISTO, e a diferença é
+ * substantiva: listar e contar querem coisas opostas da ausência. Uma listagem
+ * PRECISA mostrar `(sem motorista) — 131 cargas` e `SP → ?`, senão esconde carga
+ * órfã de quem precisa resolvê-la. Uma contagem de entidades não pode incluir
+ * nenhuma das duas. Unificar as funções faria uma das duas mentir.
+ */
+export function valorDaDimensao(c: CargaCompleta, dimensao: DimensaoContavel): string | null {
+  switch (dimensao) {
+    case 'motorista':
+      /* Motorista tem IDENTIDADE, não só grafia: a mesma pessoa aparece com
+         placa e tag coladas ao nome. Ver `identidadeDeMotorista`. */
+      return dimensaoAusente(c.motorista) ? null : identidadeDeMotorista(c.motorista);
+    case 'rota':
+      /**
+       * ROTA EXIGE AS DUAS PONTAS. Uma carga com destino em branco não define
+       * uma rota parcial: define uma rota desconhecida. Contá-la como "SP → ?"
+       * criaria uma entidade por origem órfã, e o número de rotas passaria a
+       * crescer com o preenchimento incompleto da planilha — que é o oposto do
+       * que quem pergunta quer saber.
+       */
+      return dimensaoAusente(c.origem) || dimensaoAusente(c.destino)
+        ? null
+        : `${c.origem.trim().toUpperCase()} → ${c.destino.trim().toUpperCase()}`;
+    case 'status_normalizado':
+      /* `SEM_STATUS` é o nome que o normalizador dá à célula vazia. Ele é
+         ausência com outro rótulo, e ausência nunca é entidade. */
+      return c.status_normalizado === 'SEM_STATUS' ? null : c.status_normalizado;
+    default: {
+      const v = c[dimensao];
+      return dimensaoAusente(v) ? null : v.trim().toUpperCase();
+    }
+  }
+}
+
 export function contarDistintos(
   cargas: readonly CargaCompleta[],
-  dimensao: 'motorista' | 'origem' | 'destino' | 'uf_origem' | 'uf_destino' | 'status',
+  dimensao: DimensaoContavel,
 ): ContagemDistinta {
   const vistos = new Set<string>();
   let ausentes = 0;
   for (const c of cargas) {
-    const v = c[dimensao];
-    if (dimensaoAusente(v)) ausentes += 1;
-    /* Motorista tem IDENTIDADE, não só grafia: a mesma pessoa aparece com
-       placa e tag coladas ao nome. Ver `identidadeDeMotorista`. */
-    else vistos.add(dimensao === 'motorista' ? identidadeDeMotorista(v) : v.trim().toUpperCase());
+    const v = valorDaDimensao(c, dimensao);
+    if (v === null) ausentes += 1;
+    else vistos.add(v);
   }
   return { distintos: vistos.size, ausentes };
 }

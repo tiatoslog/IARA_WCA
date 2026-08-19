@@ -118,6 +118,34 @@ function proveniencia(campos: Readonly<Record<string, string | number | boolean>
     .map(([k, v]) => `${k}=${v}`)
     .join(' ');
 }
+/**
+ * COMO A DIMENSÃO SE CHAMA EM PORTUGUÊS — singular e plural, para a frase.
+ *
+ * O DEFEITO (auditoria em navegador real, 19/08/2026): a resposta saía
+ * *"82 origems diferentes"* e *"3 status_normalizados diferentes — 2529 cargas
+ * sem status_normalizado preenchido"*. O texto era montado com
+ * `${agruparPor}` mais um "s" — quer dizer, com o NOME DO PARÂMETRO INTERNO
+ * concatenado a um plural de brinquedo.
+ *
+ * É a mesma doença que esta folha já pagou em 18/08, quando a IARA respondeu
+ * *"`agrupar_por` fora dos valores aceitos"* a quem perguntou quantas cargas
+ * existem: vocabulário de dentro do código vazando para quem só queria o número.
+ * Naquela vez entrou `SINONIMOS_AGRUPAMENTO` para traduzir o que ENTRA; faltava
+ * traduzir o que SAI. A tradução tem que ter as duas direções, senão ela é meia.
+ *
+ * `status` não flexiona em português — e é por isso que o mapa guarda as duas
+ * formas em vez de calcular o plural com um "s".
+ */
+const NOME_DA_DIMENSAO: Readonly<Record<AgruparPor, { um: string; varios: string }>> = {
+  motorista: { um: 'motorista', varios: 'motoristas' },
+  rota: { um: 'rota', varios: 'rotas' },
+  origem: { um: 'origem', varios: 'origens' },
+  destino: { um: 'destino', varios: 'destinos' },
+  status: { um: 'status', varios: 'status' },
+  status_normalizado: { um: 'status', varios: 'status' },
+  nenhum: { um: 'registro', varios: 'registros' },
+};
+
 const METRICAS = ['contagem', 'valor_total', 'valor_medio', 'distintos'] as const;
 type Metrica = (typeof METRICAS)[number];
 
@@ -396,6 +424,30 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     };
 
     if (agruparPor === 'nenhum') {
+      /**
+       * "QUANTOS DIFERENTES" SEM DIZER DE QUÊ não tem resposta — e antes tinha.
+       *
+       * Achado na mesma varredura que pegou a rota (19/08/2026): com
+       * `metrica=distintos` e `agrupar_por=nenhum`, este ramo caía no `else` e
+       * devolvia a CONTAGEM DE CARGAS. Quem perguntasse "quantos diferentes
+       * temos?" receberia 2687 — o total de cargas apresentado como se fosse um
+       * número de entidades distintas. A pergunta está incompleta; a resposta
+       * certa é dizer isso, não escolher uma dimensão no lugar de quem perguntou.
+       */
+      if (metrica === 'distintos') {
+        return {
+          texto:
+            'Para contar quantos DIFERENTES existem eu preciso saber de quê: motorista, rota, ' +
+            'origem, destino ou status. Sem a dimensão não há o que contar como distinto — e o ' +
+            'total de cargas seria outra resposta, para outra pergunta.',
+          detalhe: proveniencia({
+            ...baseProveniencia,
+            operacao: 'COUNT_DISTINCT',
+            resultado: 'dimensao_ausente',
+          }),
+          resolveu: false,
+        };
+      }
       const [tudo] = agregarCargas(cargas, 'nenhum');
       const contagem = cargas.length;
       const valorTotal = tudo?.valor_total ?? 0;
@@ -461,10 +513,19 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
      * número certo.
      */
     if (metrica === 'distintos') {
-      const d = contarDistintos(cargas, agruparPor as Parameters<typeof contarDistintos>[1]);
+      /**
+       * SEM CAST. O `as Parameters<typeof contarDistintos>[1]` que estava aqui
+       * desligava a única checagem capaz de acusar `rota` — dimensão DERIVADA,
+       * que `contarDistintos` não sabia calcular e que respondeu "0 rotas
+       * diferentes" com procedência completa em produção (19/08/2026). Agora os
+       * dois lados falam `DimensaoContavel`, e o compilador PROVA que `nenhum`
+       * não chega aqui — o ramo sem agrupamento já retornou acima.
+       */
+      const d = contarDistintos(cargas, agruparPor);
+      const rotulo = NOME_DA_DIMENSAO[agruparPor];
       const ressalva =
         d.ausentes > 0
-          ? ` — ${d.ausentes} carga${d.ausentes === 1 ? '' : 's'} sem ${agruparPor} preenchido, fora dessa conta`
+          ? ` — ${d.ausentes} carga${d.ausentes === 1 ? '' : 's'} sem ${rotulo.um} preenchido, fora dessa conta`
           : '';
       /**
        * A SUSPEITA SAI JUNTO COM O NÚMERO — regra da operadora, 19/08/2026.
@@ -491,7 +552,7 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
             '\nSe forem a mesma pessoa, me diga e eu passo a contar como uma.';
 
       return {
-        texto: `${rotuloPeriodo}: ${d.distintos} ${agruparPor}${d.distintos === 1 ? '' : 's'} diferente${d.distintos === 1 ? '' : 's'}${ressalva}.${aviso}`,
+        texto: `${rotuloPeriodo}: ${d.distintos} ${d.distintos === 1 ? rotulo.um : rotulo.varios} diferente${d.distintos === 1 ? '' : 's'}${ressalva}.${aviso}`,
         detalhe: proveniencia({
           ...baseProveniencia,
           operacao: 'COUNT_DISTINCT',
@@ -527,7 +588,7 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     const resto = grupos.length > TOPO ? `\n… e mais ${grupos.length - TOPO} grupo(s).` : '';
 
     return {
-      texto: `${rotuloPeriodo}, por ${agruparPor}:\n${linhas.join('\n')}${resto}`,
+      texto: `${rotuloPeriodo}, por ${NOME_DA_DIMENSAO[agruparPor].um}:\n${linhas.join('\n')}${resto}`,
       detalhe: proveniencia({ ...baseProveniencia, operacao: 'GROUP_BY', agrupamento: agruparPor, grupos: grupos.length }),
       resolveu: true,
     };
