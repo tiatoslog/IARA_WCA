@@ -19,6 +19,7 @@ import {
   anoForaDoAlcance,
   cargasNoPeriodo,
   contarCargas,
+  contarDistintos,
   planilhaOcisDisponivel,
   todasAsCargas,
   valorMedio,
@@ -94,6 +95,13 @@ const SINONIMOS_METRICA: Readonly<Record<string, Metrica>> = {
   quantidade: 'contagem',
   numero: 'contagem',
   cargas: 'contagem',
+  /* "quantos motoristas DIFERENTES" — a família que a LLM resolvia somando o
+     rodapé de uma listagem truncada. Ver a métrica `distintos`. */
+  distinto: 'distintos',
+  diferentes: 'distintos',
+  unicos: 'distintos',
+  count_distinct: 'distintos',
+  contagem_distinta: 'distintos',
 };
 
 /**
@@ -108,7 +116,7 @@ function proveniencia(campos: Readonly<Record<string, string | number | boolean>
     .map(([k, v]) => `${k}=${v}`)
     .join(' ');
 }
-const METRICAS = ['contagem', 'valor_total', 'valor_medio'] as const;
+const METRICAS = ['contagem', 'valor_total', 'valor_medio', 'distintos'] as const;
 type Metrica = (typeof METRICAS)[number];
 
 /**
@@ -270,10 +278,16 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       'cadastradas) e recebe a EXPRESSÃO como foi dita ("essa semana", "17/08"), nunca uma data já ' +
       'calculada. "agrupar_por" é um de: motorista, rota, origem, destino, status (texto exato da célula), ' +
       'status_normalizado (agrupa FINALIZADO/finalizado/FINALIZADA juntos), nenhum. "metrica" é um de: ' +
-      'contagem, valor_total, valor_medio. Use para "qual motorista fez mais cargas", "faturamento por ' +
-      'rota", "quantas cargas por status", "valor total das cargas desta semana".',
+      'contagem, valor_total, valor_medio, distintos. Use para "qual motorista fez mais cargas", ' +
+      '"faturamento por rota", "quantas cargas por status", "valor total das cargas desta semana". ' +
+      'Para "QUANTOS motoristas/rotas/destinos DIFERENTES existem", use metrica=distintos com o ' +
+      'agrupar_por da dimensão — ela devolve a contagem única já descontando as cargas sem o campo ' +
+      'preenchido. NUNCA some os grupos de uma listagem para chegar a esse número: a listagem é ' +
+      'truncada e o rodapé "e mais N" não é somável.',
     exemplos: [
       'Qual motorista tem mais cargas?',
+      'Quantos motoristas diferentes temos?',
+      'Quantas rotas distintas existem?',
       'Motoristas disponíveis agora?',
       'Qual rota teve maior faturamento?',
       'Qual o total faturado essa semana?',
@@ -400,6 +414,43 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       return {
         texto,
         detalhe: proveniencia({ ...baseProveniencia, operacao: metrica.toUpperCase(), agrupamento: 'nenhum' }),
+        resolveu: true,
+      };
+    }
+
+    /**
+     * QUANTOS X DIFERENTES — a métrica que faltava, e a falta custava caro.
+     *
+     * MEDIDO EM PRODUÇÃO (18/08/2026), depois de o motor já estar correto:
+     * perguntada "quantos motoristas diferentes temos?", a IARA respondeu
+     * *"15 na lista principal mais 60 outros grupos — o que dá 75"*. São 73.
+     *
+     * Ela somou o RODAPÉ de uma listagem truncada em 15 itens. Não havia nada
+     * errado no motor: `contarDistintos` já devolvia 73. O que não existia era
+     * uma capacidade DECLARADA para a pergunta, então a LLM improvisou
+     * aritmética sobre texto — e aritmética sobre texto sempre vai parecer uma
+     * resposta.
+     *
+     * A lição, que vale para o resto do catálogo: capacidade que existe no
+     * motor e não existe no manifesto é capacidade que não existe. Motor certo
+     * com roteamento improvisado entrega número errado com a mesma cara de
+     * número certo.
+     */
+    if (metrica === 'distintos') {
+      const d = contarDistintos(cargas, agruparPor as Parameters<typeof contarDistintos>[1]);
+      const ressalva =
+        d.ausentes > 0
+          ? ` — ${d.ausentes} carga${d.ausentes === 1 ? '' : 's'} sem ${agruparPor} preenchido, fora dessa conta`
+          : '';
+      return {
+        texto: `${rotuloPeriodo}: ${d.distintos} ${agruparPor}${d.distintos === 1 ? '' : 's'} diferente${d.distintos === 1 ? '' : 's'}${ressalva}.`,
+        detalhe: proveniencia({
+          ...baseProveniencia,
+          operacao: 'COUNT_DISTINCT',
+          dimensao: agruparPor,
+          distintos: d.distintos,
+          ausentes: d.ausentes,
+        }),
         resolveu: true,
       };
     }
