@@ -209,7 +209,29 @@ export const consultarCargasLuft: Habilidade = {
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['rede', 'banco'],
-    timeout_ms: 15000,
+    /**
+     * SETENTA E CINCO SEGUNDOS, e o número é aritmética, não generosidade.
+     *
+     * MEDIDO EM PRODUÇÃO (19/08/2026). "Quantos motoristas temos?" devolveu
+     * "consultar_estatisticas_cargas_luft passou de 15000ms". O roteamento
+     * estava certo e a habilidade era a certa — ela morria antes de terminar.
+     *
+     * DOIS TETOS PARA A MESMA OPERAÇÃO, e só um tinha sido levantado. A leitura
+     * em massa da planilha (~2700 linhas × 29 colunas pelo `range`, ou o arquivo
+     * inteiro pelo caminho de `/content`) ganhou 60 s em
+     * `TEMPO_LIMITE_LEITURA_MS`; a habilidade que a chama continuou com 15. O
+     * `GerenciadorHabilidades` a matava aos 15 s, e o operador via um timeout
+     * sem saber que a leitura ainda estava a caminho.
+     *
+     * O TETO DE FORA PRECISA SER MAIOR QUE O DE DENTRO, sempre. Senão o interno
+     * nunca chega a valer e quem lê o código acredita num prazo que o sistema
+     * não pratica — 60 s de rede mais margem para desserializar e agregar.
+     *
+     * Só pesa no cache frio: com os 5 min de cache quente a resposta é imediata.
+     * As quatro habilidades desta folha compartilham o número porque compartilham
+     * a leitura.
+     */
+    timeout_ms: 75000,
     custo: 'zero',
     risco: 'baixo',
     idempotencia: 'leitura',
@@ -302,7 +324,7 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['rede', 'banco'],
-    timeout_ms: 15000,
+    timeout_ms: 75000,
     custo: 'zero',
     risco: 'baixo',
     idempotencia: 'leitura',
@@ -524,7 +546,7 @@ export const compararSemanasLuft: Habilidade = {
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['rede', 'banco'],
-    timeout_ms: 15000,
+    timeout_ms: 75000,
     custo: 'zero',
     risco: 'baixo',
     idempotencia: 'leitura',
@@ -620,7 +642,7 @@ export const relatorioExecutivoLuft: Habilidade = {
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['rede', 'banco'],
-    timeout_ms: 15000,
+    timeout_ms: 75000,
     custo: 'zero',
     risco: 'baixo',
     idempotencia: 'leitura',
