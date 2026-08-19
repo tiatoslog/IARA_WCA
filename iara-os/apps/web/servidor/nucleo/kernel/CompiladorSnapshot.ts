@@ -233,6 +233,10 @@ export class CompiladorSnapshot {
           id: e.id_mensagem,
           texto: e.texto,
           concluida: false,
+          /* Carimbo do SERVIDOR. O cliente formata para o fuso de quem lê, mas
+             não inventa a hora: quem recarregar a página receberia "agora" em
+             toda mensagem antiga. */
+          instante: new Date().toISOString(),
           /* Copiado do evento, nunca lido de `this.pergunta`: o campo existe
              justamente porque "a pergunta corrente do compilador" e "a pergunta
              que este turno está respondendo" podem ser duas coisas diferentes
@@ -276,6 +280,10 @@ export class CompiladorSnapshot {
           id: e.id_mensagem,
           texto: e.texto,
           concluida: true,
+          /* Preserva o carimbo de quando a fala COMEÇOU: reestampar aqui daria
+             à mensagem a hora em que ela terminou, e um turno de 40 s apareceria
+             fora de ordem ao lado do pedido que o originou. */
+          instante: this.fala?.instante ?? new Date().toISOString(),
           responde_a: e.responde_a,
           destino: e.rota,
           latencia_ms: e.ms,

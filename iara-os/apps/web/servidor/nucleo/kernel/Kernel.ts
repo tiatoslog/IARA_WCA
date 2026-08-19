@@ -2305,7 +2305,22 @@ export class Kernel {
      * `reconhece` foi perguntado lá em cima e é o que armou a trava: sem isso,
      * chegar aqui com o texto já na tela tornaria a escalada decorativa.
      */
-    if (verificavel) {
+    /**
+     * `cardinalidadeSemExecucao` ENTRA NA PORTA, e a falta disso foi medida em
+     * produção em 19/08/2026.
+     *
+     * A trava de cardinalidade retinha a fala — corretamente, e no lugar certo,
+     * porque só o Kernel sabe se algum passo alcançou o mundo. Mas o bloco de
+     * verificação continuava atrás de `verificavel`, que é `reconhece()`, e
+     * `reconhece` deliberadamente NÃO cobre cardinalidade (ver o comentário do
+     * E23 em `VerificacaoRuntime`). Resultado medido com a planilha ligada e a
+     * pergunta real do operador: rota cognitiva, fala retida, e NENHUM veredito
+     * — o turno era segurado e ninguém o conferia.
+     *
+     * Reter sem verificar é o pior dos dois mundos: paga o custo da retenção e
+     * não entrega a proteção.
+     */
+    if (verificavel || cardinalidadeSemExecucao) {
       const verificado = await this.verificarEEscalar({
         texto: textoDaLLM,
         pergunta: percepcao.bruto,
@@ -2315,6 +2330,19 @@ export class Kernel {
         b,
         idMensagem,
         respondeA,
+        /**
+         * O QUE DE FATO RODOU NESTE TURNO — sem isto `conferirExecucaoNoTurno`
+         * recebe `undefined` e se cala, que é o comportamento certo dele e
+         * inútil aqui: o oráculo da procedência existe para distinguir "73,
+         * porque acabei de contar" de "75, porque foi o que eu disse antes", e
+         * essa distinção é exatamente esta lista.
+         *
+         * Só passos que ALCANÇARAM o mundo contam. Um passo que falhou não deu
+         * procedência a número nenhum.
+         */
+        operacoes: execucao.passos
+          .filter((p) => p.estado === 'executado' || p.estado === 'verificado')
+          .map((p) => String(p.habilidade)),
       });
       if (verificado !== null) return verificado;
     }
@@ -2418,6 +2446,8 @@ export class Kernel {
     b: BarramentoEventos;
     idMensagem: string;
     respondeA: string | null;
+    /** Habilidades que alcançaram o mundo neste turno. Ver o chamador. */
+    operacoes: readonly string[];
   }): Promise<string | null> {
     const porta = this.verificacao;
     if (!porta) return null;
@@ -2430,6 +2460,7 @@ export class Kernel {
         pergunta: a.pergunta,
         inicio_ms: a.inicio,
         fim_ms: Date.now(),
+        operacoes_do_turno: a.operacoes,
       });
 
       /* O ORÇAMENTO É O DONO DO LAÇO — perguntado sem debitar, para que avaliar

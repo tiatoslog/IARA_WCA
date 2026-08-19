@@ -30,6 +30,18 @@ export interface Fala {
   texto: string;
   concluida: boolean;
   /**
+   * ISO do SERVIDOR — a hora que a bolha carimba, no estilo do WhatsApp.
+   *
+   * Não é `Date.now()` do navegador: quem recarrega a página receberia "agora"
+   * em toda mensagem antiga, e uma conversa inteira marcada com o mesmo minuto
+   * é pior que nenhuma marcação. A formatação é local, porque o fuso é de quem
+   * lê; o instante é do servidor, porque o fato é dele.
+   *
+   * Opcional para degradar contra servidor anterior a 19/08/2026 — sem o campo,
+   * a bolha simplesmente não mostra hora.
+   */
+  instante?: string;
+  /**
    * Para falas da IARA: o id da bolha do operador que esta resposta responde.
    * É o que decide ONDE ela entra na lista — ver `absorverFala`. Ausente em
    * bolhas do operador e em recado que a IARA dá sem ninguém ter perguntado.
@@ -200,6 +212,8 @@ export function useIaraSocket(credencial: Credencial) {
           papel: 'operador',
           texto: p.texto,
           concluida: true,
+          /* Bolha do operador nasce AQUI: o instante local é o instante real. */
+          instante: new Date().toISOString(),
           iniciada_em: performance.now(),
           imagem: p.imagem ?? null,
         },
@@ -218,6 +232,8 @@ export function useIaraSocket(credencial: Credencial) {
         papel: 'iara',
         texto: f.texto,
         concluida: f.concluida,
+        /* Do SERVIDOR — ver `FalaProjetada.instante`. */
+        instante: f.instante,
         responde_a: f.responde_a ?? null,
         destino: f.destino ?? undefined,
         latencia_ms: f.latencia_ms ?? undefined,
@@ -519,6 +535,8 @@ export function useIaraSocket(credencial: Credencial) {
             papel: 'operador',
             texto: limpo,
             concluida: true,
+            /* Bolha do operador nasce AQUI: o instante local é o instante real. */
+            instante: new Date().toISOString(),
             iniciada_em: performance.now(),
             imagem: anexo ?? null,
           },

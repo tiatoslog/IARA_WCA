@@ -555,6 +555,20 @@ export function PainelConversa({
                   pedido de outra tela é indistinguível de um pedido lento — e a
                   pessoa não sabe se ainda dá tempo de desistir. */}
               {f.na_fila && <span className="balao-espera">esperando a vez</span>}
+              {/*
+                A HORA, como no WhatsApp: pequena, no canto, depois do texto.
+                Formatada no fuso de quem lê — o carimbo chega em ISO do
+                servidor, porque o relógio do navegador daria "agora" a toda
+                mensagem antiga depois de um recarregamento.
+              */}
+              {f.instante && (
+                <time className="balao-hora" dateTime={f.instante}>
+                  {new Date(f.instante).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </time>
+              )}
             </div>
           );
         })}

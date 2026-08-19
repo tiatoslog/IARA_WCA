@@ -1258,6 +1258,24 @@ ol.plano {
   opacity: 0.75;
 }
 
+/*
+  A HORA DA MENSAGEM — o carimbo do WhatsApp: pequeno, à direita, recuado.
+
+  Alinhado ao FIM nas duas famílias de balão, e não ao lado de quem fala: a hora
+  é da mensagem, não do interlocutor, e alterná-la de lado faria a coluna de
+  horários serrilhar. `tabular-nums` mantém "09:07" e "18:29" com a mesma
+  largura, para a coluna não dançar a cada minuto.
+*/
+.balao-hora {
+  display: block;
+  margin-top: 2px;
+  text-align: right;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  /* Discreta de propósito: acompanha a mensagem sem competir com ela. */
+  opacity: 0.45;
+}
+
 .balao.iara {
   align-self: flex-start;
   color: var(--c-tinta);
