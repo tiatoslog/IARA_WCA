@@ -903,6 +903,61 @@ export function valorDaDimensao(c: CargaCompleta, dimensao: DimensaoContavel): s
   }
 }
 
+/**
+ * QUEM SUMIU — os valores que a operação conhece e que NÃO apareceram na janela.
+ *
+ * A PERGUNTA (operadora, 19/08/2026): *"quais centrais não tiveram cargas nos
+ * últimos 30 dias?"*. Ela é de uma família diferente de tudo que existia aqui:
+ * as outras contam o que ESTÁ nos dados; esta procura o que FALTA. Uma central
+ * que parou de receber não aparece em nenhuma listagem — some, e sumir em
+ * silêncio é exatamente o que a operadora precisa ver.
+ *
+ * O UNIVERSO É A PLANILHA, e a fronteira precisa ser dita em voz alta. `deTodo`
+ * é o que a aba do ano conhece; `naJanela` é o recorte. A diferença são os que
+ * pararam.
+ *
+ * O QUE ISTO NÃO ALCANÇA, medido em 19/08/2026 antes de escrever a função: a
+ * tabela `centrais` do Supabase tem 12 centrais e a planilha tem 24 destinos —
+ * e só DUAS aparecem nas duas (`RIO VERDE`, `SORRISO`). Os cadastros não se
+ * falam. Cruzar as duas fontes produziria uma lista errada nas duas pontas:
+ * nomearia central que a operação não usa e esconderia central que ela usa.
+ *
+ * Então esta função responde pela planilha e só por ela: "das centrais que
+ * receberam carga em 2026, estas pararam". Uma central que NUNCA apareceu no ano
+ * está fora do alcance, e quem responde tem de dizer isso.
+ */
+export interface SemMovimento {
+  /** Os valores presentes no universo e ausentes na janela, em ordem de volume. */
+  readonly parados: readonly { readonly chave: string; readonly cargas_no_universo: number }[];
+  /** Quantos valores o universo conhece. O denominador da frase. */
+  readonly conhecidos: number;
+  /** Quantos apareceram na janela. */
+  readonly ativos: number;
+}
+
+export function semMovimentoNaJanela(
+  deTodo: readonly CargaCompleta[],
+  naJanela: readonly CargaCompleta[],
+  dimensao: DimensaoContavel,
+): SemMovimento {
+  const volume = new Map<string, number>();
+  for (const c of deTodo) {
+    const v = valorDaDimensao(c, dimensao);
+    if (v !== null) volume.set(v, (volume.get(v) ?? 0) + 1);
+  }
+  const ativos = new Set<string>();
+  for (const c of naJanela) {
+    const v = valorDaDimensao(c, dimensao);
+    if (v !== null) ativos.add(v);
+  }
+  const parados = [...volume.entries()]
+    .filter(([chave]) => !ativos.has(chave))
+    .map(([chave, cargas_no_universo]) => ({ chave, cargas_no_universo }))
+    /* Maior volume primeiro: a que mais movimentava e parou é a que dói. */
+    .sort((a, b) => b.cargas_no_universo - a.cargas_no_universo);
+  return { parados, conhecidos: volume.size, ativos: ativos.size };
+}
+
 export function contarDistintos(
   cargas: readonly CargaCompleta[],
   dimensao: DimensaoContavel,

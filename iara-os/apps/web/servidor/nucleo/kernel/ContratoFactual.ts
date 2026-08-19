@@ -57,10 +57,22 @@ import type { AgruparPor } from '../ClientePlanilhaOcis';
  * A operação relacional que responde a pergunta. Nome de SQL de propósito: é o
  * vocabulário em que a operadora e o auditor conferem a conta.
  */
-export type OperacaoFactual = 'COUNT' | 'COUNT_DISTINCT' | 'SUM' | 'AVG' | 'GROUP_BY';
+export type OperacaoFactual =
+  | 'COUNT'
+  | 'COUNT_DISTINCT'
+  | 'SUM'
+  | 'AVG'
+  | 'GROUP_BY'
+  /** Quem a operação conhece e NÃO apareceu na janela. Ver `semMovimentoNaJanela`. */
+  | 'SEM_MOVIMENTO';
 
 /** A métrica no vocabulário do catálogo — o que vai no parâmetro da habilidade. */
-export type MetricaFactual = 'contagem' | 'distintos' | 'valor_total' | 'valor_medio';
+export type MetricaFactual =
+  | 'contagem'
+  | 'distintos'
+  | 'valor_total'
+  | 'valor_medio'
+  | 'sem_movimento';
 
 /**
  * O CONTRATO. Tudo que a pergunta significa, sem uma palavra de texto livre.
@@ -107,15 +119,45 @@ export type LeituraFactual =
 // Vocabulário — uma tabela, não regras espalhadas
 // ---------------------------------------------------------------------------
 
-/** Substantivos que nomeiam uma DIMENSÃO da carga: contá-los é COUNT DISTINCT. */
-const DIMENSOES: ReadonlyArray<{ re: RegExp; dimensao: AgruparPor; entidade: string }> = [
+/**
+ * Substantivos que nomeiam uma DIMENSÃO da carga: contá-los é COUNT DISTINCT.
+ *
+ * O QUE A COLUNA É, NA OPERAÇÃO (operadora, 19/08/2026): existe **um** cliente
+ * nesta planilha, a LUFT. Quem varia é a ponta:
+ *
+ *   ORIGEM  = o POSTO de onde a carga sai
+ *   DESTINO = a CENTRAL que recebe
+ *
+ * Por isso `posto` e `central` entram como sinônimos de pleno direito, e não
+ * como gentileza: é assim que a pergunta chega. "Quantas cargas por posto?" e
+ * "qual central mais recebeu carga?" são as perguntas reais que estavam sendo
+ * traduzidas na cabeça da operadora para o vocabulário da planilha.
+ *
+ * `exigeCarga` EXISTE POR CAUSA DE UMA COLISÃO REAL, e sem ele isto seria uma
+ * regressão: `central` já é entidade de OUTRA fonte — a tabela `centrais` do
+ * Supabase, que responde "quantas centrais ativas temos em MT?". Se a palavra
+ * bastasse, essa pergunta passaria a contar destinos de carga na planilha e a
+ * IARA responderia um número real, da fonte errada, para uma pergunta que ela
+ * já sabia responder certo.
+ *
+ * `posto` não colide com nada, então não precisa da trava.
+ */
+const DIMENSOES: ReadonlyArray<{
+  re: RegExp;
+  dimensao: AgruparPor;
+  entidade: string;
+  /** Só vale como dimensão da planilha quando a frase fala de carga. */
+  exigeCarga?: true;
+}> = [
   {
     re: /\b(motorista|motoristas|condutor|condutores)\b/,
     dimensao: 'motorista',
     entidade: 'motorista',
   },
   { re: /\b(rota|rotas)\b/, dimensao: 'rota', entidade: 'rota' },
+  { re: /\b(posto|postos)\b/, dimensao: 'origem', entidade: 'posto' },
   { re: /\b(origem|origens)\b/, dimensao: 'origem', entidade: 'origem' },
+  { re: /\b(central|centrais)\b/, dimensao: 'destino', entidade: 'central', exigeCarga: true },
   { re: /\b(destino|destinos)\b/, dimensao: 'destino', entidade: 'destino' },
   { re: /\b(status|situacao|situacoes)\b/, dimensao: 'status_normalizado', entidade: 'status' },
 ];
@@ -149,8 +191,23 @@ const SEM_COLUNA: ReadonlyArray<{ re: RegExp; nome: LacunaDeColuna }> = [
  * viraria mais um lugar por onde passa afirmação sem lastro.
  */
 export const LACUNAS_DE_COLUNA = {
+  /**
+   * "CLIENTE" NÃO É UMA COLUNA QUE FALTA — é uma pergunta mal endereçada, e a
+   * diferença muda a resposta inteira.
+   *
+   * A versão anterior dizia "a planilha não tem coluna de cliente" e parava aí.
+   * Estava correta e era inútil: soava a limitação, quando o fato é que **esta
+   * planilha inteira é de um cliente só, a LUFT** (operadora, 19/08/2026). Não
+   * há coluna de cliente porque não há mais de um cliente para distinguir.
+   *
+   * O que a operadora quer quando pergunta "por cliente" é a ponta que de fato
+   * varia: o POSTO que despacha (origem) ou a CENTRAL que recebe (destino).
+   * Então a resposta deixa de recusar e passa a devolver a pergunta certa —
+   * que é a única coisa que a faz sair dali com o número na mão.
+   */
   cliente:
-    'a planilha da operação LUFT não tem coluna de cliente. Ela tem OCI, origem, destino, motorista, status, datas e valor',
+    'esta planilha é toda de um cliente só, a LUFT. Não existe coluna de cliente porque não há outro para distinguir. ' +
+    'O que varia é a ponta: a origem é o POSTO que despacha e o destino é a CENTRAL que recebe',
   veiculo:
     'a planilha não tem coluna de veículo. A placa aparece colada ao nome do motorista, e contar dali seria contar anotação como se fosse cadastro',
 } as const;
@@ -170,6 +227,22 @@ const VERBO_DE_SOMA =
 
 /** Pede a média do valor. */
 const VERBO_DE_MEDIA = /\b(valor medio|ticket medio|media por carga|media das cargas)\b/;
+
+/**
+ * PERGUNTA PELA AUSÊNCIA — "quais centrais não tiveram carga nos últimos 30
+ * dias?" (operadora, 19/08/2026).
+ *
+ * É a única família aqui que procura o que NÃO está nos dados, e por isso ela é
+ * testada ANTES de todas as outras: a frase contém "cargas" e contém "centrais",
+ * então casaria COUNT_DISTINCT ou GROUP_BY e responderia quantas existem para
+ * quem perguntou quais sumiram. Resposta certa, pergunta errada.
+ *
+ * A negação é EXIGIDA junto com o verbo de movimento — "não tiveram carga",
+ * "ficaram sem carga", "pararam de receber". Negação solta ("quais centrais não
+ * são de MT") não é isto, e cai fora, que é onde deve cair.
+ */
+const VERBO_DE_AUSENCIA =
+  /\b(nao|sem)\s+(tiveram|teve|receberam|recebeu|fizeram|fez|movimentaram|movimentou|tem)\b|\bficaram?\s+sem\b|\bpararam?\s+de\s+(receber|mandar|carregar|movimentar)\b|\bsem\s+(carga|cargas|movimento|movimentacao)\b/;
 
 /**
  * Pede um ranking — o topo de um GROUP BY.
@@ -196,7 +269,7 @@ const AGRUPADO_POR = /\b(?:por|para cada|agrupados? por|agrupadas? por|separados
  * um módulo que é puro de propósito.
  */
 const EXPRESSAO_DE_PERIODO =
-  /\b(depois de amanha|hoje|amanha|ontem|[dn]?essa semana|[dn]?esta semana|semana atual|semana que vem|proxima semana|semana seguinte|semana passada|semana anterior|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/;
+  /\bultimos?\s+\d{1,3}\s+dias?\b|\b(depois de amanha|hoje|amanha|ontem|[dn]?essa semana|[dn]?esta semana|semana atual|semana que vem|proxima semana|semana seguinte|semana passada|semana anterior|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\b/;
 
 /**
  * A CONTRAÇÃO COME A FRONTEIRA DE PALAVRA — `[dn]?` acima não é enfeite.
@@ -369,7 +442,8 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
    * "quantas CARGAS por cliente" recusa; "quantos clientes temos" segue o
    * caminho de sempre.
    */
-  const falaDaOperacao = CARGA.test(t) || DIMENSOES.some((d) => d.re.test(t));
+  const falaDaOperacao =
+    CARGA.test(t) || DIMENSOES.some((d) => d.re.test(t) && (!d.exigeCarga || CARGA.test(t)));
   if (!falaDaOperacao) return { tipo: 'fora' };
 
   const pedeConta =
@@ -388,8 +462,18 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
   }
 
   const periodo = periodoDaFrase(t);
-  const dim = DIMENSOES.find((d) => d.re.test(t)) ?? null;
+  /* `central` só é dimensão da planilha quando a frase fala de carga — senão a
+     pergunta é sobre o CADASTRO de centrais, que tem fonte própria. */
+  const dim = DIMENSOES.find((d) => d.re.test(t) && (!d.exigeCarga || CARGA.test(t))) ?? null;
   const explicito = agrupamentoExplicito(t);
+
+  /* 0. QUEM PAROU — antes de tudo, porque a frase também casa "contar". */
+  if (VERBO_DE_AUSENCIA.test(t) && dim && periodo.tipo === 'explicito') {
+    return {
+      tipo: 'contrato',
+      contrato: montar('SEM_MOVIMENTO', dim.entidade, dim.dimensao, 'sem_movimento', periodo),
+    };
+  }
 
   // 3. Valor — soma e média. Sozinhas valem o universo; com "por X", agrupam.
   if (VERBO_DE_MEDIA.test(t)) {

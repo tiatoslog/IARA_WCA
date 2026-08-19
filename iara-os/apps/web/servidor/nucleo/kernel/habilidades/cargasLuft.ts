@@ -20,6 +20,7 @@ import {
   cargasNoPeriodo,
   contarCargas,
   contarDistintos,
+  semMovimentoNaJanela,
   suspeitasDeIdentidade,
   planilhaOcisDisponivel,
   todasAsCargas,
@@ -74,6 +75,14 @@ const SINONIMOS_AGRUPAMENTO: Readonly<Record<string, AgruparPor>> = {
   rotas: 'rota',
   origens: 'origem',
   destinos: 'destino',
+  /* O VOCABULÁRIO DA OPERAÇÃO (operadora, 19/08/2026): há um cliente só, a
+     LUFT. A origem é o POSTO que despacha; o destino é a CENTRAL que recebe. É
+     assim que a pergunta chega, e traduzir aqui é o que evita a operadora ter
+     de traduzir na cabeça dela. */
+  posto: 'origem',
+  postos: 'origem',
+  central: 'destino',
+  centrais: 'destino',
   /* "cidade" sozinha é ambígua entre origem e destino: fica FORA do mapa de
      propósito, para virar recusa com o enum na mensagem em vez de um palpite
      que responde a pergunta errada. */
@@ -104,6 +113,11 @@ const SINONIMOS_METRICA: Readonly<Record<string, Metrica>> = {
   unicos: 'distintos',
   count_distinct: 'distintos',
   contagem_distinta: 'distintos',
+  /* A família "quem parou" — ver a métrica `sem_movimento`. */
+  parados: 'sem_movimento',
+  inativos: 'sem_movimento',
+  sem_carga: 'sem_movimento',
+  sem_movimentacao: 'sem_movimento',
 };
 
 /**
@@ -139,14 +153,18 @@ function proveniencia(campos: Readonly<Record<string, string | number | boolean>
 const NOME_DA_DIMENSAO: Readonly<Record<AgruparPor, { um: string; varios: string }>> = {
   motorista: { um: 'motorista', varios: 'motoristas' },
   rota: { um: 'rota', varios: 'rotas' },
-  origem: { um: 'origem', varios: 'origens' },
-  destino: { um: 'destino', varios: 'destinos' },
+  /* POSTO e CENTRAL, não "origem" e "destino": são os nomes da coisa nesta
+     operação, e a coluna é só onde eles moram. Dizer "82 origens" obriga quem
+     lê a traduzir de volta; dizer "82 postos" já é a resposta. A procedência
+     continua carimbando `dimensao=origem`, que é o que o auditor confere. */
+  origem: { um: 'posto', varios: 'postos' },
+  destino: { um: 'central', varios: 'centrais' },
   status: { um: 'status', varios: 'status' },
   status_normalizado: { um: 'status', varios: 'status' },
   nenhum: { um: 'registro', varios: 'registros' },
 };
 
-const METRICAS = ['contagem', 'valor_total', 'valor_medio', 'distintos'] as const;
+const METRICAS = ['contagem', 'valor_total', 'valor_medio', 'distintos', 'sem_movimento'] as const;
 type Metrica = (typeof METRICAS)[number];
 
 /**
@@ -329,8 +347,13 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       'por rota, cargas por status, valor total ou médio. "periodo" é opcional (vazio = todas as cargas ' +
       'cadastradas) e recebe a EXPRESSÃO como foi dita ("essa semana", "17/08"), nunca uma data já ' +
       'calculada. "agrupar_por" é um de: motorista, rota, origem, destino, status (texto exato da célula), ' +
-      'status_normalizado (agrupa FINALIZADO/finalizado/FINALIZADA juntos), nenhum. "metrica" é um de: ' +
-      'contagem, valor_total, valor_medio, distintos. Use para "qual motorista fez mais cargas", ' +
+      'status_normalizado (agrupa FINALIZADO/finalizado/FINALIZADA juntos), nenhum. NESTA OPERAÇÃO a ' +
+      'origem é o POSTO que despacha e o destino é a CENTRAL que recebe: "por posto" = origem, ' +
+      '"por central" = destino. Há um cliente só (LUFT), então não existe agrupamento por cliente. ' +
+      '"metrica" é um de: contagem, valor_total, valor_medio, distintos, sem_movimento. ' +
+      'Use sem_movimento com um "periodo" para "quais centrais/postos/motoristas NÃO tiveram carga ' +
+      'nos últimos 30 dias" — ela lista quem a planilha do ano conhece e não apareceu na janela, e ' +
+      'EXIGE período (sem janela não existe "parou"). Use para "qual motorista fez mais cargas", ' +
       '"faturamento por rota", "quantas cargas por status", "valor total das cargas desta semana". ' +
       'Para "QUANTOS motoristas/rotas/destinos DIFERENTES existem", use metrica=distintos com o ' +
       'agrupar_por da dimensão — ela devolve a contagem única já descontando as cargas sem o campo ' +
@@ -339,6 +362,10 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     exemplos: [
       'Qual motorista tem mais cargas?',
       'Quantos motoristas diferentes temos?',
+      'Quantas cargas por posto?',
+      'Qual central recebeu mais cargas?',
+      'Quais centrais não tiveram cargas nos últimos 30 dias?',
+      'Quais postos ficaram sem carga essa semana?',
       'Quantas rotas distintas existem?',
       'Motoristas disponíveis agora?',
       'Qual rota teve maior faturamento?',
@@ -347,6 +374,8 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     ],
     capacidades: [
       'ranking de motoristas',
+      'cargas por posto e por central',
+      'quem parou de movimentar num período',
       'faturamento por rota',
       'valor total e médio das cargas',
       'cargas por status',
@@ -512,6 +541,91 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
      * com roteamento improvisado entrega número errado com a mesma cara de
      * número certo.
      */
+    /**
+     * QUEM PAROU — a família que pergunta pelo que NÃO está nos dados.
+     *
+     * A PERGUNTA (operadora, 19/08/2026): *"quais centrais não tiveram cargas
+     * nos últimos 30 dias?"*. Todas as outras métricas contam o que está lá;
+     * esta procura o que sumiu. Uma central que parou de receber não aparece em
+     * listagem nenhuma — ela some, e sumir em silêncio é justamente o que
+     * precisa ser visto.
+     *
+     * EXIGE PERÍODO, e a exigência é a definição: sem janela não existe "parou".
+     * Sobre o universo inteiro a resposta seria sempre vazia, e vazia parece
+     * "está tudo bem" — o pior jeito de errar aqui.
+     *
+     * A FRONTEIRA VAI JUNTO COM A RESPOSTA. O universo é a aba do ano: uma
+     * central que nunca apareceu em 2026 está fora do alcance desta conta.
+     * Medido em 19/08/2026: o cadastro de centrais do Supabase tem 12 nomes, a
+     * planilha tem 24 destinos, e só DOIS coincidem (RIO VERDE, SORRISO).
+     * Cruzar as duas fontes produziria uma lista errada nas duas pontas —
+     * nomeando central que a operação não usa e escondendo central que ela usa.
+     * Então esta resposta fala pela planilha, e diz que fala.
+     */
+    if (metrica === 'sem_movimento') {
+      if (!periodo) {
+        return {
+          texto:
+            'Para eu dizer quem parou, preciso de um prazo. "Parou" só existe contra uma janela: ' +
+            'me diga "nos últimos 30 dias", "essa semana" ou uma data, e eu comparo com o que a ' +
+            'operação movimentou no ano.',
+          detalhe: proveniencia({
+            ...baseProveniencia,
+            operacao: 'SEM_MOVIMENTO',
+            resultado: 'periodo_ausente',
+          }),
+          resolveu: false,
+        };
+      }
+      const rotuloDim = NOME_DA_DIMENSAO[agruparPor];
+      const m = semMovimentoNaJanela(r.cargas, cargas, agruparPor);
+      const alcance =
+        `\n\nIsso vale para ${rotuloDim.varios} que a planilha de ${ANO_VIVO} conhece. ` +
+        'Se alguma nunca apareceu no ano, ela não está nesta conta, porque não tenho de onde saber que existe.';
+
+      if (m.parados.length === 0) {
+        return {
+          texto:
+            `Nenhuma das ${m.conhecidos} ${rotuloDim.varios} ficou sem carga em ${periodo.rotulo}: ` +
+            `${m.ativos} movimentaram no prazo.${alcance}`,
+          detalhe: proveniencia({
+            ...baseProveniencia,
+            operacao: 'SEM_MOVIMENTO',
+            dimensao: agruparPor,
+            conhecidos: m.conhecidos,
+            ativos: m.ativos,
+            parados: 0,
+          }),
+          resolveu: true,
+        };
+      }
+
+      const TOPO_PARADOS = 20;
+      const linhasParadas = m.parados
+        .slice(0, TOPO_PARADOS)
+        .map(
+          (x, i) =>
+            `${i + 1}. ${x.chave}: ${x.cargas_no_universo} carga${x.cargas_no_universo === 1 ? '' : 's'} no ano, nenhuma no prazo`,
+        );
+      const cortadas = m.parados.length - linhasParadas.length;
+      return {
+        texto:
+          `${m.parados.length} de ${m.conhecidos} ${rotuloDim.varios} ficaram sem carga em ${periodo.rotulo}. ` +
+          `As que mais movimentavam vêm primeiro:\n${linhasParadas.join('\n')}` +
+          (cortadas > 0 ? `\n\nA lista para no ${TOPO_PARADOS}º. Ficaram outras ${cortadas} de fora.` : '') +
+          alcance,
+        detalhe: proveniencia({
+          ...baseProveniencia,
+          operacao: 'SEM_MOVIMENTO',
+          dimensao: agruparPor,
+          conhecidos: m.conhecidos,
+          ativos: m.ativos,
+          parados: m.parados.length,
+        }),
+        resolveu: true,
+      };
+    }
+
     if (metrica === 'distintos') {
       /**
        * SEM CAST. O `as Parameters<typeof contarDistintos>[1]` que estava aqui

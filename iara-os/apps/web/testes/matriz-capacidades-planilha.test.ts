@@ -72,7 +72,8 @@ const ESTADO_MEDIDO: Readonly<Record<string, EstadoCapacidade>> = {
   'DATE-002': 'SUPPORTED_CORRECT',
   'DATE-003': 'UNSUPPORTED',
   'DATE-004': 'UNSUPPORTED',
-  'DATE-005': 'UNSUPPORTED',
+  /* 19/08: a janela móvel ('últimos N dias') entrou com a família "quem parou". */
+  'DATE-005': 'SUPPORTED_PARTIAL',
   'DATE-006': 'SUPPORTED_PARTIAL',
   'DATE-007': 'UNSUPPORTED',
   'CMP-001': 'UNSUPPORTED',

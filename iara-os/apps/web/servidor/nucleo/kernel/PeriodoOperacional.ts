@@ -76,6 +76,32 @@ export function interpretarPeriodo(bruto: string, agora = new Date()): Periodo |
     return { inicio: iso, fim: iso, rotulo: `amanhã (${paraDDMM(iso)})` };
   }
 
+  /**
+   * "NOS ÚLTIMOS 30 DIAS" — janela móvel, pedida pela operadora em 19/08/2026.
+   *
+   * É o período que a pergunta "quais centrais não tiveram carga nos últimos 30
+   * dias?" exige, e nenhuma das expressões acima o cobre: "essa semana" é curta
+   * demais para ver uma central parar, e o ano inteiro é longo demais.
+   *
+   * A janela INCLUI hoje — 30 dias contados para trás a partir de hoje dão 30
+   * dias de calendário, não 31. Quem pergunta por "últimos 30 dias" quer o mês
+   * que passou, e um dia a mais faria a resposta discordar de qualquer relatório
+   * que a operadora tire por fora.
+   */
+  const janela = t.match(/\bultimos?\s+(\d{1,3})\s+dias?\b|\bultimo\s+(dia)\b/);
+  if (janela) {
+    const dias = janela[2] ? 1 : Number(janela[1]);
+    if (dias >= 1 && dias <= 366) {
+      const inicio = paraISOLocal(comDias(agora, -(dias - 1)));
+      const fim = paraISOLocal(comDias(agora, 0));
+      return {
+        inicio,
+        fim,
+        rotulo: `os últimos ${dias} dia${dias === 1 ? '' : 's'} (${paraDDMM(inicio)} a ${paraDDMM(fim)})`,
+      };
+    }
+  }
+
   if (/\bontem\b/.test(t)) {
     const iso = paraISOLocal(comDias(agora, -1));
     return { inicio: iso, fim: iso, rotulo: `ontem (${paraDDMM(iso)})` };

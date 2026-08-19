@@ -23,8 +23,8 @@ interface real. As duas medições são necessárias e nenhuma substitui a outra
 | Estado | Quantidade |
 | --- | ---: |
 | SUPPORTED_CORRECT | 19 |
-| SUPPORTED_PARTIAL | 2 |
-| UNSUPPORTED | 14 |
+| SUPPORTED_PARTIAL | 3 |
+| UNSUPPORTED | 13 |
 | **Total** | **35** |
 
 ## A matriz
@@ -57,7 +57,7 @@ interface real. As duas medições são necessárias e nenhuma substitui a outra
 | DATE-002 | datas | …essa semana | `DATE_RANGE` | entende | entende | **SUPPORTED_CORRECT** | — |
 | DATE-003 | datas | …em janeiro | `DATE_RANGE(mês nomeado)` | — | — | **UNSUPPORTED** | interpretador — a expressão não é entendida |
 | DATE-004 | datas | …no primeiro trimestre | `DATE_RANGE(trimestre)` | — | — | **UNSUPPORTED** | interpretador — a expressão não é entendida |
-| DATE-005 | datas | …nos últimos 30 dias | `DATE_RANGE(janela móvel)` | — | — | **UNSUPPORTED** | interpretador — a expressão não é entendida |
+| DATE-005 | datas | …nos últimos 30 dias | `DATE_RANGE(janela móvel)` | entende | entende | **SUPPORTED_PARTIAL** | interpretador — a expressão não é entendida |
 | DATE-006 | datas | …entre 01/01 e 31/03 | `DATE_RANGE(intervalo explícito)` | — | entende | **SUPPORTED_PARTIAL** | interpretador — a expressão não é entendida |
 | DATE-007 | datas | …ano passado | `DATE_RANGE(ano relativo)` | — | — | **UNSUPPORTED** | interpretador — a expressão não é entendida |
 | CMP-001 | comparação | Tivemos mais cargas em 2025 ou 2026? | `COMPARE(ano)` | — | — | **UNSUPPORTED** | dados — a informação não está na fonte |

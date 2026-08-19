@@ -398,7 +398,9 @@ export const CASOS: readonly CasoCapacidade[] = [
     pergunta: '…nos últimos 30 dias',
     operacao: 'DATE_RANGE(janela móvel)',
     medir: () => (interpretarPeriodo('últimos 30 dias') ? 'entende' : null),
-    esperado: null,
+    /* Passou a ser suportado em 19/08/2026 — a janela móvel entrou junto com a
+       pergunta "quais centrais não tiveram carga nos últimos 30 dias?". */
+    esperado: 'entende',
     causa: 'interpretador',
   },
   {
