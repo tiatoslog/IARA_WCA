@@ -539,6 +539,137 @@ export function interpretarContratoFactual(bruto: string): LeituraFactual {
   return { tipo: 'fora' };
 }
 
+// ---------------------------------------------------------------------------
+// A ELIPSE — "e amanhã?"
+// ---------------------------------------------------------------------------
+
+/**
+ * O DEFEITO REL-0005, medido na auditoria em navegador de 19/08/2026:
+ *
+ *   operadora:  quantas cargas hoje?
+ *   IARA:       hoje (19/08): 15 cargas.
+ *   operadora:  e amanhã?
+ *   IARA:       "Não tenho o total de cargas para amanhã ainda. Posso consultar
+ *                a base e trazer o número de cargas previstas para 20/08/2026.
+ *                Você autoriza?"
+ *
+ *  Duas coisas erradas numa frase. Ela não consultou o que sabe consultar, e
+ *  inventou um portão de autorização que não existe — a habilidade é leitura,
+ *  risco baixo, custo zero. E o segundo turno é justamente onde a operadora
+ *  disse que toda sessão desanda.
+ *
+ * A CAUSA: "e amanhã?" não tem substantivo da operação nem verbo de contagem,
+ * então o contrato devolvia `fora` e a frase caía no raciocínio livre. Nada
+ * errado com a análise dela — a frase, SOZINHA, não quer dizer nada.
+ *
+ * A CORREÇÃO É SUBSTITUIÇÃO DE SLOT, e não reinterpretação. Uma elipse não é
+ * uma pergunta nova: é a MESMA pergunta com um campo trocado. Reinterpretar do
+ * zero seria pedir à LLM que adivinhasse o resto, que é como se perde período e
+ * entidade entre turnos.
+ *
+ * O QUE ESTA FUNÇÃO NÃO FAZ, e a recusa continua sendo a metade que protege:
+ * ela só troca PERÍODO e DIMENSÃO, porque são os dois slots que o motor sabe
+ * executar. "E no posto Três Pontas?" é filtro por entidade nomeada — o motor
+ * não tem, `EXCETO` já recusa a forma completa, e herdar aqui seria criar por
+ * elipse uma capacidade que a pergunta inteira não tem.
+ */
+const ABERTURA_DE_ELIPSE = /^(e|ok e|certo e|mas e|entao e|e quanto a|e sobre|e para|e pra)\b/;
+
+/**
+ * A frase é curta o bastante para ser elipse? Quarenta caracteres cobrem
+ * "e na semana passada?" e deixam de fora o parágrafo que só COMEÇA com "e".
+ */
+const TETO_DA_ELIPSE = 40;
+
+/**
+ * Esta frase é uma continuação factual — quer dizer, só faz sentido colada à
+ * anterior?
+ *
+ * É juízo sobre a FRASE, de propósito: `Percepcao` decide âncora sem saber quem
+ * está falando, e é o `Planejador` — que tem a identidade — quem vai buscar o
+ * contrato anterior. Misturar as duas coisas levaria sessão para dentro da
+ * percepção, que este repositório mantém deliberadamente cega a isso.
+ */
+export function ehElipseFactual(bruto: string): boolean {
+  const t = normalizar(bruto).replace(/[?!.,]+$/, '').trim();
+  if (t.length > TETO_DA_ELIPSE) return false;
+  if (!ABERTURA_DE_ELIPSE.test(t)) return false;
+
+  /* Precisa carregar UM slot reconhecível, senão "e aí?" viraria consulta. */
+  const temSlot =
+    EXPRESSAO_DE_PERIODO.test(t) || agrupamentoExplicito(t) !== null || ANO_NA_ELIPSE.test(t);
+  if (!temSlot) return false;
+
+  /**
+   * E NÃO PODE CARREGAR MAIS NADA — a trava que faltava na primeira versão.
+   *
+   * O portão pegou na hora: **"e o relatório que pedi ontem, saiu?"** começa com
+   * "e", cabe em quarenta caracteres e contém "ontem". Pelo critério anterior era
+   * elipse, e a IARA responderia a contagem de cargas de ontem a quem perguntou
+   * por um relatório. Resposta certa, pergunta errada — de novo.
+   *
+   * A diferença é estrutural, não de tamanho: uma elipse É o slot. Ela não tem
+   * sujeito nem verbo próprios, porque os herda. Então tira-se a abertura, o
+   * slot e as palavras de ligação; o que sobrar é assunto próprio, e assunto
+   * próprio significa pergunta nova.
+   */
+  const resto = t
+    .replace(ABERTURA_DE_ELIPSE, ' ')
+    .replace(EXPRESSAO_DE_PERIODO, ' ')
+    .replace(ANO_NA_ELIPSE, ' ')
+    .replace(AGRUPADO_POR, ' ')
+    .replace(LIGACAO, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return resto === '';
+}
+
+/**
+ * Palavras que ligam sem dizer nada por conta própria. Tirar preposição e
+ * artigo é o que deixa "e na semana passada" chegar vazia ao teste acima.
+ */
+const LIGACAO =
+  /\b(o|a|os|as|um|uma|de|do|da|dos|das|em|no|na|nos|nas|ao|aos|para|pra|por|com|e|entao|tambem|agora|ai|quanto|foi|foram|ficou|ficaram)\b/g;
+
+/** "e em 2025?" — o ano é slot de período, e quem recusa o ano é a habilidade. */
+const ANO_NA_ELIPSE = /\b20[12]\d\b/;
+
+/**
+ * O contrato anterior com UM slot trocado. `null` quando a frase não nomeia
+ * slot nenhum que o motor saiba executar.
+ */
+export function herdarContrato(bruto: string, anterior: ContratoFactual): ContratoFactual | null {
+  const t = normalizar(bruto).replace(/[?!.]+$/, '').trim();
+
+  /* Dimensão primeiro: "e por motorista?" troca o eixo, não o prazo. */
+  const dimensao = agrupamentoExplicito(t);
+  if (dimensao) {
+    const entidade = DIMENSOES.find((d) => d.dimensao === dimensao)?.entidade ?? dimensao;
+    return montar(anterior.operacao, entidade, dimensao, anterior.metrica, anterior.periodo);
+  }
+
+  const periodo = periodoDaFrase(t);
+  if (periodo.tipo === 'explicito') {
+    return montar(anterior.operacao, anterior.entidade, anterior.dimensao, anterior.metrica, periodo);
+  }
+
+  /**
+   * O ANO É PERÍODO, e herdá-lo é o que faz "e em 2025?" chegar à porta que
+   * sabe recusá-lo (ou respondê-lo, quando a aba for lida). Sem isto a frase
+   * volta para o raciocínio livre, e foi de lá que saiu "preciso que você
+   * autorize a leitura desse arquivo" — um portão inventado.
+   */
+  const ano = t.match(ANO_NA_ELIPSE);
+  if (ano) {
+    return montar(anterior.operacao, anterior.entidade, anterior.dimensao, anterior.metrica, {
+      tipo: 'explicito',
+      expressao: ano[0],
+    });
+  }
+
+  return null;
+}
+
 /**
  * A ASSINATURA DO CONTRATO — o que o portão de determinismo compara.
  *

@@ -12,7 +12,7 @@
 import type { LeituraOperador } from '../../../lib/estado';
 import type { Percepcao, TipoEntrada, Urgencia } from './Evento';
 import { corrigirTypos, normalizar } from '../texto';
-import { ehPerguntaDeContratoFactual } from './ContratoFactual';
+import { ehElipseFactual, ehPerguntaDeContratoFactual } from './ContratoFactual';
 import { TeoriaDaMente, type SinalTemporal } from '../TeoriaDaMente';
 import {
   ehPerguntaSobreResolver,
@@ -134,7 +134,21 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     /* `re` casa sempre: quem decide é o predicado, e uma segunda regra aqui só
        teria como divergir da primeira. Ver `Ancora.predicado`. */
     re: /^/,
-    predicado: ehPerguntaDeContratoFactual,
+    /**
+     * A ELIPSE ENTRA NA ÂNCORA, e a resolução dela fica no `Planejador`.
+     *
+     * "E amanhã?" não forma contrato sozinha — é a pergunta anterior com um
+     * campo trocado. Mas SER uma continuação factual é propriedade da FRASE
+     * ("começa com 'e', é curta, carrega um slot"), e isso a percepção sabe
+     * julgar. Quem era a pergunta anterior depende de QUEM está falando, e a
+     * `Percepcao` é cega a identidade de propósito: quem tem o
+     * `ContextoPlanejamento` é o `Planejador`, e é lá que a herança acontece.
+     *
+     * Sem esta linha, a rota nem chegaria à receita — a frase cairia no
+     * raciocínio livre, que foi de onde saiu "você autoriza?" para uma leitura
+     * de risco baixo e custo zero (REL-0005).
+     */
+    predicado: (f) => ehPerguntaDeContratoFactual(f) || ehElipseFactual(f),
     nome: 'contrato_factual',
     acionavel: true,
   },

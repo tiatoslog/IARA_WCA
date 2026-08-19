@@ -38,6 +38,7 @@ import { readFileSync } from 'node:fs';
 
 import {
   assinaturaDoContrato,
+  ehElipseFactual,
   ehPerguntaDeContratoFactual,
   interpretarContratoFactual,
   LACUNAS_DE_COLUNA,
@@ -534,11 +535,13 @@ test('a âncora dispara exatamente quando o contrato existe', () => {
   ];
   for (const f of corpus) {
     const temAncora = percepcao.perceber(f).ancoras.includes('contrato_factual');
-    const temContrato = ehPerguntaDeContratoFactual(f);
+    /* A âncora cobre DUAS famílias desde o REL-0005: a pergunta que forma
+       contrato sozinha, e a elipse que só forma colada à anterior. */
+    const deveria = ehPerguntaDeContratoFactual(f) || ehElipseFactual(f);
     assert.equal(
       temAncora,
-      temContrato,
-      `"${f}": âncora=${temAncora} mas contrato=${temContrato} — as duas pontas divergiram`,
+      deveria,
+      `"${f}": âncora=${temAncora} mas contrato/elipse=${deveria} — as duas pontas divergiram`,
     );
   }
 });

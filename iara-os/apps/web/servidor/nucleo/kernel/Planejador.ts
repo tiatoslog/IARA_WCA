@@ -20,7 +20,13 @@ import { extrairAssuntoLembrete } from './Quando';
 import { planosPropostos } from './PlanosPropostos';
 import { passosExecutaveis } from './Investigacao';
 import { corrigirTypos } from '../texto';
-import { interpretarContratoFactual } from './ContratoFactual';
+import {
+  ehElipseFactual,
+  herdarContrato,
+  interpretarContratoFactual,
+  type ContratoFactual,
+} from './ContratoFactual';
+import { contratoAnterior } from './ContratoAnterior';
 
 function passo(
   indice: number,
@@ -63,6 +69,35 @@ export interface ContextoPlanejamento {
   readonly sessao: string;
 }
 
+/**
+ * O plano de um contrato factual. Uma função porque a herança por elipse produz
+ * exatamente o mesmo plano — e duas cópias divergiriam no dia em que a descrição
+ * do passo mudasse só num lado.
+ *
+ * A DESCRIÇÃO DO PASSO CARREGA O CONTRATO, e não é enfeite: é o trace semântico.
+ * Quem audita o jornal lê `COUNT_DISTINCT(motorista) periodo=implicito
+ * nulo=excluir` e sabe qual pergunta o sistema entendeu, sem reconstruí-la do
+ * texto da resposta — que é justamente o que não se pode fazer quando a resposta
+ * está errada.
+ */
+function planoDoContrato(c: ContratoFactual, sufixo: string): Plano {
+  const alvo = c.dimensao === 'nenhum' ? c.entidade : c.dimensao;
+  return {
+    objetivo: `Contar ${alvo} na operação LUFT (${c.operacao})${sufixo}`,
+    origem: 'deterministico',
+    passos: [
+      passo(
+        0,
+        `${c.operacao}(${alvo}) periodo=${c.periodo.tipo}${
+          c.periodo.expressao ? `:${c.periodo.expressao}` : ''
+        } nulo=${c.politica_nulo} fonte=${c.fonte}${sufixo ? ' herdado' : ''}`,
+        c.habilidade,
+        c.parametros,
+      ),
+    ],
+  };
+}
+
 const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) => Plano> = {
   /**
    * A CONTAGEM DA OPERAÇÃO — o plano nasce do CONTRATO, não de um modelo.
@@ -92,26 +127,42 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
    * raciocínio livre é pior que o determinismo, e é muito melhor que executar
    * um plano vazio.
    */
-  contrato_factual: (p) => {
+  contrato_factual: (p, ctx) => {
     const leitura = interpretarContratoFactual(p.bruto);
+
+    /**
+     * A ELIPSE RESOLVE AQUI, e não na `Percepcao` — REL-0005.
+     *
+     * "E amanhã?" não quer dizer nada sozinha: ela é a pergunta anterior com um
+     * campo trocado. Quem sabe QUAL era a anterior é quem tem a identidade da
+     * conversa, e isso é o `ContextoPlanejamento` — a `Percepcao` decide âncora
+     * sem saber quem está falando, e este repositório a mantém cega a isso de
+     * propósito.
+     *
+     * A herança é SUBSTITUIÇÃO DE SLOT, nunca reinterpretação: `herdarContrato`
+     * troca período ou dimensão e preserva o resto. Mandar a frase de volta para
+     * a LLM com o histórico seria pedir que ela adivinhasse operação, métrica e
+     * política de nulo outra vez — e é assim que período e entidade se perdem
+     * entre turnos.
+     *
+     * Sem contexto ou sem pergunta anterior, cai no raciocínio livre lá embaixo:
+     * uma elipse sem antecedente é genuinamente ambígua, e adivinhar seria pior.
+     */
+    if (leitura.tipo === 'fora' && ctx && ehElipseFactual(p.bruto)) {
+      const anterior = contratoAnterior.ler(ctx.id_usuario, ctx.sessao);
+      const herdado = anterior ? herdarContrato(p.bruto, anterior) : null;
+      if (herdado) {
+        contratoAnterior.registrar(ctx.id_usuario, ctx.sessao, herdado);
+        return planoDoContrato(herdado, ' (continuação)');
+      }
+    }
 
     if (leitura.tipo === 'contrato') {
       const c = leitura.contrato;
-      const alvo = c.dimensao === 'nenhum' ? c.entidade : c.dimensao;
-      return {
-        objetivo: `Contar ${alvo} na operação LUFT (${c.operacao})`,
-        origem: 'deterministico',
-        passos: [
-          passo(
-            0,
-            `${c.operacao}(${alvo}) periodo=${c.periodo.tipo}${
-              c.periodo.expressao ? `:${c.periodo.expressao}` : ''
-            } nulo=${c.politica_nulo} fonte=${c.fonte}`,
-            c.habilidade,
-            c.parametros,
-          ),
-        ],
-      };
+      /* A pergunta desta vez é a "anterior" da próxima. Guarda o CONTRATO, nunca
+         a resposta: memória de conversa não é fonte de valor. */
+      if (ctx) contratoAnterior.registrar(ctx.id_usuario, ctx.sessao, c);
+      return planoDoContrato(c, '');
     }
 
     if (leitura.tipo === 'sem_dado') {
