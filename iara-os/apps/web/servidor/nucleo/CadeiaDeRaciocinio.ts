@@ -234,6 +234,125 @@ export function registrarSucessoProvedor(apelido: string): void {
   observacoes.delete(apelido);
 }
 
+/**
+ * LATÊNCIA OBSERVADA — quanto cada elo demorou para começar a falar.
+ *
+ * MEDIDA, NUNCA DECLARADA. Um número de latência escrito à mão envelhece no dia
+ * seguinte: provedor gratuito muda de fila, modelo é trocado, a rede daqui não é
+ * a rede de lá. O que vale é o que ESTE processo observou.
+ *
+ * É O TEMPO ATÉ O PRIMEIRO PEDAÇO, e não o total, pela mesma razão que o prazo
+ * de abandono usa esse marco: é ele que tira a tela do vazio. Uma resposta longa
+ * que começa em 1 s é melhor, para quem espera, que uma curta que começa em 10.
+ *
+ * SÓ SUCESSO CONTA. Medido em 18/08/2026, o OpenRouter devolvia `429` em 46 ms e
+ * o Gemini `503` em 43 s — contar falha como latência faria o elo com a cota
+ * esgotada parecer o mais rápido da casa e ganhar a frente da fila.
+ *
+ * Guarda as últimas amostras e usa a MEDIANA: uma ida ruim isolada não deve
+ * rebaixar um elo bom, e uma boa isolada não deve promover um ruim. O anel é
+ * curto de propósito — a fila gratuita muda de humor ao longo do dia, e média
+ * longa demais mede o passado.
+ */
+const AMOSTRAS_POR_ELO = 5;
+const latencias = new Map<string, number[]>();
+
+export function registrarLatenciaProvedor(apelido: string, ms: number): void {
+  if (!Number.isFinite(ms) || ms < 0) return;
+  const anel = latencias.get(apelido) ?? [];
+  anel.push(ms);
+  if (anel.length > AMOSTRAS_POR_ELO) anel.shift();
+  latencias.set(apelido, anel);
+}
+
+/** A mediana observada, ou `null` quando este elo nunca respondeu. */
+export function latenciaObservada(apelido: string): number | null {
+  const anel = latencias.get(apelido);
+  if (!anel || anel.length === 0) return null;
+  const ordenado = [...anel].sort((a, b) => a - b);
+  return ordenado[Math.floor(ordenado.length / 2)];
+}
+
+/** Cópia para o diagnóstico. */
+export function latenciasObservadas(): ReadonlyMap<string, number> {
+  const mapa = new Map<string, number>();
+  for (const apelido of latencias.keys()) {
+    const m = latenciaObservada(apelido);
+    if (m !== null) mapa.set(apelido, m);
+  }
+  return mapa;
+}
+
+/** Só para teste: registro de processo precisa de reset entre casos. */
+export function limparLatenciasObservadas(): void {
+  latencias.clear();
+}
+
+/**
+ * ORDENA POR LATÊNCIA DENTRO DA CAMADA — e o "dentro da camada" é a parte que
+ * impede um estrago.
+ *
+ * A ordem da cadeia carrega uma DECISÃO DE CUSTO, tomada e documentada em
+ * 18/08/2026: as gratuitas primeiro, a Anthropic (única paga) por último. E a
+ * Anthropic é, de longe, a mais rápida — 1,4–1,9 s ao primeiro pedaço contra
+ * 5–44 s do Gemini naquele mesmo dia. Ordenar por latência sem olhar a camada
+ * poria a paga na frente e reverteria, em silêncio, uma decisão que alguém tomou
+ * de propósito. Latência não pode revogar orçamento.
+ *
+ * ENTÃO O PADRÃO COMPETE COM O PADRÃO, e o premium fica onde a decisão de custo
+ * o pôs. Dentro de cada grupo, quem responde mais rápido vai na frente.
+ *
+ * SEM MEDIÇÃO, SEM OPINIÃO — e a implementação disso não é um comparador que
+ * devolve zero. Um comparador que devolve zero para alguns pares e não para
+ * outros deixa de ser ordem total: com A sem medição, B=10 e C=5, `A vs B` e
+ * `A vs C` empatam mas `B vs C` não, e o resultado passa a depender da ORDEM EM
+ * QUE o `sort` compara. Ordenação de fila de provedor não pode variar por
+ * detalhe de implementação do motor de JavaScript.
+ *
+ * Então os elos MEDIDOS são ordenados entre si e reescritos nas posições que já
+ * ocupavam; os não medidos ficam parados onde a configuração os pôs. Um elo novo
+ * não é promovido por otimismo nem rebaixado por desconhecimento — ele mantém o
+ * lugar declarado até dizer, respondendo, quanto custa esperar por ele.
+ */
+export function ordenarPorLatencia<T extends { apelido: string; camada?: 'padrao' | 'premium' }>(
+  elos: readonly T[],
+): T[] {
+  const fora = [...elos];
+  /**
+   * O GRUPO É (SAÚDE, CAMADA) — e a saúde entrar aqui foi um defeito que um
+   * teste pegou.
+   *
+   * A primeira versão agrupava só por camada, e com isso DESFAZIA a ordenação
+   * por saúde: um elo em carência, por ser rápido, voltava para a frente de um
+   * saudável mais lento. Rápido e quebrado continua quebrado, e o comentário
+   * acima já prometia "dentro do que a saúde já separou" — a implementação é que
+   * não cumpria.
+   *
+   * Reordenar dentro de cada grupo nunca move um elo através da fronteira que
+   * `ordenarPorSaude` desenhou.
+   */
+  const chave = (e: T): string => `${emCarencia(e.apelido) ? 'doente' : 'sao'}:${e.camada ?? 'padrao'}`;
+  const grupos = [...new Set(fora.map(chave))];
+
+  for (const g of grupos) {
+    /* As POSIÇÕES ocupadas por elos medidos deste grupo. Só elas são
+       reescritas — tudo o mais fica exatamente onde estava. */
+    const posicoes: number[] = [];
+    for (const [i, e] of fora.entries()) {
+      if (chave(e) === g && latenciaObservada(e.apelido) !== null) posicoes.push(i);
+    }
+    if (posicoes.length < 2) continue;
+
+    const ordenados = posicoes
+      .map((i) => fora[i])
+      .sort((a, b) => (latenciaObservada(a.apelido) ?? 0) - (latenciaObservada(b.apelido) ?? 0));
+    posicoes.forEach((pos, k) => {
+      fora[pos] = ordenados[k];
+    });
+  }
+  return fora;
+}
+
 /** Cópia — o diagnóstico lê, nunca escreve. */
 export function falhasObservadas(): ReadonlyMap<string, FalhaObservada> {
   return new Map(observacoes);
@@ -470,7 +589,18 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
      * responde "ela funcionou da última vez". São perguntas diferentes, e era a
      * segunda que faltava — ver `CARENCIA_MS`.
      */
-    const porSaude = ordenarPorSaude(candidatos.length > 0 ? candidatos : this.elos);
+    /**
+     * SAÚDE PRIMEIRO, LATÊNCIA DEPOIS — e a ordem entre as duas não é arbitrária.
+     *
+     * "Funcionou da última vez" é uma pergunta sobre EXISTIR resposta; "responde
+     * rápido" é sobre QUANTO custa esperar por ela. Um elo em carência que
+     * respondia em 1 s não deve ganhar a frente de um saudável que leva 3 —
+     * rápido e quebrado continua quebrado. Por isso a latência reordena DENTRO
+     * do que a saúde já separou, nunca por cima dela.
+     */
+    const porSaude = ordenarPorLatencia(
+      ordenarPorSaude(candidatos.length > 0 ? candidatos : this.elos),
+    );
 
     /**
      * O ELO QUE NÃO CABE NÃO É TENTADO — o primeiro degrau do roteamento por
@@ -528,6 +658,7 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
        * um cancelamento do operador sem efeito dentro da chamada de rede, e a
        * IARA continuaria pensando depois de mandarem parar.
        */
+      const comecouEm = Date.now();
       const abandono = new AbortController();
       const prazoElo = prazoDoPrimeiroPedaco();
       const relogioDoElo = setTimeout(() => {
@@ -546,7 +677,13 @@ export class CadeiaDeRaciocinio implements ProvedorRaciocinio {
           aoReceberTexto: (pedaco) => {
             /* Começou a falar: o prazo morre aqui. Daqui em diante o turno é
                deste elo, dê no que der — cortar no meio duplicaria a fala. */
-            if (!comecouAFalar) clearTimeout(relogioDoElo);
+            if (!comecouAFalar) {
+              clearTimeout(relogioDoElo);
+              /* O MARCO DA MEDIÇÃO é este, e não o fim da resposta: é o primeiro
+                 pedaço que tira a tela do vazio. Registrado só no caminho de
+                 sucesso — falha rápida não é elo rápido. */
+              registrarLatenciaProvedor(elo.apelido, Date.now() - comecouEm);
+            }
             comecouAFalar = true;
             pedido.aoReceberTexto(pedaco);
           },

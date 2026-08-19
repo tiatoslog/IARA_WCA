@@ -23,6 +23,12 @@ import {
   PRAZO_PRIMEIRO_PEDACO_PADRAO_MS,
   registrarSucessoProvedor,
   estimarTokensDoPedido,
+  latenciaObservada,
+  limparLatenciasObservadas,
+  ordenarPorLatencia,
+  registrarLatenciaProvedor,
+  registrarFalhaProvedor,
+  limparFalhasObservadas,
 } from '../servidor/nucleo/CadeiaDeRaciocinio';
 import { ProvedorIndisponivel, type ProvedorRaciocinio } from '../servidor/nucleo/ProvedorRaciocinio';
 import { GROQ } from '../servidor/nucleo/ClienteCompativelOpenAI';
@@ -359,4 +365,148 @@ test('C20. pedido incompleto não derruba a estimativa', async () => {
     aoReceberTexto: () => {},
   } as never);
   assert.equal(r.texto, 'respondeu');
+});
+
+// ===========================================================================
+// ROTEAMENTO POR MODELO — degrau 2: latência MEDIDA, dentro da camada
+// ===========================================================================
+
+test('C21. a latência é medida no PRIMEIRO PEDAÇO, não no fim da resposta', async () => {
+  /* É o primeiro pedaço que tira a tela do vazio. Uma resposta longa que começa
+     em 1 s é melhor, para quem espera, que uma curta que começa em 10. */
+  limparLatenciasObservadas();
+  const demorado: ProvedorRaciocinio = {
+    apelido: 'streamer',
+    origem: 'nuvem',
+    modelo: 'm',
+    disponivel: true,
+    async raciocinar(p) {
+      await new Promise((r) => setTimeout(r, 40));
+      p.aoReceberTexto('come');
+      await new Promise((r) => setTimeout(r, 300));
+      return { texto: 'começou', ...RESPOSTA };
+    },
+  };
+  await new CadeiaDeRaciocinio([demorado]).raciocinar(pedido(new AbortController().signal));
+  const m = latenciaObservada('streamer');
+  assert.ok(m !== null && m < 200, `mediu ${m}ms — pegou o fim em vez do primeiro pedaço`);
+});
+
+test('C22. falha rápida NÃO conta como latência baixa', async () => {
+  /**
+   * Medido em 18/08/2026: o OpenRouter devolvia `429` em 46 ms. Contar falha
+   * como latência faria o elo com a cota esgotada parecer o mais rápido da casa
+   * e ganhar a frente da fila para sempre.
+   */
+  limparLatenciasObservadas();
+  const cadeia = new CadeiaDeRaciocinio([
+    eloQueFalha('cotaEstourada', 'openrouter respondeu 429: rate limit exceeded'),
+    eloLento('bom', 30, 'respondi'),
+  ]);
+  await cadeia.raciocinar(pedido(new AbortController().signal));
+  assert.equal(latenciaObservada('cotaEstourada'), null, 'a falha virou medição');
+  assert.ok(latenciaObservada('bom') !== null);
+  registrarSucessoProvedor('cotaEstourada');
+});
+
+test('C23. entre saudáveis do mesmo grupo, o mais rápido vai na frente', () => {
+  limparLatenciasObservadas();
+  /* A CARÊNCIA TAMBÉM: `emCarencia` agora entra no agrupamento, e o C7 deixa
+     elos chamados `a` e `b` em carência de `servico_fora` por dois minutos.
+     Registro de processo sem reset faz um teste medir o resíduo do anterior. */
+  limparFalhasObservadas();
+  registrarLatenciaProvedor('lento', 8_000);
+  registrarLatenciaProvedor('rapido', 900);
+  const ordem = ordenarPorLatencia([
+    { apelido: 'lento' },
+    { apelido: 'rapido' },
+  ]).map((e) => e.apelido);
+  assert.deepEqual(ordem, ['rapido', 'lento']);
+});
+
+test('C24. latência NÃO promove o premium — ela não revoga a decisão de custo', () => {
+  /**
+   * A ordem da cadeia carrega uma decisão de custo documentada em 18/08/2026:
+   * gratuitas primeiro, Anthropic (única paga) por último. E a Anthropic é a
+   * MAIS RÁPIDA — 1,4–1,9 s contra 5–44 s do Gemini naquele dia. Ordenar por
+   * latência sem olhar a camada poria a paga na frente e reverteria em silêncio
+   * uma decisão que alguém tomou de propósito.
+   */
+  limparLatenciasObservadas();
+  /* A CARÊNCIA TAMBÉM: `emCarencia` agora entra no agrupamento, e o C7 deixa
+     elos chamados `a` e `b` em carência de `servico_fora` por dois minutos.
+     Registro de processo sem reset faz um teste medir o resíduo do anterior. */
+  limparFalhasObservadas();
+  registrarLatenciaProvedor('gratuito', 14_000);
+  registrarLatenciaProvedor('pago', 1_500);
+  const ordem = ordenarPorLatencia([
+    { apelido: 'gratuito', camada: 'padrao' as const },
+    { apelido: 'pago', camada: 'premium' as const },
+  ]).map((e) => e.apelido);
+  assert.deepEqual(ordem, ['gratuito', 'pago'], 'a latência promoveu o provedor pago');
+});
+
+test('C25. sem medição, sem opinião: o elo novo fica onde a configuração o pôs', () => {
+  /* Nem promovido por otimismo, nem rebaixado por desconhecimento. */
+  limparLatenciasObservadas();
+  /* A CARÊNCIA TAMBÉM: `emCarencia` agora entra no agrupamento, e o C7 deixa
+     elos chamados `a` e `b` em carência de `servico_fora` por dois minutos.
+     Registro de processo sem reset faz um teste medir o resíduo do anterior. */
+  limparFalhasObservadas();
+  registrarLatenciaProvedor('medido', 5_000);
+  const ordem = ordenarPorLatencia([
+    { apelido: 'novo' },
+    { apelido: 'medido' },
+  ]).map((e) => e.apelido);
+  assert.deepEqual(ordem, ['novo', 'medido']);
+});
+
+test('C26. a ordenação é DETERMINÍSTICA com medidos e não medidos misturados', () => {
+  /**
+   * Um comparador que devolve zero para alguns pares e não para outros deixa de
+   * ser ordem total: com A sem medição, B=10 e C=5, `A vs B` e `A vs C` empatam
+   * mas `B vs C` não, e o resultado passa a depender da ORDEM EM QUE o `sort`
+   * compara. Fila de provedor não pode variar por detalhe do motor de JS.
+   */
+  limparLatenciasObservadas();
+  /* A CARÊNCIA TAMBÉM: `emCarencia` agora entra no agrupamento, e o C7 deixa
+     elos chamados `a` e `b` em carência de `servico_fora` por dois minutos.
+     Registro de processo sem reset faz um teste medir o resíduo do anterior. */
+  limparFalhasObservadas();
+  registrarLatenciaProvedor('b', 10_000);
+  registrarLatenciaProvedor('c', 5_000);
+  const entrada = [{ apelido: 'a' }, { apelido: 'b' }, { apelido: 'c' }];
+  const primeira = ordenarPorLatencia(entrada).map((e) => e.apelido);
+  for (let i = 0; i < 20; i += 1) {
+    assert.deepEqual(ordenarPorLatencia(entrada).map((e) => e.apelido), primeira);
+  }
+  /* `a` não se move; `b` e `c` trocam entre si nas posições que já ocupavam. */
+  assert.deepEqual(primeira, ['a', 'c', 'b']);
+});
+
+test('C27. a mediana absorve uma ida ruim isolada', () => {
+  /* Uma volta ruim não deve rebaixar um elo bom, nem uma boa promover um ruim. */
+  limparLatenciasObservadas();
+  limparFalhasObservadas();
+  for (const ms of [900, 950, 40_000, 1_000, 980]) registrarLatenciaProvedor('oscilante', ms);
+  const m = latenciaObservada('oscilante');
+  assert.ok(m !== null && m < 2_000, `mediana ${m}ms — o pico dominou`);
+});
+
+test('C28. saúde vence latência: rápido e quebrado continua quebrado', async () => {
+  /* "Funcionou da última vez" é sobre EXISTIR resposta; "responde rápido" é
+     sobre quanto custa esperar. A segunda não pode revogar a primeira. */
+  limparLatenciasObservadas();
+  limparFalhasObservadas();
+  registrarLatenciaProvedor('rapidoDoente', 100);
+  registrarLatenciaProvedor('lentoSao', 3_000);
+  registrarFalhaProvedor('rapidoDoente', new Error('quota esgotada'));
+
+  const cadeia = new CadeiaDeRaciocinio([
+    eloLento('rapidoDoente', 1, 'nao deveria'),
+    eloLento('lentoSao', 1, 'eu respondo'),
+  ]);
+  const r = await cadeia.raciocinar(pedido(new AbortController().signal));
+  assert.equal(r.texto, 'eu respondo');
+  limparFalhasObservadas();
 });
