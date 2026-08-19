@@ -27,6 +27,7 @@ import {
 } from '../servidor/nucleo/ClientePlanilhaOcis';
 
 const carga = (oci: string, motorista: string): CargaCompleta => ({
+  ano: '2026',
   oci,
   origem: 'SP',
   uf_origem: 'SP',

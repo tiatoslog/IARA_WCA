@@ -64,6 +64,7 @@ const c = (
   data_coleta: string,
   valor: number | null,
 ): CargaCompleta => ({
+  ano: '2026',
   oci,
   origem,
   uf_origem: origem,

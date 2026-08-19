@@ -488,6 +488,16 @@ export function normalizarStatus(bruto: string): StatusNormalizado {
 }
 
 export interface CargaCompleta {
+  /**
+   * De qual ABA esta carga veio. Existe desde 19/08/2026, quando a leitura
+   * deixou de ser só de 2026.
+   *
+   * NÃO é derivável da data de coleta: uma OCI recebida em dezembro e coletada
+   * em janeiro mora na aba do ano em que foi cadastrada. A aba é o fato; a data
+   * é outro campo. Confundir os dois faria a contagem por ano discordar da
+   * planilha que a operadora abre na tela — e a planilha vence sempre.
+   */
+  readonly ano: AnoLido;
   readonly oci: string;
   readonly origem: string;
   readonly uf_origem: string;
@@ -508,10 +518,49 @@ function serialOuNulo(v: unknown): string | null {
   return typeof v === 'number' ? serialParaISO(v) : null;
 }
 
-function paraCargaCompleta(linha: readonly unknown[]): CargaCompleta {
-  const valorBruto = linha[23];
-  const statusBruto = String(linha[21] ?? '').trim();
+/**
+ * ONDE CADA ANO GUARDA O QUE MUDA DE LUGAR — medido no arquivo real em
+ * 19/08/2026 por `testes/gate/mapear-abas.mjs`.
+ *
+ * O COMENTÁRIO QUE BLOQUEOU ISSO POR TRÊS MESES dizia que as abas antigas têm
+ * "outro desenho de colunas", e a frase virou o motivo de a IARA recusar
+ * qualquer pergunta sobre 2025. Medido, o desenho é quase o MESMO: OCI (4),
+ * ORIGEM (5), UF (6), DESTINO (7), UF (8), DATA REC. OCI (9), MOTORISTA (10),
+ * DATA COLETA (11) e DATA DESCARGA (12) estão nos mesmos índices nas três abas.
+ *
+ * Diverge só o que está DEPOIS do bloco AGENDAMENTO, que existe em 2025/2024
+ * (colunas 13–20: POSTOS, CENTRAL, TAC) e não existe em 2026:
+ *
+ *              2026      2025 / 2024
+ *   VALOR      23 (X)    24 (Y)
+ *   status     21 (V)    não existe — ali fica DATA ENV. OCI
+ *
+ * `status: null` NÃO é "status vazio": é a coluna não existir. Uma carga de
+ * 2024 não tem status desconhecido, ela tem status inexistente — e chamar as
+ * duas coisas de `SEM_STATUS` faria a IARA responder "2500 cargas sem status
+ * preenchido" para um ano em que ninguém deixou de preencher nada.
+ */
+export const ANOS_LIDOS = ['2026', '2025', '2024'] as const;
+export type AnoLido = (typeof ANOS_LIDOS)[number];
+
+interface MapaDaAba {
+  readonly valor: number;
+  /** `null` quando a aba não tem a coluna. Ver o comentário acima. */
+  readonly status: number | null;
+}
+
+const MAPA_DA_ABA: Readonly<Record<AnoLido, MapaDaAba>> = {
+  '2026': { valor: 23, status: 21 },
+  '2025': { valor: 24, status: null },
+  '2024': { valor: 24, status: null },
+};
+
+function paraCargaCompleta(linha: readonly unknown[], ano: AnoLido = ABA_VIVA): CargaCompleta {
+  const mapa = MAPA_DA_ABA[ano];
+  const valorBruto = linha[mapa.valor];
+  const statusBruto = mapa.status === null ? '' : String(linha[mapa.status] ?? '').trim();
   return {
+    ano,
     oci: String(linha[4]),
     origem: String(linha[5] ?? ''),
     uf_origem: String(linha[6] ?? ''),
@@ -631,7 +680,7 @@ export async function todasAsCargas(): Promise<ResultadoTodasAsCargas> {
   const resultado = await buscarLinhasReais(t, loc.loc);
   if (!resultado.ok) return falhaNaLeitura(`${resultado.motivo}.`);
 
-  const cargas = resultado.linhas.map(paraCargaCompleta);
+  const cargas = resultado.linhas.map((l) => paraCargaCompleta(l));
   const buscadoEm = Date.now();
   cacheTodas = { cargas, buscadoEm, via: resultado.via };
   return { ok: true, texto: `${cargas.length} cargas cadastradas.`, cargas, fonte: fonteDe(buscadoEm, false, resultado.via) };
