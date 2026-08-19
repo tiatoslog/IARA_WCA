@@ -28,7 +28,7 @@ import {
   type AgruparPor,
 } from '../../ClientePlanilhaOcis';
 import { interpretarPeriodo } from '../PeriodoOperacional';
-import { DIMENSOES_SEM_COLUNA, LACUNAS_DE_COLUNA } from '../ContratoFactual';
+import { DIMENSOES_SEM_COLUNA, LACUNAS_DE_COLUNA, SAIDA_DA_LACUNA } from '../ContratoFactual';
 
 const formatarReal = (v: number): string =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -610,7 +610,7 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       const cortadas = m.parados.length - linhasParadas.length;
       return {
         texto:
-          `${m.parados.length} de ${m.conhecidos} ${rotuloDim.varios} ficaram sem carga em ${periodo.rotulo}. ` +
+          `${periodo.rotulo}: ${m.parados.length} de ${m.conhecidos} ${rotuloDim.varios} ficaram sem carga. ` +
           `As que mais movimentavam vêm primeiro:\n${linhasParadas.join('\n')}` +
           (cortadas > 0 ? `\n\nA lista para no ${TOPO_PARADOS}º. Ficaram outras ${cortadas} de fora.` : '') +
           alcance,
@@ -788,10 +788,7 @@ export const declararLacunaDeDado: Habilidade = {
     const dimensao = String(ctx.parametros.dimensao ?? '') as keyof typeof LACUNAS_DE_COLUNA;
     const motivo = LACUNAS_DE_COLUNA[dimensao];
     return {
-      texto:
-        `Não tenho esse dado. ${motivo[0].toUpperCase()}${motivo.slice(1)}. ` +
-        'Eu poderia agrupar por origem, destino, rota, motorista ou status. Se algum desses servir, é só dizer. ' +
-        'Para agrupar por essa dimensão de verdade, a coluna precisa passar a existir na planilha.',
+      texto: `${motivo[0].toUpperCase()}${motivo.slice(1)}. ${SAIDA_DA_LACUNA[dimensao]}`,
       detalhe: proveniencia({
         fonte: 'planilha LUFT',
         resultado: 'dado_indisponivel',

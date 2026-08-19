@@ -190,6 +190,24 @@ const SEM_COLUNA: ReadonlyArray<{ re: RegExp; nome: LacunaDeColuna }> = [
  * enxerga o catálogo — poderia chamá-la com um motivo inventado e a recusa
  * viraria mais um lugar por onde passa afirmação sem lastro.
  */
+/**
+ * A SAÍDA de cada lacuna — e ela não é a mesma nas duas, porque as duas lacunas
+ * não são a mesma coisa.
+ *
+ * `cliente` NÃO precisa de coluna nova: a pergunta só precisa ser reendereçada,
+ * e a saída é oferecer a ponta certa. Dizer "a coluna precisa passar a existir"
+ * ali seria pedir à operadora que criasse uma coluna com um valor só, para
+ * distinguir nada de nada.
+ *
+ * `veiculo` precisa mesmo: a placa existe no mundo, está colada ao nome do
+ * motorista, e separar as duas é trabalho de quem mantém a planilha.
+ */
+export const SAIDA_DA_LACUNA = {
+  cliente: 'Quer por posto (quem despacha) ou por central (quem recebe)? Qualquer um dos dois eu levanto agora.',
+  veiculo:
+    'Posso agrupar por motorista, que é a pessoa. Para contar por veículo de verdade, a placa precisa virar uma coluna própria na planilha.',
+} as const;
+
 export const LACUNAS_DE_COLUNA = {
   /**
    * "CLIENTE" NÃO É UMA COLUNA QUE FALTA — é uma pergunta mal endereçada, e a
