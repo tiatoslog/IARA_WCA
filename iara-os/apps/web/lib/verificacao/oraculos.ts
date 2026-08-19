@@ -196,3 +196,65 @@ export function conferirSemFonte(
     escalavel: false,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Evidência do turno — o eixo AUTORIDADE
+// ---------------------------------------------------------------------------
+
+/**
+ * AFIRMOU UM NÚMERO SEM TER EXECUTADO NADA NESTE TURNO.
+ *
+ * O INCIDENTE (produção, 19/08/2026). "Quantos motoristas temos?" → *"75
+ * motoristas diferentes — mesma contagem que te dei agora há pouco."* São 73.
+ * Não houve soma de listagem nem chamada de ferramenta: a IARA **repetiu a
+ * própria resposta errada do histórico**, e o "já respondi isso" funcionou como
+ * credencial.
+ *
+ * ESTE ORÁCULO NÃO PRECISA SABER A RESPOSTA CERTA, e é isso que o torna geral.
+ * Ele não conhece motorista, não conhece carga, não conhece 73. Ele responde a
+ * uma pergunta mais simples e mais forte: *esta fala afirma um número que só
+ * poderia vir de uma execução, e nenhuma execução aconteceu?* A mesma regra vale
+ * para faturamento, cargas, clientes e o que vier depois — é a razão de não ser
+ * um `if` por assunto.
+ *
+ * `operacoes` é a lista do que rodou de fato no turno. Vazia significa que a
+ * fala não tem de onde tirar o número a não ser do contexto — e contexto não é
+ * fonte. `undefined` significa que quem chamou não sabe informar, e aí o oráculo
+ * se cala: não conseguir olhar é diferente de olhar e discordar.
+ *
+ * ESCALÁVEL, ao contrário de `conferirSemFonte`. Ali o valor não existia em
+ * lugar nenhum e insistir seria gastar cota para inventar de novo. Aqui a fonte
+ * está LIGADA e a operação existe — a segunda tentativa tem exatamente o que
+ * fazer de diferente: executar.
+ */
+export function conferirExecucaoNoTurno(
+  texto: string,
+  operacoes: readonly string[] | undefined,
+  assunto: string,
+): ResultadoVerificacao {
+  if (operacoes === undefined) {
+    return NAO_SEI_CONFERIR('não sei quais operações rodaram neste turno');
+  }
+  const ditos = numerosAfirmados(texto);
+  if (ditos.length === 0) {
+    return NAO_SEI_CONFERIR('a fala não afirma número algum');
+  }
+  if (operacoes.length > 0) {
+    /* Rodou algo determinístico: o número TEM origem. Se ele está certo é
+       assunto de outro oráculo — este só cuida da autoridade. */
+    return NAO_SEI_CONFERIR(`o turno executou ${operacoes.join(', ')}; o valor tem origem`);
+  }
+  return {
+    status: 'invalido',
+    motivo: `afirmou ${ditos.join(', ')} sobre ${assunto} sem executar nada neste turno`,
+    evidencia: {
+      fonte: 'evidencia-do-turno',
+      esperado: 'um número vindo de execução determinística neste turno',
+      obtido: ditos.join('/'),
+      detalhe:
+        'a fonte está ligada e existe operação para responder — o número veio do contexto, ' +
+        'e contexto (inclusive uma resposta anterior da própria IARA) não é fonte',
+    },
+    escalavel: true,
+  };
+}

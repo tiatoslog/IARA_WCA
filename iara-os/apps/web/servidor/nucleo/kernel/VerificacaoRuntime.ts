@@ -28,6 +28,7 @@ import {
 } from '../../../lib/verificacao/contrato';
 import {
   conferirContagem,
+  conferirExecucaoNoTurno,
   conferirHoraDeParede,
   conferirSemFonte,
 } from '../../../lib/verificacao/oraculos';
@@ -135,6 +136,23 @@ const PERGUNTA_DE_HORA = /\b(que horas?|qual (é |e )?(a )?hora)\b/i;
 /** "quantas centrais", "número de centrais" — a contagem que a base responde. */
 const PERGUNTA_DE_CENTRAIS = /\b(quantas?|n[úu]mero de|total de)\b[^?]{0,40}\bcentrais?\b/i;
 
+/**
+ * PERGUNTA DE CARDINALIDADE SOBRE A OPERAÇÃO — "quantos motoristas", "quantas
+ * cargas", "quantas rotas diferentes".
+ *
+ * Existe para o oráculo de EVIDÊNCIA DO TURNO, que não confere o valor: confere
+ * se o valor teve de onde vir. Por isso a lista de substantivos é a das
+ * entidades que TÊM operação determinística — perguntar deles e responder sem
+ * executar nada é o defeito de 19/08/2026, quando a IARA repetiu "75
+ * motoristas" do próprio histórico.
+ *
+ * `centrais` fica de fora de propósito: tem oráculo próprio, que sabe a
+ * resposta certa, e um oráculo que sabe o valor vale mais que um que só sabe a
+ * procedência.
+ */
+const PERGUNTA_DE_CARDINALIDADE =
+  /\b(quantos?|quantas?|n[úu]mero de|total de|quantidade de)\b[^?]{0,40}\b(motoristas?|cargas?|rotas?|destinos?|origens?|clientes?)\b/i;
+
 /** A UF citada na pergunta, quando houver. `null` = operação inteira. */
 function ufDaPergunta(pergunta: string): string | null {
   const m = pergunta.match(/\b(?:em|de|do|da|no|na)\s+([A-Z]{2})\b/);
@@ -173,6 +191,20 @@ export class VerificadorDeterministico implements PortaVerificacaoRuntime {
     if (PERGUNTA_DE_CENTRAIS.test(pergunta)) {
       return existsSync(path.join(this.opcoes.raiz, 'dados', 'infraestrutura.json'));
     }
+    /**
+     * CARDINALIDADE NÃO ENTRA AQUI — e a razão é o E23.
+     *
+     * A tentação era reconhecer toda pergunta de "quantos X" para poder cobrar
+     * procedência. Mas `reconhece` arma a trava da fala e custa a digitação ao
+     * vivo do turno INTEIRO, inclusive nos turnos que funcionam — e a imensa
+     * maioria funciona. Punir o caminho bom para pegar o ruim é caro demais.
+     *
+     * A procedência é cobrada noutro lugar, e num lugar melhor: o Kernel já
+     * sabe, ANTES de gerar, se algum passo alcançou o mundo. Cobrar ali retém a
+     * fala só nos turnos de fato suspeitos — ver a trava de cardinalidade em
+     * `Kernel.ts`. O oráculo `conferirExecucaoNoTurno` continua ligado em
+     * `verificar` para os turnos que chegarem aqui por outro motivo.
+     */
     return fonteInvocada(pergunta, this.opcoes.fontesAusentes?.() ?? []) !== null;
   }
 
@@ -204,6 +236,23 @@ export class VerificadorDeterministico implements PortaVerificacaoRuntime {
      * saber que não existe resposta. Vem por último porque é o mais largo: só
      * vale quando a pergunta menciona uma fonte que está fora.
      */
+    /**
+     * EVIDÊNCIA DO TURNO — vem antes da fonte-desligada porque é mais preciso:
+     * "não executou nada" é um fato do turno, enquanto "a fonte está fora" é uma
+     * inferência sobre o ambiente. Quando os dois valem, o primeiro diz mais.
+     */
+    if (PERGUNTA_DE_CARDINALIDADE.test(pergunta)) {
+      const veredito = conferirExecucaoNoTurno(
+        resposta,
+        contexto.operacoes_do_turno,
+        'a operação',
+      );
+      /* `inconclusivo` aqui significa "o turno executou algo" ou "não sei quais
+         operações rodaram" — nos dois casos a palavra final é de quem sabe o
+         valor, e a cadeia segue para os oráculos de baixo. */
+      if (veredito.status !== 'inconclusivo') return veredito;
+    }
+
     const fonte = fonteInvocada(pergunta, this.opcoes.fontesAusentes?.() ?? []);
     if (fonte) {
       /* O ano citado no pedido é ecoado na recusa ("a base 2026 está

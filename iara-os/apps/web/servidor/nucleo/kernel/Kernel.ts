@@ -167,6 +167,20 @@ export interface AnexoMensagem {
  * substitui o primeiro), quatro é o teto que a topologia já impõe — o valor
  * aqui é a rede de segurança para o dia em que ela mudar sem ninguém avisar.
  */
+/**
+ * "QUANTOS X" SOBRE A OPERAÇÃO — as perguntas cujo número só pode vir de contar.
+ *
+ * Usada pela trava de autoridade: pergunta desta forma respondida num turno em
+ * que nada alcançou o mundo é um número sem procedência, e foi assim que a IARA
+ * repetiu "75 motoristas" do próprio histórico em 19/08/2026.
+ *
+ * A lista é das entidades que TÊM operação determinística. `centrais` fica de
+ * fora porque já tem oráculo que sabe o valor certo — e saber o valor vale mais
+ * que saber a procedência.
+ */
+const PERGUNTA_DE_CARDINALIDADE_OPERACIONAL =
+  /\b(quantos?|quantas?|n[úu]mero de|total de|quantidade de)\b[^?]{0,40}\b(motoristas?|cargas?|rotas?|destinos?|origens?|clientes?)\b/i;
+
 const TETO_DA_FILA = 4;
 
 /**
@@ -2147,8 +2161,44 @@ export class Kernel {
      * a digitação ao vivo de um turno que não precisava.
      */
     const verificavel = this.verificacao?.reconhece(percepcao.bruto) ?? false;
+    /**
+     * PERGUNTA DE CARDINALIDADE QUE NÃO EXECUTOU NADA — a trava de autoridade.
+     *
+     * O INCIDENTE (produção, 19/08/2026): "quantos motoristas temos?" → *"75
+     * motoristas diferentes — **mesma contagem que te dei agora há pouco**"*.
+     * São 73. Não houve soma de listagem truncada (esse foi o defeito da
+     * véspera, já fechado) e não houve chamada de ferramenta: a IARA repetiu a
+     * própria resposta errada do histórico. O "já respondi isso" virou
+     * credencial, e o erro passou a se auto-confirmar.
+     *
+     * POR QUE AQUI E NÃO NO `reconhece` DO VERIFICADOR. Reconhecer toda
+     * pergunta de "quantos X" armaria a trava em TODO turno de contagem,
+     * inclusive nos que funcionam — e a imensa maioria funciona. O E23 de
+     * `escalada-verificada.test.ts` recusa isso com razão: punir o caminho bom
+     * para pegar o ruim custa a digitação ao vivo de todo mundo.
+     *
+     * Aqui a conta é outra: neste ponto o turno JÁ executou (ou não), e a trava
+     * arma só quando nada alcançou o mundo. O turno legítimo — o que consultou a
+     * planilha — não paga nada.
+     *
+     * A REGRA É GERAL, e é o que a impede de virar `if pergunta.includes
+     * ("motoristas")`: ela não conhece motorista, não conhece carga e não sabe
+     * que a resposta é 73. Ela cobra PROCEDÊNCIA — um número que só poderia vir
+     * de execução, num turno em que execução não houve.
+     *
+     * Memória segue resolvendo CONTEXTO e referência ("e em 2026?"). Nunca
+     * VALOR: a hierarquia é execução no turno > fonte > memória > resposta
+     * anterior da IARA > inferência da LLM, e as duas últimas não fornecem
+     * número operacional quando existe operação que o produz.
+     */
+    const cardinalidadeSemExecucao =
+      PERGUNTA_DE_CARDINALIDADE_OPERACIONAL.test(percepcao.bruto) && !alcancouOMundo;
+
     const travaArmada =
-      (execucao.passos.length > 0 && !alcancouOMundo) || comandoSemPasso || verificavel;
+      (execucao.passos.length > 0 && !alcancouOMundo) ||
+      comandoSemPasso ||
+      verificavel ||
+      cardinalidadeSemExecucao;
 
     const inicio = Date.now();
     let acumulado = '';

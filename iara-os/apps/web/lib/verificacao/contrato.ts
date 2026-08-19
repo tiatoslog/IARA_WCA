@@ -94,6 +94,35 @@ export interface ContextoDaTarefa {
    * verificador sabe disso sem precisar saber a resposta certa.
    */
   readonly fontes_ausentes?: readonly string[];
+  /**
+   * AS OPERAÇÕES DETERMINÍSTICAS QUE RODARAM NESTE TURNO — a evidência do turno.
+   *
+   * O DEFEITO QUE ISTO FECHA (produção, 19/08/2026). Perguntada "quantos
+   * motoristas temos?", a IARA respondeu *"75 motoristas diferentes — **mesma
+   * contagem que te dei agora há pouco**"*. São 73. Ela não somou listagem, não
+   * chamou ferramenta: **repetiu a própria resposta errada do histórico**.
+   *
+   * O erro se auto-confirma. Uma vez dito, "75" vira contexto, e contexto tem a
+   * mesma aparência de fato para quem gera a próxima frase — só que ganhou a
+   * credencial de "já respondi isso".
+   *
+   * Sem este campo o verificador não tinha como distinguir *"73, porque acabei
+   * de contar"* de *"75, porque foi o que eu disse antes"*: as duas chegam como
+   * texto com um número dentro. A hierarquia de autoridade para número
+   * operacional é:
+   *
+   *   execução no turno  >  fonte sem execução  >  memória conversacional  >
+   *   resposta anterior da IARA  >  inferência da LLM
+   *
+   * E as duas últimas não podem fornecer o valor final quando existe operação
+   * determinística aplicável. Memória resolve CONTEXTO e referência ("e em
+   * 2026?"); nunca VALOR.
+   *
+   * Lista vazia = nada determinístico rodou. `undefined` = quem chamou não sabe
+   * informar, e aí o oráculo se cala em vez de acusar — não conseguir olhar é
+   * diferente de olhar e discordar.
+   */
+  readonly operacoes_do_turno?: readonly string[];
 }
 
 /**

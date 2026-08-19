@@ -133,5 +133,19 @@ test('F. a condição no Kernel é a que este arquivo descreve', () => {
    * verificação em runtime seria decorativa — o operador leria o número errado e
    * o veria ser trocado meio segundo depois. Ver `VerificacaoRuntime.ts`.
    */
-  assert.match(fonte, /const travaArmada =[\s\S]{0,200}comandoSemPasso \|\| verificavel;/);
+  /**
+   * E um QUARTO motivo em 19/08/2026: `cardinalidadeSemExecucao`. A IARA
+   * respondeu "75 motoristas — mesma contagem que te dei agora há pouco",
+   * repetindo o próprio histórico sem chamar ferramenta nenhuma. Número
+   * operacional afirmado num turno que não executou nada não tem procedência.
+   *
+   * A trava mora AQUI e não no `reconhece` do verificador de propósito: lá ela
+   * reteria a fala de todo turno de contagem, inclusive dos que funcionam — o
+   * que o `E23` de `escalada-verificada.test.ts` recusa com razão. Aqui só arma
+   * quando nada alcançou o mundo.
+   */
+  assert.match(
+    fonte,
+    /const travaArmada =[\s\S]{0,300}comandoSemPasso \|\|[\s\S]{0,80}cardinalidadeSemExecucao;/,
+  );
 });

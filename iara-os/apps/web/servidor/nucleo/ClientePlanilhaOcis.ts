@@ -677,6 +677,64 @@ export function dimensaoAusente(v: string | null | undefined): boolean {
 }
 
 /**
+ * A MESMA PESSOA EM VEÍCULOS DIFERENTES — a identidade do motorista.
+ *
+ * O DEFEITO (operadora, 19/08/2026): *"não analiso que em 2026 tivemos 76
+ * motoristas diferentes; LINO está numa linha e LINEALDO em outra, são a mesma
+ * pessoa"*. Ela estava certa, e a causa medida na aba 2026 é estrutural: a
+ * coluna MOTORISTA carrega **nome + veículo + tag de pedágio**.
+ *
+ *   CARLOS ANEVTON                            24 cargas
+ *   CARLOS ANEVTON - GRO4761                   1
+ *   CARLOS ANEVTON - GRO4761 (SEM PARAR)       4
+ *   CARLOS ANEVTON - QHI4C04 ( CONECT CAR )    1
+ *   CARLOS ANEVTON - QHI4C04 (CONECTCAR)      14
+ *
+ * Uma pessoa, cinco linhas de contagem. O mesmo vale para `MOLINA - IMN7071`,
+ * `LUCAS - PYN` (39 cargas!), `SERGIO - SEM PARAR` (27), `WILIS - SEM PARAR`.
+ *
+ * DUAS NATUREZAS, DOIS TRATAMENTOS — e a distinção é o que impede esta função
+ * de virar o defeito que ela conserta:
+ *
+ *  1. ESTRUTURAL. O que vem depois de " - " e o que está entre parênteses é
+ *     anotação de veículo, não nome. Removê-lo é ler o formato, não adivinhar
+ *     semelhança.
+ *
+ *  2. DECLARADO. `CLAUDINEI DE SOUZA`, `LOURENCO SAMPAIO`, `JAIRO GMK` e
+ *     `CLEITON LAUDIR` não têm marca estrutural nenhuma — só quem conhece a
+ *     operação sabe que são as mesmas pessoas de `CLAUDINEI`, `LOURENCO`,
+ *     `JAIRO` e `CLEITON`. Ficam num mapa escrito à mão, confirmado pela
+ *     operadora.
+ *
+ * POR QUE NÃO SEMELHANÇA. `LUIZ ANTONIO` (5 cargas) e `LUIZ PAULO` (88) têm o
+ * mesmo primeiro nome e são pessoas DIFERENTES. Qualquer regra por prefixo ou
+ * distância de edição as fundiria — e sumir com uma pessoa real é pior que
+ * contá-la duas vezes. Nome novo que apareça sem marca estrutural continua
+ * sendo pessoa nova até alguém declarar o contrário.
+ */
+const IDENTIDADE_DECLARADA: Readonly<Record<string, string>> = {
+  'CLAUDINEI DE SOUZA': 'CLAUDINEI',
+  'LOURENCO SAMPAIO': 'LOURENCO',
+  'JAIRO GMK': 'JAIRO',
+  'CLEITON LAUDIR': 'CLEITON',
+};
+
+export function identidadeDeMotorista(bruto: string): string {
+  const semAcento = bruto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toUpperCase();
+  /* Parênteses primeiro: "(SEM PARAR)", "( CONECT CAR )", "(CONECTCAR)". */
+  const semParenteses = semAcento.replace(/\([^)]*\)/g, ' ');
+  /* Depois o que vem após " - ": placa, prefixo de placa ou nome de tag. O
+     espaço em volta do hífen é o que separa anotação de nome composto — um
+     "JEAN-PAULO" não tem espaços e sobrevive inteiro. */
+  const semVeiculo = semParenteses.split(/\s+-\s+/)[0];
+  const limpo = semVeiculo.replace(/\s+/g, ' ').trim();
+  return IDENTIDADE_DECLARADA[limpo] ?? limpo;
+}
+
+/**
  * CONTAR GRUPOS NÃO É CONTAR ENTIDADES — o defeito DIST-002.
  *
  * `agregarCargas(cargas, 'motorista')` devolve um grupo por motorista MAIS um
@@ -708,7 +766,9 @@ export function contarDistintos(
   for (const c of cargas) {
     const v = c[dimensao];
     if (dimensaoAusente(v)) ausentes += 1;
-    else vistos.add(v.trim().toUpperCase());
+    /* Motorista tem IDENTIDADE, não só grafia: a mesma pessoa aparece com
+       placa e tag coladas ao nome. Ver `identidadeDeMotorista`. */
+    else vistos.add(dimensao === 'motorista' ? identidadeDeMotorista(v) : v.trim().toUpperCase());
   }
   return { distintos: vistos.size, ausentes };
 }
@@ -766,7 +826,10 @@ export function valorMedio(g: GrupoAgregado): number | null {
 function chaveDoGrupo(c: CargaCompleta, agruparPor: AgruparPor): string {
   switch (agruparPor) {
     case 'motorista':
-      return c.motorista || '(sem motorista)';
+      /* Agrupa por PESSOA, não por grafia: sem isto o ranking mostrava
+         `CARLOS ANEVTON` cinco vezes, uma por veículo, e a operadora somava na
+         cabeça. Ver `identidadeDeMotorista`. */
+      return c.motorista ? identidadeDeMotorista(c.motorista) : '(sem motorista)';
     case 'rota':
       return `${c.origem || '?'} → ${c.destino || '?'}`;
     case 'origem':
