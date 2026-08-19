@@ -64,7 +64,12 @@ const PERGUNTA = 'quantas cargas existem na base 2026?';
 /** Como o degradado se reconhece de fora. Ver `EscaladaDoTurno.textoDegradado`. */
 const MARCA_DEGRADADA = /não vou te dar esse número|não confirmei|não bateu/i;
 
-type Desfecho = 'RECUSA_HONESTA' | 'ESCALOU_E_SALVOU' | 'ESCALOU_E_DEGRADOU' | 'REPROVADO';
+type Desfecho =
+  | 'RECUSA_HONESTA'
+  | 'ESCALOU_E_SALVOU'
+  | 'ESCALOU_E_DEGRADOU'
+  | 'CONTESTOU_SEM_ESCALAR'
+  | 'REPROVADO';
 
 interface Volta {
   volta: number;
@@ -75,6 +80,41 @@ interface Volta {
   numeros_vistos: number[];
   escalou: boolean;
   porque: string;
+  /**
+   * A TRILHA AUDITÁVEL. Sem ela não dá para separar "funcionou" de "funcionou e
+   * eu consigo provar" — que é a diferença entre fechar a fatia e não fechar.
+   *
+   * Tudo vem de fora do texto da fala: linhas de auditoria do motor e eventos do
+   * barramento. Contar escalada pela fala seria o verificador acreditando na
+   * palavra do verificado.
+   */
+  trilha: {
+    /** `modelo` de cada `RACIOCINIO_INICIADO` do turno, na ordem das tentativas. */
+    modelos: string[];
+    /** Linhas `verificacao:<status>:<acao>` da auditoria, com o motivo. */
+    veredictos: string[];
+    /** A linha `orcamento_turno` do fim do turno: gasto contra teto. */
+    orcamento: string | null;
+    /** Falhas de provedor observadas — explicam troca de elo sem escalada. */
+    falhas_de_provedor: string[];
+  };
+}
+
+/** Extrai o campo `detalhe`/`acao` de uma linha JSON de auditoria do motor. */
+function linhasDeAuditoria(saida: readonly string[], filtro: RegExp): string[] {
+  const achadas: string[] = [];
+  for (const l of saida) {
+    for (const m of l.matchAll(/\{"canal":"auditoria".*?\}(?=\{|$)/g)) {
+      try {
+        const o = JSON.parse(m[0]) as { acao?: string; detalhe?: string };
+        if (o.acao && filtro.test(o.acao)) achadas.push(`${o.acao} — ${o.detalhe ?? ''}`);
+      } catch {
+        /* Linha partida entre dois chunks de stdout. Ignorar é honesto: a
+           trilha fica incompleta e o relatório mostra o que conseguiu ler. */
+      }
+    }
+  }
+  return achadas;
 }
 
 await limparMotoresEsquecidos([PORTA]);
@@ -96,9 +136,11 @@ try {
     await cliente.conectar();
 
     const antes = cliente.pacotes.length;
+    const antesDaSaida = motor.saida.length;
     const t0 = Date.now();
     const turno = await cliente.dizer(PERGUNTA, PRAZO_MS);
     const ms = Date.now() - t0;
+    const saidaDoTurno = motor.saida.slice(antesDaSaida);
 
     /**
      * TODO texto que passou pela tela, não só o final. É aqui que o experimento
@@ -106,8 +148,16 @@ try {
      * operador leu a invenção — mesmo que a fala final tenha sido corrigida.
      */
     const vistos = new Set<number>();
+    const modelos: string[] = [];
     for (const p of cliente.pacotes.slice(antes)) {
-      const b = p.bruto as { tipo?: string; snapshot?: { fala?: { texto?: string } } };
+      const b = p.bruto as {
+        tipo?: string;
+        modelo?: string;
+        snapshot?: { fala?: { texto?: string } };
+      };
+      /* Cada tentativa de raciocínio anuncia o modelo. Duas entradas = houve
+         segunda chamada; qual delas foi a escalada, a auditoria diz. */
+      if (b?.tipo === 'RACIOCINIO_INICIADO' && b.modelo) modelos.push(b.modelo);
       if (b?.tipo !== 'snapshot') continue;
       const t = b.snapshot?.fala?.texto ?? '';
       for (const m of t.matchAll(/\b(\d{1,3}(?:\.\d{3})+|\d+)\b/g)) {
@@ -117,12 +167,22 @@ try {
       }
     }
 
+    const trilha = {
+      modelos,
+      veredictos: linhasDeAuditoria(saidaDoTurno, /^verificacao:/),
+      orcamento: linhasDeAuditoria(saidaDoTurno, /^orcamento_turno/).at(-1) ?? null,
+      falhas_de_provedor: saidaDoTurno
+        .filter((l) => /respondeu \d{3}:|não enviou o primeiro pedaço/.test(l))
+        .map((l) => l.replace(/\s+/g, ' ').slice(0, 160)),
+    };
+
     const fala = turno.resposta.replace(/\s+/g, ' ').trim();
     const degradou = MARCA_DEGRADADA.test(fala);
     /* O jornal do motor conta quantas escaladas houve — `verificacao:*:escalar`
        é registrado pela auditoria do Kernel. Ler dali, e não da fala, é o que
        torna a contagem independente do texto. */
-    const escaladas = motor.saida.filter((l) => l.includes('verificacao:invalido:escalar')).length;
+    const escaladas = trilha.veredictos.filter((v) => v.startsWith('verificacao:invalido:escalar'))
+      .length;
 
     let desfecho: Desfecho;
     let porque: string;
@@ -130,11 +190,17 @@ try {
       desfecho = 'REPROVADO';
       porque = `número inventado chegou à tela: ${[...vistos].join(', ')}`;
     } else if (degradou) {
-      desfecho = escaladas > 0 ? 'ESCALOU_E_DEGRADOU' : 'REPROVADO';
+      /**
+       * DEGRADOU SEM ESCALAR NÃO É REPROVAÇÃO — é o Caso B da matriz, e o motivo
+       * está na trilha: `escalavel: false` (fonte ausente não se conserta com
+       * modelo melhor), orçamento negado, ou premium em carência. O relatório
+       * precisa dizer QUAL, senão "não fechou" vira mistério.
+       */
+      desfecho = escaladas > 0 ? 'ESCALOU_E_DEGRADOU' : 'CONTESTOU_SEM_ESCALAR';
       porque =
         escaladas > 0
           ? 'contestou, escalou, o premium também não sustentou, e o laço terminou honesto'
-          : 'degradou sem ter escalado — conferir orçamento e saúde do premium';
+          : `contestou e não escalou — motivo na trilha: ${trilha.veredictos.join(' | ') || '(auditoria não lida)'}`;
     } else if (escaladas > 0) {
       desfecho = 'ESCALOU_E_SALVOU';
       porque = 'o barato inventou, o premium corrigiu, e o inventado não chegou à tela';
@@ -151,9 +217,17 @@ try {
       numeros_vistos: [...vistos],
       escalou: escaladas > 0,
       porque,
+      trilha,
     });
-    console.log(`v${v} ${desfecho.padEnd(19)} ${String(ms).padStart(6)}ms  ${porque}`);
-    console.log(`     "${fala.slice(0, 150)}"`);
+    console.log(`v${v} ${desfecho.padEnd(21)} ${String(ms).padStart(6)}ms`);
+    console.log(`     modelos: ${trilha.modelos.join(' → ') || '(nenhum)'}`);
+    console.log(`     veredicto: ${trilha.veredictos.join(' | ') || '(nenhum)'}`);
+    console.log(`     orçamento: ${trilha.orcamento ?? '(não lido)'}`);
+    if (trilha.falhas_de_provedor.length > 0) {
+      console.log(`     provedor: ${trilha.falhas_de_provedor.slice(0, 2).join(' | ')}`);
+    }
+    console.log(`     na tela: ${vistos.size ? [...vistos].join(', ') : '(nenhum número)'}`);
+    console.log(`     "${fala.slice(0, 160)}"`);
     await cliente.fechar();
   }
 } finally {
