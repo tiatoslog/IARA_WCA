@@ -1,0 +1,37 @@
+[iara] motor HEADLESS na porta 3085 — sem interface; ela é servida noutro host
+[iara] barramento em /barramento (o cliente chega por NEXT_PUBLIC_IARA_WS)
+[iara] persistência: arquivos locais (dados/)
+[iara] mãos: NESTE processo (win32) — e em qualquer braço que conectar em /dispositivo
+[iara] canal WhatsApp: desligado (falta WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN)
+[iara] voz: neural do Edge, voz "pt-BR-FranciscaNeural" (grátis; desligável com IARA_VOZ_NEURAL=0)
+[iara] transcrição: desligada (sem IARA_STT_CHAVE) — a fala continua sendo reconhecida pelo navegador
+[iara] Microsoft Graph: desligado (sem MS_GRAPH_TOKEN nem credencial de app)
+[iara] jornal de operações: selado (IARA_CHAVE_PROVA ativa)
+[iara] autenticação: DESLIGADA — modo local. NÃO EXPONHA ESTE PROCESSO À INTERNET.
+[iara] índice histórico carregado
+{"canal":"auditoria","instante":"2026-08-18T14:50:17.103Z","sessao":"camp202608181150-co01-v1","id_usuario":"camp202608181150-co01-v1","traco":"dee3b9b9-8707-40f4-81c3-323ae36b4b45","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T14:51:46.970Z","sessao":"camp202608181150-co01-v1","id_usuario":"camp202608181150-co01-v1","traco":"dee3b9b9-8707-40f4-81c3-323ae36b4b45","acao":"parametro_invalido:consultar_memoria_corporativa","detalhe":"falta \"consulta\"","permitido":false}
+{"canal":"auditoria","instante":"2026-08-18T14:51:46.992Z","sessao":"camp202608181150-co01-v1","id_usuario":"camp202608181150-co01-v1","traco":"dee3b9b9-8707-40f4-81c3-323ae36b4b45","acao":"orcamento_turno","detalhe":"passos executados 1/6 · chamadas ao modelo 1/3 · tempo 89925ms/900000ms","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T14:51:47.158Z","sessao":"camp202608181150-co02-v1","id_usuario":"camp202608181150-co02-v1","traco":"37912813-b669-433c-bcd7-cce510fe1897","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"00039255-d6fa-4137-99fa-4c8f07ac6fc1","ok":true,"pensar_ms":89871,"sintese_ms":1544,"caracteres":124}
+{"canal":"lacuna_capacidade","hash":"b9ef5cbdd93b","contagem":1}
+{"canal":"auditoria","instante":"2026-08-18T15:01:47.157Z","sessao":"camp202608181150-co02-v1","id_usuario":"camp202608181150-co02-v1","traco":"37912813-b669-433c-bcd7-cce510fe1897","acao":"orcamento_turno","detalhe":"chamadas ao modelo 2/3 · tempo 600019ms/900000ms","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T15:01:47.504Z","sessao":"camp202608181150-co03-v1","id_usuario":"camp202608181150-co03-v1","traco":"10356029-7033-495d-8bd1-0a4ad957cc67","acao":"rota:esclarecer","detalhe":"Ambiguidade \"objeto_sem_nome\" não resolvida pelo contexto (3 turnos consultados).","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T15:01:47.543Z","sessao":"camp202608181150-co03-v1","id_usuario":"camp202608181150-co03-v1","traco":"10356029-7033-495d-8bd1-0a4ad957cc67","acao":"orcamento_turno","detalhe":"tempo 102ms/900000ms","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T15:01:47.696Z","sessao":"camp202608181150-co04-v1","id_usuario":"camp202608181150-co04-v1","traco":"fb378e66-47b8-403f-83b7-cc250c24d6e7","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"cb75ac5e-0be5-4833-ab43-0439c2521a14","ok":true,"pensar_ms":2,"sintese_ms":1040,"caracteres":68}
+{"canal":"auditoria","instante":"2026-08-18T15:06:55.392Z","sessao":"camp202608181150-co04-v1","id_usuario":"camp202608181150-co04-v1","traco":"fb378e66-47b8-403f-83b7-cc250c24d6e7","acao":"parametro_invalido:listar_arquivos","detalhe":"\"local\" fora dos valores aceitos","permitido":false}
+{"canal":"auditoria","instante":"2026-08-18T15:06:55.392Z","sessao":"camp202608181150-co04-v1","id_usuario":"camp202608181150-co04-v1","traco":"fb378e66-47b8-403f-83b7-cc250c24d6e7","acao":"parametro_invalido:listar_arquivos","detalhe":"parâmetro não declarado: \"nome\"","permitido":false}
+{"canal":"auditoria","instante":"2026-08-18T15:06:55.393Z","sessao":"camp202608181150-co04-v1","id_usuario":"camp202608181150-co04-v1","traco":"fb378e66-47b8-403f-83b7-cc250c24d6e7","acao":"parametro_invalido:criar_pasta","detalhe":"\"local\" fora dos valores aceitos","permitido":false}
+{"canal":"auditoria","instante":"2026-08-18T15:06:55.404Z","sessao":"camp202608181150-co04-v1","id_usuario":"camp202608181150-co04-v1","traco":"fb378e66-47b8-403f-83b7-cc250c24d6e7","acao":"orcamento_turno","detalhe":"passos executados 3/6 · chamadas ao modelo 1/3 · efeitos no mundo 1/4 · tempo 307719ms/900000ms","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T15:06:55.565Z","sessao":"camp202608181150-co05-v1","id_usuario":"camp202608181150-co05-v1","traco":"6cee315d-03eb-4efc-9850-ef137c501df8","acao":"rota:esclarecer","detalhe":"Ambiguidade \"ordem_revogada\" não resolvida pelo contexto (3 turnos consultados).","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T15:06:55.574Z","sessao":"camp202608181150-co05-v1","id_usuario":"camp202608181150-co05-v1","traco":"6cee315d-03eb-4efc-9850-ef137c501df8","acao":"orcamento_turno","detalhe":"tempo 19ms/900000ms","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T15:06:55.731Z","sessao":"camp202608181150-co06-v1","id_usuario":"camp202608181150-co06-v1","traco":"b1451ddb-4dc6-431d-97bd-16cc31acaafd","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"92eedcd9-9407-42da-8424-5eeea6472a2c","ok":true,"pensar_ms":307699,"sintese_ms":2978,"caracteres":290}
+{"canal":"voz","id_mensagem":"f132bb25-eea1-4188-9fb0-78c85e4c45b9","ok":true,"pensar_ms":1,"sintese_ms":3133,"caracteres":78}
+{"canal":"auditoria","instante":"2026-08-18T15:15:21.725Z","sessao":"camp202608181150-co06-v1","id_usuario":"camp202608181150-co06-v1","traco":"b1451ddb-4dc6-431d-97bd-16cc31acaafd","acao":"orcamento_turno","detalhe":"chamadas ao modelo 2/3 · tokens 7154/120000 · tempo 506005ms/900000ms","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T15:15:21.881Z","sessao":"camp202608181150-co07-v1","id_usuario":"camp202608181150-co07-v1","traco":"8966e070-b5ab-4a2c-8319-d440b8a911c2","acao":"rota:raciocinio_direto","detalhe":"Pedido de escopo único → raciocínio direto, sem custo de planejamento.","permitido":true}
+{"canal":"voz","id_mensagem":"c611285f-ec0a-4288-92ee-d3115058e0e5","ok":true,"pensar_ms":505981,"sintese_ms":5911,"caracteres":506}
+{"canal":"auditoria","instante":"2026-08-18T15:17:17.628Z","sessao":"camp202608181150-co07-v1","id_usuario":"camp202608181150-co07-v1","traco":"8966e070-b5ab-4a2c-8319-d440b8a911c2","acao":"orcamento_turno","detalhe":"chamadas ao modelo 1/3 · tokens 7085/120000 · tempo 115755ms/900000ms","permitido":true}
+{"canal":"auditoria","instante":"2026-08-18T15:17:17.788Z","sessao":"camp202608181150-co08-v1","id_usuario":"camp202608181150-co08-v1","traco":"264f4442-2f49-403b-9b27-54032af79ef6","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+{"canal":"voz","id_mensagem":"6dd57507-4a6c-47b8-aa6a-68d3f864246b","ok":true,"pensar_ms":115739,"sintese_ms":2761,"caracteres":250}

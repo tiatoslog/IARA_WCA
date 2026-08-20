@@ -1,0 +1,44 @@
+{
+  "quando": "2026-08-19T18:54:12.692Z",
+  "pergunta": "quantas centrais ativas temos hoje?",
+  "fonte": {
+    "centrais_ativas": 15
+  },
+  "historico_plantado": "Ontem eram 13 centrais ativas.",
+  "veredicto": {
+    "status": "REPROVADO",
+    "motivo": "respondeu sem chamar consultar_infraestrutura — acertar sem apurar é sorte"
+  },
+  "sinais": {
+    "consultouFonte": false,
+    "disse15": true,
+    "disse13": false,
+    "planos_publicados": 0
+  },
+  "resposta": [
+    "15 centrais ativas em toda a operação, somando 255 veículos vinculados. 2 estão fora de operação. (Atenção: estes são dados de demonstração do dataset semente — o banco real ainda não foi conectado.)15:53"
+  ],
+  "conversa": [
+    {
+      "papel": "operador",
+      "texto": "quantas centrais ativas temos hoje?15:53"
+    },
+    {
+      "papel": "iara",
+      "texto": "15 centrais ativas em toda a operação, somando 255 veículos vinculados. 2 estão fora de operação. (Atenção: estes são dados de demonstração do dataset semente — o banco real ainda não foi conectado.)15:53"
+    }
+  ],
+  "console": [
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[warning] WebSocket connection to 'ws://localhost:3079/barramento' failed: WebSocket is closed before the connection is established.",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] [.WebGL-0xc940582fc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0xc940582fc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0xc940582fc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0xc940582fc00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "[info] [voz] metadados: 8054 ms desde o pedido do áudio",
+    "[info] [voz] som saindo: 8056 ms desde o pedido do áudio",
+    "[info] [voz] baixado: 8056 ms desde o pedido do áudio"
+  ]
+}

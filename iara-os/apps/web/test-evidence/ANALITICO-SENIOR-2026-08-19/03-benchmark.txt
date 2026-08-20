@@ -1,0 +1,80 @@
+==============================================================================
+BENCHMARK ANALÍTICO — holdout
+==============================================================================
+
+  CASO A CASO
+    ok   H01  abster                 degrau=nenhum        confiança=baixa  3.30ms
+    ok   H02  concluir_com_ressalva  degrau=descritiva    confiança=media  0.86ms
+    ok   H03  abster                 degrau=nenhum        confiança=baixa  0.25ms
+    ok   H04  concluir_com_ressalva  degrau=comparativa   confiança=alta   0.31ms
+    ok   H05  concluir_com_ressalva  degrau=descritiva    confiança=baixa  0.17ms
+    ok   H06  concluir_com_ressalva  degrau=descritiva    confiança=media  0.28ms
+    ok   H07  concluir_com_ressalva  degrau=descritiva    confiança=media  0.11ms
+    ok   H08  concluir_com_ressalva  degrau=descritiva    confiança=media  0.14ms
+    ok   H09  concluir               degrau=populacional  confiança=alta   0.21ms
+    ok   H10  concluir               degrau=populacional  confiança=alta   0.14ms
+    ok   H11  concluir_com_ressalva  degrau=descritiva    confiança=media  0.08ms
+    ok   H12  concluir_com_ressalva  degrau=descritiva    confiança=media  0.07ms
+    ok   H13  concluir_com_ressalva  degrau=descritiva    confiança=baixa  0.08ms
+    ok   H14  abster                 degrau=nenhum        confiança=baixa  0.05ms
+    ok   H15  concluir               degrau=comparativa   confiança=media  0.15ms
+    ok   H16  concluir_com_ressalva  degrau=descritiva    confiança=media  0.08ms
+    ok   H17  concluir_com_ressalva  degrau=descritiva    confiança=media  0.08ms
+    ok   H18  concluir_com_ressalva  degrau=comparativa   confiança=alta   0.05ms
+    ok   H19  concluir_com_ressalva  degrau=populacional  confiança=media  0.05ms
+    ok   H20  concluir_com_ressalva  degrau=descritiva    confiança=media  0.11ms
+    ok   H21  concluir_com_ressalva  degrau=populacional  confiança=media  0.09ms
+    ok   H22  concluir               degrau=comparativa   confiança=media  0.05ms
+
+  por DOMINIO
+    ok   dados                3/3
+    ok   estrategia           2/2
+    ok   executivo            1/1
+    ok   financeiro           7/7
+    ok   gestao               2/2
+    ok   operacional          5/5
+    ok   pessoas              2/2
+
+  por COMPLEXIDADE
+    ok   alta                 7/7
+    ok   media                9/9
+    ok   multidimensional     1/1
+    ok   simples              5/5
+
+  por EVIDENCIA
+    ok   ausente              4/4
+    ok   completa             6/6
+    ok   contraditoria        3/3
+    ok   desatualizada        2/2
+    ok   parcial              7/7
+
+  por RACIOCINIO
+    ok   agregacao            9/9
+    ok   causalidade          4/4
+    ok   comparacao           4/4
+    ok   concentracao         1/1
+    ok   decisao              2/2
+    ok   previsao             1/1
+    ok   tendencia            1/1
+
+  por RISCO
+    ok   alto                 12/12
+    ok   baixo                2/2
+    ok   critico              6/6
+    ok   medio                2/2
+
+  BURACOS DA MATRIZ — dimensões declaradas e não exercitadas
+    dominio        7/11 coberto  — SEM CASO: qualidade, processos, clientes, risco
+    complexidade   4/4 coberto
+    evidencia      5/5 coberto
+    raciocinio     7/11 coberto  — SEM CASO: anomalia, cenario, tradeoff, priorizacao
+    risco          4/4 coberto
+
+  LATÊNCIA E CUSTO
+    total          6.71ms para 22 cenários
+    pior caso      3.30ms
+    tokens         0 — a camada não chama modelo em nenhum caminho
+
+==============================================================================
+VEREDITO DO BENCHMARK: 22/22 — nenhuma categoria vermelha
+==============================================================================

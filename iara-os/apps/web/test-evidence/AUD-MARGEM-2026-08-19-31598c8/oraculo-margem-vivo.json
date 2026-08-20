@@ -1,0 +1,127 @@
+{
+ "ORACULO": "margem-viva-independente",
+ "ano": "2026",
+ "geral": {
+  "cargas": 2688,
+  "com_preco": 2687,
+  "sem_preco": 0,
+  "sem_valor": 1,
+  "ambiguas": 0,
+  "cobertura_pct": 99.96279761904762,
+  "receita": 4738184.52,
+  "custo": 3309842.4299999634,
+  "pedagio": 73799.03999999963,
+  "resultado_bruto": 1428342.0900000362,
+  "resultado_com_pedagio": 1354543.0500000366,
+  "pct_bruto": 30.145345415970343,
+  "pct_com_pedagio": 28.58780708692275,
+  "receita_brl": "R$ 4.738.184,52",
+  "resultado_bruto_brl": "R$ 1.428.342,09",
+  "resultado_com_pedagio_brl": "R$ 1.354.543,05",
+  "pct_bruto_1casa": "30.1",
+  "pct_com_pedagio_1casa": "28.6",
+  "cobertura_pct_2casas": "99.96"
+ },
+ "margem_media_das_rotas_1casa": "30.2",
+ "top5_central": [
+  {
+   "central": "SORRISO",
+   "resultado": "R$ 214.133,23",
+   "pct": "32.0",
+   "cargas": 436
+  },
+  {
+   "central": "PATROCINIO",
+   "resultado": "R$ 158.601,48",
+   "pct": "33.7",
+   "cargas": 251
+  },
+  {
+   "central": "MORRINHOS",
+   "resultado": "R$ 141.149,04",
+   "pct": "28.3",
+   "cargas": 250
+  },
+  {
+   "central": "POUSO ALEGRE",
+   "resultado": "R$ 109.253,78",
+   "pct": "25.1",
+   "cargas": 255
+  },
+  {
+   "central": "UBERABA",
+   "resultado": "R$ 91.259,32",
+   "pct": "32.5",
+   "cargas": 153
+  }
+ ],
+ "top5_posto": [
+  {
+   "posto": "TRES PONTAS",
+   "resultado": "R$ 101.858,64",
+   "pct": "24.6",
+   "cargas": 220
+  },
+  {
+   "posto": "BOA ESPERANCA DO NORTE",
+   "resultado": "R$ 80.709,12",
+   "pct": "33.2",
+   "cargas": 128
+  },
+  {
+   "posto": "PONTES E LACERDA",
+   "resultado": "R$ 65.736,16",
+   "pct": "28.7",
+   "cargas": 112
+  },
+  {
+   "posto": "ARARANGUA",
+   "resultado": "R$ 62.189,40",
+   "pct": "32.0",
+   "cargas": 67
+  },
+  {
+   "posto": "NOVA UBIRATA",
+   "resultado": "R$ 61.396,02",
+   "pct": "32.5",
+   "cargas": 126
+  }
+ ],
+ "top3_motorista": [
+  {
+   "motorista": "LUCAS",
+   "resultado": "R$ 125.824,94",
+   "pct": "35.5",
+   "cargas": 177
+  },
+  {
+   "motorista": "LINO",
+   "resultado": "R$ 104.439,49",
+   "pct": "32.0",
+   "cargas": 213
+  },
+  {
+   "motorista": "LAUDIR",
+   "resultado": "R$ 97.750,73",
+   "pct": "32.0",
+   "cargas": 199
+  }
+ ],
+ "maior_percentual_central": [
+  {
+   "central": "BEBEDOURO",
+   "pct": "38.4",
+   "cargas": 60
+  },
+  {
+   "central": "CONTENDA",
+   "pct": "38.0",
+   "cargas": 56
+  },
+  {
+   "central": "LINHARES",
+   "pct": "38.0",
+   "cargas": 30
+  }
+ ]
+}

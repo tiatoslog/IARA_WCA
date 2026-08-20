@@ -32,7 +32,7 @@ import {
   lacunaDeValor,
   PISO_DE_COBERTURA_DE_VALOR_PCT,
   type CargaCompleta,
-} from '../servidor/nucleo/ClientePlanilhaOcis.ts';
+} from '../servidor/nucleo/ClientePlanilhaOcis';
 
 /** Uma carga mínima: só o que a cobertura de valor olha. */
 const carga = (valor: number | null, i = 0): CargaCompleta =>

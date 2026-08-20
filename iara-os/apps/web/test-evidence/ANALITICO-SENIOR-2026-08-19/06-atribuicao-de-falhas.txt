@@ -1,0 +1,48 @@
+ATRIBUICAO DAS 23 FALHAS DA SUITE COMPLETA (04-suite-final.txt)
+medido em 2026-08-19T16:47:49-03:00
+
+-- ARQUIVOS TOCADOS POR OUTRA SESSAO nos 40 min anteriores --
+servidor/nucleo/ClientePlanilhaOcis.ts
+servidor/nucleo/kernel/ContratoFactual.ts
+servidor/nucleo/kernel/habilidades/cargasLuft.ts
+servidor/nucleo/kernel/Kernel.ts
+servidor/nucleo/kernel/PromessaDeAcao.ts
+servidor/nucleo/kernel/RegistroErros.ts
+testes/abas-por-ano.test.ts
+testes/afirmacao-de-feito.test.ts
+testes/ano-fora-de-alcance.test.ts
+testes/contrato-factual.test.ts
+testes/elipse-conversacional.test.ts
+testes/promessa-de-acao.test.ts
+
+-- ARGUMENTO ESTRUTURAL --
+As 17 falhas de laco-do-agente sao 'a habilidade rodou 1 vez em vez de 2':
+o laco parou cedo. Todo o codigo desta sessao roda DEPOIS de executarLaco
+retornar; nada meu esta dentro dele. Nao ha caminho por onde eu mude a
+contagem de voltas.
+
+A falha de afirmacao-de-feito F espera a fonte do Kernel terminar em
+'cardinalidadeSemExecucao;'. A fonte agora tem '|| lacoDeuVolta;' —
+simbolo que nao existe em nenhuma linha desta sessao:
+2
+
+Nenhum dos arquivos de teste que falharam importa modulo desta sessao:
+  testes/laco-do-agente.test.ts: 0
+  testes/afirmacao-de-feito.test.ts: 0
+
+-- REGRESSAO FOCADA NOS CAMINHOS QUE ESTA SESSAO TOCOU --
+# tests 267
+# pass 267
+# fail 0
+
+--- ACHADO FORA DO ESCOPO DESTA SESSAO (reportado, nao corrigido ainda) ---
+cargasLuft.ts recusaPorAno(): a frase ao operador afirma
+  "eu leio so a aba 2026 da planilha"
+e o detalhe carimba ano_lido=ANO_VIVO.
+Mas ClientePlanilhaOcis.anoForaDoAlcance ja compara contra
+  ANOS_LIDOS = ['2026','2025','2024']
+Ou seja: a IARA declara cobertura MENOR do que a que tem. Para uma pergunta
+sobre 2023 ela diz que le uma aba so, quando le tres.
+Nenhum teste trava essa frase (grep por "leio so a aba" em testes/ = vazio).
+Mesma familia de defeito que esta sessao atacou: o sistema afirmando algo
+falso sobre a propria cobertura.

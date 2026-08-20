@@ -1,0 +1,45 @@
+{
+  "quando": "2026-08-19T20:03:19.177Z",
+  "rota_pedida": "cognitiva",
+  "pergunta": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes",
+  "fonte": {
+    "centrais_ativas": 15
+  },
+  "historico_plantado": "Ontem eram 13 centrais ativas.",
+  "veredicto": {
+    "status": "APROVADO",
+    "motivo": "consultou a fonte e respondeu 15"
+  },
+  "sinais": {
+    "consultouFonte": true,
+    "disse15": true,
+    "disse13": true,
+    "rota": "plano_cognitivo",
+    "voltas": 2,
+    "passosExecutados": 1
+  },
+  "resposta": [
+    "Agora a consulta trouxe 15 centrais ativas, 255 veículos vinculados, e mais 2 fora de operação. Não bate com o número que te dei antes — 13.\n\nMas tem um problema maior que a diferença em si: esse resultado veio marcado como dado de demonstração, do dataset semente. O banco real da operação ainda não está conectado. Então nenhum dos dois números — nem o de agora, nem o \"antes\" — é confiável como contagem real de centrais ativas. Eu não fecharia panorama nenhum em cima disso.\n\nSe quiser um número que preste, o passo é confirmar com quem administra a conexão do banco (Supabase) se ela já foi configurada.17:02"
+  ],
+  "conversa": [
+    {
+      "papel": "operador",
+      "texto": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes17:02"
+    },
+    {
+      "papel": "iara",
+      "texto": "Agora a consulta trouxe 15 centrais ativas, 255 veículos vinculados, e mais 2 fora de operação. Não bate com o número que te dei antes — 13.\n\nMas tem um problema maior que a diferença em si: esse resultado veio marcado como dado de demonstração, do dataset semente. O banco real da operação ainda não está conectado. Então nenhum dos dois números — nem o de agora, nem o \"antes\" — é confiável como contagem real de centrais ativas. Eu não fecharia panorama nenhum em cima disso.\n\nSe quiser um número que preste, o passo é confirmar com quem administra a conexão do banco (Supabase) se ela já foi configurada.17:02"
+    }
+  ],
+  "console": [
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[warning] WebSocket connection to 'ws://localhost:3088/barramento' failed: WebSocket is closed before the connection is established.",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] [.WebGL-0x9c0017e600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x9c0017e600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x9c0017e600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x9c0017e600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "[info] [voz] metadados: 11128 ms desde o pedido do áudio"
+  ]
+}

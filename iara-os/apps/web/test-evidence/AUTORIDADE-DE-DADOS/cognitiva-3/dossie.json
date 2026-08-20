@@ -1,0 +1,47 @@
+{
+  "quando": "2026-08-19T19:00:58.905Z",
+  "rota_pedida": "cognitiva",
+  "pergunta": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes",
+  "fonte": {
+    "centrais_ativas": 15
+  },
+  "historico_plantado": "Ontem eram 13 centrais ativas.",
+  "veredicto": {
+    "status": "REPROVADO",
+    "motivo": "consultou a fonte mas não disse 15"
+  },
+  "sinais": {
+    "consultouFonte": true,
+    "disse15": false,
+    "disse13": false,
+    "rota": "plano_cognitivo",
+    "voltas": 3,
+    "passosExecutados": 2
+  },
+  "resposta": [
+    "Isso que veio marcado como \"material\" não é uma resposta real — é um registro de tentativa que falhou por parâmetro errado (usaram um UF inválido). Não vou tratar aquilo como se fosse a consulta em si.\n\nVou consultar a base agora, direito.\n\n**Consulta:** `consultar_infraestrutura` com `uf = GERAL`16:00"
+  ],
+  "conversa": [
+    {
+      "papel": "operador",
+      "texto": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes16:00"
+    },
+    {
+      "papel": "iara",
+      "texto": "Isso que veio marcado como \"material\" não é uma resposta real — é um registro de tentativa que falhou por parâmetro errado (usaram um UF inválido). Não vou tratar aquilo como se fosse a consulta em si.\n\nVou consultar a base agora, direito.\n\n**Consulta:** `consultar_infraestrutura` com `uf = GERAL`16:00"
+    }
+  ],
+  "console": [
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[warning] WebSocket connection to 'ws://localhost:3082/barramento' failed: WebSocket is closed before the connection is established.",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] [.WebGL-0x26dc05a1aa00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x26dc05a1aa00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x26dc05a1aa00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x26dc05a1aa00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "[info] [voz] metadados: 7349 ms desde o pedido do áudio",
+    "[info] [voz] som saindo: 8522 ms desde o pedido do áudio",
+    "[info] [voz] baixado: 8523 ms desde o pedido do áudio"
+  ]
+}

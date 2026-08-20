@@ -1,0 +1,77 @@
+{
+  "instante": "2026-08-19T14:52:48.180Z",
+  "amostras": [
+    {
+      "provedor": "openrouter",
+      "modelo": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "volta": 1,
+      "planejou": false,
+      "passos": 0,
+      "ms": 425,
+      "erro": null
+    },
+    {
+      "provedor": "openrouter",
+      "modelo": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "volta": 2,
+      "planejou": false,
+      "passos": 0,
+      "ms": 151,
+      "erro": null
+    },
+    {
+      "provedor": "groq",
+      "modelo": "openai/gpt-oss-120b",
+      "volta": 1,
+      "planejou": true,
+      "passos": 2,
+      "ms": 1040,
+      "erro": null
+    },
+    {
+      "provedor": "groq",
+      "modelo": "openai/gpt-oss-120b",
+      "volta": 2,
+      "planejou": false,
+      "passos": 0,
+      "ms": 109,
+      "erro": null
+    },
+    {
+      "provedor": "gemini",
+      "modelo": "gemini-flash-latest",
+      "volta": 1,
+      "planejou": false,
+      "passos": 0,
+      "ms": 27606,
+      "erro": null
+    },
+    {
+      "provedor": "gemini",
+      "modelo": "gemini-flash-latest",
+      "volta": 2,
+      "planejou": false,
+      "passos": 0,
+      "ms": 328,
+      "erro": null
+    },
+    {
+      "provedor": "anthropic",
+      "modelo": "claude-sonnet-5",
+      "volta": 1,
+      "planejou": true,
+      "passos": 2,
+      "ms": 4433,
+      "erro": null
+    },
+    {
+      "provedor": "anthropic",
+      "modelo": "claude-sonnet-5",
+      "volta": 2,
+      "planejou": true,
+      "passos": 2,
+      "ms": 3856,
+      "erro": null
+    }
+  ]
+}

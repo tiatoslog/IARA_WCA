@@ -113,6 +113,18 @@ test('E. a condição da trava: comando sem passo arma, conversa sem passo não'
   assert.equal(arma(0, 'saudacao', false), false, 'bom dia fica fora');
   assert.equal(arma(1, 'comando', false), true, 'passo que não alcançou o mundo');
   assert.equal(arma(1, 'comando', true), false, 'passo que alcançou o mundo não arma');
+  /**
+   * A RETENÇÃO É OUTRA PERGUNTA, e desde 19/08/2026 tem flag própria
+   * (`retemAFala`). Turno que usou ferramenta retém a fala — não porque a
+   * trava de FEITO arme, mas porque a de AÇÃO PÓS-FECHAMENTO precisa validar
+   * antes de qualquer coisa alcançar a tela (ver `PromessaDeAcao.ts`).
+   * Misturar as duas fez o descarte "Nada foi alterado na máquina" disparar
+   * num turno cujo efeito estava no disco.
+   */
+  const retem = (passos: number, tipo: string, alcancou: boolean) =>
+    arma(passos, tipo, alcancou) || passos > 0;
+  assert.equal(retem(1, 'texto', true), true, 'turno com ferramenta retém para validar');
+  assert.equal(retem(0, 'texto', false), false, 'conversa pura continua digitando ao vivo');
 });
 
 test('F. a condição no Kernel é a que este arquivo descreve', () => {

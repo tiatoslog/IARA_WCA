@@ -26,6 +26,7 @@
  * precisam falar a mesma língua sobre evidência sem depender uns dos outros.
  */
 
+import type { Cobertura } from './Cobertura';
 import type { Risco } from './Habilidade';
 import { podeAfirmarSemRessalva, type Procedencia } from './Verdade';
 
@@ -62,6 +63,20 @@ export interface Evidencia {
   readonly relevancia: Relevancia;
   /** ISO 8601. Métrica sem instante é métrica que envelhece sem avisar. */
   readonly instante: string;
+  /**
+   * SOBRE QUANTO isto foi medido — ver `Cobertura.ts`.
+   *
+   * OPCIONAL, e o motivo importa: a sonda de desempenho lê a CPU inteira, não
+   * uma amostra dela, e obrigá-la a declarar `elegiveis: 1, consideradas: 1`
+   * seria cerimônia sem informação. O campo existe para a evidência que sai de
+   * um CONJUNTO de registros — onde "18% de margem" pode ser 18% de tudo ou 18%
+   * do que tinha preço, e a frase é a mesma.
+   *
+   * Ausente NÃO significa cobertura completa. `MotorCritica` trata a ausência
+   * como "não declarada" e barra afirmação populacional em cima dela — supor
+   * completa no silêncio seria transformar esquecimento em garantia.
+   */
+  readonly cobertura?: Cobertura;
 }
 
 /**

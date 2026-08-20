@@ -13,6 +13,11 @@
 
 import type { CapacidadeAtiva } from '../../../lib/estado';
 import type { Dominio } from '../../../lib/capacidades';
+/* Ciclo APENAS de tipo — `Investigacao` importa `Risco` daqui e este arquivo
+   importa `Evidencia` de lá. Os dois lados são `import type`, apagados na
+   compilação: não existe aresta em runtime, e o vocabulário fica num lugar só
+   em vez de ganhar uma cópia por conveniência de grafo. */
+import type { Evidencia } from './Investigacao';
 import type { Operacao, SemanticaEfeito } from './Operacao';
 import type { RegistroOperacoes } from './RegistroOperacoes';
 import type { RegistroErros } from './RegistroErros';
@@ -231,6 +236,29 @@ export interface ResultadoHabilidade {
    * COMO retomar. Nenhum dos dois conhece o outro além deste campo.
    */
   readonly pendencia?: { readonly parametro: string };
+  /**
+   * OS NÚMEROS QUE ESTA HABILIDADE CALCULOU, TIPADOS — não a frase sobre eles.
+   *
+   * O DEFEITO QUE ESTE CAMPO FECHA: até aqui, todo número que uma habilidade
+   * apurava virava `string` antes de sair dela. `dizerCobertura()` mora dentro
+   * de `cargasLuft.ts` e é uma convenção de redação — nada obriga a próxima
+   * habilidade a chamá-la, e o kernel não tem como SABER que a cobertura foi
+   * 71%. Sem saber, ele não pode recusar uma afirmação sobre a população, não
+   * pode calcular confiança e não pode se abster. As propriedades analíticas
+   * boas deste repositório eram texto escrito à mão, habilidade por habilidade.
+   *
+   * OPCIONAL, E VAI CONTINUAR SENDO. A imensa maioria das habilidades — abrir
+   * aplicativo, criar pasta, mandar mensagem — não apura número nenhum, e
+   * obrigá-las a declarar evidência vazia seria cerimônia sem informação. O
+   * campo é para quem calcula sobre um CONJUNTO de registros, que é onde "18%"
+   * pode ser 18% de tudo ou 18% do que tinha preço, com a mesma frase.
+   *
+   * AUSÊNCIA NÃO É COBERTURA COMPLETA: `MotorCritica` trata evidência ausente
+   * ou sem `cobertura` como "não declarada" e rebaixa a conclusão para
+   * descritiva. Supor completa no silêncio transformaria esquecimento de quem
+   * escreveu a habilidade em garantia sobre o mundo.
+   */
+  readonly evidencias?: readonly Evidencia[];
 }
 
 /**

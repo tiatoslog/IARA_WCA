@@ -1,0 +1,39 @@
+=== A ===
+[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[warning] WebSocket connection to 'ws://127.0.0.1:3092/barramento' failed: WebSocket is closed before the connection is established.
+[warning] ../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] ../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] [.WebGL-0x7c9401b18600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] ../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] ../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] [.WebGL-0x7c9401b18600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x7c9401b18600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x7c9401b18600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+[info] [voz] metadados: 10321 ms desde o pedido do áudio
+[info] [voz] som saindo: 10321 ms desde o pedido do áudio
+[info] [voz] baixado: 10321 ms desde o pedido do áudio
+
+=== B ===
+[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[warning] WebSocket connection to 'ws://127.0.0.1:3092/barramento' failed: WebSocket is closed before the connection is established.
+[warning] ../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] ../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+[warning] [.WebGL-0x2444020e0000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x2444020e0000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x2444020e0000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[warning] [.WebGL-0x2444020e0000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+[info] [voz] metadados: 12494 ms desde o pedido do áudio
+[info] [voz] som saindo: 12494 ms desde o pedido do áudio
+[info] [voz] baixado: 12495 ms desde o pedido do áudio
+[info] [voz] metadados: 12994 ms desde o pedido do áudio
+[info] [voz] som saindo: 12994 ms desde o pedido do áudio
+[info] [voz] baixado: 12994 ms desde o pedido do áudio
+[info] [voz] metadados: 10683 ms desde o pedido do áudio
+[info] [voz] som saindo: 10683 ms desde o pedido do áudio
+[info] [voz] baixado: 10684 ms desde o pedido do áudio

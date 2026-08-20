@@ -1,0 +1,223 @@
+{
+ "tabela": {
+  "linhas": 117,
+  "trechos_unicos": 117,
+  "chaves_ambiguas": 0
+ },
+ "formulas": {
+  "bruta_ok": 117,
+  "bruta_erro": 0,
+  "pedagio_ida_ok": 117,
+  "pedagio_idavolta_ok": 0,
+  "pedagio_erro": 0
+ },
+ "formula_divergente_exemplos": [],
+ "cobertura": {
+  "2024": {
+   "rotas": {
+    "total": 135,
+    "EXACT": 96,
+    "NORMALIZED_EXACT": 0,
+    "AMBIGUOUS": 0,
+    "UNMATCHED": 39
+   },
+   "cobertura_por_rota_pct": 71.11,
+   "cargas": {
+    "total": 4064,
+    "com_match": 3579,
+    "ambiguas": 0,
+    "sem_match": 485
+   },
+   "cobertura_por_carga_pct": 88.07,
+   "maiores_rotas_sem_match": [
+    {
+     "rota": "PARANOA > LUZIANIA",
+     "cargas": 92,
+     "pct_do_total": 2.26
+    },
+    {
+     "rota": "PINHEIROS > LINHARES",
+     "cargas": 63,
+     "pct_do_total": 1.55
+    },
+    {
+     "rota": "JAGUARE > LINHARES",
+     "cargas": 46,
+     "pct_do_total": 1.13
+    },
+    {
+     "rota": "SANTA CRUZ DO RIO PARDO > SAO MANUEL",
+     "cargas": 40,
+     "pct_do_total": 0.98
+    },
+    {
+     "rota": "SAO MATEUS DO SUL > CONTENDA",
+     "cargas": 35,
+     "pct_do_total": 0.86
+    },
+    {
+     "rota": "BOA ESPERANCA-MG > POUSO ALEGRE",
+     "cargas": 23,
+     "pct_do_total": 0.57
+    },
+    {
+     "rota": "COLATINA > LINHARES",
+     "cargas": 19,
+     "pct_do_total": 0.47
+    },
+    {
+     "rota": "ITARANA > LINHARES",
+     "cargas": 18,
+     "pct_do_total": 0.44
+    },
+    {
+     "rota": "VENDA NOVA DO IMIGRANTE > LINHARES",
+     "cargas": 13,
+     "pct_do_total": 0.32
+    },
+    {
+     "rota": "CAMPO ERE > GUARAPUAVA",
+     "cargas": 13,
+     "pct_do_total": 0.32
+    },
+    {
+     "rota": "PIRAJU > SAO MANUEL",
+     "cargas": 12,
+     "pct_do_total": 0.3
+    },
+    {
+     "rota": "SAO DOMINGOS > GUARAPUAVA",
+     "cargas": 11,
+     "pct_do_total": 0.27
+    },
+    {
+     "rota": "MONTE AZUL PAULISTA > BEBEDOURO",
+     "cargas": 10,
+     "pct_do_total": 0.25
+    },
+    {
+     "rota": "ARARANGUA > CAPAO DO LEAO",
+     "cargas": 8,
+     "pct_do_total": 0.2
+    },
+    {
+     "rota": "CACHOEIRO DO ITAPEMIRIM > LINHARES",
+     "cargas": 6,
+     "pct_do_total": 0.15
+    }
+   ]
+  },
+  "2025": {
+   "rotas": {
+    "total": 113,
+    "EXACT": 93,
+    "NORMALIZED_EXACT": 0,
+    "AMBIGUOUS": 0,
+    "UNMATCHED": 20
+   },
+   "cobertura_por_rota_pct": 82.3,
+   "cargas": {
+    "total": 4030,
+    "com_match": 3806,
+    "ambiguas": 0,
+    "sem_match": 224
+   },
+   "cobertura_por_carga_pct": 94.44,
+   "maiores_rotas_sem_match": [
+    {
+     "rota": "PARANOA > LUZIANIA",
+     "cargas": 81,
+     "pct_do_total": 2.01
+    },
+    {
+     "rota": "ITARANA > LINHARES",
+     "cargas": 24,
+     "pct_do_total": 0.6
+    },
+    {
+     "rota": "PINHEIROS > LINHARES",
+     "cargas": 23,
+     "pct_do_total": 0.57
+    },
+    {
+     "rota": "TRES PONTAS > ARARAQUARA",
+     "cargas": 18,
+     "pct_do_total": 0.45
+    },
+    {
+     "rota": "JAGUARE > LINHARES",
+     "cargas": 17,
+     "pct_do_total": 0.42
+    },
+    {
+     "rota": "COLATINA > LINHARES",
+     "cargas": 12,
+     "pct_do_total": 0.3
+    },
+    {
+     "rota": "VENDA NOVA DO IMIGRANTE > LINHARES",
+     "cargas": 10,
+     "pct_do_total": 0.25
+    },
+    {
+     "rota": "SAO DOMINGOS > FRANCISCO BELTRAO",
+     "cargas": 8,
+     "pct_do_total": 0.2
+    },
+    {
+     "rota": "CARATINGA > LINHARES",
+     "cargas": 6,
+     "pct_do_total": 0.15
+    },
+    {
+     "rota": "IPUACU > FRANCISCO BELTRAO",
+     "cargas": 4,
+     "pct_do_total": 0.1
+    },
+    {
+     "rota": "ABELARDO LUZ > FRANCISCO BELTRAO",
+     "cargas": 3,
+     "pct_do_total": 0.07
+    },
+    {
+     "rota": "OURO VERDE > TANGARA",
+     "cargas": 3,
+     "pct_do_total": 0.07
+    },
+    {
+     "rota": "JAGUARE > ITARANA",
+     "cargas": 3,
+     "pct_do_total": 0.07
+    },
+    {
+     "rota": "PINHEIROS > ITARANA",
+     "cargas": 3,
+     "pct_do_total": 0.07
+    },
+    {
+     "rota": "TEIXEIRA DE FREITAS > ITARANA",
+     "cargas": 3,
+     "pct_do_total": 0.07
+    }
+   ]
+  },
+  "2026": {
+   "rotas": {
+    "total": 88,
+    "EXACT": 88,
+    "NORMALIZED_EXACT": 0,
+    "AMBIGUOUS": 0,
+    "UNMATCHED": 0
+   },
+   "cobertura_por_rota_pct": 100,
+   "cargas": {
+    "total": 2688,
+    "com_match": 2688,
+    "ambiguas": 0,
+    "sem_match": 0
+   },
+   "cobertura_por_carga_pct": 100,
+   "maiores_rotas_sem_match": []
+  }
+ }
+}
