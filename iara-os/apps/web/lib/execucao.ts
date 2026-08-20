@@ -41,6 +41,18 @@ export type AcaoDesktop =
   | 'abrir_aplicativo'
   | 'fechar_aplicativo'
   | 'criar_pasta'
+  /**
+   * ESCREVER ARQUIVO COM CONTEUDO — a familia que faltava, medida em
+   * 20/08/2026: a operadora pediu "cria notas.txt com o texto X" e a IARA
+   * recusou com honestidade porque a habilidade nao existia.
+   *
+   * Nome, nunca caminho — a mesma regra de `criar_pasta`, e a razao e a mesma:
+   * caminho livre transforma a allowlist de locais em decoracao.
+   */
+  | 'criar_arquivo'
+  | 'renomear_arquivo'
+  | 'mover_arquivo'
+  | 'copiar_arquivo'
   | 'listar_arquivos'
   | 'capturar_tela'
   | 'informacoes_sistema'
@@ -71,6 +83,10 @@ export const ACOES_DESKTOP: readonly AcaoDesktop[] = [
   'abrir_aplicativo',
   'fechar_aplicativo',
   'criar_pasta',
+  'criar_arquivo',
+  'renomear_arquivo',
+  'mover_arquivo',
+  'copiar_arquivo',
   'listar_arquivos',
   'capturar_tela',
   'informacoes_sistema',

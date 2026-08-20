@@ -116,6 +116,14 @@ const PRAZO_MS: Record<AcaoDesktop, number> = {
   abrir_aplicativo: 20_000,
   fechar_aplicativo: 20_000,
   criar_pasta: 10_000,
+  /* Escrita local de até 2 MB: o custo é do disco, não da rede. O teto de 15 s
+     cobre um HD lento sem deixar a operadora esperando por um `write` travado. */
+  criar_arquivo: 15_000,
+  renomear_arquivo: 10_000,
+  /* Mover pode cair no caminho copiar-e-apagar quando os locais estão em
+     volumes diferentes (`EXDEV`) — aí o custo é o do tamanho do arquivo. */
+  mover_arquivo: 20_000,
+  copiar_arquivo: 20_000,
   listar_arquivos: 10_000,
   capturar_tela: 45_000,
   informacoes_sistema: 10_000,

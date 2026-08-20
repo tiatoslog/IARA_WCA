@@ -42,7 +42,7 @@ const LOCAIS = Object.keys(ROTULO_DO_LOCAL) as LocalAutorizado[];
  * a inventar prova: sem relato e sem mãos, a resposta honesta é que não há como
  * conferir daqui.
  */
-function provaDaPonte(
+export function provaDaPonte(
   ctx: ContextoHabilidade,
   acao: AcaoDesktop,
   local: () => Verificacao,
