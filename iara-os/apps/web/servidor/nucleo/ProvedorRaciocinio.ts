@@ -60,7 +60,11 @@ export interface PedidoRaciocinio {
    * `testes/fronteira-interna.test.ts` derruba a suíte se isso acontecer. É a
    * mesma injeção que o `MotorAnalise` recebe para saber o que sabe fechar.
    *
-   * Vazio no modo planejador, que monta a própria lista com outro recorte.
+   * O modo planejador passa um RECORTE diferente — só `custo: 'zero'`, sem
+   * sigilo, só o que o porteiro deixa planejar —, mas pelo mesmo campo e pela
+   * mesma razão: é aqui que o bloco entra no prefixo cacheado. Até 19/08/2026
+   * ele mandava a lista dentro de `mensagem`, fora do breakpoint, e pagava
+   * ~5.400 tokens de escrita em todo turno. Ver `MotorRaciocinio.planejar`.
    */
   capacidades?: string;
   /**

@@ -45,6 +45,20 @@
 import { lerConfig } from './Configuracao';
 
 export type RecursoOrcado =
+  /**
+   * UMA VOLTA DO LAÇO — decidir, executar, observar.
+   *
+   * Não é o mesmo recurso que `chamada_modelo`, e confundir os dois foi o que
+   * segurou o laço até 19/08/2026. Uma volta gasta UMA chamada de modelo para
+   * decidir, mas o turno gasta outras que não são volta nenhuma: a síntese
+   * final e a escalada por verificação. Um teto só para as duas coisas obriga a
+   * escolher entre "o laço pensa pouco" e "a síntese fica sem orçamento".
+   *
+   * `voltas: 1` reproduz exatamente o pipeline anterior ao laço — uma decisão,
+   * uma execução, uma resposta. É a saída de emergência sem código morto: não
+   * existe caminho desligado, existe teto de um.
+   */
+  | 'volta'
   /** Uma habilidade EXECUTADA. É a chamada de ferramenta do contrato. */
   | 'passo'
   /** Uma ida ao provedor pedida pelo Kernel (planejar, sintetizar). */
@@ -71,6 +85,8 @@ export type RecursoOrcado =
   | 'tempo';
 
 export interface TetosDoTurno {
+  /** Quantas vezes o modelo pode decidir dentro de um turno. Ver `RecursoOrcado`. */
+  readonly voltas: number;
   readonly passos: number;
   readonly chamadas_modelo: number;
   readonly tentativas_provedor: number;
@@ -102,9 +118,36 @@ export interface TetosDoTurno {
  * normal em recusa — que é o modo mais rápido de alguém desligar o orçamento.
  */
 export const TETOS_PADRAO: TetosDoTurno = {
-  passos: 6,
-  chamadas_modelo: 3,
-  tentativas_provedor: 6,
+  /**
+   * OITO VOLTAS, e o número vem de `GuardaDeLaco.VOLTAS_PADRAO` — que é quem
+   * argumenta por ele. Repetido aqui como literal, e não importado, porque o
+   * orçamento não pode depender da guarda: são duas travas independentes sobre
+   * o mesmo laço, e uma importando a outra as tornaria uma só. Há teste
+   * travando a igualdade.
+   */
+  voltas: 8,
+  /**
+   * DOZE PASSOS, dobro do que era. O laço executa habilidade em VÁRIAS voltas;
+   * o teto antigo de 6 era o total de um plano único e, sob laço, seria gasto
+   * pela primeira decomposição — as voltas seguintes decidiriam sem poder agir.
+   * Dois passos por volta em seis voltas efetivas é o que este número compra.
+   */
+  passos: 12,
+  /**
+   * DOZE CHAMADAS: até oito decisões do laço, mais a síntese, mais a escalada
+   * por verificação, mais folga para a retomada de pendência. O teto anterior
+   * era 3 — dimensionado para um pipeline de duas chamadas, e cabia exato. Sob
+   * laço ele morreria na volta 3 de todo pedido de dois saltos, e o operador
+   * receberia "orçamento estourado" onde antes recebia resposta: regressão, não
+   * evolução.
+   *
+   * O que torna isto pagável é o catálogo ter saído de `mensagem` para o
+   * prefixo cacheado (medido: 7.448 → 101 tokens de escrita por decisão).
+   * Sem aquela mudança, subir este número multiplicaria a conta por quatro.
+   */
+  chamadas_modelo: 12,
+  /** Duas tentativas de rede por chamada de modelo. */
+  tentativas_provedor: 24,
   efeitos_externos: 4,
   tokens: 120_000,
   tempo_ms: 900_000,
@@ -123,6 +166,7 @@ export type VeredictoOrcamento =
     };
 
 const ROTULO: Readonly<Record<RecursoOrcado, string>> = {
+  volta: 'voltas do laço',
   passo: 'passos executados',
   custo: 'custo',
   chamada_modelo: 'chamadas ao modelo',
@@ -134,6 +178,7 @@ const ROTULO: Readonly<Record<RecursoOrcado, string>> = {
 
 export class OrcamentoDoTurno {
   private readonly gastos: Record<RecursoOrcado, number> = {
+    volta: 0,
     passo: 0,
     chamada_modelo: 0,
     tentativa_provedor: 0,
@@ -156,6 +201,8 @@ export class OrcamentoDoTurno {
 
   private tetoDe(r: RecursoOrcado): number {
     switch (r) {
+      case 'volta':
+        return this.tetos.voltas;
       case 'passo':
         return this.tetos.passos;
       case 'chamada_modelo':
@@ -319,6 +366,8 @@ const numero = (variavel: string, padrao: number): number => {
 
 export function tetosDoAmbiente(): TetosDoTurno {
   return {
+    /* `IARA_ORCAMENTO_VOLTAS=1` devolve o comportamento de antes do laço. */
+    voltas: numero('IARA_ORCAMENTO_VOLTAS', TETOS_PADRAO.voltas),
     passos: numero('IARA_ORCAMENTO_PASSOS', TETOS_PADRAO.passos),
     chamadas_modelo: numero('IARA_ORCAMENTO_CHAMADAS_MODELO', TETOS_PADRAO.chamadas_modelo),
     tentativas_provedor: numero(

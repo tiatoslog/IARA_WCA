@@ -18,6 +18,7 @@ import { BarramentoEventos } from '../servidor/nucleo/kernel/BarramentoEventos';
 import { EstadoAtomico } from '../servidor/nucleo/EstadoAtomico';
 import { Kernel } from '../servidor/nucleo/kernel/Kernel';
 import type { MotorRaciocinio } from '../servidor/nucleo/kernel/MotorRaciocinio';
+import { TETOS_PADRAO } from '../servidor/nucleo/kernel/OrcamentoDoTurno';
 import type {
   ContextoDaTarefa,
   PortaVerificacaoRuntime,
@@ -131,7 +132,8 @@ async function turno(o: {
     ...(o.tetos
       ? {
           tetosOrcamento: {
-            passos: 6,
+            voltas: TETOS_PADRAO.voltas,
+  passos: 6,
             chamadas_modelo: o.tetos.chamadas_modelo ?? 3,
             tentativas_provedor: o.tetos.tentativas_provedor ?? 6,
             efeitos_externos: 4,

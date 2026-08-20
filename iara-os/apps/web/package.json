@@ -22,7 +22,8 @@
     "superficie": "node --import tsx testes/validacao/superficieCLI.ts",
     "veredito": "node --import tsx testes/validacao/veredito.ts",
     "bateria": "node --import tsx testes/validacao/executar.ts",
-    "confiabilidade": "node --import tsx testes/confiabilidade/executar.ts"
+    "confiabilidade": "node --import tsx testes/confiabilidade/executar.ts",
+    "inventario": "node --import tsx scripts/inventario-habilidades.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

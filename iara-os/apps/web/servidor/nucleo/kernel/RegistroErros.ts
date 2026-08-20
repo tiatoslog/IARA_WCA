@@ -59,7 +59,20 @@ export type ClasseErro =
    * modelo tentou e a trava segurou — a série diz se o prompt está melhorando ou
    * se a trava é a única coisa de pé.
    */
-  | 'afirmacao_sem_efeito';
+  | 'afirmacao_sem_efeito'
+  /**
+   * A SÍNTESE ANUNCIOU UMA AÇÃO DEPOIS DE O TURNO FECHAR — "vou consultar a
+   * base", "[Chamando consultar_infraestrutura]" — e a trava a descartou antes
+   * de o operador ler.
+   *
+   * Irmã de `afirmacao_sem_efeito` e classe própria pela mesma razão que aquela:
+   * a correção é outra. Lá o modelo narra um feito que não houve; aqui ele
+   * promete um que não virá, e o operador nem descobre — fica esperando um
+   * número que nunca chega. Medida 2 de 2 na rota cognitiva em 19/08/2026, com
+   * modelo real, depois que o laço passou a terminar com o modelo ainda na
+   * postura de quem pode agir.
+   */
+  | 'acao_pos_fechamento';
 
 export interface ErroCognitivo {
   readonly classe: ClasseErro;

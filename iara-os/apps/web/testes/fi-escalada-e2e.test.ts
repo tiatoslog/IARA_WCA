@@ -50,6 +50,7 @@ import { ProvedorDeFalha, type RoteiroDoProvedor } from './apoio/ProvedorDeFalha
 import { interpretarContratoFactual } from '../servidor/nucleo/kernel/ContratoFactual';
 import { MotorPercepcao } from '../servidor/nucleo/kernel/Percepcao';
 import { Planejador } from '../servidor/nucleo/kernel/Planejador';
+import { TETOS_PADRAO } from '../servidor/nucleo/kernel/OrcamentoDoTurno';
 
 /** A fonte determinística do experimento. 73, como manda o roteiro FI. */
 const VERDADE = 73;
@@ -148,7 +149,8 @@ async function turno(o: {
     raciocinio: new MotorRaciocinio(cadeia),
     verificacao,
     tetosOrcamento: {
-      passos: 6,
+      voltas: TETOS_PADRAO.voltas,
+  passos: 6,
       chamadas_modelo: o.tetos?.chamadas_modelo ?? 9,
       tentativas_provedor: o.tetos?.tentativas_provedor ?? 20,
       efeitos_externos: 4,
