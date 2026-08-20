@@ -512,7 +512,15 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
  * famílias na frase, e nesse empate desistir é a leitura correta.
  */
 const NEGACAO = /\b(cancela|cancelar|cancelado|aborta|abortar|desiste|desistir|nao|deixa)\b/;
-const AFIRMACAO = /\b(confirmo|confirmado|confirma|confirmar|prossiga|prossegue|prosseguir|pode ir|pode sim|manda|sim)\b/;
+/**
+ * O VOCABULÁRIO DE QUEM DIZ SIM.
+ *
+ * `autorizo` e companhia entraram em 19/08/2026 junto com a âncora: reconhecer
+ * a frase e depois não entender a polaridade dela seria trocar um silêncio por
+ * um cancelamento — pior que o defeito original.
+ */
+const AFIRMACAO =
+  /\b(confirmo|confirmado|confirma|confirmar|prossiga|prossegue|prosseguir|autorizo|autorizado|autorizada|autoriza|autorizar|libero|liberado|permito|permitido|pode ir|pode sim|manda|sim)\b/;
 
 export function ehAfirmacao(bruto: string): boolean {
   const t = normalizarLocal(bruto);

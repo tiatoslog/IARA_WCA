@@ -29,12 +29,21 @@ import {
   suspeitasDeIdentidade,
   planilhaOcisDisponivel,
   todasAsCargas,
+  valorDaDimensao,
   valorMedio,
   type AgruparPor,
+  type CargaCompleta,
 } from '../../ClientePlanilhaOcis';
 import { deCoberturaDeJoin } from '../Cobertura';
 import { interpretarPeriodo } from '../PeriodoOperacional';
 import { calcularMargem, margemMediaDasRotas, margemPorDimensao } from '../../MargemOperacional';
+import {
+  comparar,
+  compararPercentual,
+  decompor,
+  dizerVariacao,
+  dizerVariacaoPercentual,
+} from '../../ComparacaoDePeriodos';
 import { DIMENSOES_SEM_COLUNA, LACUNAS_DE_COLUNA, SAIDA_DA_LACUNA } from '../ContratoFactual';
 
 const formatarReal = (v: number): string =>
@@ -572,10 +581,26 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
          * determinística da casa (`Verdade.ts`), mas ninguém conferiu este
          * número contra o mundo depois de calculá-lo.
          */
+        /**
+         * O RECORTE CARIMBA A ABA QUE RESPONDEU (`anoPedido`), NUNCA `ANO_VIVO`.
+         *
+         * A primeira versão desta linha usava a constante, e ela nasceu certa e
+         * ficou errada no mesmo dia: a leitura por ano chegou depois, e desde
+         * então uma consulta a 2024 saía com o recorte dizendo 2026. O estrago
+         * não é cosmético — `Cobertura.saoComparaveis` decide se dois lados de
+         * uma comparação batem OLHANDO O RECORTE, e dois anos diferentes com o
+         * mesmo rótulo passariam como comparáveis. A ressalva de denominador
+         * móvel ficaria cega exatamente no caso que ela existe para pegar
+         * (2026 a 100% contra 2024 a 88%).
+         *
+         * Mesma lição da procedência logo acima, e a mesma do `fonte: '2026'`
+         * que virou `fonte: anoPedido`: rótulo carimbado por constante mente no
+         * dia em que a fonte deixa de ser única.
+         */
         const recorteDaMargem = [
           {
             dimensao: 'periodo',
-            valor: periodo ? `${periodo.inicio}..${periodo.fim}` : `ano ${ANO_VIVO}`,
+            valor: periodo ? `${periodo.inicio}..${periodo.fim}` : `ano ${anoPedido}`,
           },
         ];
         const coberturaDaMargem = deCoberturaDeJoin(m.cobertura, recorteDaMargem);
@@ -1222,10 +1247,244 @@ export const relatorioExecutivoLuft: Habilidade = {
   },
 };
 
+/**
+ * COMPARAR DOIS ANOS — a capacidade que a leitura das abas antigas destravou.
+ *
+ * Enquanto só 2026 era lida, "compare 2025 com 2026" não era uma capacidade
+ * faltando: era uma fonte que não existia. Agora existe, e a conta tem três
+ * armadilhas que a operadora nomeou junto com o pedido — todas tratadas em
+ * `ComparacaoDePeriodos`, não aqui:
+ *
+ *   base zero          → variação percentual é `null`, nunca infinito
+ *   ponto percentual   → margem que vai de 30% a 33% subiu 3 PONTOS, não 3%
+ *   contribuição >100% → é verdade quando há movimento em direções opostas,
+ *                        e a frase precisa dizer que há
+ *
+ * POR QUE HABILIDADE PRÓPRIA e não um parâmetro da de estatísticas: aquela lê
+ * UM recorte. Esta lê dois e os confronta — o resultado não é uma linha a mais
+ * na mesma tabela, é outra forma de resposta. Enfiar as duas na mesma
+ * habilidade faria `periodo` significar coisas diferentes conforme o parâmetro
+ * vizinho, que é como um esquema começa a mentir.
+ */
+export const compararAnosLuft: Habilidade = {
+  manifesto: {
+    id: 'comparar_anos_luft',
+    nome: 'Comparação entre anos — operação LUFT',
+    descricao:
+      'Compara DOIS ANOS da operação LUFT: volume de cargas, faturamento, motoristas distintos ou ' +
+      'margem. "ano_atual" e "ano_anterior" são um de: ' +
+      ANOS_LIDOS.join(', ') +
+      '. "metrica" é um de: contagem, valor_total, distintos, margem. "agrupar_por" é opcional e, ' +
+      'quando informado (motorista, rota, origem/posto, destino/central), DECOMPÕE a diferença ' +
+      'mostrando quem explica o movimento. Use para "compare 2025 com 2026", "qual ano teve mais ' +
+      'cargas", "a margem melhorou", "qual central caiu mais", "quanto crescemos".',
+    exemplos: [
+      'Compare 2025 com 2026',
+      'A margem melhorou de 2025 para 2026?',
+      'Qual ano teve mais cargas?',
+      'Qual central mais caiu de 2025 para 2026?',
+      'Quanto o faturamento cresceu em relação ao ano passado?',
+    ],
+    capacidades: [
+      'comparar volume, faturamento e margem entre anos',
+      'decompor a diferença por posto, central, rota ou motorista',
+    ],
+    dominio: 'operacoes',
+    capacidade: 'automacao',
+    permissoes: ['rede', 'banco'],
+    timeout_ms: 75000,
+    custo: 'zero',
+    risco: 'baixo',
+    idempotencia: 'leitura',
+    esquema: {
+      ano_atual: { tipo: 'texto', padrao: ANO_VIVO, dentre: ANOS_LIDOS },
+      ano_anterior: { tipo: 'texto', obrigatorio: true, dentre: ANOS_LIDOS },
+      metrica: {
+        tipo: 'texto',
+        padrao: 'contagem',
+        dentre: ['contagem', 'valor_total', 'distintos', 'margem'],
+        sinonimos: {
+          cargas: 'contagem',
+          volume: 'contagem',
+          faturamento: 'valor_total',
+          receita: 'valor_total',
+          valor: 'valor_total',
+          motoristas: 'distintos',
+          lucro: 'margem',
+          rentabilidade: 'margem',
+        },
+      },
+      agrupar_por: { tipo: 'texto', padrao: 'nenhum', dentre: AGRUPAMENTOS, sinonimos: SINONIMOS_AGRUPAMENTO },
+    },
+  },
+  indisponivelPorque() {
+    return planilhaOcisDisponivel() ? null : 'falta MS_GRAPH_TOKEN ou MS_GRAPH_OCI_URL no ambiente';
+  },
+  async executar(ctx) {
+    const foraDeAlcance = recusaPorAno(ctx.enunciado);
+    if (foraDeAlcance) return foraDeAlcance;
+
+    const anoAtual = String(ctx.parametros.ano_atual ?? ANO_VIVO) as AnoLido;
+    const anoAnterior = String(ctx.parametros.ano_anterior ?? '') as AnoLido;
+    const metrica = String(ctx.parametros.metrica ?? 'contagem');
+    const agruparPor = String(ctx.parametros.agrupar_por ?? 'nenhum') as AgruparPor;
+
+    if (anoAtual === anoAnterior) {
+      return {
+        texto: `Os dois anos são o mesmo (${anoAtual}) — não há o que comparar. Me diga os dois anos que você quer confrontar.`,
+        detalhe: proveniencia({ fonte: 'planilha LUFT', operacao: 'COMPARACAO', resultado: 'anos_iguais' }),
+        resolveu: false,
+      };
+    }
+
+    const [a, b] = await Promise.all([cargasDoAno(anoAnterior), cargasDoAno(anoAtual)]);
+    if (!a.ok || !b.ok) {
+      return {
+        texto: !a.ok ? a.texto : b.texto,
+        detalhe: proveniencia({ fonte: 'planilha LUFT', operacao: 'COMPARACAO', resultado: 'indisponivel' }),
+        resolveu: false,
+      };
+    }
+
+    const base = {
+      fonte: `${anoAnterior}->${anoAtual}`,
+      operacao: 'COMPARACAO',
+      metrica,
+      registros_anterior: a.cargas.length,
+      registros_atual: b.cargas.length,
+      deterministico: true,
+    };
+
+    /* ---- MARGEM: percentual, então a variação é em PONTOS ---- */
+    if (metrica === 'margem') {
+      const t = await tabelaDeTrechos();
+      if (!t.ok) {
+        return {
+          texto: `Não consigo comparar margem agora: ${t.texto}`,
+          detalhe: proveniencia({ ...base, resultado: 'tabelario_indisponivel' }),
+          resolveu: false,
+        };
+      }
+      const mA = calcularMargem(a.cargas, t.tabela);
+      const mB = calcularMargem(b.cargas, t.tabela);
+      const pct = compararPercentual(mA.percentual_bruto, mB.percentual_bruto);
+      const resultado = comparar(mA.resultado_bruto, mB.resultado_bruto);
+      const cobertura =
+        `\n\nA conta cobre ${(Math.floor((mA.cobertura.percentual ?? 0) * 10) / 10).toFixed(1)}% das cargas de ${anoAnterior} ` +
+        `e ${(Math.floor((mB.cobertura.percentual ?? 0) * 10) / 10).toFixed(1)}% das de ${anoAtual}. ` +
+        'Onde a cobertura difere, parte da diferença pode ser de rota sem preço na tabela, não de operação.';
+      return {
+        texto:
+          `Margem de ${anoAnterior} para ${anoAtual}: ${dizerVariacaoPercentual(pct)}.\n\n` +
+          `Em dinheiro, o resultado bruto ${dizerVariacao(resultado)}: ${formatarReal(mA.resultado_bruto)} em ${anoAnterior} ` +
+          `contra ${formatarReal(mB.resultado_bruto)} em ${anoAtual}.` +
+          cobertura,
+        detalhe: proveniencia({
+          ...base,
+          pct_anterior: (mA.percentual_bruto ?? 0).toFixed(2),
+          pct_atual: (mB.percentual_bruto ?? 0).toFixed(2),
+          delta_pp: (pct.delta_pp ?? 0).toFixed(2),
+        }),
+        resolveu: true,
+      };
+    }
+
+    /* ---- As métricas de VOLUME ---- */
+    const medir = (cargas: readonly CargaCompleta[]): number => {
+      if (metrica === 'valor_total') return cargas.reduce((s, c) => s + (c.valor ?? 0), 0);
+      if (metrica === 'distintos') return contarDistintos(cargas, agruparPor === 'nenhum' ? 'motorista' : agruparPor).distintos;
+      return contarCargas(cargas).unicas;
+    };
+    const comoTexto = (v: number): string => (metrica === 'valor_total' ? formatarReal(v) : String(v));
+    const nomeDaMetrica =
+      metrica === 'valor_total'
+        ? 'faturamento'
+        : metrica === 'distintos'
+          ? `${NOME_DA_DIMENSAO[agruparPor === 'nenhum' ? 'motorista' : agruparPor].varios} diferentes`
+          : 'cargas';
+
+    const c = comparar(medir(a.cargas), medir(b.cargas));
+
+    if (agruparPor === 'nenhum' || metrica === 'distintos') {
+      return {
+        texto:
+          `${nomeDaMetrica[0].toUpperCase()}${nomeDaMetrica.slice(1)}: ${comoTexto(c.anterior)} em ${anoAnterior} ` +
+          `contra ${comoTexto(c.atual)} em ${anoAtual} — ${dizerVariacao(c)}` +
+          (c.sem_base ? '.' : ` (diferença de ${comoTexto(Math.abs(c.delta))}).`),
+        detalhe: proveniencia({ ...base, anterior: c.anterior, atual: c.atual, delta: c.delta }),
+        resolveu: true,
+      };
+    }
+
+    /* ---- DECOMPOSIÇÃO: quem explica o movimento ---- */
+    const porGrupo = (cargas: readonly CargaCompleta[]): Map<string, number> => {
+      const m = new Map<string, number>();
+      for (const carga of cargas) {
+        const v = valorDaDimensao(carga, agruparPor);
+        if (v === null) continue;
+        const soma = metrica === 'valor_total' ? (carga.valor ?? 0) : 1;
+        m.set(v, (m.get(v) ?? 0) + soma);
+      }
+      return m;
+    };
+    const d = decompor(porGrupo(a.cargas), porGrupo(b.cargas));
+    const rotulo = NOME_DA_DIMENSAO[agruparPor];
+    const TOPO_COMP = 10;
+    const linhas = d.grupos
+      .slice(0, TOPO_COMP)
+      .filter((g) => g.delta !== 0)
+      .map((g, i) => {
+        const seta = g.delta > 0 ? '+' : '';
+        const parte =
+          g.contribuicao_pct === null
+            ? ''
+            : ` — ${g.contribuicao_pct.toFixed(0)}% do movimento total`;
+        return `${i + 1}. ${g.chave}: ${comoTexto(g.anterior)} → ${comoTexto(g.atual)} (${seta}${comoTexto(g.delta)})${parte}`;
+      });
+
+    const ressalvas: string[] = [];
+    if (d.tem_direcao_oposta) {
+      ressalvas.push(
+        `Há ${rotulo.varios} andando na direção contrária à do total, então as porcentagens de contribuição podem passar de 100% — isso é o movimento se cancelando, não erro de conta.`,
+      );
+    }
+    if (d.so_no_anterior.length > 0) {
+      ressalvas.push(`${d.so_no_anterior.length} ${rotulo.varios} apareciam em ${anoAnterior} e sumiram em ${anoAtual}.`);
+    }
+    if (d.so_no_atual.length > 0) {
+      ressalvas.push(`${d.so_no_atual.length} ${rotulo.varios} só aparecem em ${anoAtual}.`);
+    }
+
+    return {
+      texto:
+        `${nomeDaMetrica[0].toUpperCase()}${nomeDaMetrica.slice(1)} de ${anoAnterior} para ${anoAtual}: ` +
+        `${comoTexto(c.anterior)} → ${comoTexto(c.atual)}, ${dizerVariacao(c)}.\n\n` +
+        `Quem mais mexeu o ponteiro, por ${rotulo.um}:\n${linhas.join('\n')}` +
+        (ressalvas.length > 0 ? `\n\n${ressalvas.join(' ')}` : ''),
+      detalhe: proveniencia({
+        ...base,
+        dimensao: agruparPor,
+        anterior: c.anterior,
+        atual: c.atual,
+        delta: c.delta,
+        grupos: d.grupos.length,
+        direcao_oposta: d.tem_direcao_oposta,
+      }),
+      resolveu: true,
+    };
+  },
+  async verificar(resultado) {
+    return resultado.resolveu
+      ? { confirmado: true, evidencia: 'as duas abas da planilha responderam e a diferença foi calculada' }
+      : { confirmado: false, evidencia: resultado.texto, motivo: 'sem_meio_de_verificar' };
+  },
+};
+
 export const HABILIDADES_PLANILHA_OCIS: readonly Habilidade[] = [
   consultarCargasLuft,
   consultarEstatisticasCargasLuft,
   compararSemanasLuft,
   relatorioExecutivoLuft,
   declararLacunaDeDado,
+  compararAnosLuft,
 ];

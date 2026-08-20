@@ -402,6 +402,30 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     nome: 'energia',
     acionavel: true,
     negavel: true,
+    /**
+     * RESPOSTA DE AUTORIZAÇÃO NÃO É PEDIDO NOVO — a segunda metade do defeito
+     * de 19/08/2026.
+     *
+     *   IARA: "confirme que devo desligar"
+     *   op:   "Eu te autorizo a desligar o computador"
+     *   IARA: "Não executei isso. Registrar pendência e pedir confirmação."
+     *
+     * A frase cita "desligar", então casava `energia` — que vem antes de
+     * `confirmacao` na lista. E `acionar_energia` NUNCA executa: ele registra
+     * pendência e pergunta. Resultado, um laço: a operadora autoriza, a IARA
+     * pergunta de novo, e o desligamento nunca acontece por mais que ela
+     * consinta.
+     *
+     * Com esta exceção, a frase que carrega verbo de AUTORIZAÇÃO cai em
+     * `confirmacao`, que é quem sabe RESOLVER a pendência aberta. O pedido
+     * novo ("desligue o computador") não tem esses verbos e continua onde
+     * estava.
+     *
+     * Se não houver pendência aberta, `resolver_confirmacao` diz isso — e
+     * dizer "não há nada pendente" é melhor que abrir uma pendência que a
+     * pessoa achou que já tinha aberto.
+     */
+    exceto: /\b(autorizo|autorizado|autorizada|confirmo|confirmado|prossiga|libero|liberado|permito|permitido)\b/,
   },
   /**
    * AUTORIZAR UM PLANO PROPOSTO — vem ANTES de `confirmacao`, e a ordem resolve
@@ -437,7 +461,27 @@ const ANCORAS: ReadonlyArray<Ancora> = [
       /\b(como|de que jeito|de que forma|o que acontece|o que muda|quanto tempo|por que|porque|em que consiste)\b[^?]{0,60}\b(plano|execut)/,
   },
   {
-    re: /\b(confirmo|confirmado|confirmar|prossiga|cancela|cancelar|cancelado|abortar)\b/,
+    /**
+     * "AUTORIZO" ENTROU EM 19/08/2026, e a falta dele deixava a IARA num laço.
+     *
+     * A conversa real, colada pela operadora:
+     *
+     *   IARA: "A política exige confirmação explícita (…). Se quiser prosseguir,
+     *          confirme que devo desligar."
+     *   op:   "Eu te autorizo"
+     *   IARA: "Não tenho nenhum plano aberto para executar."
+     *
+     * A IARA PEDIU confirmação e não reconheceu a resposta mais natural que
+     * existe para o pedido dela. Sem âncora, "eu te autorizo" caía em
+     * `raciocinio_direto` e a LLM chutava — chutou `executar_plano`.
+     *
+     * É a mesma família do defeito de `busca`, que exigia o substantivo
+     * "busca" enquanto a operadora escrevia "BUSQUE": a âncora não cobria a
+     * palavra que a pessoa usa para fazer exatamente o que a IARA acabou de
+     * pedir. Autorizar é o verbo de quem responde a "a política exige
+     * autorização" — e era o único que faltava.
+     */
+    re: /\b(confirmo|confirmado|confirmar|prossiga|autorizo|autorizado|autorizada|libero|liberado|permito|permitido|cancela|cancelar|cancelado|abortar)\b/,
     nome: 'confirmacao',
     acionavel: true,
     /**

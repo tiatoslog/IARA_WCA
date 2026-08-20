@@ -12,6 +12,7 @@
     "buscar_historico|baixo|leitura|verificador=false",
     "cancelar_lembrete|medio|escrita_idempotente|verificador=true",
     "capturar_tela|medio|escrita_nao_idempotente|verificador=true",
+    "comparar_anos_luft|baixo|leitura|verificador=true",
     "comparar_semanas_luft|baixo|leitura|verificador=true",
     "consultar_agenda|baixo|leitura|verificador=false",
     "consultar_cargas_luft|baixo|leitura|verificador=true",
