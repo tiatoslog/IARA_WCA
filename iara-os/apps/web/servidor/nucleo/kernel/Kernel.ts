@@ -46,6 +46,7 @@ import type { Plano, Percepcao } from './Evento';
 import { PermissaoNegada, ParametroInvalido, type Habilidade, type Risco } from './Habilidade';
 import { confirmaAcontecimento, VERBO_DO_ESTADO, type EstadoExecucao } from './Verdade';
 import { lerAfirmacaoDeFeito } from './AfirmacaoDeFeito';
+import { lerNegacaoDeFeito } from './NegacaoDeFeito';
 import { lerPromessaDeAcao } from './PromessaDeAcao';
 import { RegistroOperacoes, registroOperacoes } from './RegistroOperacoes';
 import { PortalEfeitos } from './PortalEfeitos';
@@ -1367,6 +1368,45 @@ export class Kernel {
     observacoes: readonly Observacao[];
   }> {
     const b = this.dep.barramento;
+
+    /**
+     * O JORNAL DO OPERADOR ENTRA NO ÍNDICE ANTES DA PRIMEIRA RESERVA.
+     *
+     * Aqui, e não no boot do processo, porque é aqui que o operador é conhecido
+     * e é a partir daqui que um efeito pode ser reservado. `garantirCarregado`
+     * lê o disco UMA vez por operador por processo; nas voltas seguintes é um
+     * `Map.get`.
+     *
+     * A GARANTIA MESMO mora em `PortalEfeitos.abrir`, que é o choke point de
+     * todo efeito — inclusive dos canais que não têm kernel. Esta chamada aqui
+     * não é a trava: é o AQUECIMENTO e, sobretudo, a DECLARAÇÃO. Ler o jornal
+     * antes do laço é o que permite avisar o operador, em voz alta, que a
+     * barreira contra efeito repetido está sem memória; dentro do portal esse
+     * aviso chegaria tarde e sem tela para onde ir.
+     *
+     * O que isso restaura: depois de um deploy, de um crash ou de um reload do
+     * dev, uma operação que ficou em `executando` volta como `desconhecida` e a
+     * barreira do retry a enxerga. Sem isso, `reservar` não encontrava nada e o
+     * mesmo efeito não idempotente executava DE NOVO — ver
+     * `testes/reidratacao-em-producao.test.ts`.
+     *
+     * Não derruba o turno se falhar: um jornal ilegível é motivo para avisar,
+     * não para deixar o operador sem resposta. A degradação é declarada no
+     * barramento em vez de acontecer calada.
+     */
+    try {
+      await this.registro.garantirCarregado(this.dep.idUsuario);
+    } catch (e) {
+      b.publicar({
+        tipo: 'FALHA',
+        modulo: 'jornal',
+        mensagem:
+          'Não consegui reler o jornal de operações deste operador: ' +
+          `${(e as Error).message}. Sigo o turno, mas a barreira contra efeito repetido ` +
+          'está sem a memória do que aconteceu antes de eu subir.',
+      });
+    }
+
     const tetos = this.dep.tetosOrcamento ?? tetosDoAmbiente();
     const guarda = new GuardaDeLaco({ ...LIMIARES_PADRAO, voltas: tetos.voltas });
     const observacoes: Observacao[] = [];
@@ -3161,16 +3201,152 @@ export class Kernel {
         return texto;
       }
 
+      /**
+       * A METADE SIMÉTRICA — NEGAR O QUE ACONTECEU também é mentir.
+       *
+       * Medido em 20/08/2026, campanha com cérebro real, missão CO-04: o laço
+       * falhou no primeiro parâmetro, replanejou, criou a pasta, e o
+       * verificador confirmou o diretório no disco. O jornal ficou `verificada`
+       * com selo válido. A síntese disse *"Não criou (...) na prática a pasta
+       * não foi feita. Manda de novo que eu registro certo."*
+       *
+       * "Manda de novo" é o que faz disto mais que constrangimento: uma negação
+       * falsa CONVIDA a repetição, e repetir efeito não idempotente é duplicá-lo.
+       *
+       * ================= O GATILHO TEM DOIS DENTES =================
+       *
+       * 1. o passo está `verificado` — o mundo foi CONFERIDO, não só relatado;
+       * 2. o passo é um EFEITO, não uma leitura.
+       *
+       * O SEGUNDO DENTE FOI PAGO COM UM FALSO POSITIVO MEU, e ele fica escrito
+       * aqui porque a próxima pessoa vai querer simplificar esta condição.
+       * Campanha de 20/08, missão FA-04, com a primeira versão desta trava:
+       *
+       *     operador: "Lê o arquivo contrato-que-nao-existe-2099.pdf"
+       *     passo:    extrair_texto_documento — LEITURA, "arquivo ausente",
+       *               estado `verificado` (o verificador confirmou a ausência)
+       *     síntese:  "o arquivo não existe" — honesta e correta
+       *     trava:    descartou e escreveu "feito e conferido — arquivo ausente"
+       *
+       * A campanha marcou `FALSO_POSITIVO`: a trava contra mentira produziu uma.
+       * `verificado` responde "o mundo foi conferido?", não "aconteceu efeito?".
+       * Numa leitura, negar não é mentir sobre ato nenhum — não existe ato.
+       */
+      const efeitosVerificados = execucao.passos.filter((x) => {
+        if (x.estado !== 'verificado') return false;
+        const m = this.habilidades.manifesto(x.habilidade);
+        return m !== null && m.idempotencia !== 'leitura';
+      });
+      const negacao =
+        efeitosVerificados.length > 0
+          ? lerNegacaoDeFeito(falaFinal)
+          : { nega: false as const, ancora: null };
+      if (negacao.nega) {
+        this.trabalho.registrarErro();
+        b.publicar({
+          tipo: 'FALHA',
+          modulo: 'verdade',
+          mensagem:
+            `A síntese negava o efeito ("${negacao.ancora}") e ${efeitosVerificados.length} ` +
+            'efeito(s) deste turno foram CONFERIDOS no mundo. Descartada.',
+        });
+        this.auditoria.registrar({
+          instante: new Date().toISOString(),
+          sessao: this.dep.sessao,
+          id_usuario: this.dep.idUsuario,
+          traco: b.tracoAtual,
+          acao: 'sintese_descartada:negacao_de_efeito_verificado',
+          detalhe: `âncora "${negacao.ancora}"`,
+          permitido: false,
+        });
+        this.erros.registrar({
+          classe: 'negacao_de_efeito_verificado',
+          entrada: percepcao.bruto,
+          observado: `a síntese negou "${negacao.ancora}" com ${efeitosVerificados.length} efeito(s) verificado(s) no mundo`,
+          esperado: 'a fala não nega o que o verificador confirmou',
+          instante: new Date().toISOString(),
+        });
+
+        /**
+         * O TEXTO É COMPOSTO PELO KERNEL, não pedido de novo à LLM: a evidência
+         * do verificador já é uma linha pronta, e regenerar daria ao mesmo
+         * modelo, com o mesmo material, a chance de repetir a mesma leitura.
+         *
+         * A FRASE CITA A EVIDÊNCIA, NÃO A DESCRIÇÃO DO PLANO — a segunda metade
+         * do defeito de FA-04. A primeira versão escrevia
+         * `${x.descricao}: feito e conferido`, e `descricao` é o que o
+         * planejador PRETENDIA ("Tentar extrair texto do arquivo X"), não o que
+         * aconteceu. Promover intenção a fato dentro da trava que existe para
+         * separar as duas coisas é o erro mais fácil de cometer aqui.
+         *
+         * As falhas do turno entram junto: a primeira tentativa pode ter dado
+         * erro mesmo, e engoli-la trocaria uma mentira por outra.
+         */
+        const texto = [
+          efeitosVerificados
+            .map((x) => `${x.habilidade}: o verificador confirmou — ${x.evidencia || 'efeito presente no mundo'}.`)
+            .join('\n'),
+          falhas.length > 0
+            ? `No caminho até aqui houve tropeço: ${falhas.join('; ')}. ` +
+              'Foi corrigido na volta seguinte.'
+            : '',
+          'Eu tinha redigido um fechamento dizendo que não tinha feito. O verificador ' +
+            'confere que fiz, então descartei o fechamento. Não peça de novo: ' +
+            'repetir duplicaria o efeito.',
+        ]
+          .filter(Boolean)
+          .join('\n\n');
+
+        await this.dep.estado.transicionar('falando', 'raciocinio');
+        b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: idMensagem,
+          texto,
+          responde_a: respondeA,
+        });
+        return texto;
+      }
+
+      /**
+       * O REGISTRO DO EFEITO É CONCATENADO — a rede que não depende de detector.
+       *
+       * A verificação independente mediu o teto do detector de negação: treze
+       * de quatorze paráfrases atravessam ("não foi possível criar", "acabei
+       * não criando", "a criação não ocorreu", "sem sucesso"). Alargar a lista
+       * de expressões é correr atrás do português, e cada palavra nova a mais
+       * aumenta a chance de censurar fala honesta — que é o erro caro.
+       *
+       * Então a proteção real não é o detector: é esta linha. Quando o turno
+       * VERIFICOU um efeito e a fala não reconhece nenhum, o Kernel acrescenta o
+       * registro por baixo, por código. O operador que leu "não deu certo" lê em
+       * seguida qual habilidade o verificador confirmou — e não repete o pedido.
+       *
+       * Concatenar em vez de descartar tem custo zero de falso positivo: nenhuma
+       * fala honesta é engolida, no máximo ganha uma linha de procedência que
+       * ela não tinha. É a mesma decisão do rodapé do dossiê analítico, pelo
+       * mesmo motivo — a LLM omitiria a ressalva exatamente nos turnos em que o
+       * texto fica mais elegante sem ela.
+       */
+      const naoReconhece =
+        efeitosVerificados.length > 0 && !lerAfirmacaoDeFeito(falaFinal).afirma;
+      const registroDoEfeito = naoReconhece
+        ? '\n\n— Registro deste turno: ' +
+          efeitosVerificados
+            .map((x) => `${x.habilidade} (o verificador confirmou: ${x.evidencia || 'efeito presente'})`)
+            .join('; ') +
+          '. Não peça de novo sem conferir: repetir duplicaria o efeito.'
+        : '';
+
       /* Não afirmou nada: a fala é honesta e vai inteira, de uma vez — foi só a
          transmissão ao vivo que ficou retida. */
       await this.dep.estado.transicionar('falando', 'raciocinio');
       b.publicar({
         tipo: 'RESPOSTA_TRECHO',
         id_mensagem: idMensagem,
-        texto: falaFinal,
+        texto: falaFinal + registroDoEfeito,
         responde_a: respondeA,
       });
-      return falaFinal;
+      return falaFinal + registroDoEfeito;
     }
 
     await this.dep.estado.aplicarIntencao({ campo: 'energia_cognitiva', delta: -0.06 });

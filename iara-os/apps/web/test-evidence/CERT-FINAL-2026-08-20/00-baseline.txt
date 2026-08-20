@@ -1,0 +1,31 @@
+BASELINE_ID: CERT-FINAL-2026-08-20
+data: 2026-08-20T10:09:56-03:00
+pai: 16f15b32f5a0bad4ab9612f4343f81fbbfcde4da
+submodulo: 170a641aac96647f5a50438d3770bce7072c5329
+branch: main
+node: v22.17.0
+npm: 10.9.2
+--- arvore suja ---
+ M package-lock.json
+?? test-evidence/ANALITICO-SENIOR-2026-08-19/17-verificacao-pos-push.txt
+?? test-evidence/ANALITICO-SENIOR-2026-08-19/17-verificacao-pre-push.txt
+?? test-evidence/CERT-FINAL-2026-08-20/
+--- tsc ---
+exit=0 (sem erro)
+--- suite ---
+  duration_ms: 0.2122
+  type: 'test'
+  ...
+1..2006
+# tests 2006
+# suites 0
+# pass 2003
+# fail 0
+# cancelled 0
+# skipped 3
+# todo 0
+# duration_ms 77208.092
+--- pulados ---
+ok 785 - CT-01. o container SÓ enxerga o repositório montado # SKIP daemon do Docker fora do ar — nada foi medido
+ok 786 - CT-02. escrita fora do repositório não alcança o disco do host # SKIP daemon do Docker fora do ar — nada foi medido
+ok 787 - CT-03. na rede interna o egresso morre — com controle positivo # SKIP daemon do Docker fora do ar — nada foi medido

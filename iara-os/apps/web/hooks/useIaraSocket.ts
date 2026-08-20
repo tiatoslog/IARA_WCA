@@ -168,6 +168,8 @@ export function useIaraSocket(credencial: Credencial) {
   const [maquinas, setMaquinas] = useState<MaquinaDoOperador[] | null>(null);
   const [pareamentoDisponivel, setPareamentoDisponivel] = useState(true);
   const [acaoDispositivo, setAcaoDispositivo] = useState<{ ok: boolean; texto: string } | null>(null);
+  /** Em qual computador a IARA está trabalhando. Vem do servidor, sempre. */
+  const [computadorEscolhido, setComputadorEscolhido] = useState<string | null>(null);
   /** Última falha de gravação da ficha vinda do servidor — ver `Porta.ts`
    *  (`emitirErro(texto, 'preferencias')`). A ficha usa isto para não ficar
    *  muda quando a gravação falha depois do clique, não só quando o socket
@@ -377,6 +379,9 @@ export function useIaraSocket(credencial: Credencial) {
       if (pacote.tipo === 'dispositivos') {
         setMaquinas(pacote.maquinas);
         setPareamentoDisponivel(pacote.pareamento_disponivel);
+        /* `?? null` e não `|| null`: um servidor de antes deste campo manda
+           `undefined`, e undefined é "não sei", que aqui vale o padrão. */
+        setComputadorEscolhido(pacote.escolhido ?? null);
         /**
          * SÓ SUBSTITUI quando o pacote traz uma ação nova — nunca apaga com
          * `null`. Achado em auditoria (14/08/2026): a gaveta reconsulta a
@@ -808,6 +813,18 @@ export function useIaraSocket(credencial: Credencial) {
     (id: string, nome: string) => pedirAoBarramento({ tipo: 'renomear_dispositivo', id, nome }),
     [pedirAoBarramento],
   );
+  /**
+   * "TRABALHE NESTE COMPUTADOR" — o gate multi-desktop (20/08/2026).
+   *
+   * `id: null` desfaz a escolha e devolve o padrão (o último que conectou
+   * atende). O `nome` viaja porque a recusa de "escolhida e offline" precisa
+   * nomear a máquina, e nesse instante ela já saiu do inventário conectado.
+   */
+  const escolherComputador = useCallback(
+    (id: string | null, nome?: string) =>
+      pedirAoBarramento({ tipo: 'escolher_dispositivo', id, ...(nome ? { nome } : {}) }),
+    [pedirAoBarramento],
+  );
 
   /** Religa após uma recusa terminal — o gesto humano que zera a decisão. */
   const religar = useCallback(() => {
@@ -832,10 +849,12 @@ export function useIaraSocket(credencial: Credencial) {
     maquinas,
     pareamentoDisponivel,
     acaoDispositivo,
+    computadorEscolhido,
     pedirDispositivos,
     autorizarComputador,
     esquecerComputador,
     atualizarComputador,
     renomearComputador,
+    escolherComputador,
   };
 }

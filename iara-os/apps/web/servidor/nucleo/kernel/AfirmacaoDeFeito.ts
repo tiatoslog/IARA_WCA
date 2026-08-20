@@ -117,6 +117,22 @@ const NEGACOES: readonly RegExp[] = [
   /\bn[ãa]o\s+(est[áa]|ficou)\s+(feito|pronto|criad[oa]|salv[oa])\b/i,
   /\bn[ãa]o\s+(foi|houve|aconteceu)\b/i,
   /\bnada\s+(foi|aconteceu|mudou|alterad[oa])\b/i,
+  /**
+   * `nenhum`/`nenhuma` DESARMA, e a falta disto foi achada pela verificação
+   * independente de 20/08/2026:
+   *
+   *     "Nenhuma pasta foi criada."  →  afirma = true, âncora "foi criada"
+   *
+   * `VOZ_PASSIVA` casava `foi criada` e nenhuma das negações acima alcançava,
+   * porque todas exigem a palavra `não`. A frase mais direta que existe para
+   * dizer que nada aconteceu era lida como afirmação de que aconteceu.
+   *
+   * O estrago é duplo, e o segundo é o pior: além de armar a trava de
+   * afirmação contra uma recusa honesta, este falso positivo DESARMA a trava de
+   * negação — `NegacaoDeFeito` pergunta a este módulo se a fala afirma algo, e
+   * um "sim" errado fazia a negação global escapar.
+   */
+  /\bnenhum[a]?\b/i,
   /\bdeixei\s+de\b/i,
   /\bsem\s+conseguir\b/i,
   /\bfalh(ei|ou|aram)\b/i,

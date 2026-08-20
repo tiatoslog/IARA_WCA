@@ -262,6 +262,32 @@ export class PortalEfeitos {
   > {
     if (pedido.semantica === 'leitura') return { ok: true, operacao: null };
 
+    /**
+     * O JORNAL DO DISCO ENTRA NO ÍNDICE ANTES DA RESERVA — e mora AQUI, e não
+     * em cada chamador, pela razão que abre este arquivo: existe UM objeto que
+     * sabe executar efeito.
+     *
+     * A primeira versão desta correção pôs a garantia no `Kernel.executarLaco`.
+     * A verificação independente achou o vão em uma varredura:
+     * `PortaWhatsapp` monta `new PortalEfeitos(registroOperacoes)` e o usa no
+     * caminho do NÚMERO NÃO CADASTRADO, que existe *"antes de haver kernel
+     * algum"* — logo `executarLaco` nunca roda e o índice fica frio. Medido: a
+     * reentrega do mesmo `wamid` depois de um restart devolvia `nova` por
+     * aquele caminho e `duplicada` pelo do Kernel. Mesma trava, dois
+     * resultados, porque a garantia estava no chamador.
+     *
+     * Corrigir por chamador teria consertado UM caso e deixado a classe aberta
+     * — exatamente o argumento que criou este portal.
+     *
+     * O `await` não reabre a corrida que a sincronicidade de `reservar`
+     * protege: ele acontece ESTRITAMENTE ANTES do teste-e-ação, que continua
+     * sem ponto de suspensão dentro de si. Duas aberturas concorrentes ainda
+     * chegam a `reservar` uma de cada vez, e a segunda encontra reservado.
+     *
+     * Custo: um `Map.get` por efeito depois da primeira leitura do operador.
+     */
+    await this.registro.garantirCarregado(pedido.id_usuario);
+
     if (!podeExecutar(pedido.semantica)) {
       return {
         ok: false,

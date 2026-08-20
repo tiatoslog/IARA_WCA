@@ -61,6 +61,18 @@ export type ClasseErro =
    */
   | 'afirmacao_sem_efeito'
   /**
+   * A SÍNTESE NEGOU UM EFEITO QUE O VERIFICADOR CONFIRMOU — o espelho exato de
+   * `afirmacao_sem_efeito`, e classe própria pelo mesmo motivo que as outras
+   * duas: as três nascem de causas diferentes e a série de cada uma responde
+   * uma pergunta diferente sobre o modelo.
+   *
+   * Medida em 20/08/2026, campanha CO-04 com cérebro real: jornal `verificada`,
+   * oráculo de disco confirmando o diretório, e a fala dizendo "na prática a
+   * pasta não foi feita. Manda de novo". Uma linha aqui é uma vez em que a IARA
+   * teria convidado o operador a duplicar um efeito que já existia.
+   */
+  | 'negacao_de_efeito_verificado'
+  /**
    * A SÍNTESE ANUNCIOU UMA AÇÃO DEPOIS DE O TURNO FECHAR — "vou consultar a
    * base", "[Chamando consultar_infraestrutura]" — e a trava a descartou antes
    * de o operador ler.

@@ -1,0 +1,8 @@
+CTRL-B O FUZZ DISPAROU — VIOLAÇÕES: 40 — INV-B — hipótese passa a valer mais que fato
+    [INV-B pontuação subiu com evidência PIOR] 0.4648 → 0.4920
+    [INV-B pontuação subiu com evidência PIOR] 0.6898 → 0.6966
+    [INV-B pontuação subiu com evidência PIOR] 0.5273 → 0.6773
+CTRL-DE O FUZZ DISPAROU — VIOLAÇÕES: 40 — INV-D/E — contextual passa a contar como direta
+    [INV-E contextual subiu o degrau] nenhum → descritiva
+    [INV-E contextual subiu o degrau] nenhum → descritiva
+    [INV-E contextual subiu o degrau] nenhum → descritiva

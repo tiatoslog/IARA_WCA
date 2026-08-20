@@ -39,6 +39,8 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
     esquecerComputador,
     atualizarComputador,
     renomearComputador,
+    escolherComputador,
+    computadorEscolhido,
   } = useIaraSocket(credencial);
 
   /**
@@ -159,6 +161,8 @@ function Sala({ credencial, aoSair }: { credencial: Credencial; aoSair: (() => v
         onEsquecerComputador={esquecerComputador}
         onAtualizarComputador={atualizarComputador}
         onRenomearComputador={renomearComputador}
+        onEscolherComputador={escolherComputador}
+        computadorEscolhido={computadorEscolhido}
         codigoDePareamentoUrl={codigoDePareamentoUrl}
         onSair={aoSair}
       />

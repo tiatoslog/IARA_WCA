@@ -207,9 +207,41 @@ export class PonteDispositivos {
    * frente do computador agora. Um braço esquecido ligado numa máquina no
    * escritório não deve engolir o comando de quem está com o notebook aberto.
    */
-  destinoDe(idUsuario: string): DispositivoConectado | null {
+  destinoDe(idUsuario: string, alvo?: string | null): DispositivoConectado | null {
     const lista = this.porOperador.get(idUsuario);
-    return lista && lista.length > 0 ? lista[lista.length - 1] : null;
+    if (!lista || lista.length === 0) return null;
+
+    /**
+     * COM ALVO, É ELE OU NADA — e o `?? null` é a regra inteira do gate
+     * multi-desktop (20/08/2026, a pedido da operadora).
+     *
+     * Cair para o último conectado quando o alvo não está ligado seria
+     * exatamente o defeito que o alvo existe para fechar: a ação física
+     * acontecendo num computador que ninguém escolheu. Quem trata a ausência é
+     * `Braco.executar`, com uma recusa que NOMEIA a máquina.
+     */
+    /**
+     * O ALVO CASA PELOS DOIS IDS, e a falta disto foi medida no campo em
+     * 20/08/2026 — com a operadora logada, um braço real conectado, e oito
+     * testes de unidade verdes que não viam o problema.
+     *
+     * `MaquinaDoOperador.id` — o id que a TELA mostra e devolve — é o
+     * `id_credencial` (ver `inventarioDeMaquinas`: `id: p.id_credencial`). O
+     * `id_dispositivo` é o id do SOCKET, novo a cada conexão (`disp-1`,
+     * `disp-2`). Para uma máquina pareada os dois NUNCA são iguais, então
+     * comparar só com o do socket fazia toda escolha vinda da interface virar
+     * "escolhido e não conectado" — sobre a máquina que estava ligada na
+     * frente da pessoa.
+     *
+     * Os dois valem porque as duas origens são legítimas: a interface manda
+     * credencial; um braço sem credencial durável (token colado, modo local)
+     * só tem o id de socket, e ele também aparece na lista.
+     */
+    if (alvo) {
+      return lista.find((d) => d.id_credencial === alvo || d.id_dispositivo === alvo) ?? null;
+    }
+
+    return lista[lista.length - 1];
   }
 
   listar(idUsuario: string): DescricaoDispositivo[] {

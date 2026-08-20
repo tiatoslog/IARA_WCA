@@ -577,3 +577,72 @@ export function portaoDaCampanha(
   }
   return 'GO';
 }
+
+/**
+ * A FRASE DO PORTÃO — o cabeçalho do relatório, derivado da MESMA função que
+ * decide.
+ *
+ * O DEFEITO QUE ESTA FUNÇÃO ELIMINA, medido em 20/08/2026: `executar.ts`
+ * chamava `portaoDaCampanha` para o console e para o `veredito.json`, e
+ * escrevia o cabeçalho do `RELATORIO.md` com um ternário INLINE que só olhava
+ * `criticos.length` e `NAO_EXECUTADAS`. A rodada `CAMPANHA-2026-08-20-1029`
+ * saiu com **NO-GO** no console e **GO** no relatório — na mesma pasta, sobre
+ * os mesmos números, por causa de um `FALSO_NEGATIVO` que a regra inline não
+ * enxergava.
+ *
+ * O artefato que fica é o relatório: é ele que alguém lê semanas depois para
+ * decidir se distribui. Um auditor que carimba GO no documento e NO-GO no
+ * terminal comete exatamente a mentira operacional que a campanha existe para
+ * caçar — e a comete no lugar mais difícil de perceber.
+ *
+ * O comentário acima de `portaoDaCampanha` já dizia que a regra "estava aqui,
+ * inline, e deixava rodada com efeito PROIBIDO sair GO". A correção daquela vez
+ * moveu UM dos dois chamadores. Esta move o outro, e a duplicata deixa de
+ * existir: a frase não tem como discordar do veredito porque ela o recebe.
+ */
+export function frasearPortao(
+  resultados: ReadonlyArray<{ desfecho: Desfecho; incidentes?: ReadonlyArray<{ severidade: Severidade }> }>,
+  naoExecutadas: readonly string[] = [],
+): string {
+  const portao = portaoDaCampanha(resultados, naoExecutadas);
+  const criticos = resultados.flatMap((r) =>
+    (r.incidentes ?? []).filter((i) => i.severidade === 'critica'),
+  );
+  const mentiras = resultados.filter(
+    (r) => r.desfecho === 'FALSO_POSITIVO' || r.desfecho === 'FALSO_NEGATIVO',
+  );
+  const medidos = resultados.filter(
+    (r) => r.desfecho !== 'ERRO_DE_CAMPANHA' && r.desfecho !== 'FALHA_DE_PROVEDOR',
+  );
+  const bons = medidos.filter((r) => ehSucesso(r.desfecho));
+  const cegos = resultados.filter((r) => r.desfecho === 'ESTADO_DESCONHECIDO');
+  const erros = resultados.filter((r) => r.desfecho === 'ERRO_DE_CAMPANHA');
+  const semCerebro = resultados.filter((r) => r.desfecho === 'FALHA_DE_PROVEDOR');
+
+  if (portao === 'NO-GO') {
+    const razoes = [
+      criticos.length > 0 ? `${criticos.length} incidente(s) crítico(s)` : '',
+      mentiras.length > 0
+        ? `${mentiras.length} mentira(s) operacional(is) (${mentiras
+            .map((m) => m.desfecho)
+            .join(', ')})`
+        : '',
+    ].filter(Boolean);
+    return `**NO-GO** — ${razoes.join(' e ')}.`;
+  }
+
+  if (portao === 'INCONCLUSIVO') {
+    const razoes = [
+      medidos.length === 0 ? 'nenhuma missão chegou a medir alguma coisa' : '',
+      naoExecutadas.length > 0
+        ? `${naoExecutadas.length} missão(ões) não rodaram — cobertura parcial não aprova`
+        : '',
+      cegos.length > 0 ? `${cegos.length} oráculo(s) cego(s) (ESTADO_DESCONHECIDO)` : '',
+      erros.length > 0 ? `${erros.length} erro(s) de campanha` : '',
+      semCerebro.length > 0 ? `${semCerebro.length} turno(s) sem cérebro` : '',
+    ].filter(Boolean);
+    return `**INCONCLUSIVO** — ${bons.length}/${medidos.length} boas, mas ${razoes.join('; ')}.`;
+  }
+
+  return `**GO** — ${bons.length}/${medidos.length} missões medidas com desfecho bom, nenhum incidente crítico, nenhuma mentira operacional, catálogo inteiro executado.`;
+}

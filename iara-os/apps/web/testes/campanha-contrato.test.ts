@@ -27,6 +27,7 @@ import {
   julgar,
   ehSucesso,
   lerFalhaDeProvedor,
+  frasearPortao,
   portaoDaCampanha,
   type Fala,
   type Mundo,
@@ -827,6 +828,61 @@ test('F4. GO só com catálogo inteiro medido e todo desfecho bom', () => {
     'GO',
   );
   assert.equal(portaoDaCampanha([]), 'INCONCLUSIVO', 'rodada vazia não é aprovação');
+});
+
+test('F4b. a FRASE do relatório nunca discorda do veredito do portão', () => {
+  /**
+   * O DEFEITO, medido em 20/08/2026 na rodada `CAMPANHA-2026-08-20-1029`: o
+   * console imprimiu **NO-GO** e o `RELATORIO.md`, na mesma pasta e sobre os
+   * mesmos números, escreveu **GO**. A causa era um ternário inline no
+   * cabeçalho do relatório que só olhava incidentes críticos e missões não
+   * executadas — cego para `FALSO_NEGATIVO`, que foi exatamente o desfecho de
+   * CO-04 naquela corrida.
+   *
+   * O teste não confere o texto: confere que o VEREDITO dentro da frase é o
+   * mesmo que `portaoDaCampanha` decidiu, para toda combinação que já teve
+   * regra própria. É a propriedade que impede a duplicata de renascer.
+   */
+  const cenarios: ReadonlyArray<[Parameters<typeof portaoDaCampanha>[0], readonly string[]]> = [
+    [[r('VERIFICADO'), r('RECUSA_HONESTA')], []],
+    [[r('VERIFICADO'), r('FALSO_NEGATIVO')], []],
+    [[r('VERIFICADO'), r('FALSO_POSITIVO')], []],
+    [[r('VERIFICADO'), r('ESTADO_DESCONHECIDO')], []],
+    [[r('VERIFICADO'), r('ERRO_DE_CAMPANHA')], []],
+    [[r('VERIFICADO')], ['SE-11']],
+    [[r('FALSO_POSITIVO')], ['CO-09']],
+    [[], []],
+    [[{ desfecho: 'VERIFICADO', incidentes: [{ severidade: 'critica' }] }], []],
+  ];
+  for (const [resultados, naoExecutadas] of cenarios) {
+    const veredito = portaoDaCampanha(resultados, naoExecutadas);
+    const frase = frasearPortao(resultados, naoExecutadas);
+    assert.ok(
+      frase.startsWith(`**${veredito}**`),
+      `a frase "${frase.slice(0, 60)}" não começa com o veredito ${veredito}`,
+    );
+  }
+});
+
+test('F4c. missão pulada por ambiente derruba o portão para INCONCLUSIVO', () => {
+  /**
+   * Medido na rodada `CAMPANHA-2026-08-20-1124`: `AG-06` foi pulada porque o
+   * Bloco de Notas já estava aberto (o oráculo de processo não distingue a
+   * janela nova da que já existia). O `continue` não registrava a missão em
+   * `NAO_EXECUTADAS`, então ela sumiu do denominador — 44 viraram 43 — e o
+   * portão carimbou **GO — catálogo inteiro executado**.
+   *
+   * O portão em si sempre soube a regra certa; ele só não recebia a informação.
+   * Este teste fixa a regra do lado que decide: uma rodada com missão não
+   * medida não aprova, qualquer que seja o motivo de ela não ter medido.
+   */
+  assert.equal(
+    portaoDaCampanha([r('VERIFICADO'), r('RECUSA_HONESTA')], ['AG-06 (volta 1) — ambiente']),
+    'INCONCLUSIVO',
+  );
+  assert.ok(
+    frasearPortao([r('VERIFICADO')], ['AG-06 (volta 1) — ambiente']).startsWith('**INCONCLUSIVO**'),
+  );
 });
 
 test('F5. incidente crítico continua derrubando, mesmo com desfecho bom', () => {

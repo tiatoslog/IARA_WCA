@@ -1,0 +1,11 @@
+P1-A — REIDRATACAO NAO ACONTECIA EM PRODUCAO
+
+--- varredura de chamadores (antes da correcao) ---
+grep -rn "reidratar(" servidor/ app/ | grep -v RegistroOperacoes.ts  ->  ZERO resultados
+
+--- reproducao isolada, com controle positivo (worktree em HEAD 170a641) ---
+1) efeito executado e no jornal: d8af375b-d1b7-4432-8f35-52ffcab430d9 (aceita_pelo_provedor)
+2) o disco tem 3 linha(s) — o jornal sobreviveria a qualquer queda
+3) MESMO pedido depois do reinício: reserva = nova
+   >>> DEFEITO REPRODUZIDO: o efeito não idempotente seria executado DE NOVO.
+4) CONTROLE — com reidratar (1 operação(ões) lidas): reserva = duplicada — mesma chave de idempotência (aceita_pelo_provedor)

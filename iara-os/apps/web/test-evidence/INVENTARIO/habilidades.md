@@ -258,7 +258,7 @@ Envia mensagem de WhatsApp para um contato da operação. NUNCA executa direto: 
 | **evidência independente** | verificador próprio |
 | **recuperação** | verificador confere depois |
 | **timeout** | 10000 ms |
-| **baterias que citam o id** | `testes/calendario-arm-confirmar.test.ts` `testes/cerebro-escrita-integridade.test.ts` `testes/cerebro-integridade.test.ts` `testes/encerramento-absoluto.test.ts` `testes/fronteira-efeitos.test.ts` `testes/fronteira-interna.test.ts` `testes/integridade-cognitiva.test.ts` `testes/proatividade-adversarial.test.ts` `testes/promessa-de-acao.test.ts` `testes/propriedades-criticas.test.ts` `testes/validacao/exfiltracao.ts` `testes/validacao/quedaFilho.ts` `testes/zero-trust-adversarial.test.ts` |
+| **baterias que citam o id** | `testes/calendario-arm-confirmar.test.ts` `testes/cerebro-escrita-integridade.test.ts` `testes/cerebro-integridade.test.ts` `testes/encerramento-absoluto.test.ts` `testes/fronteira-efeitos.test.ts` `testes/fronteira-interna.test.ts` `testes/integridade-cognitiva.test.ts` `testes/promessa-de-acao.test.ts` `testes/propriedades-criticas.test.ts` `testes/validacao/exfiltracao.ts` `testes/validacao/quedaFilho.ts` `testes/zero-trust-adversarial.test.ts` |
 
 ### `buscar_documento_sharepoint`
 
@@ -333,7 +333,7 @@ Cria uma pasta em um local autorizado da máquina (Área de Trabalho, Documentos
 | **evidência independente** | verificador próprio |
 | **recuperação** | valor padrão · verificador confere depois |
 | **timeout** | 5000 ms |
-| **baterias que citam o id** | `testes/afirmacao-de-feito.test.ts` `testes/campanha/missoes/agente.ts` `testes/campanha/missoes/auditores.ts` `testes/campanha/missoes/lacunas.ts` `testes/campanha/MotorSandbox.ts` `testes/campanha-contrato.test.ts` `testes/cerebro-escrita-integridade.test.ts` `testes/cerebro-integridade-final.test.ts` `testes/cerebro-integridade.test.ts` `testes/guarda-de-laco.test.ts` `testes/habilidades.test.ts` `testes/integridade-cognitiva.test.ts` `testes/invariantes-cognitivos.test.ts` `testes/mentira-operacional.test.ts` `testes/moldura-observacao.test.ts` `testes/ponte-execucao-adversarial.test.ts` `testes/ponte-execucao.test.ts` `testes/promessa-de-acao.test.ts` `testes/propriedades-criticas.test.ts` `testes/verificacao.test.ts` `testes/zero-trust-adversarial.test.ts` |
+| **baterias que citam o id** | `testes/afirmacao-de-feito.test.ts` `testes/campanha/missoes/agente.ts` `testes/campanha/missoes/auditores.ts` `testes/campanha/missoes/lacunas.ts` `testes/campanha/MotorSandbox.ts` `testes/campanha-contrato.test.ts` `testes/cerebro-escrita-integridade.test.ts` `testes/cerebro-integridade-final.test.ts` `testes/cerebro-integridade.test.ts` `testes/guarda-de-laco.test.ts` `testes/habilidades.test.ts` `testes/integridade-cognitiva.test.ts` `testes/invariantes-cognitivos.test.ts` `testes/mentira-operacional.test.ts` `testes/moldura-observacao.test.ts` `testes/negacao-de-feito.test.ts` `testes/ponte-execucao-adversarial.test.ts` `testes/ponte-execucao.test.ts` `testes/promessa-de-acao.test.ts` `testes/propriedades-criticas.test.ts` `testes/verificacao.test.ts` `testes/zero-trust-adversarial.test.ts` |
 
 ### `abrir_aplicativo`
 

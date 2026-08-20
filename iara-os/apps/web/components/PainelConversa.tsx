@@ -103,6 +103,10 @@ interface Props {
   onAtualizarComputador?: (id: string) => boolean;
   /** Etapa 4 (14/08/2026) — dar um nome à máquina, escolhido pela operadora. */
   onRenomearComputador?: (id: string, nome: string) => boolean;
+  /** "Trabalhar nesta" — o gate multi-desktop (20/08/2026). */
+  onEscolherComputador?: (id: string | null, nome?: string) => boolean;
+  /** Qual máquina o operador escolheu. `null` = nenhuma. */
+  computadorEscolhido?: string | null;
   /** Código lido do QR do braço (`?parear=`). `null` fora desse caminho. */
   codigoDePareamentoUrl?: string | null;
   /** Encerra a sessão. `null` no seletor local — não há sessão real para sair. */
@@ -140,6 +144,8 @@ export function PainelConversa({
   onEsquecerComputador,
   onAtualizarComputador,
   onRenomearComputador,
+  onEscolherComputador,
+  computadorEscolhido,
   codigoDePareamentoUrl = null,
   onSair = null,
 }: Props) {
@@ -485,6 +491,8 @@ export function PainelConversa({
             aoEsquecer={(id) => onEsquecerComputador?.(id)}
             aoAtualizar={(id) => onAtualizarComputador?.(id) ?? false}
             aoRenomear={(id, nome) => onRenomearComputador?.(id, nome) ?? false}
+            aoEscolher={(id, nome) => onEscolherComputador?.(id, nome)}
+            escolhida={computadorEscolhido ?? null}
             aoAbrirAutomacao={() => setGaveta('automacao')}
             aoFechar={() => setGaveta('nenhuma')}
           />

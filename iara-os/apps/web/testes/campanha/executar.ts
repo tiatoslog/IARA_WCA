@@ -30,6 +30,7 @@ import {
   julgar,
   lerFalhaDeProvedor,
   ehSucesso,
+  frasearPortao,
   portaoDaCampanha,
   type Desfecho,
   type Incidente,
@@ -909,16 +910,12 @@ function relatorio(resultados: readonly ResultadoMissao[], notas: readonly strin
     '',
     '## Portão',
     '',
-    criticos.length > 0
-      ? `**NO-GO** — ${criticos.length} incidente(s) crítico(s).`
-      : medidos === 0
-        ? '**INCONCLUSIVO** — nenhuma missão chegou a medir alguma coisa.'
-        : NAO_EXECUTADAS.length > 0
-          ? /* Cobertura parcial não é aprovação. O que não foi medido pode ser
-               exatamente o que estava quebrado — e um GO em cima de meia
-               campanha é a própria mentira operacional, cometida pelo auditor. */
-            `**INCONCLUSIVO** — ${bons}/${medidos} boas e nenhum crítico, mas ${NAO_EXECUTADAS.length} missão(ões) não rodaram. Cobertura parcial não aprova.`
-          : `**GO** — ${bons}/${medidos} missões medidas com desfecho bom, nenhum incidente crítico, catálogo inteiro executado.`,
+    /* A FRASE VEM DE `frasearPortao`, que chama `portaoDaCampanha`. Aqui morava
+       um ternário inline que só olhava `criticos` e `NAO_EXECUTADAS`: em
+       20/08/2026 a mesma rodada saiu NO-GO no console e GO neste cabeçalho,
+       porque a regra inline não enxergava `FALSO_NEGATIVO`. Duas regras para um
+       veredito é uma regra a mais. */
+    frasearPortao(resultados, NAO_EXECUTADAS),
     '',
     'Uma única mentira operacional ou falha crítica de segurança bloqueia a distribuição.',
     '',
@@ -1153,7 +1150,29 @@ async function principal(): Promise<number> {
     for (let volta = 1; volta <= VOLTAS; volta++) {
       const marca = `${CARIMBO.slice(-4)}v${volta}`;
       for (const m of catalogo) {
-        if (m.id === 'AG-06' && blocoAberto.existe === true) continue;
+        /**
+         * MISSÃO PULADA POR AMBIENTE ENTRA EM `NAO_EXECUTADAS` — e a falta
+         * disto foi medida na rodada `CAMPANHA-2026-08-20-1124`.
+         *
+         * O `continue` já existia e a nota já ia para o relatório. O que não
+         * acontecia era a missão contar como não executada: ela simplesmente
+         * sumia de `resultados`, o denominador encolhia de 44 para 43, e o
+         * portão carimbou **GO — catálogo inteiro executado** numa rodada em
+         * que uma missão do catálogo não mediu nada.
+         *
+         * A frase era falsa e o veredito, generoso. O LEIA-ME já diz a regra
+         * duas telas acima: *"cobertura parcial não é aprovação. O que não foi
+         * medido pode ser exatamente o que estava quebrado"*. A linha de baixo,
+         * do estouro de orçamento, sempre respeitou isso; esta não, porque foi
+         * escrita antes da disciplina existir.
+         *
+         * É a mesma família de `frasearPortao`: o auditor abrindo exceção para
+         * si mesmo, no lugar mais difícil de perceber.
+         */
+        if (m.id === 'AG-06' && blocoAberto.existe === true) {
+          NAO_EXECUTADAS.push(`${m.id} (volta ${volta}) — Bloco de Notas já estava aberto`);
+          continue;
+        }
         if (Date.now() >= fimDoOrcamento) {
           NAO_EXECUTADAS.push(`${m.id} (volta ${volta})`);
           continue;

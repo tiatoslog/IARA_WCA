@@ -1,0 +1,41 @@
+oráculo independente: 53 motoristas (pessoas distintas)
+
+--- REPETIÇÃO: a mesma frase 20x, sessão nova a cada vez ---
+ 1  CONFERE      11 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+ 2  CONFERE      12 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+ 3  CONFERE      10 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+ 4  CONFERE      11 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+ 5  CONFERE      10 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+ 6  CONFERE      11 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+ 7  CONFERE      12 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+ 8  CONFERE      10 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+ 9  CONFERE      13 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+10  CONFERE       9 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+11  CONFERE      11 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+12  CONFERE      11 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+13  CONFERE      14 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+14  CONFERE      20 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+15  CONFERE      14 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+16  CONFERE      13 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+17  CONFERE      13 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+18  CONFERE      13 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+19  CONFERE      20 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+20  CONFERE      45 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+
+--- PARÁFRASE: 8 frases para a mesma pergunta ---
+21  CONFERE      21 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas temos?
+22  CONFERE      13 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas diferentes temos?
+23  CONFERE      12 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  temos quantos motoristas?
+24  CONFERE      10 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  qual o total de motoristas?
+25  CONFERE       9 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  qual é a quantidade de motoristas?
+26  CONFERE       7 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  me diga o número de motoristas
+27  CONFERE       8 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos motoristas distintos existem?
+28  CONFERE      12 ms  nums=[2026,53,150]  ferr=consultar_estatisticas_cargas_luft  quantos condutores temos?
+
+=== VEREDITO ===
+oráculo: 53
+turnos com fala: 28/28
+afirmaram o número certo: 28/28
+conjunto de números citados: {53, 150, 2026}
+ferramentas usadas: {consultar_estatisticas_cargas_luft}
+CONSISTENTE — toda rodada afirmou o número do oráculo.

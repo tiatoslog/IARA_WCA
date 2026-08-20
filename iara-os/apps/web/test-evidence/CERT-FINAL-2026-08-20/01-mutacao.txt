@@ -1,0 +1,19 @@
+MUTATION TESTING — §24 da auditoria
+Worktree isolada (HEAD 170a641, sem test-evidence), node_modules por junção.
+Cada mutação é aplicada sozinha e revertida em `finally`.
+Regra: mutante MORTO = a suíte detecta. Mutante SOBREVIVEU = lacuna de cobertura.
+
+MUT-01 MORTO   pass=95 fail=1   autorização de risco alto (só operador autoriza)
+MUT-02 MORTO   pass=36 fail=4   deduplicação de efeito (idempotência)
+MUT-03 SOBREVIVEU no subconjunto / MORTO na suíte inteira
+               recusa de efeito_desconhecido — morto por
+               "37. quem declara efeito_desconhecido NÃO executa, mesmo injetada no catálogo"
+               NOTA: um único teste sustenta este invariante.
+MUT-04 MORTO   pass=45 fail=2   abstenção determinística do kernel
+MUT-05 MORTO   pass=41 fail=1   portão de evidência DIRETA
+MUT-06 MORTO   pass=53 fail=2   cobertura 0/0 = null, nunca 0%
+MUT-07 MORTO   pass=26 fail=2   trava de afirmação de feito sem efeito
+MUT-08 MORTO   pass=80 fail=11  validação de esquema de parâmetros
+MUT-09 MORTO   pass=45 fail=11  isolamento de shard por operador
+
+PLACAR: 9 mutações críticas, 9 mortas pela suíte. 0 sobreviventes.

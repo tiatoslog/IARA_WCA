@@ -23,6 +23,7 @@
 import { createServer, type IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import { WebSocketServer } from 'ws';
+import { frasearIdentidade, identidadeBackend } from './nucleo/IdentidadeBackend';
 import { config as carregarEnv } from 'dotenv';
 import { origemNaLista, temCuringa } from '../lib/origens';
 import { conectarOperador, encerrarResidentes, prepararMotor } from './barramento/Porta';
@@ -533,6 +534,20 @@ async function subir(): Promise<void> {
           ok: true,
           uptime_s: Math.round((Date.now() - inicioProcesso) / 1000),
           modo: DEV ? 'desenvolvimento' : 'producao',
+          /**
+           * QUAL CÓDIGO ESTÁ ATENDENDO — pedido da auditoria de 20/08/2026
+           * antes de liberar o push:
+           *
+           *   "Você consegue provar 'o Railway respondeu', mas não 'o Railway
+           *    respondeu usando exatamente o código que acabou de ser
+           *    auditado'."
+           *
+           * Sem este campo, "funciona local e não funciona na nuvem" é uma
+           * tarde de investigação; com ele, é uma linha. Nada aqui vem de
+           * credencial — este endpoint responde sem login. Ver
+           * `IdentidadeBackend`.
+           */
+          backend: identidadeBackend,
           // A interface está NESTE processo ou noutro host? O shell desktop e
           // quem for diagnosticar um deploy precisam da resposta sem adivinhar.
           projecao: MODO === 'unificado' ? 'anexa' : 'externa',
@@ -856,6 +871,10 @@ async function subir(): Promise<void> {
         ? `[iara] barramento em ${CAMINHO_WS} (mesma porta, mesma origem)`
         : `[iara] barramento em ${CAMINHO_WS} (o cliente chega por NEXT_PUBLIC_IARA_WS)`,
     );
+    /* QUAL CÓDIGO SUBIU, na primeira tela de quem abre o log do deploy. Sem
+       isto, saber qual commit está no ar exige entrar no painel do host e
+       cruzar horários — que é o passo que ninguém dá às três da manhã. */
+    console.log(`[iara] código: ${frasearIdentidade()}`);
     console.log(`[iara] persistência: ${persistenciaEmUso()}`);
     console.log(
       motorTemMaos()

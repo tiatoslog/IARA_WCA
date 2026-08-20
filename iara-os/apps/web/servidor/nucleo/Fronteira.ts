@@ -116,6 +116,21 @@ export const ESTADO_INTERNO: readonly string[] = [
    * operador autoriza, o que não descreve nada do que acontece aqui.
    */
   'servidor/nucleo/Pareamento.ts',
+  /**
+   * A IDENTIDADE DO BACKEND. Abre `node:fs` para ler DOIS arquivos e só:
+   * `package.json` (a versão) e `.git/HEAD` (o commit que subiu).
+   *
+   * Leitura pura de metadado do próprio processo, na carga do módulo. Não
+   * alcança o mundo do operador, não escreve nada, não depende de credencial —
+   * e por isso não passa pelo portal, que existe para efeito que a LLM propõe e
+   * o operador autoriza.
+   *
+   * Lê `.git/HEAD` à mão em vez de chamar `git`: um `execFile` aqui a
+   * classificaria como EFEITO EXTERNO, e com razão — abrir processo é abrir
+   * processo. Ler dois arquivos é mais barato, não depende de `git` existir no
+   * contêiner, e mantém este módulo do lado certo da fronteira.
+   */
+  'servidor/nucleo/IdentidadeBackend.ts',
   // O jornal das operações. É a AUDITORIA, não um executor — ver `Fase 3`.
   'servidor/nucleo/kernel/RegistroOperacoes.ts',
   // Estado cognitivo em memória; nada atravessa o processo.

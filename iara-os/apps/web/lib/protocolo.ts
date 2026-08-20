@@ -63,6 +63,17 @@ export type PacoteServidor =
       maquinas: MaquinaDoOperador[];
       /** `false` quando não há banco: sem ele o pareamento não fica guardado. */
       pareamento_disponivel: boolean;
+      /**
+       * A máquina que o operador escolheu, ou `null` para o padrão (o último
+       * que conectou atende). Ver `EscolhaDeMaquina`.
+       *
+       * VEM DO SERVIDOR, e não de estado local da tela, porque é lá que a
+       * escolha mora: um F5 tem de mostrar em qual computador a IARA está
+       * trabalhando, não esquecer. Guardar no cliente faria duas telas do mesmo
+       * operador discordarem sobre onde a próxima ação vai acontecer — que é
+       * exatamente a família de defeito que este gate existe para fechar.
+       */
+      escolhido: string | null;
       ultima_acao?: { ok: boolean; texto: string };
     };
 
@@ -142,7 +153,20 @@ export type PacoteCliente =
    *  hostname que o braço reporta sozinho ("DESKTOP-7F2A") não diz nada; "meu
    *  notebook" ou "PC da sala" diz. `id` é o mesmo `id_credencial` das duas
    *  ações acima. */
-  | { tipo: 'renomear_dispositivo'; id: string; nome: string };
+  | { tipo: 'renomear_dispositivo'; id: string; nome: string }
+  /**
+   * "TRABALHE NESTE COMPUTADOR" — o gate multi-desktop (20/08/2026).
+   *
+   * `id` é o `id_dispositivo` do braço conectado, o mesmo que a gaveta mostra.
+   * `nome` viaja junto porque a recusa de "escolhida e offline" precisa NOMEAR
+   * a máquina, e nesse instante ela já não está no inventário conectado para
+   * alguém perguntar o nome dela.
+   *
+   * `id: null` desfaz a escolha e devolve o padrão: o último que conectou
+   * atende. Desfazer é um pedido tão legítimo quanto escolher, e sem ele a
+   * operadora ficaria presa à última máquina que tocou.
+   */
+  | { tipo: 'escolher_dispositivo'; id: string | null; nome?: string };
 
 /**
  * Prioridade de descarte da fila de telemetria. Quanto menor, mais descartável.
@@ -272,6 +296,15 @@ export function lerPacoteCliente(bruto: string): PacoteCliente | null {
       codigo: codigo.slice(0, 40),
       ...(nome ? { nome } : {}),
     };
+  }
+  if (obj.tipo === 'escolher_dispositivo') {
+    /* `null` explícito é DESESCOLHER, e é diferente de campo ausente — que é
+       pacote malformado e vira descarte. */
+    if (obj.id === null) return { tipo: 'escolher_dispositivo', id: null };
+    const id = typeof obj.id === 'string' ? obj.id.trim() : '';
+    if (!id) return null;
+    const nome = typeof obj.nome === 'string' ? obj.nome.trim().slice(0, 80) : '';
+    return { tipo: 'escolher_dispositivo', id: id.slice(0, 80), ...(nome ? { nome } : {}) };
   }
   if (obj.tipo === 'esquecer_dispositivo') {
     const id = typeof obj.id === 'string' ? obj.id.trim() : '';
