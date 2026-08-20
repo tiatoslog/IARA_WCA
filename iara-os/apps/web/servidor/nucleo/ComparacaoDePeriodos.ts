@@ -175,7 +175,7 @@ const numero = (v: number, casas = 1): string =>
 export function dizerVariacao(c: Comparacao): string {
   if (c.delta === 0) return 'não mudou';
   if (c.sem_base) {
-    return `saiu de zero para ${numero(c.atual, 0)} — não havia base para calcular variação percentual`;
+    return `saiu de zero para ${numero(c.atual, 0)}, e não havia base para calcular variação percentual`;
   }
   const verbo = c.delta > 0 ? 'subiu' : 'caiu';
   return `${verbo} ${numero(Math.abs(c.variacao_pct ?? 0))}%`;

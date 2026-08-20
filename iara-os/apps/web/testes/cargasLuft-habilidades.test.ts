@@ -91,7 +91,10 @@ test(
       assert.equal(r.resolveu, true, r.texto);
       assert.match(r.texto, /2 cargas/, `esperava 2 cargas na semana atual: "${r.texto}"`);
       assert.match(r.texto, /1 carga\b/, `esperava 1 carga na semana anterior: "${r.texto}"`);
-      assert.match(r.texto, /\+500\.0%/, `esperava +500% de variação (3000 vs 500): "${r.texto}"`);
+      /* VÍRGULA, e não ponto. Percentual dito em português usa vírgula decimal,
+         como o dinheiro na mesma frase já usava. A expectativa antiga estava
+         presa ao que o `toFixed` produzia, que é formato de máquina. */
+      assert.match(r.texto, /\+500,0%/, `esperava +500% de variação (3000 vs 500): "${r.texto}"`);
     } finally {
       globalThis.fetch = fetchOriginal;
     }

@@ -558,6 +558,15 @@ export const ANOS_LIDOS = ['2026', '2025', '2024'] as const;
 export type AnoLido = (typeof ANOS_LIDOS)[number];
 
 interface MapaDaAba {
+  /**
+   * O ÍNDICE DA COLUNA "VALOR" — que EXISTE nas três abas e só tem dado em uma.
+   *
+   * Em 2025 e 2024 o cabeçalho está lá, na coluna 24, e a coluna está vazia (1
+   * de 4.030 e 11 de 4.064, medido em 20/08/2026). Manter o índice mapeado é
+   * correto: a coluna é aquela mesmo, e no dia em que a operadora preencher, a
+   * leitura já funciona. Quem decide se dá para responder é `lacunaDeValor`,
+   * que mede o preenchimento REAL do recorte em vez de confiar no cabeçalho.
+   */
   readonly valor: number;
   /** `null` quando a aba não tem a coluna. Ver o comentário acima. */
   readonly status: number | null;
@@ -1282,6 +1291,103 @@ export function contarCargas(cargas: readonly CargaCompleta[]): ContagemDeCargas
   const linhas = cargas.length;
   const unicas = ocis.size + semOci; /* linha sem OCI não é duplicata de ninguém */
   return { linhas, unicas, repetidas: linhas - unicas };
+}
+
+/**
+ * QUANTAS CARGAS DO RECORTE TÊM VALOR LANÇADO — a medição que precisa vir ANTES
+ * de qualquer conta de dinheiro.
+ *
+ * MEDIDO NO ARQUIVO REAL EM 20/08/2026, e o resultado é a razão deste código
+ * existir:
+ *
+ *          cargas   com valor   cobertura
+ *   2026     2689        2688      99,96%
+ *   2025     4030           1       0,02%
+ *   2024     4064          11       0,27%
+ *
+ * A aba de 2025 TEM uma coluna com o cabeçalho "VALOR". Ela está vazia. O
+ * mapeador de colunas achou o rótulo e deu a coluna por mapeada — o cabeçalho
+ * era real, o dado não era. É a mesma família do falso verde por âncora de
+ * texto: procurar o nome e concluir que a coisa existe.
+ *
+ * O que isso produzia, medido antes da correção:
+ *
+ *   "o faturamento cresceu 430.830% de 2025 para 2026"   (R$ 1.100 -> R$ 4,7 mi)
+ *   "a margem caiu 1,13 ponto percentual"                (31,27% apurado sobre UMA carga)
+ *
+ * Os dois números são aritmeticamente corretos e operacionalmente falsos. Nada
+ * cresceu 430.830%: o que mudou foi quem preencheu a planilha. E uma margem
+ * apurada sobre uma carga em quatro mil não é a margem de 2025 — é a margem
+ * daquela carga, com o nome do ano em cima.
+ *
+ * A MEDIÇÃO É FEITA AQUI, e não escrita como constante por ano. Se amanhã a
+ * operadora lançar os valores de 2025, a IARA passa a responder sozinha. Uma
+ * tabela fixa dizendo "2025 não tem valor" viraria mentira no dia do
+ * preenchimento, e ninguém lembraria de ir mexer nela.
+ */
+/**
+ * PERCENTUAL EM PORTUGUÊS — vírgula, não ponto.
+ *
+ * `toFixed` é uma função de máquina e devolve "30.1". Numa frase em português
+ * isso é "30.1%", que ninguém escreve. O dinheiro já saía certo porque
+ * `toLocaleString('pt-BR')` cuidava dele; o percentual passava direto porque
+ * ninguém tinha escrito o formatador equivalente.
+ *
+ * É a mesma família de "82 origems" e "pontos percentualis": a frase montada
+ * pela conveniência do código em vez da gramática de quem lê.
+ */
+export const formatarPorcento = (v: number, casas = 1): string =>
+  `${v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
+
+export interface CoberturaDeValor {
+  readonly total: number;
+  readonly com_valor: number;
+  /** `null` quando o recorte está vazio: 0 de 0 não é 0%, é ausência de recorte. */
+  readonly percentual: number | null;
+}
+
+export function coberturaDeValor(cargas: readonly CargaCompleta[]): CoberturaDeValor {
+  const comValor = cargas.reduce((s, c) => s + (c.valor === null ? 0 : 1), 0);
+  return {
+    total: cargas.length,
+    com_valor: comValor,
+    percentual: cargas.length === 0 ? null : (comValor / cargas.length) * 100,
+  };
+}
+
+/**
+ * O PISO ABAIXO DO QUAL UMA SOMA NÃO É UM TOTAL.
+ *
+ * Metade é a fronteira defensável: acima dela o número é um total com ressalva,
+ * abaixo dela é a soma de uma amostra que ninguém escolheu, apresentada com
+ * nome de total. Não existe percentual "certo" aqui — existe a obrigação de
+ * haver UM, declarado, em vez de a conta sair sempre.
+ *
+ * Entre o piso e 100% a resposta SAI, com a cobertura junto. Recusar a 94% seria
+ * trocar um exagero por outro.
+ */
+export const PISO_DE_COBERTURA_DE_VALOR_PCT = 50;
+
+/**
+ * A frase da recusa, ou `null` quando dá para responder.
+ *
+ * Ela diz o número medido em vez de "dados insuficientes": a operadora é quem
+ * preenche essa planilha, e "1 de 4.030 cargas de 2025 tem valor lançado" é
+ * acionável — ela sabe exatamente o que fazer com isso. "Não consigo calcular"
+ * não é.
+ */
+export function lacunaDeValor(rotulo: string, c: CoberturaDeValor): string | null {
+  if (c.percentual === null) return `Não há carga nenhuma em ${rotulo}, então não há valor a somar.`;
+  if (c.percentual >= PISO_DE_COBERTURA_DE_VALOR_PCT) return null;
+  return (
+    `Não vou responder isso com os dados de ${rotulo}: só ${c.com_valor} ` +
+    `de ${c.total} carga${c.total === 1 ? '' : 's'} ` +
+    `(${formatarPorcento(Math.floor((c.percentual ?? 0) * 100) / 100, 2)}) tem valor lançado na planilha. ` +
+    `A coluna VALOR existe nessa aba e está praticamente vazia, então qualquer soma, média ou margem ` +
+    `que eu apresentasse seria de um punhado de cargas com o nome do período inteiro em cima. ` +
+    `Contagem, motoristas, postos e centrais desse período eu respondo normalmente. ` +
+    `O que falta é o dinheiro.`
+  );
 }
 
 /**

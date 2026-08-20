@@ -22,8 +22,11 @@ import {
   cargasDoAno,
   type AnoLido,
   cargasNoPeriodo,
+  coberturaDeValor,
   contarCargas,
+  lacunaDeValor,
   contarDistintos,
+  formatarPorcento,
   semMovimentoNaJanela,
   tabelaDeTrechos,
   suspeitasDeIdentidade,
@@ -172,18 +175,29 @@ function proveniencia(campos: Readonly<Record<string, string | number | boolean>
  * `status` não flexiona em português — e é por isso que o mapa guarda as duas
  * formas em vez de calcular o plural com um "s".
  */
-const NOME_DA_DIMENSAO: Readonly<Record<AgruparPor, { um: string; varios: string }>> = {
-  motorista: { um: 'motorista', varios: 'motoristas' },
-  rota: { um: 'rota', varios: 'rotas' },
+/**
+ * O GÊNERO VAI DECLARADO, e não deduzido da última letra.
+ *
+ * "mais de um central" saiu daqui em 20/08/2026: a frase montava o artigo com
+ * `endsWith('a')`, e "central" é feminino sem terminar em A. É o mesmo erro de
+ * fazer plural por concatenação, que já tinha produzido "pontos percentualis" e
+ * "82 origems" — português não sai de regra de sufixo, e cada vez que se tenta,
+ * a frase quebra num caso que ninguém listou.
+ *
+ * Seis palavras. Escrevê-las é mais barato que qualquer heurística.
+ */
+const NOME_DA_DIMENSAO: Readonly<Record<AgruparPor, { um: string; varios: string; artigo: 'um' | 'uma' }>> = {
+  motorista: { um: 'motorista', varios: 'motoristas', artigo: 'um' },
+  rota: { um: 'rota', varios: 'rotas', artigo: 'uma' },
   /* POSTO e CENTRAL, não "origem" e "destino": são os nomes da coisa nesta
      operação, e a coluna é só onde eles moram. Dizer "82 origens" obriga quem
      lê a traduzir de volta; dizer "82 postos" já é a resposta. A procedência
      continua carimbando `dimensao=origem`, que é o que o auditor confere. */
-  origem: { um: 'posto', varios: 'postos' },
-  destino: { um: 'central', varios: 'centrais' },
-  status: { um: 'status', varios: 'status' },
-  status_normalizado: { um: 'status', varios: 'status' },
-  nenhum: { um: 'registro', varios: 'registros' },
+  origem: { um: 'posto', varios: 'postos', artigo: 'um' },
+  destino: { um: 'central', varios: 'centrais', artigo: 'uma' },
+  status: { um: 'status', varios: 'status', artigo: 'um' },
+  status_normalizado: { um: 'status', varios: 'status', artigo: 'um' },
+  nenhum: { um: 'registro', varios: 'registros', artigo: 'um' },
 };
 
 const METRICAS = ['contagem', 'valor_total', 'valor_medio', 'distintos', 'sem_movimento', 'margem'] as const;
@@ -501,6 +515,33 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
     };
 
     /**
+     * A PLANILHA PRECISA TER O DINHEIRO ANTES DE EU FALAR DE DINHEIRO.
+     *
+     * Três métricas dependem da coluna VALOR: soma, média e margem. As outras
+     * (contagem, distintos, sem_movimento) não tocam nela e seguem direto.
+     *
+     * A verificação é sobre o RECORTE já filtrado, não sobre o ano: "faturamento
+     * de março de 2026" pode ter cobertura pior que 2026 inteiro, e é a cobertura
+     * do que vai ser somado que autoriza somar. Ver `lacunaDeValor`, que carrega
+     * a medição de 20/08/2026 e o que ela evitava.
+     */
+    if (metrica === 'valor_total' || metrica === 'valor_medio' || metrica === 'margem') {
+      const lacuna = lacunaDeValor(rotuloPeriodo, coberturaDeValor(cargas));
+      if (lacuna) {
+        return {
+          texto: lacuna,
+          detalhe: proveniencia({
+            ...baseProveniencia,
+            operacao: metrica.toUpperCase(),
+            resultado: 'sem_valor_lancado',
+            cobertura_valor_pct: (coberturaDeValor(cargas).percentual ?? 0).toFixed(2),
+          }),
+          resolveu: false,
+        };
+      }
+    }
+
+    /**
      * MARGEM — a única métrica que CRUZA duas fontes, e por isso a única que
      * carrega cobertura na resposta.
      *
@@ -509,7 +550,13 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
      * `origem → destino`, medido em 19/08/2026 antes de escrever isto:
      *
      *   trechos únicos 117 · chaves ambíguas 0 · fórmula confere 117/117
-     *   cobertura por CARGA — 2026: 100%   2025: 94,4%   2024: 88,1%
+     *   cobertura de TRECHO por carga — 2026: 100%   2025: 94,4%   2024: 88,1%
+     *
+     * Esses 94,4% e 88,1% são de ROTA achada no tabelário, e por muito tempo
+     * este comentário parecia dizer que 2025 e 2024 davam para calcular. Não
+     * dão: a margem precisa dos DOIS lados, e o lado da receita está vazio nessas
+     * abas (1 valor em 4.030, 11 em 4.064 — ver `lacunaDeValor`). Ter o custo de
+     * 94% dos trechos não ajuda quando não se sabe o que se cobrou por eles.
      *
      * A COBERTURA SAI JUNTO COM O NÚMERO, sempre que não for total. "A margem da
      * operação é 32%" dita sobre 88% das cargas é uma afirmação sobre um
@@ -553,13 +600,47 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
          * nunca pode arredondar na direção otimista.
          */
         const cobre = Math.floor((c.percentual ?? 0) * 10) / 10;
-        return `\n\nA conta cobre ${cobre.toFixed(1)}% das cargas do recorte: ${partes.join('; ')}.`;
+        return `\n\nA conta cobre ${formatarPorcento(cobre)} das cargas do recorte: ${partes.join('; ')}.`;
       };
 
       if (agruparPor === 'nenhum') {
         const m = calcularMargem(cargas, t.tabela);
+        const recorteDoRamo = [
+          {
+            dimensao: 'periodo',
+            valor: periodo ? `${periodo.inicio}..${periodo.fim}` : `ano ${anoPedido}`,
+          },
+        ];
         if (m.percentual_bruto === null) {
+          /**
+           * O RAMO SEM BASE TAMBÉM EMITE EVIDÊNCIA — e sem isto a trava mais
+           * importante da camada analítica era inalcançável em produção.
+           *
+           * A auditoria independente (19/08/2026) mediu: `R1` ("ausência não é
+           * zero") e o caminho de ABSTENÇÃO só disparavam em teste, porque o
+           * único emissor de evidência tipada do produto era o ramo de sucesso
+           * logo abaixo — que por construção sempre entrega três evidências
+           * completas e finitas. O caso exato que a regra existe para pegar
+           * (nenhuma carga com preço E receita no recorte) retornava sem
+           * `evidencias`, e a camada nem engajava.
+           *
+           * Uma trava que não alcança o caso que a motivou é decoração. Aqui a
+           * cobertura vem com `consideradas: 0`, R1 dispara como impeditiva, e
+           * o turno termina em abstenção determinística — sem passar pela LLM.
+           */
           return {
+            evidencias: [
+              {
+                metrica: 'margem_bruta_pct',
+                fonte: 'planilha_luft+tabela_trechos',
+                valor: 0,
+                unidade: '%',
+                procedencia: 'fato' as const,
+                relevancia: 'direta' as const,
+                instante: new Date().toISOString(),
+                cobertura: deCoberturaDeJoin(m.cobertura, recorteDoRamo),
+              },
+            ],
             texto: `${rotuloPeriodo}: nenhuma carga com receita lançada e preço de trecho, então não há margem a calcular.${dizerCobertura(m.cobertura)}`,
             detalhe: proveniencia({ ...baseProveniencia, operacao: 'MARGEM', resultado: 'sem_base' }),
             resolveu: true,
@@ -584,26 +665,25 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
         /**
          * O RECORTE CARIMBA A ABA QUE RESPONDEU (`anoPedido`), NUNCA `ANO_VIVO`.
          *
-         * A primeira versão desta linha usava a constante, e ela nasceu certa e
-         * ficou errada no mesmo dia: a leitura por ano chegou depois, e desde
-         * então uma consulta a 2024 saía com o recorte dizendo 2026. O estrago
-         * não é cosmético — `Cobertura.saoComparaveis` decide se dois lados de
-         * uma comparação batem OLHANDO O RECORTE, e dois anos diferentes com o
-         * mesmo rótulo passariam como comparáveis. A ressalva de denominador
-         * móvel ficaria cega exatamente no caso que ela existe para pegar
-         * (2026 a 100% contra 2024 a 88%).
+         * A primeira versão usava a constante, e ela nasceu certa e ficou errada
+         * no mesmo dia: a leitura por ano chegou depois, e uma consulta a 2024
+         * saía com o recorte dizendo 2026.
          *
-         * Mesma lição da procedência logo acima, e a mesma do `fonte: '2026'`
-         * que virou `fonte: anoPedido`: rótulo carimbado por constante mente no
-         * dia em que a fonte deixa de ser única.
+         * ⚠️ CORREÇÃO DA JUSTIFICATIVA (auditoria independente, 19/08/2026). A
+         * primeira redação deste comentário dizia que `Cobertura.saoComparaveis`
+         * decide olhando o recorte e que dois anos com o mesmo rótulo passariam
+         * como comparáveis. **Era falso**: aquela função lê `r.dimensao` e nunca
+         * `r.valor` — e deve mesmo, porque valores diferentes na mesma dimensão
+         * são exatamente a comparação que se quer fazer.
+         *
+         * O que o rótulo errado de fato estragava, e não é pouco: `mesmoRecorte`
+         * em R4 (é comparação ou é contradição?), a lista de `limitacoes`, a
+         * `linhaDeAuditoria` e o texto que sai ao operador — todos passariam a
+         * dizer 2026 sobre um número de 2024. Um comentário que promete mais do
+         * que a condição ao lado entrega é o modo de falhar que esta casa já
+         * catalogou; ele fica aqui corrigido em vez de apagado.
          */
-        const recorteDaMargem = [
-          {
-            dimensao: 'periodo',
-            valor: periodo ? `${periodo.inicio}..${periodo.fim}` : `ano ${anoPedido}`,
-          },
-        ];
-        const coberturaDaMargem = deCoberturaDeJoin(m.cobertura, recorteDaMargem);
+        const coberturaDaMargem = deCoberturaDeJoin(m.cobertura, recorteDoRamo);
         const instanteDaMargem = new Date().toISOString();
         const evidenciaBase = {
           fonte: 'planilha_luft+tabela_trechos',
@@ -620,12 +700,12 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
           ],
           texto:
             `${rotuloPeriodo}: margem bruta de ${formatarReal(m.resultado_bruto)}, ` +
-            `que é ${m.percentual_bruto.toFixed(1)}% sobre ${formatarReal(m.receita)} faturados. ` +
+            `que é ${formatarPorcento(m.percentual_bruto)} sobre ${formatarReal(m.receita)} faturados. ` +
             `Descontando o pedágio de ida, sobram ${formatarReal(m.resultado_com_pedagio)} ` +
-            `(${(m.percentual_com_pedagio ?? 0).toFixed(1)}%).` +
+            `(${formatarPorcento(m.percentual_com_pedagio ?? 0)}).` +
             (media === null
               ? ''
-              : `\n\nEssa é a margem do VOLUME, ponderada pelo que cada carga faturou. A margem da rota típica é outra conta e dá ${media.toFixed(1)}% — as duas estão certas e respondem coisas diferentes.`) +
+              : `\n\nEssa é a margem do VOLUME, ponderada pelo que cada carga faturou. A margem da rota típica é outra conta e dá ${formatarPorcento(media)}. As duas estão certas e respondem coisas diferentes.`) +
             dizerCobertura(m.cobertura),
           detalhe: proveniencia({
             ...baseProveniencia,
@@ -655,7 +735,7 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
         .map(
           (g, i) =>
             `${i + 1}. ${g.chave}: ${formatarReal(g.margem.resultado_bruto)} de margem` +
-            (g.margem.percentual_bruto === null ? '' : ` (${g.margem.percentual_bruto.toFixed(1)}%)`) +
+            (g.margem.percentual_bruto === null ? '' : ` (${formatarPorcento(g.margem.percentual_bruto)})`) +
             `, sobre ${g.margem.cobertura.com_preco} carga${g.margem.cobertura.com_preco === 1 ? '' : 's'}`,
         );
       const geral = calcularMargem(cargas, t.tabela);
@@ -1048,7 +1128,7 @@ function formatarDelta(atual: number, anterior: number): string {
   if (anterior === 0) return atual === 0 ? 'sem variação (as duas semanas em zero)' : 'sem base de comparação (semana anterior em zero)';
   const pct = ((atual - anterior) / anterior) * 100;
   const sinal = pct >= 0 ? '+' : '';
-  return `${sinal}${pct.toFixed(1)}%`;
+  return `${sinal}${formatarPorcento(pct)}`;
 }
 
 export const compararSemanasLuft: Habilidade = {
@@ -1331,7 +1411,7 @@ export const compararAnosLuft: Habilidade = {
 
     if (anoAtual === anoAnterior) {
       return {
-        texto: `Os dois anos são o mesmo (${anoAtual}) — não há o que comparar. Me diga os dois anos que você quer confrontar.`,
+        texto: `Os dois anos são o mesmo (${anoAtual}), então não há o que comparar. Me diga os dois anos que você quer confrontar.`,
         detalhe: proveniencia({ fonte: 'planilha LUFT', operacao: 'COMPARACAO', resultado: 'anos_iguais' }),
         resolveu: false,
       };
@@ -1355,6 +1435,40 @@ export const compararAnosLuft: Habilidade = {
       deterministico: true,
     };
 
+    /**
+     * OS DOIS LADOS PRECISAM TER DINHEIRO — e aqui a recusa importa mais que na
+     * pergunta de um ano só.
+     *
+     * Comparar 2026 (99,96% de cobertura) com 2025 (0,02%) produzia o pior
+     * número que este código já emitiu: *"o faturamento cresceu 430.830%"*. A
+     * variação é aritmeticamente correta e diz respeito a preenchimento de
+     * planilha, não a operação. Uma comparação entre um ano medido e um ano não
+     * medido não é uma comparação ruim: não é uma comparação.
+     *
+     * A recusa NOMEIA O LADO que falta, porque o outro pode estar perfeito e a
+     * operadora precisa saber onde mexer.
+     */
+    if (metrica === 'valor_total' || metrica === 'margem') {
+      const lados: string[] = [];
+      for (const [ano, r] of [
+        [anoAnterior, a],
+        [anoAtual, b],
+      ] as const) {
+        const lacuna = lacunaDeValor(ano, coberturaDeValor(r.cargas));
+        if (lacuna) lados.push(lacuna);
+      }
+      if (lados.length > 0) {
+        return {
+          texto:
+            lados.join('\n\n') +
+            `\n\nO que eu comparo entre ${anoAnterior} e ${anoAtual} sem depender de valor: ` +
+            'quantidade de cargas, motoristas distintos, e o movimento por posto, central ou rota.',
+          detalhe: proveniencia({ ...base, resultado: 'sem_valor_lancado', lados_sem_valor: String(lados.length) }),
+          resolveu: false,
+        };
+      }
+    }
+
     /* ---- MARGEM: percentual, então a variação é em PONTOS ---- */
     if (metrica === 'margem') {
       const t = await tabelaDeTrechos();
@@ -1370,8 +1484,8 @@ export const compararAnosLuft: Habilidade = {
       const pct = compararPercentual(mA.percentual_bruto, mB.percentual_bruto);
       const resultado = comparar(mA.resultado_bruto, mB.resultado_bruto);
       const cobertura =
-        `\n\nA conta cobre ${(Math.floor((mA.cobertura.percentual ?? 0) * 10) / 10).toFixed(1)}% das cargas de ${anoAnterior} ` +
-        `e ${(Math.floor((mB.cobertura.percentual ?? 0) * 10) / 10).toFixed(1)}% das de ${anoAtual}. ` +
+        `\n\nA conta cobre ${formatarPorcento(Math.floor((mA.cobertura.percentual ?? 0) * 10) / 10)} das cargas de ${anoAnterior} ` +
+        `e ${formatarPorcento(Math.floor((mB.cobertura.percentual ?? 0) * 10) / 10)} das de ${anoAtual}. ` +
         'Onde a cobertura difere, parte da diferença pode ser de rota sem preço na tabela, não de operação.';
       return {
         texto:
@@ -1409,24 +1523,99 @@ export const compararAnosLuft: Habilidade = {
       return {
         texto:
           `${nomeDaMetrica[0].toUpperCase()}${nomeDaMetrica.slice(1)}: ${comoTexto(c.anterior)} em ${anoAnterior} ` +
-          `contra ${comoTexto(c.atual)} em ${anoAtual} — ${dizerVariacao(c)}` +
+          `contra ${comoTexto(c.atual)} em ${anoAtual}: ${dizerVariacao(c)}` +
           (c.sem_base ? '.' : ` (diferença de ${comoTexto(Math.abs(c.delta))}).`),
         detalhe: proveniencia({ ...base, anterior: c.anterior, atual: c.atual, delta: c.delta }),
         resolveu: true,
       };
     }
 
-    /* ---- DECOMPOSIÇÃO: quem explica o movimento ---- */
+    /**
+     * DECOMPOSIÇÃO: quem explica o movimento — e as PARTES TÊM DE SOMAR O TODO.
+     *
+     * MEDIDO EM 20/08/2026, e a primeira versão errava por 8: a manchete dizia
+     * "4022 → 2689" e as contribuições eram calculadas sobre 4030 → 2689. A
+     * manchete contava CARGAS (OCI distinta, que é a identidade de uma carga) e
+     * o agrupamento contava LINHAS. 2025 tem 8 linhas repetidas, e elas
+     * reapareciam aqui depois de terem sido removidas lá em cima.
+     *
+     * Ninguém somaria as dez linhas à mão para descobrir isso. É justamente por
+     * isso que precisa estar certo: um erro que só aparece na conferência que
+     * ninguém faz é um erro que fica.
+     *
+     * A regra: o grupo conta a MESMA COISA que a manchete conta. Para valor, a
+     * soma dos valores; para o resto, OCIs distintas.
+     */
     const porGrupo = (cargas: readonly CargaCompleta[]): Map<string, number> => {
-      const m = new Map<string, number>();
+      if (metrica === 'valor_total') {
+        const m = new Map<string, number>();
+        for (const carga of cargas) {
+          const v = valorDaDimensao(carga, agruparPor);
+          if (v === null) continue;
+          m.set(v, (m.get(v) ?? 0) + (carga.valor ?? 0));
+        }
+        return m;
+      }
+      /* Contagem: OCI distinta por grupo, a mesma identidade de `contarCargas`.
+         Linha sem OCI não é duplicata de ninguém e conta uma. */
+      const ocis = new Map<string, Set<string>>();
+      const soltas = new Map<string, number>();
       for (const carga of cargas) {
         const v = valorDaDimensao(carga, agruparPor);
         if (v === null) continue;
-        const soma = metrica === 'valor_total' ? (carga.valor ?? 0) : 1;
-        m.set(v, (m.get(v) ?? 0) + soma);
+        const oci = carga.oci.trim().toUpperCase();
+        if (oci === '') soltas.set(v, (soltas.get(v) ?? 0) + 1);
+        else (ocis.get(v) ?? ocis.set(v, new Set()).get(v)!).add(oci);
       }
+      const m = new Map<string, number>();
+      for (const [v, s] of ocis) m.set(v, s.size);
+      for (const [v, n] of soltas) m.set(v, (m.get(v) ?? 0) + n);
       return m;
     };
+
+/**
+     * POR QUE AS PARTES PODEM NÃO SOMAR O TODO — as duas causas, medidas.
+     *
+     * Depois de fazer o grupo contar OCI distinta, a soma das centrais de 2025
+     * ainda deu 4029 contra os 4022 da manchete. Nenhuma carga está sem central.
+     * A causa é outra e só apareceu porque a conta foi conferida:
+     *
+     *   SETE OCIs DE 2025 APARECEM SOB DUAS CENTRAIS DIFERENTES.
+     *
+     * A mesma carga, registrada com dois destinos. Ela conta uma vez na
+     * manchete, porque é uma carga; e conta em cada uma das duas centrais,
+     * porque esteve nas duas segundo a planilha. As duas contagens estão certas
+     * — o que não pode é a diferença ficar muda.
+     *
+     * Isto interessa à operadora mais do que a aritmética: sete cargas com dois
+     * destinos é coisa para conferir na fonte, e ela não tinha como saber.
+     *
+     * A outra causa é a carga SEM a dimensão preenchida, que fica fora e faz a
+     * soma ficar menor. Inventar um grupo "(sem central)" faria a ausência virar
+     * entidade, que é o defeito DIST-002. As duas saem declaradas.
+     */
+    interface DivergenciaDoAgrupamento {
+      readonly sem_dimensao: number;
+      readonly em_mais_de_um: number;
+    }
+    const divergencia = (cargas: readonly CargaCompleta[]): DivergenciaDoAgrupamento => {
+      const valoresPorOci = new Map<string, Set<string>>();
+      let semDimensao = 0;
+      for (const carga of cargas) {
+        const v = valorDaDimensao(carga, agruparPor);
+        if (v === null) {
+          semDimensao += 1;
+          continue;
+        }
+        const oci = carga.oci.trim().toUpperCase();
+        if (oci === '') continue; /* linha sem OCI não tem como estar em dois lugares */
+        (valoresPorOci.get(oci) ?? valoresPorOci.set(oci, new Set()).get(oci)!).add(v);
+      }
+      let emMaisDeUm = 0;
+      for (const s of valoresPorOci.values()) if (s.size > 1) emMaisDeUm += 1;
+      return { sem_dimensao: semDimensao, em_mais_de_um: emMaisDeUm };
+    };
+
     const d = decompor(porGrupo(a.cargas), porGrupo(b.cargas));
     const rotulo = NOME_DA_DIMENSAO[agruparPor];
     const TOPO_COMP = 10;
@@ -1438,21 +1627,48 @@ export const compararAnosLuft: Habilidade = {
         const parte =
           g.contribuicao_pct === null
             ? ''
-            : ` — ${g.contribuicao_pct.toFixed(0)}% do movimento total`;
+            : `, ${formatarPorcento(g.contribuicao_pct, 0)} do movimento total`;
         return `${i + 1}. ${g.chave}: ${comoTexto(g.anterior)} → ${comoTexto(g.atual)} (${seta}${comoTexto(g.delta)})${parte}`;
       });
 
     const ressalvas: string[] = [];
     if (d.tem_direcao_oposta) {
       ressalvas.push(
-        `Há ${rotulo.varios} andando na direção contrária à do total, então as porcentagens de contribuição podem passar de 100% — isso é o movimento se cancelando, não erro de conta.`,
+        `Há ${rotulo.varios} andando na direção contrária à do total, então as porcentagens de contribuição podem passar de 100%. Isso é o movimento se cancelando, não erro de conta.`,
       );
     }
+    /* "1 centrais só aparecem em 2026" saiu da primeira versão. É o mesmo
+       defeito de "82 origems": a frase monta o plural sem olhar o número. Aqui a
+       concordância pega o substantivo E o verbo. */
+    const quantos = (n: number): string => `${n} ${n === 1 ? rotulo.um : rotulo.varios}`;
     if (d.so_no_anterior.length > 0) {
-      ressalvas.push(`${d.so_no_anterior.length} ${rotulo.varios} apareciam em ${anoAnterior} e sumiram em ${anoAtual}.`);
+      const n = d.so_no_anterior.length;
+      ressalvas.push(
+        `${quantos(n)} ${n === 1 ? 'aparecia' : 'apareciam'} em ${anoAnterior} e ${n === 1 ? 'sumiu' : 'sumiram'} em ${anoAtual}.`,
+      );
     }
     if (d.so_no_atual.length > 0) {
-      ressalvas.push(`${d.so_no_atual.length} ${rotulo.varios} só aparecem em ${anoAtual}.`);
+      const n = d.so_no_atual.length;
+      ressalvas.push(`${quantos(n)} só ${n === 1 ? 'aparece' : 'aparecem'} em ${anoAtual}.`);
+    }
+    /* POR QUE AS PARTES NÃO FECHAM COM O TOTAL — ver `divergencia`. */
+    const divA = divergencia(a.cargas);
+    const divB = divergencia(b.cargas);
+    const fora = divA.sem_dimensao + divB.sem_dimensao;
+    const duplas = divA.em_mais_de_um + divB.em_mais_de_um;
+    if (fora > 0) {
+      ressalvas.push(
+        `${fora} carga${fora === 1 ? '' : 's'} não ${fora === 1 ? 'tem' : 'têm'} ${rotulo.um} ` +
+          `na planilha e ${fora === 1 ? 'ficou' : 'ficaram'} fora desta divisão.`,
+      );
+    }
+    if (duplas > 0) {
+      ressalvas.push(
+        `${duplas} carga${duplas === 1 ? '' : 's'} ${duplas === 1 ? 'aparece' : 'aparecem'} na planilha com ` +
+          `mais de ${rotulo.artigo} ${rotulo.um}, então ${duplas === 1 ? 'conta' : 'contam'} ` +
+          `em cada ${rotulo.um} e a soma das partes passa do total. Vale conferir ` +
+          `ess${duplas === 1 ? 'e registro' : 'es registros'} na fonte.`,
+      );
     }
 
     return {
