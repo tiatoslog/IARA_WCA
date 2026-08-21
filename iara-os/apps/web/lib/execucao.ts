@@ -193,6 +193,17 @@ export const ESTADOS_INCERTOS: readonly EstadoExecucao[] = ['expirou'];
 export type CodigoErro =
   | 'DESKTOP_OFFLINE'
   | 'APP_NAO_ENCONTRADO'
+  /**
+   * O programa INICIOU e nenhuma janela apareceu na tela.
+   *
+   * Nasceu em 21/08/2026, do caso em que a IARA disse "Pronto. Abri o Bloco de
+   * Notas" com a tela vazia. É deliberadamente distinto de
+   * `APP_NAO_ENCONTRADO`: ali o programa não existe na máquina, aqui ele existe
+   * e não se mostrou. As duas frases são diferentes porque as duas causas são
+   * diferentes, e juntar as duas devolveria "não está instalado" sobre um
+   * programa instalado.
+   */
+  | 'APP_SEM_JANELA'
   | 'ARQUIVO_NAO_ENCONTRADO'
   | 'PERMISSAO_NEGADA'
   | 'PARAMETRO_INVALIDO'
@@ -217,6 +228,7 @@ export type CodigoErro =
 export const CODIGOS_ERRO: readonly CodigoErro[] = [
   'DESKTOP_OFFLINE',
   'APP_NAO_ENCONTRADO',
+  'APP_SEM_JANELA',
   'ARQUIVO_NAO_ENCONTRADO',
   'PERMISSAO_NEGADA',
   'PARAMETRO_INVALIDO',
@@ -230,6 +242,10 @@ export const RETENTAVEL: Record<CodigoErro, boolean> = {
   DESKTOP_OFFLINE: true,
   ERRO_DE_REDE: true,
   APP_NAO_ENCONTRADO: false,
+  /* Não retentável: a segunda tentativa encontra o mesmo programa residente e
+     produz a mesma ausência de janela. Repetir aqui é o laço que a operadora
+     viveu à mão — pediu duas vezes, ouviu "Pronto" duas vezes, viu nada. */
+  APP_SEM_JANELA: false,
   ARQUIVO_NAO_ENCONTRADO: false,
   PERMISSAO_NEGADA: false,
   PARAMETRO_INVALIDO: false,

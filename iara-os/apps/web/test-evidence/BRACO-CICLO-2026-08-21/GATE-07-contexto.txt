@@ -1,0 +1,16 @@
+﻿EXPERIMENTO C - contexto de lancamento - 2026-08-21T11:54:23.5570421-03:00
+quem: COMPUTADOR\daian
+sessao deste processo: 1
+sanidade da enumeracao: 12 janelas visiveis com titulo
+
+notepads antes: 0
+pid lancado por node (windowsHide: true, como o braco): 10616
+
+processos notepad depois: 1
+   pid=26328 pai=10616 linha="C:\Program Files\WindowsApps\Microsoft.WindowsNotepad_11.2606.15.0_x64__8wekyb3d8bbwe\Notepad\Notepad.exe" /SESSION:KnOVHdBdKk2QZI4MHxCaKwAAAAABAAABeCkAANBdKk2MAwAAAAAAAA==
+
+JANELAS VISIVEIS DE NOTEPAD: 1
+   26328|* .env.local - Bloco de notas
+
+VEREDITO DESTE EXPERIMENTO:
+  janela APARECEU -> o contexto do Agendador NAO e a causa

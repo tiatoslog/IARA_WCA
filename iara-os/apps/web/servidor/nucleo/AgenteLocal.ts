@@ -955,6 +955,16 @@ export type Lancador = (
 
 const GRACA_LANCAMENTO_MS = 1500;
 
+/**
+ * Quanto esperar por uma janela depois do lançamento.
+ *
+ * Oito segundos porque a Calculadora numa máquina fria leva um par de segundos
+ * para acordar, e o Chrome com sessão grande passa disso — e porque o custo de
+ * errar para baixo é dizer "não abriu" sobre um programa que abriu. Errar para
+ * cima custa espera; errar para baixo custa confiança.
+ */
+const ESPERA_JANELA_MS = 8000;
+
 const lancadorReal: Lancador = (comando, argumentos) =>
   new Promise((resolver) => {
     let respondido = false;
@@ -1043,6 +1053,166 @@ const sondaReal: SondaProcessos = (imagem) =>
       },
     );
   });
+
+/**
+ * A SONDA DE JANELAS — o oráculo que faltava, e o defeito que ele fecha.
+ *
+ * 21/08/2026, com a operadora na frente da máquina: ela pediu o Bloco de Notas
+ * e a IARA respondeu *"Pronto. Abri o Bloco de Notas no computador."* Nenhuma
+ * janela apareceu. Ela pediu de novo, e ouviu a mesma frase.
+ *
+ * O que estava sendo medido era a CONTAGEM DE PROCESSOS. Ela subiu de fato:
+ *
+ *     notepad 25908  pai=6168 (o runtime)  sessao=1  criado 11:36:58
+ *     EnumWindows na sessão 1 → nenhuma janela de topo pertence a esse PID
+ *
+ * Processo criado e aplicativo aberto são proposições diferentes, e o oráculo
+ * media a primeira enquanto a frase prometia a segunda.
+ *
+ * DUAS HIPÓTESES FORAM REFUTADAS POR EXPERIMENTO antes de qualquer conserto,
+ * e as duas eram plausíveis:
+ *
+ *   H1  `windowsHide: true` esconderia a janela do app gráfico.
+ *       REFUTADA: `windowsHide` true e false, em rodadas isoladas, produziram
+ *       2 janelas visíveis cada.
+ *   H8  o contexto do Agendador (InteractiveToken) não ativaria apps MSIX.
+ *       REFUTADA: lançado de uma tarefa agendada, a janela apareceu.
+ *
+ * Ficou uma terceira (instância MSIX residente absorvendo a ativação) que a
+ * medição não fechou. E **isso deixou de importar**: com um oráculo que olha o
+ * efeito, qualquer causa produz a mesma resposta honesta — "não consegui
+ * confirmar que a janela apareceu" — em vez de "Pronto".
+ *
+ * POR QUE POR NOME DE IMAGEM, e não pelo PID que lançamos: em app empacotado o
+ * processo que ganha a janela NÃO é o que a gente iniciou. Medido:
+ * `notepad.exe` (stub, pid 10616) → `Notepad.exe` do WindowsApps (pid 26328),
+ * e a janela é do segundo. Casar pelo PID lançado daria "sem janela" com a
+ * janela na tela.
+ *
+ * `null` = não sei olhar. Mesma distinção de `sondaReal`: "olhei e não havia"
+ * e "não consigo olhar" pedem frases diferentes ao operador.
+ */
+export type SondaJanelas = (
+  imagem: string,
+  /** Handles já existentes ANTES do pedido. A espera termina quando aparecer um fora desta lista. */
+  ignorar?: readonly number[],
+  /** Quanto esperar por uma janela nova. `0` = fotografa e devolve. */
+  esperarMs?: number,
+) => Promise<number[] | null>;
+
+/**
+ * UMA invocação só, que espera POR DENTRO.
+ *
+ * A alternativa era o Node sondar em laço, e sairiam dez processos de
+ * PowerShell por clique. O script recebe o que já existia e devolve assim que
+ * vir algo novo — ou no fim do prazo, com o que houver.
+ *
+ * `EnumWindows` e não `Get-Process().MainWindowHandle`: o segundo devolve UMA
+ * janela por processo e mede zero em contextos onde a enumeração real funciona
+ * — foi exatamente o que aconteceu comigo ao medir daqui, e uma sonda cega
+ * reprovaria toda abertura legítima.
+ */
+const sondaJanelasReal: SondaJanelas = (imagem, ignorar = [], esperarMs = 0) =>
+  new Promise((resolver) => {
+    if (process.platform !== 'win32') {
+      resolver(null);
+      return;
+    }
+    /* `imagem` vem do catálogo fechado de `APLICATIVOS`, nunca do operador — mas
+       o filtro tira qualquer coisa que não seja nome de executável, porque a
+       distância entre "vem do catálogo hoje" e "vem de um parâmetro amanhã" é
+       uma refatoração distraída. */
+    const alvo = imagem.replace(/[^A-Za-z0-9._-]/g, '');
+    const excluidos = ignorar.filter((n) => Number.isInteger(n)).join(',');
+    const prazo = Math.max(0, Math.min(20_000, Math.trunc(esperarMs)));
+
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', SCRIPT_JANELAS],
+      {
+        windowsHide: true,
+        encoding: 'utf8',
+        timeout: prazo + 15_000,
+        env: { ...process.env, IARA_JANELA_IMAGEM: alvo, IARA_JANELA_IGNORAR: excluidos, IARA_JANELA_PRAZO: String(prazo) },
+      },
+      (erro, saida) => {
+        if (erro) {
+          resolver(null);
+          return;
+        }
+        const linha = saida.trim().split(/\r?\n/).pop() ?? '';
+        if (linha === 'SEM_MEIO') {
+          resolver(null);
+          return;
+        }
+        resolver(
+          linha
+            .split(',')
+            .map((n) => Number(n.trim()))
+            .filter((n) => Number.isFinite(n) && n > 0),
+        );
+      },
+    );
+  });
+
+/**
+ * CONSTANTE, e os parâmetros entram por variável de ambiente — nunca por
+ * interpolação. Um script montado por concatenação é injeção esperando
+ * acontecer, e a mesma decisão já governa `SCRIPT_PROCESSOS`.
+ */
+const SCRIPT_JANELAS = `
+$ErrorActionPreference = 'Stop'
+try {
+  Add-Type @"
+using System;
+using System.Text;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+public class IaraJanelas {
+  [DllImport("user32.dll")] static extern bool EnumWindows(EnumWindowsProc f, IntPtr p);
+  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] static extern int GetWindowTextLength(IntPtr h);
+  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  delegate bool EnumWindowsProc(IntPtr h, IntPtr p);
+  public static List<string> Visiveis() {
+    var r = new List<string>();
+    EnumWindows((h, l) => {
+      if (!IsWindowVisible(h)) return true;
+      if (GetWindowTextLength(h) == 0) return true;
+      uint pid; GetWindowThreadProcessId(h, out pid);
+      r.Add(pid + ":" + h.ToInt64());
+      return true;
+    }, IntPtr.Zero);
+    return r;
+  }
+}
+"@
+} catch { Write-Output 'SEM_MEIO'; exit 0 }
+
+$imagem  = $env:IARA_JANELA_IMAGEM -replace '\\.exe$',''
+$ignorar = @()
+if ($env:IARA_JANELA_IGNORAR) { $ignorar = $env:IARA_JANELA_IGNORAR -split ',' | ForEach-Object { [int64]$_ } }
+$prazo   = [int]$env:IARA_JANELA_PRAZO
+$fim     = (Get-Date).AddMilliseconds([Math]::Max($prazo, 1))
+
+$achadas = @()
+do {
+  $pids = @(Get-Process -Name $imagem -ErrorAction SilentlyContinue | ForEach-Object { [string]$_.Id })
+  $achadas = @()
+  if ($pids.Count -gt 0) {
+    foreach ($v in [IaraJanelas]::Visiveis()) {
+      $partes = $v -split ':'
+      if ($pids -contains $partes[0]) { $achadas += [int64]$partes[1] }
+    }
+  }
+  $novas = @($achadas | Where-Object { $ignorar -notcontains $_ })
+  if ($novas.Count -gt 0) { break }
+  if ((Get-Date) -ge $fim) { break }
+  Start-Sleep -Milliseconds 400
+} while ($true)
+
+Write-Output ($achadas -join ',')
+`;
 
 /**
  * A SONDA DETALHADA — quem consome o processador, agora.
@@ -1437,6 +1607,12 @@ export class AgenteLocal {
      * evento de verdade no calendário real de ninguém.
      */
     private readonly criadorEventoCalendario: CriadorEventoCalendario = criarEventoCalendarioReal,
+    /**
+     * Entra no FIM da lista de propósito: todos os testes que já existem
+     * constroem o agente com um ou dois parâmetros posicionais, e nenhum
+     * precisa saber que este oráculo nasceu.
+     */
+    private readonly sondaJanelas: SondaJanelas = sondaJanelasReal,
   ) {}
 
   /** As sessões de agente de código deste processo, por id. */
@@ -1802,6 +1978,13 @@ export class AgenteLocal {
      * verificação seria só uma forma mais cara de dizer "sim".
      */
     const antes = await this.sonda(app.processo);
+    /**
+     * AS JANELAS QUE JÁ EXISTIAM. Sem esta foto, "há uma janela do Bloco de
+     * Notas" não distingue a que acabou de nascer da que já estava lá — o
+     * mesmo argumento que a foto de processos acima carrega, aplicado à
+     * pergunta que de fato importa ao operador.
+     */
+    const janelasAntes = await this.sondaJanelas(app.processo);
     const lancamento = await this.lancador(app.comando, argumentos);
 
     if (!lancamento.subiu) {
@@ -1822,81 +2005,109 @@ export class AgenteLocal {
 
     const depois = await this.esperarProcesso(app.processo, antes?.length ?? 0);
 
-    // Sem sonda não há prova — e dizer isso é melhor que inventar uma.
-    if (antes === null || depois === null) {
-      this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} (sem sonda)`);
-      return {
-        ok: true,
-        texto:
-          `Mandei ${artigoDe(app.rotulo)} ${app.rotulo} abrir${urlLimpa ? ` em ${urlLimpa}` : ''}. ` +
-          'Não consigo conferir a tabela de processos desta máquina, então não tenho como te garantir que a janela apareceu.',
-        prova: {
-          confirmado: false,
-          evidencia: 'lançamento aceito; a tabela de processos não é consultável nesta plataforma',
-          motivo: 'sem_meio_de_verificar',
-        },
-        codigo_erro: null,
-      };
-    }
+    /**
+     * O ORÁCULO É A JANELA — e a troca vale a pena explicar, porque a versao
+     * anterior era razoável e mesmo assim mentia.
+     *
+     * Ela media `depois.length > antes.length`: apareceu processo novo, logo
+     * "Pronto. Abri o Bloco de Notas". Em 21/08/2026 isso produziu a frase com
+     * a tela vazia — o processo nasceu (pid 25908, filho do runtime, na sessao
+     * interativa) e nenhuma janela existiu.
+     *
+     * Processo novo é uma condição INTERMEDIÁRIA. O efeito que a frase promete
+     * é uma janela na tela da pessoa. Enquanto o oráculo medir a primeira e a
+     * frase afirmar a segunda, a distância entre as duas é exatamente o tamanho
+     * da mentira possivel.
+     *
+     * Note o que este bloco NÃO faz: não tenta adivinhar por que a janela
+     * faltou. Não precisa. Um oráculo que olha o efeito responde igual para
+     * app empacotado, instância única, stub que não ativa e qualquer causa
+     * ainda não descoberta.
+     */
+    const janelasDepois = await this.sondaJanelas(app.processo, janelasAntes ?? [], ESPERA_JANELA_MS);
+    const novasJanelas =
+      janelasAntes === null || janelasDepois === null
+        ? null
+        : janelasDepois.filter((h) => !janelasAntes.includes(h));
 
-    if (depois.length > antes.length) {
-      this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} pid=${depois.at(-1)}`);
-      /**
-       * A EVIDÊNCIA PRECISA DIZER OS DOIS NÚMEROS, e a primeira versão dizia
-       * "ausente antes do pedido" neste ramo — o que é verdade quando `antes`
-       * está vazio e MENTIRA quando não está. Pego na primeira bateria real:
-       * abrir o Chrome com quinze processos dele já rodando produziu um novo
-       * processo (prova legítima) acompanhado da frase "ausente antes do
-       * pedido", que era falsa sobre o estado anterior da máquina.
-       *
-       * Uma prova que exagera o que apurou é uma prova estragada, mesmo quando
-       * a conclusão está certa — porque a próxima pessoa a lê-la vai confiar na
-       * frase, não refazer a medição.
-       */
-      const novos = depois.length - antes.length;
+    /* 1. JANELA NOVA — o efeito prometido, observado. */
+    if (novasJanelas !== null && novasJanelas.length > 0) {
+      this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} janela=${novasJanelas.length}`);
       return {
         ok: true,
         texto: `Pronto. Abri ${artigoDe(app.rotulo)} ${app.rotulo} no computador${urlLimpa ? `, já em ${urlLimpa}` : ''}.`,
         prova: {
           confirmado: true,
           evidencia:
-            antes.length === 0
-              ? `${app.processo} presente na tabela de processos (PID ${depois.at(-1)}), ausente antes do pedido`
-              : `${app.processo} passou de ${antes.length} para ${depois.length} processo(s) — ` +
-                `${novos} novo(s) depois do pedido, último PID ${depois.at(-1)}`,
+            `${novasJanelas.length} janela(s) visível(is) de ${app.processo} que não existiam antes do pedido ` +
+            `(a sessão tinha ${janelasAntes?.length ?? 0} antes, ${janelasDepois?.length ?? 0} depois)`,
         },
         codigo_erro: null,
       };
     }
 
-    if (antes.length > 0) {
-      /**
-       * O caso incômodo, e o que ele NÃO pode virar. O aplicativo já estava
-       * aberto; o lançamento foi aceito; a contagem de processos não mudou.
-       * Isso é normal — muitos programas trazem a janela existente para a
-       * frente em vez de criar processo novo. Chamar de sucesso seria afirmar
-       * uma janela que ninguém viu; chamar de falha seria negar um lançamento
-       * que deu certo. O nome disto é `sem_meio_de_verificar`, e ele existe
-       * exatamente para não ter que escolher entre duas mentiras.
-       */
-      this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} (já estava aberto)`);
+    /* 2. NÃO CONSIGO OLHAR — outra plataforma, ou a enumeração falhou. */
+    if (novasJanelas === null) {
+      this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} (sem sonda de janela)`);
       return {
         ok: true,
         texto:
-          `${artigoDe(app.rotulo)==="a"?"A":"O"} ${app.rotulo} já estava aberto no computador e eu mandei abrir de novo${urlLimpa ? ` em ${urlLimpa}` : ''}. ` +
-          'Ele traz a janela existente para a frente em vez de criar um processo novo, ' +
-          'então não tenho como te provar que uma janela nova apareceu' +
-          (urlLimpa ? ' — mas o endereço deve ter aberto numa aba nova dela.' : '.'),
+          `Mandei ${artigoDe(app.rotulo)} ${app.rotulo} abrir${urlLimpa ? ` em ${urlLimpa}` : ''}. ` +
+          'Não consigo enxergar as janelas desta máquina, então não tenho como te garantir que ela apareceu.',
         prova: {
           confirmado: false,
-          evidencia: `${app.processo} já estava em execução antes do pedido (${antes.length} processo(s)); a contagem não mudou`,
+          evidencia: 'lançamento aceito; as janelas não são enumeráveis nesta plataforma',
           motivo: 'sem_meio_de_verificar',
         },
         codigo_erro: null,
       };
     }
 
-    this.auditar(idUsuario, 'abrir_aplicativo', false, `${app.rotulo}: processo não apareceu`);
+    /* 3. JÁ HAVIA JANELA E NENHUMA NOVA — o caso legítimo do "trouxe para a
+       frente". Não é sucesso: eu não vi nada acontecer. Também não é falha: o
+       programa está lá, na tela, e pode ter recebido foco. */
+    if (janelasAntes !== null && janelasAntes.length > 0) {
+      this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} (ja tinha janela)`);
+      return {
+        ok: true,
+        texto:
+          `${artigoDe(app.rotulo) === 'a' ? 'A' : 'O'} ${app.rotulo} já estava aberto com janela na tela e eu mandei abrir de novo` +
+          `${urlLimpa ? ` em ${urlLimpa}` : ''}. ` +
+          'Nenhuma janela nova apareceu — ele deve ter trazido a que já existia para a frente, ' +
+          'e isso eu não consigo te provar.',
+        prova: {
+          confirmado: false,
+          evidencia: `${app.processo} já tinha ${janelasAntes.length} janela(s) visível(is) antes do pedido; nenhuma nova depois`,
+          motivo: 'sem_meio_de_verificar',
+        },
+        codigo_erro: null,
+      };
+    }
+
+    /* 4. O PROCESSO ESTÁ LÁ E NÃO HÁ JANELA NENHUMA. Este é o caso que a
+       operadora viveu, e o único honesto aqui é o negativo: eu OLHEI e o
+       efeito não está. Ausência de evidência seria `sem_meio_de_verificar`;
+       isto é evidência de ausência, e `Braco.ts` a converte em `falhou`. */
+    if (depois !== null && depois.length > 0) {
+      this.auditar(idUsuario, 'abrir_aplicativo', false, `${app.rotulo}: processo sem janela`);
+      return {
+        ok: false,
+        texto:
+          `Não consegui abrir ${artigoDe(app.rotulo)} ${app.rotulo} para você. ` +
+          `O programa chegou a iniciar neste computador, mas nenhuma janela apareceu na tela em ` +
+          `${Math.round(ESPERA_JANELA_MS / 1000)} segundos. Não afirmo uma abertura que eu não vi acontecer.`,
+        prova: {
+          confirmado: false,
+          evidencia:
+            `${app.processo} presente na tabela de processos (${depois.length} processo(s), último PID ` +
+            `${depois.at(-1)}) e nenhuma janela visível depois de ${ESPERA_JANELA_MS} ms`,
+          motivo: 'divergente',
+        },
+        codigo_erro: 'APP_SEM_JANELA',
+      };
+    }
+
+    this.auditar(idUsuario, 'abrir_aplicativo', false, `${app.rotulo}: processo nao apareceu`);
     return {
       ok: false,
       texto:

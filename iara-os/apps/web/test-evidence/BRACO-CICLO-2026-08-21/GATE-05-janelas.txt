@@ -1,0 +1,33 @@
+﻿JANELAS DE DENTRO - 2026-08-21T11:51:35.0081687-03:00
+quem: COMPUTADOR\daian
+sessao deste script: 1
+sessao do explorer.exe (a sessao interativa): 1
+
+=============== PROCESSOS NOTEPAD ===============
+  pid=6288 pai=19996 sessao=1 criado=21/08/2026 11:51:16
+     linha=notepad.exe
+  pid=24984 pai=21696 sessao=1 criado=21/08/2026 11:51:16
+     linha="C:\Program Files\WindowsApps\Microsoft.WindowsNotepad_11.2606.15.0_x64__8wekyb3d8bbwe\Notepad\Notepad.exe" /SESSION:Wd2UpQsu9ECL/ZFifR53iAAAAAABAAABwFQAAAsu9EBgAwAAAAAAAA==
+
+=============== O BRACO ===============
+  pid=6844 pai=2128 sessao=1 nome=supervisor.exe criado=21/08/2026 11:12:17
+  pid=23876 pai=6844 sessao=1 nome=iara-braco.exe criado=21/08/2026 11:47:51
+
+=============== TODAS AS JANELAS DE TOPO ===============
+  (pid | hwnd | visivel | tamanho e posicao | titulo)
+
+  --- janelas VISIVEIS com titulo, de qualquer processo (contexto) ---
+  6164 (WindowsTerminal) 1199x616 em (146,154) :: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+  10040 (chrome) 1550x830 em (-7,-7) :: Automatizar Conexão Do Braço - Google Chrome
+  10040 (chrome) 1550x830 em (-7,-7) :: IARA OS - Google Chrome
+  9172 (explorer) 159x27 em (-25600,-25600) :: env.lo - Resultados da Pesquisa em IARA – Explorador de Arquivos
+  26780 (SystemSettings) 1536x816 em (0,7) :: Configurações
+  14060 (ApplicationFrameHost) 1550x830 em (-7,-7) :: Configurações
+  10040 (chrome) 1550x830 em (-7,-7) :: IARA OS
+  24984 (Notepad) 1152x592 em (160,160) ::  Sem título - Bloco de notas
+  24984 (Notepad) 1152x592 em (259,43) :: * .env.local - Bloco de notas
+  1780 (TextInputHost) 1536x864 em (0,0) :: Experiência de Entrada do Windows
+  6164 (WindowsTerminal) 159x27 em (-25600,-25600) :: C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe
+  14872 (WhatsApp.Root) 159x27 em (-25600,-25600) :: WhatsApp
+  6864 (claude) 159x27 em (-25600,-25600) :: Claude
+  9172 (explorer) 1536x864 em (0,0) :: Program Manager
