@@ -35,6 +35,17 @@ export const verAgendaCalendario: Habilidade = {
       'Tenho alguma reunião amanhã?',
     ],
     capacidades: ['listar eventos do calendário real'],
+    /**
+     * « Estou livre amanhã? » morria em conversa até 21/08/2026: ato certo,
+     * período certo, e nenhuma palavra da frase existia neste manifesto.
+     * `disponibilidade` é o conceito que faltava — e ele é declarado AQUI, e não
+     * numa regra de código, porque senão os próximos seriam "vago", "sem
+     * reunião", "posso marcar?", um `if` de cada vez.
+     */
+    conceitos: [
+      { nome: 'agenda', termos: ['calendario', 'compromisso', 'evento', 'reuniao'] },
+      { nome: 'disponibilidade', termos: ['livre', 'vago', 'ocupado', 'horario', 'disponivel'] },
+    ],
     dominio: 'comunicacao',
     capacidade: 'conhecimento',
     permissoes: ['rede', 'memoria'],
@@ -89,6 +100,24 @@ export const criarEventoCalendario: Habilidade = {
       'Bota no calendário: dentista quinta-feira às 9h',
     ],
     capacidades: ['criar evento em calendário real'],
+    /**
+     * OS MESMOS CONCEITOS DE `ver_agenda_calendario`, DE PROPÓSITO — e é este
+     * par que prova a regra da arquitetura.
+     *
+     * « Estou livre amanhã? » recupera `disponibilidade`, e `disponibilidade`
+     * alcança as DUAS habilidades: ler a agenda e criar evento nela. A
+     * similaridade é altíssima e está correta. O que separa as duas não é
+     * conceito nenhum — é a OPERAÇÃO, `leitura` contra `criacao`, e é ela que
+     * impede uma pergunta de virar um compromisso no calendário de quem só
+     * queria saber se estava livre.
+     *
+     * Ver `IndiceConceitual.admissivel`: similaridade × compatibilidade, nunca
+     * similaridade sozinha.
+     */
+    conceitos: [
+      { nome: 'agenda', termos: ['calendario', 'compromisso', 'evento', 'reuniao'] },
+      { nome: 'disponibilidade', termos: ['livre', 'vago', 'ocupado', 'horario', 'disponivel'] },
+    ],
     dominio: 'comunicacao',
     capacidade: 'automacao',
     // `externo`, não `escrita`: o evento é visível fora do processo da IARA

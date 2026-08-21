@@ -149,6 +149,7 @@ export const listarLembretes: Habilidade = {
       'distante. Use para "quais lembretes eu tenho", "o que eu marquei", "minha agenda".',
     exemplos: ['Quais lembretes eu tenho?', 'O que eu marquei com você?'],
     capacidades: ['listar lembretes pendentes'],
+    entidades: ['lembrete'],
     dominio: 'memoria',
     capacidade: 'memoria',
     permissoes: ['memoria'],
@@ -180,6 +181,8 @@ export const listarLembretes: Habilidade = {
 export const cancelarLembrete: Habilidade = {
   manifesto: {
     id: 'cancelar_lembrete',
+    /** Só fecha o que o operador abriu antes. Ver ManifestoHabilidade. */
+    fecha_interacao_aberta: true,
     nome: 'Cancelar lembrete',
     descricao:
       'Remove um lembrete pendente. O parâmetro "termo" é um trecho do assunto ("a reunião", ' +

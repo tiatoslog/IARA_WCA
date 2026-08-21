@@ -112,6 +112,20 @@ const CONFIANCA_SUFICIENTE = 0.85;
  */
 const PERGUNTA_DE_FATO = /\b(quantos?|quantas?|qual|quais)\b/i;
 
+/**
+ * O QUE A CAMADA DE COMPREENSÃO DEVOLVE PARA ESTA DECISÃO — e só isto.
+ *
+ * Deliberadamente menor que o `ContratoSemantico` inteiro: a rota não precisa
+ * de atributos, restrições nem evidências, e receber o contrato completo
+ * convidaria a próxima pessoa a usar um campo qualquer para desempatar uma
+ * decisão que deveria continuar simples.
+ */
+export interface AtoDoTurno {
+  readonly ato: string;
+  /** `null` quando nenhuma habilidade se sustenta, ou quando falta contexto. */
+  readonly objetivo: string | null;
+}
+
 export class FuncaoExecutiva {
   private readonly sigilo: PortaoSigilo;
   private readonly ambiguidade = new DetectorAmbiguidade();
@@ -128,6 +142,25 @@ export class FuncaoExecutiva {
      * o injeta. Sem ele, o portão volta a depender só da forma da frase.
      */
     private readonly descoberta: DescobertaCapacidades | null = null,
+    /**
+     * A CAMADA DE COMPREENSÃO — ver `CompreensaoSemantica`. OPCIONAL pela mesma
+     * razão que `descoberta`: os testes que provam as outras etapas isoladamente
+     * não a injetam, e o Kernel sempre injeta.
+     *
+     * Entra como FUNÇÃO e não como módulo importado de propósito. A `FuncaoExecutiva`
+     * decide rota; ela não pode ganhar uma dependência de compilação sobre quem
+     * interpreta, ou a fronteira que `interpretar-nao-executa.test.ts` protege
+     * passaria a valer nos dois sentidos e nenhum dos dois lados poderia ser
+     * testado sozinho.
+     *
+     * O QUE ELA ACRESCENTA, e só isso: o ATO comunicativo. O índice de assunto
+     * responde "esta frase fala do que eu faço?" e responde SIM para um desabafo
+     * com vocabulário de trabalho. O ato responde "esta frase PEDE alguma
+     * coisa?" — e são perguntas diferentes, o que a auditoria de 21/08/2026
+     * mediu ao ver « como você está? » e « estou livre amanhã? » saindo pela
+     * mesma rota.
+     */
+    private readonly compreender: ((bruto: string) => AtoDoTurno) | null = null,
   ) {
     this.sigilo = new PortaoSigilo(outrosOperadores);
   }
@@ -200,7 +233,48 @@ export class FuncaoExecutiva {
     //    interrogativo de fato, e ainda assim fala do que a operação faz. Ver
     //    `DescobertaCapacidades` — a decisão de qual habilidade (ou nenhuma)
     //    continua sendo da LLM com o catálogo à frente, nunca daqui.
-    if (!this.mereceDecomposicao(percepcao) && !this.descoberta?.pareceOperacional(percepcao.bruto)) {
+    /**
+     * O ATO COMUNICATIVO ENTRA AQUI — e ele é o sinal que faltava.
+     *
+     * Os dois sinais anteriores respondem perguntas diferentes da que importa:
+     * `mereceDecomposicao` olha a FORMA, `pareceOperacional` olha o ASSUNTO. Nem
+     * um nem outro sabe se a frase PEDE alguma coisa, e é por isso que
+     * « como você está? » e « estou livre amanhã? » saíam pela mesma rota — as
+     * duas são interrogativas e nenhuma das duas tem vocabulário de catálogo.
+     *
+     * A COMPREENSÃO SÓ FALA QUANDO TEM O QUE DIZER, e nas duas direções:
+     *
+     *   · `conversar` DERRUBA — é a única forma de um desabafo com vocabulário
+     *     de trabalho ("esse relatório me destruiu hoje") parar de pagar
+     *     planejamento. Vale mesmo contra o índice de assunto, porque o ato é
+     *     evidência mais específica: o assunto diz que a frase FALA de trabalho,
+     *     o ato diz que ela não PEDE nada;
+     *   · ato de pedido com objetivo LEVANTA — pergunta ou ordem que alcançou
+     *     uma habilidade merece o catálogo, mesmo sem forma de comando e sem
+     *     interrogativo de fato.
+     *
+     * Quando não há camada injetada, o portão é exatamente o de antes.
+     */
+    const compreensao = this.compreender?.(percepcao.bruto) ?? null;
+    const ATOS_DE_PEDIDO = ['perguntar', 'solicitar_acao', 'recapitular'];
+    const pedeAlgo = compreensao !== null && ATOS_DE_PEDIDO.includes(compreensao.ato);
+
+    if (compreensao?.ato === 'conversar') {
+      return {
+        rota: 'raciocinio_direto',
+        acao: 'responder',
+        justificativa: 'Ato comunicativo é conversa — a frase não pede nada.',
+        custo_estimado: 'tokens',
+      };
+    }
+
+    const alcancouHabilidade = pedeAlgo && compreensao.objetivo !== null;
+
+    if (
+      !this.mereceDecomposicao(percepcao) &&
+      !this.descoberta?.pareceOperacional(percepcao.bruto) &&
+      !alcancouHabilidade
+    ) {
       return {
         rota: 'raciocinio_direto',
         acao: 'responder',

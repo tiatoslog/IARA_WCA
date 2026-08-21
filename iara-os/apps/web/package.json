@@ -25,7 +25,8 @@
     "confiabilidade": "node --import tsx testes/confiabilidade/executar.ts",
     "benchmark-analitico": "node --import tsx testes/holdout/benchmark.ts",
     "inventario": "node --import tsx scripts/inventario-habilidades.ts",
-    "importacoes": "node scripts/verificar-importacoes.mjs"
+    "importacoes": "node scripts/verificar-importacoes.mjs",
+    "invariancia": "node --import tsx testes/invariancia/executar.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

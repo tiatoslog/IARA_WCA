@@ -201,6 +201,8 @@ export const acompanharAgenteCodigo: Habilidade = {
 export const encerrarAgenteCodigo: Habilidade = {
   manifesto: {
     id: 'encerrar_agente_codigo',
+    /** Só fecha o que o operador abriu antes. Ver ManifestoHabilidade. */
+    fecha_interacao_aberta: true,
     nome: 'Encerrar sessão de agente de código',
     descricao:
       'Encerra uma sessão do Claude Code que está em andamento. Use para "para o Claude Code", ' +

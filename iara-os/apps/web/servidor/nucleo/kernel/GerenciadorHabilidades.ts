@@ -137,6 +137,26 @@ export class GerenciadorHabilidades {
   }
 
   /**
+   * A UNIÃO DOS SUBSTANTIVOS QUE O CATÁLOGO SABE CONTAR — insumo da trava de
+   * autoridade do Kernel. Ver `ManifestoHabilidade.entidades`.
+   *
+   * DELIBERADAMENTE SOBRE O REGISTRO INTEIRO, e não sobre `catalogo()`, que
+   * filtra por disponibilidade. Uma habilidade sem credencial continua sendo a
+   * prova de que aquele número tem dono determinístico: se `ler_emails` está
+   * fora do ar, "quantos e-mails chegaram?" fica MENOS respondível de cabeça,
+   * não mais. Ligar a trava à disponibilidade a desligaria exatamente no dia em
+   * que a fonte cai — que é o dia em que a LLM mais tem motivo para preencher o
+   * buraco com um número plausível.
+   */
+  entidadesOperacionais(): readonly string[] {
+    const uniao = new Set<string>();
+    for (const h of this.registro.values()) {
+      for (const e of h.manifesto.entidades ?? []) uniao.add(e);
+    }
+    return [...uniao];
+  }
+
+  /**
    * Manifesto COMPLETO, incluindo o que está desligado e por quê. Vai para o
    * snapshot: o operador vê o que a IARA poderia fazer e o que falta ligar.
    */

@@ -151,3 +151,47 @@ export function corrigirTypos(textoNormalizado: string): string {
     })
     .join('');
 }
+
+/**
+ * A FRASE PERGUNTA, ou manda?
+ *
+ * SINTAXE, NUNCA VOCABULÁRIO DE DOMÍNIO — e é essa restrição que faz esta
+ * função valer alguma coisa. Ela não sabe o que é lembrete, pasta ou carga, e
+ * não pode saber: no instante em que alguém acrescentar um substantivo aqui,
+ * ela vira mais uma lista de frases, que é exatamente a doença que ela existe
+ * para tratar. O sinal é o ponto de interrogação e o pronome interrogativo em
+ * abertura — dois traços que valem para qualquer pergunta em português,
+ * inclusive as de habilidades que ainda não nasceram.
+ *
+ * O DEFEITO QUE ISTO FECHA (auditoria de 21/08/2026). Duas âncoras de receita
+ * determinística compilavam PERGUNTA em ESCRITA NÃO IDEMPOTENTE:
+ *
+ *   « esse lembrete das 11h foi criado quando? »
+ *     → agendar_lembrete({ assunto: "das foi criado quando", quando: "hoje às 11:00" })
+ *   « a captura de tela funciona? »
+ *     → capturar_tela({ local: "documentos" })
+ *
+ * Nos dois, a rota era `plano_local`: sem laço, sem LLM no caminho e — porque
+ * o risco declarado é `medio` — sem porteiro. Nada na cadeia podia ler a frase
+ * de novo. O operador perguntava e a agenda dele ganhava um item.
+ *
+ * A CAUSA não era a regex de nenhuma das duas âncoras. Era a FORMA das
+ * receitas: cancelar e listar são casos casados, e CRIAR é o que sobra no
+ * `return` final. Alargar a regex de listagem — que foi a correção de
+ * 14/08/2026 para o mesmo defeito, documentada em `Planejador.ts` — conserta a
+ * frase e deixa a forma intacta, então o defeito volta pela frase seguinte.
+ *
+ * `como` fica de fora de propósito: "como está o computador?" traz o "?" e é
+ * pega por ele, enquanto "como pedido, cria a pasta" não é pergunta nenhuma.
+ * `que` sozinho também fica: "que bom", "que pena". Subcontar pergunta é o
+ * lado certo de errar aqui — o falso NEGATIVO devolve o comportamento de hoje,
+ * e o falso POSITIVO só troca a receita determinística pelo laço, que responde
+ * a mesma coisa com catálogo e porteiro na frente.
+ */
+const ABERTURA_INTERROGATIVA =
+  /^(o que|quando|quanto|quantos|quantas|qual|quais|onde|quem|por que|porque|cade|sera que)\b/;
+
+export function ehInterrogativa(bruto: string): boolean {
+  if (/\?\s*$/.test(bruto.trim())) return true;
+  return ABERTURA_INTERROGATIVA.test(normalizar(bruto));
+}

@@ -92,6 +92,20 @@ export const MAX_TEXTO_PADRAO = 4000;
 
 export type Esquema = Record<string, CampoEsquema>;
 
+/**
+ * UM CONCEITO DA OPERAÇÃO e as palavras com que ele é dito.
+ *
+ * `{ nome: 'disponibilidade', termos: ['livre', 'vago', 'ocupado', 'horario'] }`
+ *
+ * `nome` é canônico e serve à NORMALIZAÇÃO (dois operadores dizendo "coletas" e
+ * "cargas" falam do mesmo referente); `termos` servem à RECUPERAÇÃO (qualquer um
+ * deles alcança a habilidade). Ver `ManifestoHabilidade.conceitos`.
+ */
+export interface ConceitoDeclarado {
+  readonly nome: string;
+  readonly termos: readonly string[];
+}
+
 export interface ManifestoHabilidade {
   /** Verbo + objeto, em português: `consultar_clima`, `buscar_historico`. */
   readonly id: string;
@@ -125,6 +139,111 @@ export interface ManifestoHabilidade {
    * o índice da descoberta onde a descrição é prosa demais.
    */
   readonly capacidades?: readonly string[];
+  /**
+   * OS SUBSTANTIVOS QUE ESTA HABILIDADE CONTA OU ENUMERA — no singular, sem
+   * acento, minúsculos. `['carga', 'motorista', 'rota']`.
+   *
+   * Não é vocabulário de busca: `capacidades` e `exemplos` já alimentam o
+   * índice de assunto da `DescobertaCapacidades`, que responde "esta frase
+   * parece falar do que eu faço?". Este campo responde outra pergunta, mais
+   * estreita e mais dura: **"um número sobre esta coisa só pode vir de
+   * execução?"** — e é a trava de autoridade do Kernel que a faz.
+   *
+   * O DEFEITO QUE ISTO FECHA (auditoria de 21/08/2026). A trava vivia como uma
+   * alternação escrita à mão dentro de `Kernel.ts`, fechada em seis
+   * substantivos. Medida contra doze perguntas de cardinalidade legítimas da
+   * operação, ela armava em duas: « quantas coletas tivemos esse mês? »,
+   * « quantas OCIs foram abertas? » e « quantos lembretes eu tenho? » podiam
+   * receber um número inventado pela LLM, sem execução nenhuma, digitado ao
+   * vivo na tela do operador. O cabeçalho da trava dizia "A REGRA É GERAL"; a
+   * medição dizia que ela era uma lista de seis palavras.
+   *
+   * POR QUE AQUI E NÃO LÁ. Uma habilidade nova que conta alguma coisa nasce
+   * coberta pela trava sem que ninguém precise lembrar de editar uma regex em
+   * outro arquivo — é a mesma disciplina de `risco` com o `PorteiroAutorizacao`
+   * e de `idempotencia` com o `PortalEfeitos`: o dado é declarado por quem
+   * conhece a habilidade, e a política o lê.
+   *
+   * O QUE NÃO DECLARAR, e a recusa é o que mantém a trava honesta. Só entram
+   * substantivos da OPERAÇÃO — coisas que existem porque esta empresa existe.
+   * "dia", "letra", "ano" não entram: um número sobre eles é conhecimento de
+   * mundo, e armar a trava ali faria a IARA descartar "fevereiro tem 28 dias"
+   * como afirmação sem procedência, que é punir a resposta certa.
+   *
+   * `central` também não entra, e por outro motivo: ela já tem oráculo próprio
+   * (`PERGUNTA_DE_CENTRAIS` em `VerificacaoRuntime`) que sabe o VALOR certo, e
+   * saber o valor vale mais que saber a procedência.
+   */
+  readonly entidades?: readonly string[];
+  /**
+   * OS CONCEITOS QUE ESTA HABILIDADE ATENDE — e as palavras com que as pessoas
+   * os nomeiam.
+   *
+   * O DEFEITO QUE ISTO FECHA (auditoria de 21/08/2026, medido pelo arnês de
+   * invariância). « Estou livre amanhã? » morria em conversa. O ato estava
+   * certo (`perguntar`), o período estava certo (`amanhã`), e nada ligava
+   * "livre" a `ver_agenda_calendario` — porque "livre" não aparece em manifesto
+   * nenhum. O mesmo buraco, em outras roupas:
+   *
+   *     "coletas"   → devia recuperar o conceito de carga
+   *     "caixa"     → devia recuperar e-mail
+   *     "documentos"→ devia recuperar arquivo
+   *
+   * Não são quatro casos: é UMA lacuna — palavras diferentes para o mesmo
+   * conceito — e é por isso que a correção é um campo declarado, não quatro
+   * remendos.
+   *
+   * POR QUE AQUI E NÃO NO CÓDIGO. Se `livre → agenda` virasse regra dentro de
+   * um módulo de interpretação, três dias depois alguém acrescentaria `vago`,
+   * `sem reunião`, `tenho horário?`, `posso marcar?` — o ciclo que este projeto
+   * inteiro persegue. O catálogo é a fonte de verdade: habilidade nova declara
+   * os próprios conceitos e nasce recuperável sem que ninguém edite um `if`.
+   * `testes/compreensao/aberto-fechado.test.ts` recusa vocabulário de domínio
+   * dentro da camada de decisão, justamente para forçar a correção para cá.
+   *
+   * DUAS FUNÇÕES NUM CAMPO SÓ, e as duas precisam do mesmo dado:
+   *   · RECUPERAÇÃO — `termos` alcança a habilidade ("livre" → agenda);
+   *   · NORMALIZAÇÃO — `nome` é o conceito canônico, e é o que permite
+   *     « coletas de agosto » e « cargas de agosto » terem o MESMO referente
+   *     sem perder o que o operador escreveu.
+   *
+   * `nome` é o conceito; `termos` são as realizações lexicais dele, sem acento e
+   * em minúsculas, no singular quando houver singular. Termo que não pertence
+   * ao conceito é pior que termo faltando: recuperar a habilidade errada com
+   * confiança é o defeito caro desta auditoria.
+   *
+   * O QUE ISTO NÃO É: autorização. Conceito recuperado PROPÕE candidato; quem
+   * admite é a compatibilidade estrutural de operação — ver `IndiceConceitual`.
+   * "criar arquivo" e "listar arquivo" compartilham conceito e são operações
+   * opostas, e nenhuma similaridade pode fazer uma virar a outra.
+   */
+  readonly conceitos?: readonly ConceitoDeclarado[];
+  /**
+   * ESTE EFEITO SÓ FECHA ALGO QUE O OPERADOR JÁ ABRIU — nunca origina nada.
+   *
+   * `resolver_confirmacao` exige uma pendência armada num turno anterior;
+   * `cancelar_lembrete` exige um lembrete que alguém marcou; `assumir_plano`
+   * exige uma proposta em cima da mesa. Nenhuma delas consegue produzir efeito
+   * a partir do nada: a autorização veio antes, do próprio operador.
+   *
+   * POR QUE O CAMPO EXISTE (auditoria de 21/08/2026). O guarda que impede uma
+   * PERGUNTA de compilar para efeito — ver `Planejador.recusarEscritaDePergunta`
+   * — na primeira versão barrava « devo cancelar isso, certo? », e a pendência
+   * de desligar a máquina seguia viva. O operador saía achando que tinha
+   * desistido. `testes/cerebro-integridade-final.test.ts` já carregava a regra
+   * escrita, do defeito anterior da mesma família:
+   *
+   *   "A assimetria do AgenteLocal: desistir nunca exige a prova que agir exige."
+   *
+   * O campo é essa assimetria em forma legível por código. Sem ele, a única
+   * saída seria uma lista de ids dentro do guarda — e uma lista de nomes é
+   * exatamente o que esta auditoria inteira existe para tirar do caminho.
+   *
+   * IDEMPOTÊNCIA NÃO SERVE PARA ISTO, e a tentação é forte. `resolver_confirmacao`
+   * é `escrita_nao_idempotente` e `enviar_whatsapp` é `escrita_idempotente`:
+   * a semântica de repetição não diz nada sobre quem autorizou o efeito.
+   */
+  readonly fecha_interacao_aberta?: boolean;
   /** Família a que pertence. Define o agrupamento no manifesto e na projeção. */
   readonly dominio: Dominio;
   /** Qual objeto da sala acende enquanto esta habilidade roda. */

@@ -240,6 +240,8 @@ export const investigarLentidaoHabilidade: Habilidade = {
 export const assumirPlano: Habilidade = {
   manifesto: {
     id: 'assumir_plano',
+    /** Só fecha o que o operador abriu antes. Ver ManifestoHabilidade. */
+    fecha_interacao_aberta: true,
     nome: 'Assumir o plano autorizado',
     descricao:
       'Registra que o operador autorizou um dos planos que a IARA propôs na investigação e anuncia ' +

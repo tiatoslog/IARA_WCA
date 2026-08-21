@@ -22,6 +22,8 @@ import { MemoriaTrabalho } from './MemoriaTrabalho';
 import { Planejador, capacidadesSemNuvemEmTexto } from './Planejador';
 import { FuncaoExecutiva, type Decisao } from './FuncaoExecutiva';
 import { DescobertaCapacidades } from './DescobertaCapacidades';
+import { compreender } from './CompreensaoSemantica';
+import { IndiceConceitual } from './IndiceConceitual';
 import { lacunasCapacidade } from './LacunasCapacidade';
 import { GerenciadorHabilidades } from './GerenciadorHabilidades';
 import { MotorRaciocinio } from './MotorRaciocinio';
@@ -74,6 +76,8 @@ import { RAIZ_DO_APP, VerificadorDeterministico, fontesDesligadas } from './Veri
 import type { PortaVerificacaoRuntime } from '../../../lib/verificacao/contrato';
 import type { DestinoCognitivo, EstagioCognitivo, OrigemRaciocinio } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
+import { ehInterrogativa, normalizar } from '../texto';
+import { instantePorExtenso } from './Quando';
 import { analisarImagem } from '../AnaliseVisual';
 import { porUrl as anexoPorUrl } from '../AnexoImagem';
 
@@ -192,18 +196,28 @@ export interface AnexoMensagem {
  * aqui é a rede de segurança para o dia em que ela mudar sem ninguém avisar.
  */
 /**
- * "QUANTOS X" SOBRE A OPERAÇÃO — as perguntas cujo número só pode vir de contar.
+ * "QUANTOS X" — a FORMA da pergunta cujo número só pode vir de contar.
  *
  * Usada pela trava de autoridade: pergunta desta forma respondida num turno em
  * que nada alcançou o mundo é um número sem procedência, e foi assim que a IARA
  * repetiu "75 motoristas" do próprio histórico em 19/08/2026.
  *
- * A lista é das entidades que TÊM operação determinística. `centrais` fica de
- * fora porque já tem oráculo que sabe o valor certo — e saber o valor vale mais
- * que saber a procedência.
+ * A FORMA MORA AQUI; O "X" VEM DO CATÁLOGO. Até 21/08/2026 os dois estavam
+ * juntos nesta constante, e o "X" era uma alternação escrita à mão com seis
+ * substantivos. Medida contra doze perguntas de cardinalidade legítimas da
+ * operação, ela cobria duas: « quantas coletas tivemos esse mês? », « quantas
+ * OCIs foram abertas? » e « quantos lembretes eu tenho? » ficavam de fora, e um
+ * número inventado pela LLM ia digitado ao vivo para a tela do operador. O
+ * cabeçalho afirmava "A REGRA É GERAL, e é o que a impede de virar `if
+ * pergunta.includes("motoristas")`"; a medição dizia que ela era a própria
+ * lista que o comentário recusava.
+ *
+ * Agora o substantivo é DECLARADO por quem conhece a habilidade, no campo
+ * `entidades` do manifesto, e a trava lê a união. Habilidade nova que conta
+ * alguma coisa nasce coberta — ver `entidadesOperacionais`.
  */
-const PERGUNTA_DE_CARDINALIDADE_OPERACIONAL =
-  /\b(quantos?|quantas?|n[úu]mero de|total de|quantidade de)\b[^?]{0,40}\b(motoristas?|cargas?|rotas?|destinos?|origens?|clientes?)\b/i;
+const PERGUNTA_DE_CARDINALIDADE =
+  /\b(quantos?|quantas?|n[úu]mero de|total de|quantidade de)\b/i;
 
 const TETO_DA_FILA = 4;
 
@@ -305,7 +319,7 @@ const JANELA_ANTECEDENTE = 6;
 export class Kernel {
   private readonly percepcao = new MotorPercepcao();
   private readonly trabalho = new MemoriaTrabalho();
-  private readonly planejador = new Planejador();
+  private readonly planejador = new Planejador((id) => this.originaEfeito(id));
   private readonly habilidades: GerenciadorHabilidades;
   private readonly raciocinio: MotorRaciocinio;
   private readonly executiva: FuncaoExecutiva;
@@ -419,12 +433,38 @@ export class Kernel {
     this.descoberta = new DescobertaCapacidades(
       [...CATALOGO, ...(dep.habilidadesExtras ?? [])].map((h) => h.manifesto),
     );
+    /**
+     * A CAMADA DE COMPREENSÃO ENTRA ANTES DA DECISÃO DE ROTA.
+     *
+     *     mensagem → compreensão → ContratoSemantico → descoberta → candidatos
+     *
+     * Injetada como FECHAMENTO e não como import da `FuncaoExecutiva`: quem
+     * decide rota não pode ganhar dependência de compilação sobre quem
+     * interpreta — ver `AtoDoTurno`. O relógio entra aqui, por parâmetro, porque
+     * a camada é pura e não lê o relógio sozinha.
+     *
+     * ELA INTERPRETA E NADA MAIS. Não alcança ferramenta, executor nem memória
+     * operacional; o que ela devolve é o ato e a hipótese principal, e toda a
+     * autorização segue nas portas que já existiam.
+     */
+    const manifestos = [...CATALOGO, ...(dep.habilidadesExtras ?? [])].map((h) => h.manifesto);
+    const conceitual = new IndiceConceitual(manifestos);
     this.executiva = new FuncaoExecutiva(
       this.planejador,
       this.trabalho,
       dep.outrosOperadores,
       () => this.raciocinio.disponivel,
       this.descoberta,
+      (bruto) => {
+        const c = compreender({
+          bruto,
+          descoberta: this.descoberta,
+          conceitual,
+          agora: new Date(),
+          habilidades: manifestos.map((m) => m.id),
+        });
+        return { ato: c.ato, objetivo: c.objetivo };
+      },
     );
   }
 
@@ -871,7 +911,7 @@ export class Kernel {
         texto.trim().length > 0 &&
         texto.trim().length <= 60;
 
-      const decisao: Decisao = preenchePendencia
+      let decisao: Decisao = preenchePendencia
         ? {
             rota: 'plano_local',
             acao: 'executar',
@@ -937,7 +977,7 @@ export class Kernel {
       }
 
       // --- 3. Plano ---------------------------------------------------------
-      const plano =
+      const planoDaRota =
         preenchePendencia && pendente
           ? ({
               objetivo: `Retomar ${pendente.habilidade} com "${pendente.parametro}" informado`,
@@ -953,6 +993,106 @@ export class Kernel {
             } satisfies Plano)
           : await this.montarPlano(decisao.rota, p, controle.signal, orcamento);
       if (controle.signal.aborted) return;
+
+      /**
+       * A ROTA É REVISTA À LUZ DO PLANO QUE ELA PRODUZIU.
+       *
+       * A CAUSA RAIZ QUE ISTO FECHA (auditoria de 21/08/2026). O laço de agente
+       * entrou em 19/08 e resolveu, dentro da rota cognitiva, o defeito de
+       * decidir às cegas: cada volta passou a decidir com o que a volta anterior
+       * observou. Só que a ESCOLHA DA ROTA continuou sendo exatamente aquilo que
+       * o laço existe para eliminar — uma decisão única, tomada por regex sobre
+       * o texto cru, antes de qualquer evidência, e irreversível. `executarLaco`
+       * só dá volta em `plano_cognitivo` (ver `daVolta`); medido na auditoria,
+       * 53% dos turnos não davam volta nenhuma porque a chave os mandou para o
+       * outro lado antes de existir o que observar.
+       *
+       * A PRIMEIRA EVIDÊNCIA DISPONÍVEL SOBRE UMA ROTA É O PLANO QUE ELA
+       * PRODUZIU. Não é o resultado de ferramenta — para isso já existe o laço —
+       * mas é observação real, e é a única que chega a tempo de trocar o
+       * caminho. Duas leituras dela derrubam a receita:
+       *
+       *  1. RECEITA QUE NÃO PRODUZIU NADA DETERMINÍSTICO. `plano_local` com
+       *     todos os passos em `raciocinio` não é plano determinístico: é a
+       *     receita declarando que não soube. Hoje isso seguia assim mesmo, e
+       *     como `plano_local` não dá volta, a LLM respondia uma pergunta
+       *     factual da própria cabeça no caminho que o sistema anuncia como
+       *     determinístico — medido em « e por central? », que casa a âncora
+       *     `contrato_factual`, devolve contrato `fora` e cai no `raciocinio`
+       *     do fim da receita.
+       *
+       *  2. PERGUNTA QUE COMPILOU PARA EFEITO NO MUNDO. Ver `ehInterrogativa`.
+       *     A idempotência vem do MANIFESTO, nunca de uma lista aqui dentro —
+       *     habilidade nova de escrita nasce coberta sem que ninguém se lembre
+       *     dela, que é a mesma disciplina do `PorteiroAutorizacao` com o campo
+       *     `risco`.
+       *
+       * PARA ONDE ELA VAI. Para o laço, que é estritamente mais capaz: catálogo
+       * inteiro à frente do modelo, porteiro, esquema, orçamento e voltas de
+       * observação. Nada é BARRADO por esta revisão — « você pode criar a pasta
+       * X? » continua criando a pasta, só que pelo caminho que sabe ler a frase.
+       * O custo é uma chamada de modelo num turno que era de custo zero, e ele
+       * só é pago quando uma das duas leituras acima é verdadeira.
+       *
+       * SEM NUVEM NÃO HÁ PARA ONDE IR, e aí as duas leituras se separam. A (1)
+       * segue como está: o passo de raciocínio responde honestamente que a
+       * camada está desligada. A (2) NÃO PODE seguir — escrever a partir de uma
+       * pergunta é o defeito, e a ausência de nuvem não o torna aceitável. Ela
+       * degrada para o mesmo passo de raciocínio, que é fail-closed: o turno
+       * responde, e a agenda do operador não ganha item nenhum.
+       */
+      const soRaciocinio = planoDaRota.passos.every(
+        (x) => !x.habilidade || x.habilidade === 'raciocinio',
+      );
+      const efeitoNoMundo = planoDaRota.passos.some(
+        (x) => x.habilidade !== null && this.originaEfeito(x.habilidade),
+      );
+      const perguntaQueEscreve = ehInterrogativa(p.bruto) && efeitoNoMundo;
+      const revisar = decisao.rota === 'plano_local' && !preenchePendencia && (soRaciocinio || perguntaQueEscreve);
+
+      let plano = planoDaRota;
+      if (revisar) {
+        const motivo = perguntaQueEscreve
+          ? 'a receita determinística compilou uma PERGUNTA em efeito no mundo'
+          : 'a receita determinística não produziu passo acionável';
+        if (this.raciocinio.disponivel) {
+          decisao = {
+            ...decisao,
+            rota: 'plano_cognitivo',
+            acao: 'criar_plano',
+            justificativa: `Rota revista: ${motivo} → decomposição com catálogo e laço.`,
+            custo_estimado: 'tokens',
+          };
+          plano = await this.montarPlano('plano_cognitivo', p, controle.signal, orcamento);
+          if (controle.signal.aborted) return;
+        } else if (perguntaQueEscreve) {
+          decisao = {
+            ...decisao,
+            rota: 'raciocinio_direto',
+            acao: 'responder',
+            justificativa: `Rota revista: ${motivo}, e sem nuvem para replanejar → nada é gravado.`,
+            custo_estimado: 'zero',
+          };
+          plano = this.planejador.planoDeRaciocinio(p);
+        }
+        if (plano !== planoDaRota) {
+          b.publicar({
+            tipo: 'DECISAO_TOMADA',
+            rota: decisao.rota,
+            justificativa: decisao.justificativa,
+            custo_estimado: decisao.custo_estimado,
+          });
+          this.auditoria.registrar({
+            instante: new Date().toISOString(),
+            sessao: this.dep.sessao,
+            id_usuario: this.dep.idUsuario,
+            traco: b.tracoAtual,
+            acao: `rota_revista:${decisao.rota}`,
+            detalhe: decisao.justificativa,
+            permitido: true,
+          });
+        }
+      }
 
       this.trabalho.iniciarTarefa(p, plano);
       b.publicar({ tipo: 'PLANO_CRIADO', plano });
@@ -1249,6 +1389,62 @@ export class Kernel {
   }
 
   // -------------------------------------------------------------------------
+
+  /**
+   * A frase nomeia alguma coisa que o catálogo sabe CONTAR?
+   *
+   * O "X" da trava de autoridade. A forma da pergunta é
+   * `PERGUNTA_DE_CARDINALIDADE`; o substantivo vem do campo `entidades` dos
+   * manifestos, e é a união deles que esta função consulta — nunca uma lista
+   * escrita aqui dentro. Ver `ManifestoHabilidade.entidades` para por que o
+   * campo é estreito de propósito: "dia" e "ano" ficam de fora, e é isso que
+   * impede a trava de descartar "fevereiro tem 28 dias" como número sem
+   * procedência.
+   *
+   * PLURAL SIMPLES NO PADRÃO PT-BR (`s`/`es`), sobre o texto normalizado. Não é
+   * flexão de verdade e não precisa ser: `entidades` declara o singular sem
+   * acento, e o que se procura aqui é o substantivo da frase do operador, que
+   * quase sempre vem no plural numa pergunta de contagem.
+   *
+   * Compilado uma vez por kernel e guardado: o catálogo não muda em tempo de
+   * execução, e recompilar a alternação a cada turno seria custo por nada.
+   */
+  /**
+   * ESTA HABILIDADE ORIGINA EFEITO NO MUNDO?
+   *
+   * A ÚNICA CÓPIA da regra, e ela precisa ser única: o guarda do `Planejador` e
+   * a revisão de rota deste arquivo fazem a MESMA pergunta. A primeira versão
+   * tinha duas cópias — uma delas perguntando `idempotencia !== 'leitura'` sem
+   * mais nada — e o resultado foi a pendência de desligar a máquina
+   * sobrevivendo a um pedido de cancelamento, com o operador achando que tinha
+   * desistido.
+   *
+   * DUAS CONDIÇÕES, e a segunda é a que faltava. Alterar o mundo não basta:
+   * `resolver_confirmacao`, `cancelar_lembrete` e `assumir_plano` alteram, mas
+   * só FECHAM o que o operador abriu num turno anterior. Barrá-las é o pior
+   * lado do erro — *desistir nunca exige a prova que agir exige*. Ver
+   * `ManifestoHabilidade.fecha_interacao_aberta`.
+   */
+  private originaEfeito(habilidade: string): boolean {
+    const m = this.habilidades.manifesto(habilidade);
+    return m !== null && m.idempotencia !== 'leitura' && m.fecha_interacao_aberta !== true;
+  }
+
+  private entidadesCompiladas: RegExp | null = null;
+
+  private falaDeEntidadeOperacional(bruto: string): boolean {
+    if (this.entidadesCompiladas === null) {
+      const nomes = this.habilidades.entidadesOperacionais();
+      /* Sem entidade declarada, a trava não arma — e não armar é o
+         comportamento seguro: ela retém fala, e reter sem motivo custa a
+         digitação ao vivo de quem não fez nada de errado. */
+      this.entidadesCompiladas =
+        nomes.length === 0
+          ? /(?!)/
+          : new RegExp(`\\b(${nomes.map((n) => `${n}e?s?`).join('|')})\\b`);
+    }
+    return this.entidadesCompiladas.test(normalizar(bruto));
+  }
 
   private async montarPlano(
     rota: string,
@@ -2697,6 +2893,40 @@ export class Kernel {
        * redação; a metade que garante continua sendo código, depois da fala.
        */
       dossie ? instrucaoDoDegrau(dossie) : '',
+      /**
+       * O INSTANTE — o fato mais barato do mundo, e o único que faltava.
+       *
+       * O DEFEITO (auditoria de 21/08/2026): a IARA dizia não ter certeza de
+       * que ano estamos. `instantePorExtenso()` existe desde 18/08, é puro,
+       * carrega `America/Sao_Paulo` explícito e é testado contra um instante
+       * conhecido — e era chamado em UM lugar: a habilidade determinística de
+       * relógio, em `OrquestradorAcoes`. A varredura da montagem de prompt não
+       * encontrava data, hora, ano nem fuso em lugar nenhum. O modelo só sabia
+       * que dia era hoje se uma ferramenta lhe contasse; fora disso ele usava o
+       * corte de conhecimento dele, que é de outro ano.
+       *
+       * O ESTRAGO NÃO É "ELA NÃO SABE A DATA". É que "esse mês", "ontem",
+       * "semana passada" e "o ano fiscal" são resolvidos por um modelo ancorado
+       * no ano errado, e a resposta sai bem formatada e confiante. É a mesma
+       * família do relógio que dizia 18:29 quando eram 15:31 — plausível,
+       * verificável só por quem já sabe, e usado para marcar coleta.
+       *
+       * VAI EM `overridePersona` PORQUE É AUTORIDADE DO KERNEL, não material a
+       * analisar. Dentro da moldura de material não confiável a instrução seria
+       * explicitamente descartada — foi assim que a síntese ficou fora do laço
+       * em 19/08 — e um instante que o redator pode ignorar não vale nada.
+       *
+       * A LINHA SEGUINTE É A METADE QUE IMPORTA. Saber a data não autoriza
+       * derivar dela um número da operação: "estamos em agosto" é fato do
+       * mundo; "tivemos 15 cargas em agosto" continua exigindo execução. Sem
+       * dizer isso, o instante vira exatamente a âncora que faltava para a LLM
+       * fabricar um período com cara de apurado.
+       */
+      `AGORA SÃO ${instantePorExtenso()} (fuso da operação). Esta é a hora de verdade, ` +
+        'vinda do relógio do sistema — use-a para resolver "hoje", "ontem", "esse mês", ' +
+        '"semana passada" e qualquer outra referência relativa, e nunca o seu corte de ' +
+        'conhecimento. Saber a data NÃO autoriza inventar número: o instante é fato do ' +
+        'mundo, um total da operação continua vindo só de execução.',
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -2787,7 +3017,9 @@ export class Kernel {
      * número operacional quando existe operação que o produz.
      */
     const cardinalidadeSemExecucao =
-      PERGUNTA_DE_CARDINALIDADE_OPERACIONAL.test(percepcao.bruto) && !alcancouOMundo;
+      PERGUNTA_DE_CARDINALIDADE.test(percepcao.bruto) &&
+      this.falaDeEntidadeOperacional(percepcao.bruto) &&
+      !alcancouOMundo;
 
     /**
      * O TURNO QUE DEU VOLTA TAMBÉM RETÉM A FALA.

@@ -283,6 +283,14 @@ export const listarArquivos: Habilidade = {
       'trabalho", "liste os arquivos de Downloads".',
     exemplos: ['O que tem na minha área de trabalho?', 'Lista os arquivos de Downloads'],
     capacidades: ['listar arquivos de local autorizado'],
+    /**
+     * "documento" é o conceito, e ele NÃO é a pasta Documentos — a descrição
+     * usa a palavra nos dois sentidos, e era por isso que « quais arquivos estão
+     * nos documentos? » ia parar na planilha de cargas.
+     */
+    conceitos: [
+      { nome: 'arquivo', termos: ['documento', 'pasta', 'conteudo', 'diretorio'] },
+    ],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],
@@ -595,6 +603,8 @@ export const acionarEnergia: Habilidade = {
 export const resolverConfirmacao: Habilidade = {
   manifesto: {
     id: 'resolver_confirmacao',
+    /** Só fecha o que o operador abriu antes. Ver ManifestoHabilidade. */
+    fecha_interacao_aberta: true,
     nome: 'Resolver confirmação pendente',
     descricao:
       'Fecha o ciclo de uma ação que ficou aguardando confirmação: executa se o operador confirmou, ' +

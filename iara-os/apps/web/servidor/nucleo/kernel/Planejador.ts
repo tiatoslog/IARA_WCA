@@ -19,7 +19,7 @@ import type { Percepcao, Passo, Plano } from './Evento';
 import { extrairAssuntoLembrete } from './Quando';
 import { planosPropostos } from './PlanosPropostos';
 import { passosExecutaveis } from './Investigacao';
-import { corrigirTypos } from '../texto';
+import { corrigirTypos, ehInterrogativa } from '../texto';
 import {
   ehElipseFactual,
   herdarContrato,
@@ -925,6 +925,48 @@ export function capacidadesSemNuvemEmTexto(): string {
 }
 
 export class Planejador {
+  /**
+   * ESTA HABILIDADE ORIGINA EFEITO NO MUNDO? — injetado, nunca importado.
+   *
+   * A PERGUNTA É "ORIGINA", NÃO "ESCREVE", e a diferença custou um teste
+   * vermelho para aparecer. A primeira versão perguntava `idempotencia !==
+   * 'leitura'` e barrava « devo cancelar isso, certo? »: a pendência de
+   * desligar a máquina seguia viva e o operador saía achando que tinha
+   * desistido. `resolver_confirmacao` escreve, mas não origina — quem autorizou
+   * foi o próprio operador, no turno anterior. Ver
+   * `ManifestoHabilidade.fecha_interacao_aberta`.
+   *
+   * QUEM COMPÕE A RESPOSTA É O KERNEL, que tem o manifesto. O planejador recebe
+   * o veredicto pronto e não sabe de onde ele veio — é o que o mantém do lado
+   * certo da fronteira.
+   *
+   * O planejador não conhece o catálogo, e não pode passar a conhecer: quem
+   * decompõe não alcança executor, e a fronteira é verificada por grafo em
+   * `testes/fronteira-interna.test.ts`. O que ele precisa saber sobre efeito
+   * entra por injeção, vindo de quem já passou pelo portal — a mesma disciplina
+   * de `MotorAnalise`, que recebe a allowlist em vez de importar `AgenteLocal`.
+   *
+   * OPCIONAL NO TIPO, OBRIGATÓRIO EM PRODUÇÃO — o mesmo desenho de `exemplos`
+   * em `ManifestoHabilidade`, e pela mesma razão. Sem o padrão, os quinze
+   * arquivos de teste que constroem um planejador para provar OUTRA coisa
+   * teriam de conhecer o catálogo, e um `new Planejador()` num caminho novo
+   * viraria erro de compilação onde a intenção era só planejar.
+   *
+   * O BURACO QUE ISSO ABRIRIA está fechado do lado certo: quem garante que o
+   * Kernel injeta uma função TOTAL sobre o catálogo é um teste de contrato
+   * (`testes/pergunta-nao-escreve.test.ts`), não a boa memória de quem escreve
+   * o `new`. É a mesma divisão que o catálogo já usa para exigir exemplo de
+   * habilidade sem exigir exemplo de dublê.
+   *
+   * O PADRÃO É `false` — desconhecido NÃO origina. Tratar desconhecido como
+   * originador faria o planejador sem injeção degradar TODA pergunta para
+   * raciocínio, quer dizer, desligaria a camada determinística inteira no lugar
+   * exato onde ela funciona. Medido na primeira versão deste guarda: 19 testes
+   * verdes viraram vermelho, e nenhum deles tinha relação com escrita.
+   * Fail-closed aqui não protege nada e quebra tudo.
+   */
+  constructor(private readonly originaEfeito: (habilidade: string) => boolean = () => false) {}
+
   /** Existe receita determinística para esta percepção? */
   temReceita(p: Percepcao): boolean {
     return p.ancoras.some((a) => a in RECEITAS);
@@ -938,9 +980,51 @@ export class Planejador {
   planejar(p: Percepcao, ctx: ContextoPlanejamento | null = null): Plano {
     for (const ancora of p.ancoras) {
       const receita = RECEITAS[ancora];
-      if (receita) return receita(p, ctx);
+      if (receita) return this.recusarEscritaDePergunta(p, receita(p, ctx));
     }
     return this.planoDeRaciocinio(p);
+  }
+
+  /**
+   * UMA PERGUNTA NUNCA COMPILA PARA EFEITO NO MUNDO.
+   *
+   * O DEFEITO (auditoria de 21/08/2026). Duas receitas transformavam pergunta
+   * em `escrita_nao_idempotente`:
+   *
+   *   « esse lembrete das 11h foi criado quando? »
+   *     → agendar_lembrete({ assunto: "das foi criado quando", quando: "hoje às 11:00" })
+   *   « a captura de tela funciona? »
+   *     → capturar_tela({ local: "documentos" })
+   *
+   * A cadeia inteira estava cega: rota `plano_local` não dá volta, `origem:
+   * 'deterministico'` não tem LLM no caminho, e risco `medio` não passa pelo
+   * porteiro. O operador perguntava e a agenda dele ganhava um item.
+   *
+   * POR QUE AQUI E NÃO SÓ NO KERNEL. O Kernel também revê a rota — ver o
+   * comentário de `revisar` em `Kernel.processar` — e as duas travas se
+   * compõem: esta degenera o plano, aquela manda o turno para o laço, que sabe
+   * ler a frase com o catálogo à frente. Mas uma propriedade que só vale porque
+   * UM chamador se lembrou de conferir é exatamente o defeito de 11/08/2026,
+   * documentado em `PorteiroAutorizacao.ts`: a `PoliticaRisco` existia, tinha
+   * testes, dizia `confirmacaoPrevia: true` — e nenhuma linha de produção a
+   * consultava. A propriedade tem de ser verdadeira sobre a UNIDADE DE
+   * COMPILAÇÃO, não sobre a boa memória de quem a chama.
+   *
+   * POR QUE UM CHOKE POINT E NÃO UM `if` EM CADA RECEITA. A causa do defeito é
+   * a FORMA das receitas — cancelar e listar são casos casados, criar é o que
+   * sobra no `return` final. Corrigir receita por receita conserta as duas de
+   * hoje e deixa a forma intacta para a vigésima primeira. Aqui, a receita nova
+   * nasce coberta.
+   *
+   * A DEGRADAÇÃO É PARA RACIOCÍNIO, NUNCA PARA RECUSA. « você pode criar a
+   * pasta X? » é pergunta na forma e pedido na intenção; barrá-la seria trocar
+   * um defeito por outro. O plano degenerado sinaliza ao Kernel que esta rota
+   * não soube, e o turno segue para o laço — mais caro, e capaz de ler a frase.
+   */
+  private recusarEscritaDePergunta(p: Percepcao, plano: Plano): Plano {
+    if (!ehInterrogativa(p.bruto)) return plano;
+    const origina = plano.passos.some((s) => s.habilidade !== null && this.originaEfeito(s.habilidade));
+    return origina ? this.planoDeRaciocinio(p) : plano;
   }
 
   /**
