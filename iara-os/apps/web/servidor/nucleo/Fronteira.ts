@@ -45,6 +45,20 @@ export const ESTADO_INTERNO: readonly string[] = [
    * processo. Quando vence, quem fala é a própria IARA, pelo canal de sempre.
    */
   'servidor/nucleo/Agenda.ts',
+  /**
+   * Em que etapa de qual POP cada operador parou. Mesma pergunta, mesma
+   * resposta que a `Agenda`: alguém fora da IARA percebe? Não. Escreve um JSON
+   * por pessoa em `dados/procedimentos-em-curso/`, que só o motor lê, e a
+   * posição só volta a existir quando a própria pessoa pergunta onde parou.
+   */
+  'servidor/nucleo/ProcedimentosEmCurso.ts',
+  /**
+   * A fila de dúvidas que a IARA não soube responder, por operador. Mesma
+   * natureza do shard de memória: são frases de uma pessoa, guardadas em
+   * `dados/lacunas/`, que ninguém fora da IARA lê. Escreve desde 19/08/2026,
+   * quando o SOS virou consumidor da fila.
+   */
+  'servidor/nucleo/kernel/LacunasCapacidade.ts',
   // Cliente do banco onde o estado interno mora.
   'servidor/nucleo/ClienteSupabase.ts',
   /**
@@ -259,6 +273,13 @@ export const LEITURA_EXTERNA: readonly string[] = [
  */
 export const LEITURA_INTERNA: readonly string[] = [
   'servidor/nucleo/RagHistorico.ts', // lê o histórico de incidentes
+  /**
+   * O corpus de POPs gerado por `npm run pops`. Só lê, e é o ponto: nenhum
+   * caminho de código altera procedimento — a proibição nº 3 de
+   * `docs/prd/hierarquia-da-verdade-sos.md` é imposta por esta classificação,
+   * não por disciplina de quem escreve a habilidade.
+   */
+  'servidor/nucleo/BaseProcedimentos.ts',
   'servidor/nucleo/kernel/habilidades/dados.ts', // lê documentos
   // Lê planilha genérica (.xlsx/.xls) de dados/documentos/. Mesmo disco de
   // `dados.ts`, sem rede — por isso LEITURA_INTERNA, não LEITURA_EXTERNA

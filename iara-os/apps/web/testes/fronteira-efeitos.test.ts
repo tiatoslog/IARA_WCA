@@ -218,6 +218,31 @@ test('A4. shell e filesystem mutável continuam confinados ao AgenteLocal', () =
      * `AgenteLocal` — `G1` prova isso pelo grafo, não pela boa-fé desta linha.
      */
     path.join('servidor', 'nucleo', 'Agenda.ts'),
+    /**
+     * Onde cada operador parou num POP. Escreve `dados/procedimentos-em-curso/`,
+     * do lado do motor, e a justificativa é a mesma da `Agenda` logo acima com
+     * uma diferença que vale escrever: aqui o efeito é ainda MENOR. Um lembrete
+     * pelo menos faz a IARA falar sozinha quando vence; uma posição de
+     * procedimento não dispara nada — ela só volta a existir quando a própria
+     * pessoa pergunta onde parou.
+     *
+     * `mkdir` e `writeFile` são para o JSON por operador; `rename` completa a
+     * escrita atômica. Não abre `child_process`, não alcança o `AgenteLocal`, e
+     * `G1` prova isso pelo grafo — não pela boa-fé desta linha.
+     */
+    path.join('servidor', 'nucleo', 'ProcedimentosEmCurso.ts'),
+    /**
+     * A fila de dúvidas sem resposta. Passou a escrever em 19/08/2026, quando
+     * ganhou o consumidor que o próprio módulo previa (o SOS) — sinal que zera
+     * a cada redeploy nunca acumula as cinco ocorrências que fazem um
+     * supervisor escrever um POP.
+     *
+     * Grava `dados/lacunas/<id>.json`, um por operador, e nada disso é
+     * percebido fora da IARA: a fila só volta a existir quando a própria pessoa
+     * pede a auditoria dela. Não abre `child_process` e não alcança o
+     * `AgenteLocal` — `G1` prova pelo grafo.
+     */
+    path.join('servidor', 'nucleo', 'kernel', 'LacunasCapacidade.ts'),
     path.join('servidor', 'nucleo', 'kernel', 'RegistroOperacoes.ts'), // o próprio jornal
     /**
      * A DECLARAÇÃO da fronteira. Ela cita os nomes dos padrões proibidos dentro

@@ -1,0 +1,300 @@
+{
+  "codigo": "IT-ADMLUFT-006",
+  "titulo": "EMISSÃO DE CTE OU MINUTA",
+  "sistema": "GW",
+  "revisao": "REV.:02 / REV.:01",
+  "estado": "oficial",
+  "qualidade": "contraditorio",
+  "arquivo_origem": "IT - ADMLUFT - 006 - TRANSMITIR CTE.pptx",
+  "hash_origem": "a487b8d7ee1ebbdf",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "TRANSMITIR O CTE PARA SEFAZ - ALTERAÇÃO",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "Lançamentos;\nConhecimentos;",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/47aed0809643.png",
+                "x": 0.0557,
+                "y": 0.1178
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/47aed0809643.png",
+                "x": 0.1241,
+                "y": 0.8835
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/47aed0809643.png",
+              "largura": 286,
+              "altura": 236,
+              "caixa": {
+                "x": 265.5,
+                "y": 102.68866141732283,
+                "w": 311.6612598425197,
+                "h": 257.17503937007876
+              }
+            }
+          ]
+        },
+        {
+          "indice": 2,
+          "texto": "Visualiza CTES;",
+          "passos": [
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/7858bd4c9fa7.png",
+                "x": 0.9203,
+                "y": 0.2271
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/7858bd4c9fa7.png",
+              "largura": 822,
+              "altura": 160,
+              "caixa": {
+                "x": 45.6636220472441,
+                "y": 166.19023622047243,
+                "w": 715.7546456692913,
+                "h": 254.51511811023622
+              }
+            }
+          ]
+        },
+        {
+          "indice": 3,
+          "texto": "4. Pesquisar com Status pendente;\n5. Clica em pesquisa;\n6. Seleciona o CTE;\n7. Enviar CTE selecionado para SEFAZ.",
+          "passos": [
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/92dd737e9a81.png",
+                "x": 0.4005,
+                "y": 0.4989
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/1900136d4945.png",
+                "x": 0.5867,
+                "y": 0.5942
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/f75931344429.png",
+                "x": 0.125,
+                "y": 0.4457
+              }
+            },
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": null
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/92dd737e9a81.png",
+              "largura": 177,
+              "altura": 122,
+              "caixa": {
+                "x": 57.91299212598425,
+                "y": 109.87330708661418,
+                "w": 212.70771653543306,
+                "h": 146.61212598425197
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/1900136d4945.png",
+              "largura": 387,
+              "altura": 77,
+              "caixa": {
+                "x": 319.82606299212597,
+                "y": 117.99771653543307,
+                "w": 411.256062992126,
+                "h": 81.82614173228346
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/f75931344429.png",
+              "largura": 259,
+              "altura": 71,
+              "caixa": {
+                "x": 325.17787401574805,
+                "y": 245.35929133858266,
+                "w": 393.5807086614173,
+                "h": 107.8927559055118
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/cd2ad4fed938.png",
+              "largura": 320,
+              "altura": 75,
+              "caixa": {
+                "x": 522.7011811023622,
+                "y": 409.2525196850394,
+                "w": 240,
+                "h": 56.25
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "numero": 2,
+      "titulo": "sem título no documento",
+      "slides": [
+        {
+          "indice": 4,
+          "texto": "Lançamentos;\nConhecimentos;\nVisualizar CTEs;\nColocar Data Emissão;\nSelecionar confirmados;\nclica no PDF do CTE desejado;\nImprimir CTE.",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/a483ab108dfe.png",
+                "x": 0.3277,
+                "y": 0.3067
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/a483ab108dfe.png",
+                "x": 0.3277,
+                "y": 0.9118
+              }
+            },
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": null
+            },
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/d57bc5f88f73.png",
+                "x": 0.0534,
+                "y": 0.4127
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/d57bc5f88f73.png",
+                "x": 0.8544,
+                "y": 0.6358
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/8c19f3c1da2f.png",
+                "x": 0.2124,
+                "y": 0.1503
+              }
+            },
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-006/49120d209ce8.png",
+                "x": 0.9372,
+                "y": 0.1894
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/a483ab108dfe.png",
+              "largura": 380,
+              "altura": 269,
+              "caixa": {
+                "x": 22.43472440944882,
+                "y": 121.10795275590552,
+                "w": 285,
+                "h": 201.75
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/d57bc5f88f73.png",
+              "largura": 757,
+              "altura": 196,
+              "caixa": {
+                "x": 321.2935433070866,
+                "y": 74.98291338582678,
+                "w": 471.1384251968504,
+                "h": 147
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/8c19f3c1da2f.png",
+              "largura": 185,
+              "altura": 129,
+              "caixa": {
+                "x": 331.4607874015748,
+                "y": 235.33110236220472,
+                "w": 138.75,
+                "h": 96.75
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-006/49120d209ce8.png",
+              "largura": 955,
+              "altura": 478,
+              "caixa": {
+                "x": 481.8177165354331,
+                "y": 222.41181102362205,
+                "w": 310.61425196850394,
+                "h": 246.8151968503937
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "particularidades": [
+    "Emitimos CTE sempre antes para quem carrega antes das 07:30 e MT e interestadual",
+    "O Manifesto e o contrato Geram automaticamente – Logo após a emissão do CTE ou da Minuta já gerar o CIOT/ e mudar a data do manifesto para data da viagem;",
+    "Lei que desobriga usar a nota – ultiza-se a SST / registro de envio de embalagens/ (único que utiza nota é sorriso)."
+  ],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "o documento traz mais de uma revisão (REV.:02, REV.:01)",
+    "3 de 5 slides trazem pouca instrução escrita — a informação está na captura de tela",
+    "o documento não cataloga mensagens de erro"
+  ]
+}

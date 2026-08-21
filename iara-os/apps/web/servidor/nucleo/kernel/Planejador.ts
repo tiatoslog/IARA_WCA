@@ -20,6 +20,7 @@ import { extrairAssuntoLembrete } from './Quando';
 import { planosPropostos } from './PlanosPropostos';
 import { passosExecutaveis } from './Investigacao';
 import { corrigirTypos } from '../texto';
+import { classificarIntencao, extrairCodigoPop } from './IntencaoProcedimento';
 
 function passo(
   indice: number,
@@ -361,6 +362,39 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
         : 'Responder sobre um plano que não está aberto',
       origem: 'deterministico',
       passos,
+    };
+  },
+
+  /**
+   * PROCEDIMENTO DO GW — a rota que tira da LLM a decisão de consultar o POP.
+   *
+   * Antes desta receita, uma pergunta sobre o GW só chegava ao SOS se a LLM
+   * escolhesse a habilidade no catálogo. Quando não escolhia, o Kernel caía em
+   * `raciocinio_direto` e a IARA respondia de conhecimento geral — sem POP, sem
+   * citação e sem registrar a lacuna. A defesa existia dentro da habilidade, e
+   * quem decidia invocá-la estava fora dela.
+   *
+   * A INTENÇÃO É RESOLVIDA AQUI, por módulo puro, e vai no parâmetro. É a mesma
+   * lei de `agendar_lembrete`: a frase do operador vai crua, e um determinístico
+   * a interpreta — a LLM nunca decide se alguém entra no meio de um
+   * procedimento ou no começo dele.
+   */
+  procedimento_gw: (p) => {
+    const codigo = extrairCodigoPop(p.bruto);
+    const intencao = classificarIntencao(p.bruto);
+    return {
+      objetivo:
+        intencao === 'localizar'
+          ? 'Localizar o ponto do procedimento oficial que responde'
+          : 'Conduzir pelo procedimento oficial, desde o começo',
+      origem: 'deterministico',
+      passos: [
+        passo(0, 'Consultar o POP oficial do GW', 'consultar_procedimento', {
+          consulta: p.bruto,
+          intencao,
+          ...(codigo ? { codigo } : {}),
+        }),
+      ],
     };
   },
 

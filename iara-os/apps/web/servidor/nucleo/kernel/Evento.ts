@@ -13,6 +13,7 @@
 
 import type { CapacidadeAtiva } from '../../../lib/estado';
 import type { LeituraOperador } from '../../../lib/estado';
+import type { Ilustracao } from '../../../lib/snapshot';
 
 export type TipoEvento =
   | 'MENSAGEM_RECEBIDA'
@@ -183,6 +184,12 @@ export type EventoKernel =
        * turno sem imagem envolvida. Ver `lib/snapshot.ts#FalaProjetada.marcacao`.
        */
       marcacao?: { alvo_x: number; alvo_y: number; elemento: string } | null;
+      /**
+       * As telas do documento que esta resposta mostra — hoje, as capturas do
+       * POP em curso. Ausente no turno que não ilustra nada, que é a regra.
+       * Ver `lib/snapshot.ts#Ilustracao`.
+       */
+      ilustracao?: Ilustracao | null;
     })
   | (EventoBase & { tipo: 'TAREFA_CANCELADA'; motivo: string })
   /**

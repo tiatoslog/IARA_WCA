@@ -1,0 +1,246 @@
+{
+  "codigo": "IT-ADMLUFT-009",
+  "titulo": "EMISSÃO DE CONTRATO MANUAL",
+  "sistema": "GW",
+  "revisao": "REV.:01",
+  "estado": "oficial",
+  "qualidade": "incompleto",
+  "arquivo_origem": "IT - ADMLUFT - 009 - EMISSÃO DE CONTRATO MANUAL.pptx",
+  "hash_origem": "b12a89f1ea9d5d0c",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "EMISSÃO DE CONTRATO NO GW",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "1. Lançamentos;\n2. Contratos de frete.",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/a144ee89734c.png",
+                "x": 0.2903,
+                "y": 0.2652
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/a144ee89734c.png",
+                "x": 0.2903,
+                "y": 0.9305
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-009/a144ee89734c.png",
+              "largura": 497,
+              "altura": 399,
+              "caixa": {
+                "x": 189.29181102362205,
+                "y": 96.68661417322835,
+                "w": 483.85102362204725,
+                "h": 332.93897637795277
+              }
+            }
+          ]
+        },
+        {
+          "indice": 2,
+          "texto": "3. Novo contrato;\n4. Seleciona o percurso se houver;\n5. Seleciona motorista.",
+          "passos": [
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/fd09a4d16822.png",
+                "x": 0.8939,
+                "y": 0.4529
+              }
+            },
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/5b8a053fc5e1.png",
+                "x": 0.3797,
+                "y": 0.1557
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/5b8a053fc5e1.png",
+                "x": 0.3155,
+                "y": 0.6819
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-009/fd09a4d16822.png",
+              "largura": 746,
+              "altura": 157,
+              "caixa": {
+                "x": 2.289763779527559,
+                "y": 109.66448818897638,
+                "w": 252.6656692913386,
+                "h": 113.47897637795276
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-009/5b8a053fc5e1.png",
+              "largura": 1128,
+              "altura": 659,
+              "caixa": {
+                "x": 258.03937007874015,
+                "y": 132.70732283464568,
+                "w": 529.3891338582678,
+                "h": 310.40094488188976
+              }
+            }
+          ]
+        },
+        {
+          "indice": 3,
+          "texto": "6. valores de pagamento;\n7. selecionar pedagio ida e volta;\n8. seleciona o pedagio deixa carregar o valor.",
+          "passos": [
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/57e41bed6b57.png",
+                "x": 0.3386,
+                "y": 0.0395
+              }
+            },
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/57e41bed6b57.png",
+                "x": 0.5303,
+                "y": 0.4663
+              }
+            },
+            {
+              "ordem": 8,
+              "rotulo": "8",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/57e41bed6b57.png",
+                "x": 0.2274,
+                "y": 0.4689
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-009/57e41bed6b57.png",
+              "largura": 1150,
+              "altura": 517,
+              "caixa": {
+                "x": 6.816614173228347,
+                "y": 98.74622047244094,
+                "w": 522.3369291338582,
+                "h": 338.6
+              }
+            }
+          ]
+        },
+        {
+          "indice": 4,
+          "texto": "9. em dados bancários favorecido sempre proprietário – seleciona 1 motorista e depois proprietário para puxar os dados;\n10. em dados bancários favorecido sempre proprietário – seleciona 1 motorista e depois proprietário para puxar os dados;\n11. data colocar data de pagamento toda sexta-feira próxima\n12. forma de pagamento não especificado;\n13. salvar\nPARTICULARIDADES",
+          "passos": [
+            {
+              "ordem": 9,
+              "rotulo": "9",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/acc3db990b25.png",
+                "x": 0.67,
+                "y": 0.4191
+              }
+            },
+            {
+              "ordem": 10,
+              "rotulo": "10",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/acc3db990b25.png",
+                "x": 0.5614,
+                "y": 0.5767
+              }
+            },
+            {
+              "ordem": 11,
+              "rotulo": "11",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/acc3db990b25.png",
+                "x": 0.1675,
+                "y": 0.6566
+              }
+            },
+            {
+              "ordem": 12,
+              "rotulo": "12",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/acc3db990b25.png",
+                "x": 0.3092,
+                "y": 0.7003
+              }
+            },
+            {
+              "ordem": 13,
+              "rotulo": "13",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-009/db9f8106b46f.png",
+                "x": 0.4541,
+                "y": 0.9041
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-009/acc3db990b25.png",
+              "largura": 1147,
+              "altura": 198,
+              "caixa": {
+                "x": 3.82503937007874,
+                "y": 104.61622047244094,
+                "w": 607.2526771653544,
+                "h": 121.34015748031496
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-009/db9f8106b46f.png",
+              "largura": 680,
+              "altura": 171,
+              "caixa": {
+                "x": 225,
+                "y": 250.3124409448819,
+                "w": 510,
+                "h": 128.25
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "particularidades": [
+    "O contrato gera sempre no automático, porém se for necessário geramos da forma descrita acima."
+  ],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "2 de 4 slides trazem pouca instrução escrita — a informação está na captura de tela",
+    "o documento não cataloga mensagens de erro"
+  ]
+}

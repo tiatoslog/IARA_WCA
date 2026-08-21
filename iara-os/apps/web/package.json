@@ -11,6 +11,7 @@
     "braco:entrar": "tsx scripts/braco-entrar.ts",
     "empacotar:braco": "tsx scripts/empacotar-braco.ts",
     "celular": "node scripts/celular.mjs",
+    "pops": "tsx scripts/geracao/ingerir-pops.ts",
     "marca": "tsx scripts/geracao/gerar-marca.ts",
     "icones": "tsx scripts/geracao/gerar-icones.ts",
     "vozes": "node scripts/diagnostico/vozes.mjs",

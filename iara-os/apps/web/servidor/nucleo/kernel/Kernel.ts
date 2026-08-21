@@ -56,7 +56,16 @@ import type { Operacao, SemanticaEfeito } from './Operacao';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
 import type { DestinoCognitivo, EstagioCognitivo, OrigemRaciocinio } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
+import type { Ilustracao } from '../../../lib/snapshot';
 import { analisarImagem } from '../AnaliseVisual';
+import {
+  avisoDeRevisao,
+  ilustracaoDaSituacao,
+  redigirConferencia,
+  registrarConferencia,
+  situacaoDoOperador,
+  type SituacaoDoOperador,
+} from '../ConferenciaDeTela';
 import { porUrl as anexoPorUrl } from '../AnexoImagem';
 
 /**
@@ -76,6 +85,11 @@ interface PassoExecutado {
   readonly texto: string;
   /** Uma linha: o que se apurou. Vira ressalva ou motivo de recusa. */
   readonly evidencia: string;
+  /**
+   * As telas do documento que este passo mostra, quando há. Viaja COLADA em
+   * `texto`: os dois entram na resposta juntos ou não entram — ver `ilustracaoDe`.
+   */
+  readonly ilustracao?: Ilustracao | null;
 }
 
 /**
@@ -89,6 +103,26 @@ interface ExecucaoPlano {
 /** Passos que produziram texto aproveitável para a resposta. */
 const saidasDe = (e: ExecucaoPlano): string[] =>
   e.passos.filter((p) => p.texto).map((p) => p.texto);
+
+/**
+ * A ILUSTRAÇÃO DA RESPOSTA — a do ÚLTIMO passo que ilustrou algo, ou `null`.
+ *
+ * Uma fala tem uma imagem, e um plano pode ter mais de um passo com tela. O
+ * último é o certo pela mesma lógica que faz "etapa 4 de 8" ser o número que
+ * importa: quando um plano consulta e depois avança, quem orienta agora é a
+ * parada em que a pessoa ficou, não a que ela acabou de sair.
+ *
+ * `p.texto` no filtro NÃO É REDUNDANTE. É o que impede a imagem de sobreviver ao
+ * texto que o mundo desmentiu — a tela continuaria dizendo "clique aqui", em
+ * silêncio, depois de a frase ter sido retirada por ser falsa.
+ */
+const ilustracaoDe = (e: ExecucaoPlano): Ilustracao | null => {
+  for (let i = e.passos.length - 1; i >= 0; i -= 1) {
+    const p = e.passos[i];
+    if (p.texto && p.ilustracao) return p.ilustracao;
+  }
+  return null;
+};
 
 /**
  * UM PASSO FALA UMA VEZ.
@@ -695,12 +729,39 @@ export class Kernel {
           return;
         }
 
+        /**
+         * ONDE A PESSOA DEVERIA ESTAR — lido ANTES de olhar a imagem.
+         *
+         * É o que transforma "descreva esta tela" em "confira esta tela contra a
+         * parada em que você está". A leitura é só leitura: `situacaoDoOperador`
+         * não escreve nada, e a conferência não move a posição de ninguém — quem
+         * avança é `avancar_procedimento`, com o operador falando. Ver
+         * `ConferenciaDeTela.ts`.
+         *
+         * Falha aqui NÃO derruba o turno: sem a parada, a análise visual segue
+         * como sempre foi. Perder a conferência é perder um extra; perder a
+         * resposta à imagem é o operador ficar sem nada.
+         */
+        let situacaoPop: SituacaoDoOperador = { tipo: 'sem_procedimento' };
+        try {
+          situacaoPop = await situacaoDoOperador(this.dep.idUsuario);
+        } catch (erro) {
+          console.warn(`[iara] conferência de tela indisponível — ${(erro as Error).message}`);
+        }
+        const paradaEsperada = situacaoPop.tipo === 'parada' ? situacaoPop.parada : undefined;
+
         /* `modelo` fica genérico de propósito: `analisarImagem` tenta uma
            CADEIA (Groq → Gemini → Anthropic, ver AnaliseVisual.ts) e só se
            sabe quem respondeu depois que a chamada volta — nomear um
            provedor aqui seria uma afirmação que ainda não é verdade. */
         b.publicar({ tipo: 'RACIOCINIO_INICIADO', modelo: 'visão', origem: 'nuvem' });
-        const resultado = await analisarImagem(arquivo.bytes, arquivo.tipo, texto, controle.signal);
+        const resultado = await analisarImagem(
+          arquivo.bytes,
+          arquivo.tipo,
+          texto,
+          controle.signal,
+          paradaEsperada,
+        );
         if (controle.signal.aborted) return;
         orcamento.consumir('tokens', resultado.tokens_entrada + resultado.tokens_saida);
         b.publicar({
@@ -715,21 +776,61 @@ export class Kernel {
         // snapshot (a mesma lacuna que `RACIOCINIO_CONCLUIDO` já tem para
         // texto: nenhum apelido de provedor atravessa até a projeção).
         console.log(
-          JSON.stringify({ canal: 'visao', provedor: resultado.provedor, procedencia: resultado.procedencia }),
+          JSON.stringify({
+            canal: 'visao',
+            provedor: resultado.provedor,
+            procedencia: resultado.procedencia,
+            // A conferência precisa aparecer na trilha: "a IARA disse que você
+            // estava na tela errada" é uma afirmação que alguém vai querer reler.
+            situacao: resultado.situacao ?? 'nao_situada',
+            pop: situacaoPop.tipo === 'parada' ? situacaoPop.procedimento.codigo : situacaoPop.tipo,
+          }),
         );
+
+        /**
+         * A RESPOSTA COMPOSTA quando há parada: leitura primeiro (com ressalva de
+         * dedução), documento depois (verbatim, com fonte). Sem parada, é a
+         * análise de sempre — nada mudou para quem só mandou um print.
+         */
+        const textoVisual =
+          situacaoPop.tipo === 'parada'
+            ? redigirConferencia(situacaoPop, { texto: resultado.texto, situacao: resultado.situacao })
+            : situacaoPop.tipo === 'revisado'
+              ? `${resultado.texto}${avisoDeRevisao(situacaoPop.codigo)}`
+              : resultado.texto;
+
+        /**
+         * A CONFERÊNCIA FICA GUARDADA para o turno em que o operador pedir para
+         * avançar — é o que faz o print virar evidência de verdade em vez de
+         * morrer nesta resposta. Não move a posição de ninguém; ver
+         * `ConferenciaDeTela.ts`.
+         */
+        if (situacaoPop.tipo === 'parada') {
+          await registrarConferencia(
+            this.dep.idUsuario,
+            situacaoPop,
+            { texto: resultado.texto, situacao: resultado.situacao },
+            anexo.url,
+          );
+        }
 
         b.publicar({
           tipo: 'TAREFA_CONCLUIDA',
           id_mensagem: idMensagem,
-          texto: resultado.texto,
+          texto: textoVisual,
           rota: 'analise_visual',
           ms: Date.now() - inicio,
           responde_a: idDaPergunta,
           marcacao: resultado.alvo
             ? { alvo_x: resultado.alvo.x, alvo_y: resultado.alvo.y, elemento: resultado.alvo.elemento }
             : null,
+          /* A tela do POP ao lado da tela real: a marcação diz onde a pessoa
+             está, a ilustração diz como aquela parada deveria parecer. É no caso
+             `outra_tela` que ela vale mais — e é exatamente o caso em que a
+             pessoa mais precisa de algo com que comparar. */
+          ilustracao: ilustracaoDaSituacao(situacaoPop),
         });
-        await this.registrarSemQuebrar('iara', resultado.texto, 'claude_nuvem');
+        await this.registrarSemQuebrar('iara', textoVisual, 'claude_nuvem');
         await this.dep.estado.aplicarIntencao({
           campo: 'afinidade',
           delta: TeoriaDaMente.GANHO_POR_TROCA,
@@ -966,6 +1067,7 @@ export class Kernel {
         rota: decisao.rota,
         ms: Date.now() - inicio,
         responde_a: idDaPergunta,
+        ilustracao: ilustracaoDe(execucao),
       });
 
       await this.registrarSemQuebrar('iara', texto_final, this.destinoDe(decisao.rota));
@@ -1541,6 +1643,9 @@ export class Kernel {
            * a habilidade por ter contado a verdade.
            */
           texto: naoConfirmado?.motivo === 'divergente' ? '' : texto,
+          // A imagem segue o texto — a mesma condição, de propósito.
+          ilustracao:
+            naoConfirmado?.motivo === 'divergente' ? null : (v.resultado.ilustracao ?? null),
           evidencia: naoConfirmado?.evidencia ?? v.resultado.detalhe,
         });
         if (naoConfirmado?.motivo !== 'divergente') this.trabalho.concluirPasso(texto);

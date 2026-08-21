@@ -1,0 +1,357 @@
+{
+  "codigo": "IT-ADMLUFT-001",
+  "titulo": "AGENDAMENTO DE COLETA",
+  "sistema": "GW",
+  "revisao": "REV.:02",
+  "estado": "oficial",
+  "qualidade": "incompleto",
+  "arquivo_origem": "IT - ADMLUFT - 001 - AGENDAMENTO DE COLETA.pptx",
+  "hash_origem": "6b3f7fd537a43fe2",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "RECEBIMENTO DA OCI VIA E-MAIL",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "A empresa LUFT envia a Ordem de Coleta via e-mail, no e-mail da analista responsável Atos.\nNós recebemos a numeração no e-mail e a partir deste momento já podemos agendar a viagem. Mas precisamos nos atentar para cada particularidade da Região. Por exemplo a Central de Piedade envia quais ordens de coleta irá carregar na semana seguinte na sexta-feira anterior.",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/b6e615e3f096.png",
+                "x": 0.0797,
+                "y": 0.6709
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/b6e615e3f096.png",
+              "largura": 1284,
+              "altura": 398,
+              "caixa": {
+                "x": 45.6636220472441,
+                "y": 107.76685039370079,
+                "w": 679.3763779527559,
+                "h": 342.51094488188977
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "numero": 2,
+      "titulo": "PREENCHIMENTO PLANILHA E AGENDAMENTO",
+      "slides": [
+        {
+          "indice": 2,
+          "texto": "Após o recebimento da OCI nós incluímos a mesma na planilha Excel de agendamento.\nAcessar a planilha no caminho da rede;\nNa planilha incluir o numero da OCI recebido;\nOrigem\ndestino\nData que você recebeu a OCI\nMotorista que faz a região\nO campo rota irá preencher automaticamente",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/1c66b4f5a0c3.png",
+                "x": 0.0089,
+                "y": 0.1161
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/242b460e7efd.png",
+                "x": 0.2818,
+                "y": 0.4205
+              }
+            },
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/242b460e7efd.png",
+                "x": 0.406,
+                "y": 0.2649
+              }
+            },
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/242b460e7efd.png",
+                "x": 0.5875,
+                "y": 0.2772
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/242b460e7efd.png",
+                "x": 0.713,
+                "y": 0.2649
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/242b460e7efd.png",
+                "x": 0.7935,
+                "y": 0.0109
+              }
+            },
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": null
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/242b460e7efd.png",
+              "largura": 1042,
+              "altura": 225,
+              "caixa": {
+                "x": 67.00700787401574,
+                "y": 252.0044094488189,
+                "w": 609.7981889763779,
+                "h": 217.87385826771654
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/1c66b4f5a0c3.png",
+              "largura": 898,
+              "altura": 227,
+              "caixa": {
+                "x": 61.257952755905514,
+                "y": 95.5028346456693,
+                "w": 644.5558267716535,
+                "h": 146.78291338582676
+              }
+            }
+          ]
+        },
+        {
+          "indice": 3,
+          "texto": "Após verificar se poderá agendar a carga de imediato ou se vai ter que aguardar para agendar 1x na semana, você irá ligar no posto x central e para o motorista para agendar as cargas.\n8. Os contatos ficam na planilha na rede.\n9. Na planilha contatos LUFT – Postos e Centrais\n10. Nesta planilha você encontra todos os contatos postos e centrais e o motorista que faz a rota e seu contato",
+          "passos": [
+            {
+              "ordem": 8,
+              "rotulo": "8",
+              "ancora": null
+            },
+            {
+              "ordem": 9,
+              "rotulo": "9",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/294247ef05fb.png",
+                "x": 0.3286,
+                "y": 0.4332
+              }
+            },
+            {
+              "ordem": 10,
+              "rotulo": "10",
+              "ancora": null
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/d5c9b293e917.png",
+              "largura": 569,
+              "altura": 73,
+              "caixa": {
+                "x": 86.60511811023622,
+                "y": 401.48779527559054,
+                "w": 426.75,
+                "h": 54.75
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/294247ef05fb.png",
+              "largura": 419,
+              "altura": 138,
+              "caixa": {
+                "x": 474.43700787401576,
+                "y": 294.5885039370079,
+                "w": 314.25,
+                "h": 103.5
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/42a3607a3cf2.png",
+              "largura": 1259,
+              "altura": 438,
+              "caixa": {
+                "x": 9.848503937007875,
+                "y": 122.66448818897638,
+                "w": 503.50661417322834,
+                "h": 249.65133858267717
+              }
+            }
+          ]
+        },
+        {
+          "indice": 4,
+          "texto": "Após efetuar a ligação de agendamento para Posto x central cx motorista preencher a planilha da seguinte forma:\n11. Postos: colocar data que falou com posto, a hora e o nome da pessoa que você fez agendamento;\n12. Central: Colocar data e hora que você falou com a central e o nome da pessoa que você agendou;\n13. TAC: colocar data e hora que avisou o motorista\nDica: sempre agendar via BOT ou WhatsApp para deixar o registro do agendamento",
+          "passos": [
+            {
+              "ordem": 11,
+              "rotulo": "11",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/e93c9a811c0e.png",
+                "x": 0.2562,
+                "y": 0.0604
+              }
+            },
+            {
+              "ordem": 12,
+              "rotulo": "12",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/e93c9a811c0e.png",
+                "x": 0.6283,
+                "y": 0.0622
+              }
+            },
+            {
+              "ordem": 13,
+              "rotulo": "13",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/e93c9a811c0e.png",
+                "x": 0.9365,
+                "y": 0.0648
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/e93c9a811c0e.png",
+              "largura": 528,
+              "altura": 224,
+              "caixa": {
+                "x": 148.0655118110236,
+                "y": 123.86866141732284,
+                "w": 482.19535433070865,
+                "h": 282.4490551181102
+              }
+            }
+          ]
+        },
+        {
+          "indice": 5,
+          "texto": "14. Preencher a data que a coleta será realizada no posto\n15. Preencher a data que a descarga será feita na Central",
+          "passos": [
+            {
+              "ordem": 14,
+              "rotulo": "14",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/c55adba2c23c.png",
+                "x": 0.6464,
+                "y": 0.0963
+              }
+            },
+            {
+              "ordem": 15,
+              "rotulo": "15",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-001/c55adba2c23c.png",
+                "x": 0.8968,
+                "y": 0.1126
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/c55adba2c23c.png",
+              "largura": 463,
+              "altura": 252,
+              "caixa": {
+                "x": 111.06141732283464,
+                "y": 137.01007874015747,
+                "w": 519.1993700787401,
+                "h": 282.58803149606297
+              }
+            }
+          ]
+        },
+        {
+          "indice": 6,
+          "texto": "PARTICULARIDADES - AGENDAMENTO",
+          "passos": [],
+          "capturas": []
+        }
+      ]
+    },
+    {
+      "numero": 7,
+      "titulo": "CONTATOS PARA AGENDAMENTO",
+      "slides": [
+        {
+          "indice": 8,
+          "texto": "INFORMAÇÕES DISPONIVEIS NA REDE",
+          "passos": [],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/d5c9b293e917.png",
+              "largura": 569,
+              "altura": 73,
+              "caixa": {
+                "x": 513.3552755905512,
+                "y": 181.81259842519685,
+                "w": 426.75,
+                "h": 54.75
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/294247ef05fb.png",
+              "largura": 419,
+              "altura": 138,
+              "caixa": {
+                "x": 557.8222834645669,
+                "y": 278.99204724409446,
+                "w": 314.25,
+                "h": 103.5
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-001/42a3607a3cf2.png",
+              "largura": 1259,
+              "altura": 438,
+              "caixa": {
+                "x": 9.848503937007875,
+                "y": 122.66448818897638,
+                "w": 503.50661417322834,
+                "h": 249.65133858267717
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "particularidades": [
+    "Motoristas que atendem esporádico normalmente o agendamento é feito com o motorista primeiro;",
+    "Cargas da Adicer: agenda antes de solicitar a OCI",
+    "Sorriso não tem agendamento – a própria central passa a as notas e passa a data do agendamento – não precisa ligar para o motorista só envia OCI. Em sorriso quando lançar na planilha não colocar motorista pois lá tem 2 (Laudir e Linealdo (Lino)",
+    "Apenas as minutas são geradas automaticamente: CIOT e manifesto  precisam ser autorizados manualmente.",
+    "O posto de Sorriso envia a nota no mesmo dia para emissão do CTE;",
+    "No agendamento enviamos:",
+    "1. 100% dos casos as OCIS",
+    "2. CTE e MDFE nos trechos interestaduais e MT",
+    "Emitimos CTE para MT e cargas interestaduais"
+  ],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "3 de 8 slides trazem pouca instrução escrita — a informação está na captura de tela",
+    "o documento não cataloga mensagens de erro"
+  ]
+}

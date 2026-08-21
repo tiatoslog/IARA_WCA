@@ -1,0 +1,457 @@
+{
+  "codigo": "IT-ADMLUFT-004",
+  "titulo": "EMISSÃO DE CTE OU MINUTA",
+  "sistema": "GW",
+  "revisao": "REV.:02",
+  "estado": "oficial",
+  "qualidade": "incompleto",
+  "arquivo_origem": "IT - ADMLUFT - 004 - EMISSÃO DE CTE OU MINUTA.pptx",
+  "hash_origem": "1078e22efe789cda",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "EMITIR CTE OU MINUTA",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "Um dia antes da viagem emitimos 100% das minutas de viagem.\nNo dia da viagem alteramos a data da minuta para a data do dia e transformamos o documento em 1 (CTE) e enviamos para sefaz.\nEm alguns casos enviamos o CTE no dia anterior da viagem (consultar exceções)\nNo sistema GW Clicamos em lançamentos;\nConhecimentos",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/7c6b1b08dd47.png",
+                "x": 0.2508,
+                "y": 0.2127
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/7c6b1b08dd47.png",
+                "x": 0.2827,
+                "y": 0.5335
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/7c6b1b08dd47.png",
+              "largura": 560,
+              "altura": 523,
+              "caixa": {
+                "x": 180.81181102362206,
+                "y": 112.55110236220473,
+                "w": 487.3084251968504,
+                "h": 368.01661417322833
+              }
+            }
+          ]
+        },
+        {
+          "indice": 2,
+          "texto": "3. novo cadastro\n4. reaproveitar CTE cancelado\nA ação de reaproveitar um CTE cancelado nós fazemos para autopreencher os dados da Rota (como se fosse um pedido)\nPara agilizar o processo e evitar erros de origem x destino.",
+          "passos": [
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/9a313e0acf1d.png",
+                "x": 0.9567,
+                "y": 0.7411
+              }
+            },
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/128d4553d861.png",
+                "x": 0.5763,
+                "y": 0.2711
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/9a313e0acf1d.png",
+              "largura": 843,
+              "altura": 157,
+              "caixa": {
+                "x": 115.8259842519685,
+                "y": 97.33708661417323,
+                "w": 563.2608661417323,
+                "h": 149.32338582677164
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/128d4553d861.png",
+              "largura": 613,
+              "altura": 166,
+              "caixa": {
+                "x": 115.8259842519685,
+                "y": 269.9604724409449,
+                "w": 563.2609448818897,
+                "h": 172.7024409448819
+              }
+            }
+          ]
+        },
+        {
+          "indice": 3,
+          "texto": "5.número da carga : colocar número da planilha de agendamento – o numero da rota\n6. todas as filiais;\n7. pesquisar;\n8. Seleciona o que é serie P (pedido) dar duplo clique e vai preencher os dados na tela",
+          "passos": [
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/75cbbe07f89e.png",
+                "x": 0.0573,
+                "y": 0.3724
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/a26ff0fc8427.png",
+                "x": 0.04,
+                "y": 0.489
+              }
+            },
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/6fab198e6774.png",
+                "x": 0.8345,
+                "y": 0.4023
+              }
+            },
+            {
+              "ordem": 8,
+              "rotulo": "8",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/6fab198e6774.png",
+                "x": 0.0239,
+                "y": 0.4961
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/6fab198e6774.png",
+              "largura": 805,
+              "altura": 430,
+              "caixa": {
+                "x": 65.0931496062992,
+                "y": 182.21385826771655,
+                "w": 538.931811023622,
+                "h": 283.40622047244096
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/75cbbe07f89e.png",
+              "largura": 165,
+              "altura": 75,
+              "caixa": {
+                "x": 85.62055118110236,
+                "y": 100.7659842519685,
+                "w": 201.23661417322833,
+                "h": 71.3740157480315
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/a26ff0fc8427.png",
+              "largura": 158,
+              "altura": 65,
+              "caixa": {
+                "x": 349.27897637795274,
+                "y": 99.51370078740158,
+                "w": 182.47259842519685,
+                "h": 71.3740157480315
+              }
+            }
+          ]
+        },
+        {
+          "indice": 4,
+          "texto": "9. Sempre conferir origem;\n10. Sempre verificar destino;\n11.  inserir o numero da OCI no campo numero do pedido;",
+          "passos": [
+            {
+              "ordem": 9,
+              "rotulo": "9",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/5be7344679e0.png",
+                "x": 0.074,
+                "y": 0.4546
+              }
+            },
+            {
+              "ordem": 10,
+              "rotulo": "10",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/5be7344679e0.png",
+                "x": 0.5612,
+                "y": 0.4546
+              }
+            },
+            {
+              "ordem": 11,
+              "rotulo": "11",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/5be7344679e0.png",
+                "x": 0.5293,
+                "y": 0.2802
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/5be7344679e0.png",
+              "largura": 1051,
+              "altura": 343,
+              "caixa": {
+                "x": 10.836456692913385,
+                "y": 102.32897637795276,
+                "w": 779.9985039370079,
+                "h": 310.66685039370077
+              }
+            }
+          ]
+        },
+        {
+          "indice": 5,
+          "texto": "12. Verificar se trouxe o valor de frete;\n13. Folha com mais (adicionar nota fiscal) ;\n14. Digitar os dados da nota do posto  sst que está na planilha de agendamento;\n15. a serie se for para o mesmo dia a viagem colocar 1 (fazendo CTE) e se tiver fazendo a viagem para o dia seguinte a  serie é M (fazendo a minuta)\n16. Valor colocar igual da SST  ou 1,00 se não tiver\n17. peso e volume nos dois campos é o mesmo da SST se for minuta colocar 1500;\n18.  Conteúdo (diversos)\n19. Tipo de doc: outros",
+          "passos": [
+            {
+              "ordem": 12,
+              "rotulo": "12",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/ea8dd37391a6.png",
+                "x": 0.7881,
+                "y": 0.5519
+              }
+            },
+            {
+              "ordem": 13,
+              "rotulo": "13",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/1b2602fa9331.png",
+                "x": 0.027,
+                "y": 0.1703
+              }
+            },
+            {
+              "ordem": 14,
+              "rotulo": "14",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/1b2602fa9331.png",
+                "x": 0.1086,
+                "y": 0.2241
+              }
+            },
+            {
+              "ordem": 15,
+              "rotulo": "15",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/1b2602fa9331.png",
+                "x": 0.1746,
+                "y": 0.2241
+              }
+            },
+            {
+              "ordem": 16,
+              "rotulo": "16",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/1b2602fa9331.png",
+                "x": 0.3278,
+                "y": 0.2255
+              }
+            },
+            {
+              "ordem": 17,
+              "rotulo": "17",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/1b2602fa9331.png",
+                "x": 0.4239,
+                "y": 0.2105
+              }
+            },
+            {
+              "ordem": 18,
+              "rotulo": "18",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/1b2602fa9331.png",
+                "x": 0.7255,
+                "y": 0.2179
+              }
+            },
+            {
+              "ordem": 19,
+              "rotulo": "19",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/1b2602fa9331.png",
+                "x": 0.8391,
+                "y": 0.843
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/ea8dd37391a6.png",
+              "largura": 975,
+              "altura": 104,
+              "caixa": {
+                "x": 21.636220472440947,
+                "y": 125.80527559055118,
+                "w": 731.25,
+                "h": 78
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/1b2602fa9331.png",
+              "largura": 1061,
+              "altura": 122,
+              "caixa": {
+                "x": 25.679212598425195,
+                "y": 362.12732283464567,
+                "w": 719.2663779527559,
+                "h": 91.5
+              }
+            }
+          ]
+        },
+        {
+          "indice": 6,
+          "texto": "20. Mudar a observação colocar numero da SST\n21. Colocar previsão de entrega (data do carregamento)\n22. Selecionar motorista e veiculo; (apagra e colocar novamente) liberação se tiver em branco colocar total\n23. Se for MINUTA alterar a série para M (e dá um TAB)  e for CTE colocar 1\n24. Em informações do frete colocar na linha saldo no campo data a data que será pago o frete: sempre a segunda sexta-feira depois da data do frete. Exemplo: frete realizado 08/02 paga-se 17/02\n25.forma de pagamento colocar não especificado;\n26. Salvar",
+          "passos": [
+            {
+              "ordem": 20,
+              "rotulo": "20",
+              "ancora": null
+            },
+            {
+              "ordem": 21,
+              "rotulo": "21",
+              "ancora": null
+            },
+            {
+              "ordem": 22,
+              "rotulo": "22",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/ef749cdd9764.png",
+                "x": 0.4529,
+                "y": 0.1993
+              }
+            },
+            {
+              "ordem": 23,
+              "rotulo": "23",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/f12359c07da0.png",
+                "x": 0.9224,
+                "y": 0.3392
+              }
+            },
+            {
+              "ordem": 24,
+              "rotulo": "24",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/56dd2ef91c2d.png",
+                "x": 0.2702,
+                "y": 0.7481
+              }
+            },
+            {
+              "ordem": 25,
+              "rotulo": "25",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/56dd2ef91c2d.png",
+                "x": 0.5449,
+                "y": 0.898
+              }
+            },
+            {
+              "ordem": 26,
+              "rotulo": "26",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-004/66f54ddc40cb.png",
+                "x": 0.6848,
+                "y": 0.79
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/ef749cdd9764.png",
+              "largura": 628,
+              "altura": 106,
+              "caixa": {
+                "x": 14.052834645669291,
+                "y": 307.92141732283466,
+                "w": 340.99047244094487,
+                "h": 79.5
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/f12359c07da0.png",
+              "largura": 629,
+              "altura": 193,
+              "caixa": {
+                "x": 373.6075590551181,
+                "y": 112.55118110236221,
+                "w": 410.04464566929136,
+                "h": 165.01401574803148
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/66f54ddc40cb.png",
+              "largura": 712,
+              "altura": 140,
+              "caixa": {
+                "x": 10.858425196850394,
+                "y": 399.73826771653546,
+                "w": 367.5651968503937,
+                "h": 79.5
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/56dd2ef91c2d.png",
+              "largura": 643,
+              "altura": 205,
+              "caixa": {
+                "x": 378.42362204724407,
+                "y": 301.4176377952756,
+                "w": 393.7503149606299,
+                "h": 153.75
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-004/26ebc821ee2e.png",
+              "largura": 618,
+              "altura": 156,
+              "caixa": {
+                "x": 8.139212598425196,
+                "y": 144.4744094488189,
+                "w": 340.99047244094487,
+                "h": 117
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "particularidades": [],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "o documento não declara exceções ou casos particulares",
+    "o documento não cataloga mensagens de erro"
+  ]
+}

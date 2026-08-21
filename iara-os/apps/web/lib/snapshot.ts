@@ -177,6 +177,60 @@ export const TELEMETRIA_ZERO: TelemetriaSnapshot = {
 // O contrato
 // ---------------------------------------------------------------------------
 
+/** Um ponto marcado sobre uma tela ilustrada, em coordenada NORMALIZADA. */
+export interface PontoMarcado {
+  /** O rótulo tal como a fonte o escreve: `'3'`, `'Clicar sim 2x'`. */
+  readonly rotulo: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Uma imagem da ilustração, com os pontos que caem DENTRO dela. */
+export interface TelaIlustrada {
+  readonly url: string;
+  readonly largura: number;
+  readonly altura: number;
+  readonly pontos: readonly PontoMarcado[];
+}
+
+/**
+ * A ILUSTRAÇÃO DE UMA FALA — as telas que a fonte mostra, com o que ela marca.
+ *
+ * NÃO É MÍDIA GERADA, e a distinção é a razão de este tipo existir separado de
+ * `marcacao`. Ali a IARA aponta sobre a imagem que o OPERADOR mandou; aqui ela
+ * exibe um RECORTE DE DOCUMENTO — a captura que o POP já continha, servida de
+ * `/procedimentos/`, com as coordenadas que as setas vetoriais do próprio slide
+ * declaram. Nenhum pixel nasce da IARA, em nenhum dos dois casos.
+ *
+ * Desenhar uma tela do GW que o documento não tem seria fabricar evidência: a
+ * imagem é lida como prova do que a tela é, e uma prova inventada é confiada sem
+ * conferência. Quem preencher este campo com imagem de outra procedência quebra
+ * a promessa inteira — ver `testes/procedimentos.test.ts`.
+ */
+export interface Ilustracao {
+  /**
+   * TODAS as telas da parada, nunca uma escolhida entre elas.
+   *
+   * Nos 11 POPs de 18/08/2026, 23 dos 73 slides têm mais de uma captura e 21
+   * têm passos apontando para capturas DIFERENTES no mesmo slide. Eleger "a
+   * principal" esconderia metade da instrução em um terço das paradas — e
+   * esconderia calada, que é o pior jeito.
+   */
+  readonly telas: readonly TelaIlustrada[];
+  /** A procedência numa linha, para a legenda. Vem de `citar()`. */
+  readonly fonte: string;
+  /**
+   * Os rótulos que a fonte numera e NÃO diz onde ficam.
+   *
+   * A seta existe no slide, mas a ponta dela não cai dentro de captura nenhuma
+   * (`PassoDoPop.ancora === null`, 10 dos 226 passos). Sem este campo a tela
+   * mostraria 3 círculos para um slide que numera 5 passos, e quem olha
+   * concluiria que são 3 — a omissão silenciosa que `lacunas` existe para
+   * impedir em todo o resto do sistema.
+   */
+  readonly nao_marcados: readonly string[];
+}
+
 /**
  * A fala corrente. Vive DENTRO do snapshot de propósito: um canal separado de
  * streaming seria um segundo caminho falando com a tela, e aí o contrato
@@ -237,6 +291,20 @@ export interface FalaProjetada {
    * ver `Verdade.ts`) — a ausência de marcação nunca é inventada.
    */
   readonly marcacao?: { readonly alvo_x: number; readonly alvo_y: number; readonly elemento: string } | null;
+
+  /**
+   * AS TELAS QUE ESTA FALA MOSTRA, quando ela orienta a partir de um documento
+   * que tinha captura — hoje, os POPs do GW.
+   *
+   * Separada de `marcacao` por procedência, não por formato: aquela é leitura de
+   * imagem (`inferencia`), esta é recorte de documento (`documento`). Misturar
+   * as duas num campo só faria a tela mostrar com a mesma cara o que a IARA
+   * ACHA que viu e o que o POP DIZ — e é justamente essa diferença que decide se
+   * a pessoa confere antes de clicar.
+   *
+   * `null`/ausente é o normal: a esmagadora maioria das falas não ilustra nada.
+   */
+  readonly ilustracao?: Ilustracao | null;
 }
 
 /**

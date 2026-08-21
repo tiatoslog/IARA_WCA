@@ -235,6 +235,9 @@ export class CompiladorSnapshot {
           // versão é uma chamada única, não incremental — a marcação só
           // existe quando a resposta está pronta, em TAREFA_CONCLUIDA.
           marcacao: null,
+          // Mesma razão, outro motivo: a ilustração vem do passo que já
+          // executou, e um trecho parcial é texto chegando antes disso.
+          ilustracao: null,
         };
         break;
 
@@ -268,6 +271,7 @@ export class CompiladorSnapshot {
           cache_lido: this.telemetria.cache_lido,
           voz: null,
           marcacao: e.marcacao ?? null,
+          ilustracao: e.ilustracao ?? null,
         };
         break;
 

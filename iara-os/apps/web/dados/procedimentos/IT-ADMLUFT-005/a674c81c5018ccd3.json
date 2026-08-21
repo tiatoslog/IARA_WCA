@@ -1,0 +1,379 @@
+{
+  "codigo": "IT-ADMLUFT-005",
+  "titulo": "GERAR CIOT E PEDAGIO",
+  "sistema": "GW",
+  "revisao": "REV.:02",
+  "estado": "oficial",
+  "qualidade": "incompleto",
+  "arquivo_origem": "IT - ADMLUFT - 005 - GERAR CIOT E PEDAGIO.pptx",
+  "hash_origem": "a674c81c5018ccd3",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "GERAR CIOT NO GW",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "1. Entrar no sistema GW e clicar em Lançamentos;\n2. Contratos de frete;",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/42d3ae2507e6.png",
+                "x": 0.2637,
+                "y": 0.1935
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/42d3ae2507e6.png",
+                "x": 0.3189,
+                "y": 0.8315
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-005/42d3ae2507e6.png",
+              "largura": 487,
+              "altura": 439,
+              "caixa": {
+                "x": 112.2063779527559,
+                "y": 102.32889763779528,
+                "w": 435.06543307086616,
+                "h": 353.8632283464567
+              }
+            }
+          ]
+        },
+        {
+          "indice": 2,
+          "texto": "3. Colocar a data que você criou a minuta ou CTE deste Contrato;\n4. Selecionar apenas Contratos feitos por mim;\n5. Clicar em pesquisar.",
+          "passos": [
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/443e1a826868.png",
+                "x": 0.0028,
+                "y": 0.1813
+              }
+            },
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/443e1a826868.png",
+                "x": 0.7702,
+                "y": 0.2651
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/443e1a826868.png",
+                "x": 0.92,
+                "y": 0.3633
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-005/443e1a826868.png",
+              "largura": 1204,
+              "altura": 333,
+              "caixa": {
+                "x": 72.93818897637796,
+                "y": 100.7659842519685,
+                "w": 675.3411023622048,
+                "h": 346.7320472440945
+              }
+            }
+          ]
+        },
+        {
+          "indice": 3,
+          "texto": "6. Dar um duplo clique no numero em azul do contrato que você irá gerar o CIOT\nRotas com pedágio SEMPRE devem ser feito emissão de pedágio antes da viagem\nPARTICULARIDADES",
+          "passos": [
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": null
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-005/25d6f7989668.png",
+              "largura": 640,
+              "altura": 427,
+              "caixa": {
+                "x": 199.51614173228347,
+                "y": 114.3959842519685,
+                "w": 384.34905511811024,
+                "h": 292.5074803149606
+              }
+            }
+          ]
+        },
+        {
+          "indice": 4,
+          "texto": "",
+          "passos": [
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/a8ed9095149a.png",
+                "x": 0.347,
+                "y": 0.3409
+              }
+            },
+            {
+              "ordem": 8,
+              "rotulo": "8",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/a8ed9095149a.png",
+                "x": 0.6223,
+                "y": 0.3461
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-005/a8ed9095149a.png",
+              "largura": 1227,
+              "altura": 525,
+              "caixa": {
+                "x": 19.87503937007874,
+                "y": 112.26338582677165,
+                "w": 744.7587401574804,
+                "h": 318.6620472440945
+              }
+            }
+          ]
+        },
+        {
+          "indice": 5,
+          "texto": "89,90",
+          "passos": [
+            {
+              "ordem": 9,
+              "rotulo": "9",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/b72e8736b421.png",
+                "x": 0.293,
+                "y": 0.0337
+              }
+            },
+            {
+              "ordem": 10,
+              "rotulo": "10",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/b72e8736b421.png",
+                "x": 0.3459,
+                "y": 0.6924
+              }
+            },
+            {
+              "ordem": 11,
+              "rotulo": "11",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/b72e8736b421.png",
+                "x": 0.2349,
+                "y": 0.7315
+              }
+            },
+            {
+              "ordem": 12,
+              "rotulo": "12",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/4dae7ccde3e6.png",
+                "x": 0.2387,
+                "y": 0.8587
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-005/b72e8736b421.png",
+              "largura": 1165,
+              "altura": 448,
+              "caixa": {
+                "x": 18.618661417322834,
+                "y": 112.26330708661418,
+                "w": 747.2944094488189,
+                "h": 336
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-005/4dae7ccde3e6.png",
+              "largura": 692,
+              "altura": 170,
+              "caixa": {
+                "x": 382.6524409448819,
+                "y": 359.3347244094488,
+                "w": 364.12543307086617,
+                "h": 127.5
+              }
+            }
+          ]
+        },
+        {
+          "indice": 6,
+          "texto": "",
+          "passos": [
+            {
+              "ordem": 13,
+              "rotulo": "13",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/c69211c24dc8.png",
+                "x": 0.1893,
+                "y": 0.4466
+              }
+            },
+            {
+              "ordem": 14,
+              "rotulo": "14",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/c69211c24dc8.png",
+                "x": 0.3001,
+                "y": 0.4024
+              }
+            },
+            {
+              "ordem": 15,
+              "rotulo": "15",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/c69211c24dc8.png",
+                "x": 0.6303,
+                "y": 0.2624
+              }
+            },
+            {
+              "ordem": 16,
+              "rotulo": "16",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/c69211c24dc8.png",
+                "x": 0.5265,
+                "y": 0.3703
+              }
+            },
+            {
+              "ordem": 17,
+              "rotulo": "17",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/c69211c24dc8.png",
+                "x": 0.5,
+                "y": 0.8714
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-005/c69211c24dc8.png",
+              "largura": 1149,
+              "altura": 312,
+              "caixa": {
+                "x": 33.313464566929134,
+                "y": 153,
+                "w": 723.2238582677165,
+                "h": 234
+              }
+            }
+          ]
+        },
+        {
+          "indice": 7,
+          "texto": "",
+          "passos": [
+            {
+              "ordem": 18,
+              "rotulo": "18",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/e0cf399889d3.png",
+                "x": 0.0422,
+                "y": 0.2354
+              }
+            },
+            {
+              "ordem": 19,
+              "rotulo": "19",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/e0cf399889d3.png",
+                "x": 0.904,
+                "y": 0.9232
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-005/e0cf399889d3.png",
+              "largura": 643,
+              "altura": 289,
+              "caixa": {
+                "x": 181.73307086614173,
+                "y": 141.05669291338583,
+                "w": 482.25,
+                "h": 216.75
+              }
+            }
+          ]
+        },
+        {
+          "indice": 8,
+          "texto": "",
+          "passos": [
+            {
+              "ordem": 20,
+              "rotulo": "20",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/f68c6d617068.png",
+                "x": 0.6485,
+                "y": 0.467
+              }
+            },
+            {
+              "ordem": 21,
+              "rotulo": "21",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-005/f68c6d617068.png",
+                "x": 0.8028,
+                "y": 0.467
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-005/f68c6d617068.png",
+              "largura": 1255,
+              "altura": 503,
+              "caixa": {
+                "x": 8.329133858267717,
+                "y": 112.26330708661418,
+                "w": 789.7088976377953,
+                "h": 316.5128346456693
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "particularidades": [],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o rodapé \"Página: N/M\" diverge da ordem real em 7 de 8 slides",
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "o documento não declara exceções ou casos particulares",
+    "6 de 8 slides trazem pouca instrução escrita — a informação está na captura de tela",
+    "o documento não cataloga mensagens de erro"
+  ]
+}

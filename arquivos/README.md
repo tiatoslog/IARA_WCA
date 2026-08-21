@@ -5,6 +5,7 @@ Material de apoio que **não é código**.
 | Pasta | O que vai ali | No Git? |
 |---|---|---|
 | `documentos/` | contratos, especificações e planilhas em formato binário | sim |
+| `procedimentos/` | os POPs oficiais (`IT - ADMLUFT - NNN`) — fonte da verdade do SOS | sim |
 | `packs-arte/` | os `.zip` originais dos packs de arte | **não** |
 | `identidade-metahuman/` | projeto MetaHuman e assets derivados | **não** |
 

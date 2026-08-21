@@ -25,6 +25,7 @@ import { HABILIDADES_INVESTIGACAO } from './investigacao';
 import { HABILIDADES_AUDITORIA } from './auditoria';
 import { HABILIDADES_PLANILHA_OCIS } from './cargasLuft';
 import { HABILIDADES_PLANILHA_GENERICA } from './planilhaGenerica';
+import { HABILIDADES_PROCEDIMENTOS } from './procedimentos';
 
 export const CATALOGO: readonly Habilidade[] = [
   ...HABILIDADES_OPERACIONAIS,
@@ -39,6 +40,7 @@ export const CATALOGO: readonly Habilidade[] = [
   ...HABILIDADES_AUDITORIA,
   ...HABILIDADES_PLANILHA_OCIS,
   ...HABILIDADES_PLANILHA_GENERICA,
+  ...HABILIDADES_PROCEDIMENTOS,
 ];
 
 export { prepararOperacionais };

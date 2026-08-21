@@ -14,6 +14,13 @@ import type { Percepcao, TipoEntrada, Urgencia } from './Evento';
 import { corrigirTypos, normalizar } from '../texto';
 import { TeoriaDaMente, type SinalTemporal } from '../TeoriaDaMente';
 import {
+  INFINITIVO_OPERACIONAL,
+  INTENCAO_PROCEDIMENTAL,
+  PERGUNTA_DE_DADO,
+  TENTATIVA_DE_ATALHO,
+  VOCABULARIO_GW,
+} from './IntencaoProcedimento';
+import {
   ehPerguntaSobreResolver,
   periodoEhIrrealis,
   separarVozes,
@@ -378,6 +385,54 @@ const ANCORAS: ReadonlyArray<Ancora> = [
      * confirmar não pode resolver a pendência. Ver `ehPerguntaSobreResolver`.
      */
     interrogavel: true,
+  },
+  /**
+   * PROCEDIMENTO DO GW — a âncora que impede a LLM de ser a autoridade sobre se
+   * o POP é consultado.
+   *
+   * O DEFEITO QUE ELA FECHA: sem rota determinística, "como faço o agendamento"
+   * dependia de a `DescobertaCapacidades` convencer a LLM a escolher
+   * `consultar_procedimento`. Quando ela não escolhia, o Kernel caía em
+   * `raciocinio_direto` e a IARA respondia de conhecimento geral — sem POP, sem
+   * citação, sem lacuna registrada. "Ignore o POP" e "use sua experiência" não
+   * tinham defesa nenhuma, porque a defesa morava DENTRO da habilidade e quem
+   * decidia invocá-la estava fora dela.
+   *
+   * FICA POR ÚLTIMO NA LISTA de propósito: toda âncora existente tem
+   * prioridade, e esta só recolhe o que ninguém mais reivindicou.
+   *
+   * O REGEX É COMPOSTO, nunca copiado. `Percepcao` já pagou por uma cópia de
+   * regra que não recebeu a correção da original (`pesquis\b`, ver a âncora
+   * `busca`). O vocabulário e as formas de pedido moram em
+   * `IntencaoProcedimento.ts`, e a mesma fonte alimenta a habilidade.
+   *
+   * As duas primeiras alternativas dispensam intenção: um código `IT-ADMLUFT-NNN`
+   * e a palavra `sos` só existem nesta conversa para pedir procedimento. A
+   * terceira EXIGE intenção procedimental E vocabulário do GW — substantivo
+   * solto capturaria toda frase que mencionasse "coleta", que é a doença que a
+   * âncora `infraestrutura` já pagou caro com `frota`.
+   */
+  {
+    re: new RegExp(
+      // Dispensam intenção: só existem nesta conversa para pedir procedimento.
+      '\\bit[\\s-]*admluft[\\s-]*\\d{3}\\b|\\bsos\\b|\\b(?:ignor\\w+|sem)\\s+(?:o\\s+)?pop\\b|' +
+        // Exigem intenção E vocabulário do GW. A intenção pode ser uma forma de
+        // pedido ("como faço"), um verbo operacional no infinitivo ("emitir
+        // CTE") ou uma TENTATIVA DE ATALHO ("o jeito mais rápido de encerrar o
+        // manifesto") — esta última porque pedir para contornar o procedimento
+        // É um pedido sobre o procedimento, e mandá-la ao raciocínio livre
+        // entregava exatamente o que ela pedia: resposta sem POP.
+        `(?=[\\s\\S]*(?:${INTENCAO_PROCEDIMENTAL.source}|${INFINITIVO_OPERACIONAL.source}` +
+        `|${TENTATIVA_DE_ATALHO.source}))(?=[\\s\\S]*${VOCABULARIO_GW.source})`,
+    ),
+    nome: 'procedimento_gw',
+    acionavel: true,
+    /**
+     * "Quantas OCIs temos hoje" é a PLANILHA, não o POP. Sem esta exclusão a
+     * âncora roubaria as frases de `consultar_estatisticas_cargas_luft` — o
+     * vocabulário é o mesmo, a pergunta é outra.
+     */
+    exceto: PERGUNTA_DE_DADO,
   },
 ];
 

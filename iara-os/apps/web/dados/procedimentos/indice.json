@@ -1,0 +1,123 @@
+{
+  "IT-ADMLUFT-001": {
+    "vigente": "6b3f7fd537a43fe2",
+    "versoes": [
+      {
+        "hash": "6b3f7fd537a43fe2",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 001 - AGENDAMENTO DE COLETA.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-002": {
+    "vigente": "bf1e76d5c7a0f898",
+    "versoes": [
+      {
+        "hash": "bf1e76d5c7a0f898",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 002 - CRIAÇÃO DE OCI.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-003": {
+    "vigente": "29ec80ede2fdf348",
+    "versoes": [
+      {
+        "hash": "29ec80ede2fdf348",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 003 - CONSULTAR ORDEM DE COLETA.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-004": {
+    "vigente": "1078e22efe789cda",
+    "versoes": [
+      {
+        "hash": "1078e22efe789cda",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 004 - EMISSÃO DE CTE OU MINUTA.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-005": {
+    "vigente": "a674c81c5018ccd3",
+    "versoes": [
+      {
+        "hash": "a674c81c5018ccd3",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 005 - GERAR CIOT E PEDAGIO.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-006": {
+    "vigente": "a487b8d7ee1ebbdf",
+    "versoes": [
+      {
+        "hash": "a487b8d7ee1ebbdf",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 006 - TRANSMITIR CTE.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-007": {
+    "vigente": "28d759b352576dc4",
+    "versoes": [
+      {
+        "hash": "28d759b352576dc4",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 007 - MANIFESTO ALTERAR - ENVIAR - ENCERRAR.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-008": {
+    "vigente": "133ec314f1f936e8",
+    "versoes": [
+      {
+        "hash": "133ec314f1f936e8",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 008 - FOLLOW-UP E ACOMPANHAMENTO DE DOCUMENTOS.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-009": {
+    "vigente": "b12a89f1ea9d5d0c",
+    "versoes": [
+      {
+        "hash": "b12a89f1ea9d5d0c",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 009 - EMISSÃO DE CONTRATO MANUAL.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-010": {
+    "vigente": "6aed70cb3874ceb1",
+    "versoes": [
+      {
+        "hash": "6aed70cb3874ceb1",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 010 - EMISSÃO DE MANIFESTO MANUAL.pptx"
+      }
+    ]
+  },
+  "IT-ADMLUFT-011": {
+    "vigente": "59d4986519dcc9a1",
+    "versoes": [
+      {
+        "hash": "59d4986519dcc9a1",
+        "ingerido_em": "2026-08-19T12:51:13.731Z",
+        "estado": "oficial",
+        "arquivo_origem": "IT - ADMLUFT - 011 - FECHAMENTO DE MOTORISTAS.pptx"
+      }
+    ]
+  }
+}

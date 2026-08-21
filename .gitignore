@@ -15,6 +15,14 @@ __pycache__/
 # Shards de memória são por pessoa. Nunca versionar.
 dados/memoria/
 iara-os/apps/web/dados/memoria/
+# Em que etapa de qual POP cada pessoa parou. É por pessoa, e diz o que ela
+# ainda não sabe fazer — mesma classe do shard de memória, nunca versionar.
+dados/procedimentos-em-curso/
+iara-os/apps/web/dados/procedimentos-em-curso/
+# A fila de dúvidas sem resposta, por pessoa. A assinatura é a frase que ela
+# escreveu, com números e e-mails mascarados — mascarar não é anonimizar.
+dados/lacunas/
+iara-os/apps/web/dados/lacunas/
 
 # --- projeto MetaHuman / Unreal Engine ---
 # Assets de MetaHuman são licenciados para uso DENTRO da Unreal Engine. Versionar

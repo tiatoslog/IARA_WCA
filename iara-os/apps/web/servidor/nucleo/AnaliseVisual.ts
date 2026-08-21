@@ -30,6 +30,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { MODELO_NUVEM_PADRAO, lerConfig } from './kernel/Configuracao';
 import { GEMINI, GROQ } from './ClienteCompativelOpenAI';
 import type { Procedencia } from './kernel/Verdade';
+/* O vocabulário da conferência mora no domínio (`lib/`), não aqui: quem guarda
+   a situação é `ProcedimentosEmCurso`, que é ESTADO INTERNO e não pode alcançar
+   — nem por tipo — um módulo que fala com a rede. Ver `Fronteira.ts`. */
+import type { ParadaEsperada, SituacaoNaParada } from '../../lib/procedimento';
 
 export class VisaoIndisponivel extends Error {}
 
@@ -43,6 +47,11 @@ export interface ResultadoAnaliseVisual {
   readonly texto: string;
   readonly alvo: AlvoVisual | null;
   readonly procedencia: Procedencia;
+  /**
+   * `null` quando a chamada NÃO foi situada — ninguém perguntou, e um palpite
+   * sobre pergunta não feita é pior que a ausência da resposta.
+   */
+  readonly situacao: SituacaoNaParada | null;
   readonly tokens_entrada: number;
   readonly tokens_saida: number;
   /** Quem respondeu de fato — `groq`, `gemini` ou `anthropic`. A mesma lição
@@ -71,14 +80,51 @@ const INSTRUCAO_SISTEMA =
   'Você é a camada de visão da IARA, o escritório digital da Atos Log. Responda sempre em ' +
   'português. Seja literal sobre o que está visível na imagem.';
 
-function instrucaoDoPedido(duvida: string): string {
+/**
+ * O BLOCO QUE SITUA A LEITURA — presente só quando há procedimento em curso.
+ *
+ * A REGRA QUE ELE CARREGA, e é a razão de o texto ser tão insistente: a visão
+ * responde ONDE A PESSOA ESTÁ; o POP responde O QUE FAZER. Um modelo de visão
+ * a quem se mostra um procedimento tende naturalmente a continuar o
+ * procedimento — e aí a orientação passa a vir da leitura de uma imagem em vez
+ * do documento aprovado, sem que ninguém na conversa perceba a troca.
+ *
+ * Por isso o pedido é explicitamente NEGATIVO em duas frentes: não corrigir o
+ * procedimento e não inventar o próximo passo. O que a IARA vai dizer ao
+ * operador sobre o que fazer sai do POP, verbatim, montado em
+ * `ConferenciaDeTela.ts` — nada do que voltar daqui entra naquele lugar.
+ */
+function blocoDaParada(parada: ParadaEsperada): string {
+  const marcas = parada.marcas.length > 0 ? parada.marcas.join(', ') : '(nenhuma)';
+  return (
+    `\nCONTEXTO — esta pessoa está no meio de um procedimento oficial, na parada ` +
+    `${parada.posicao} de "${parada.titulo}" (etapa: ${parada.etapa}).\n` +
+    `O procedimento manda, NESTA parada, exatamente isto (texto do documento, não reescreva):\n` +
+    `"""\n${parada.instrucao}\n"""\n` +
+    `O documento marca nesta tela os pontos: ${marcas}.\n\n` +
+    `SUA ÚNICA TAREFA A MAIS é dizer se o screenshot anexado é a tela dessa parada. ` +
+    `Acrescente ao JSON o campo "situacao" com um destes valores:\n` +
+    `  "na_etapa"   — o screenshot é a tela que essa parada descreve\n` +
+    `  "outra_tela" — é claramente outra tela do sistema\n` +
+    `  "indefinido" — você não consegue afirmar\n` +
+    `Na dúvida, "indefinido". Dizer que a pessoa está no lugar errado quando você ` +
+    `apenas não conseguiu ler a tela é pior que não responder.\n` +
+    `NÃO corrija o procedimento, NÃO diga qual é o próximo passo e NÃO acrescente ` +
+    `instrução que não esteja no texto acima — quem orienta é o documento, não você.\n`
+  );
+}
+
+function instrucaoDoPedido(duvida: string, parada?: ParadaEsperada): string {
   const pergunta = duvida.trim();
   return (
     `O operador anexou um screenshot da tela onde está trabalhando e perguntou:\n` +
-    `"${pergunta || '(nada escrito — descreva o que vê e sugira o próximo passo óbvio)'}"\n\n` +
-    `Responda APENAS com um objeto JSON, sem cerca de código e sem texto antes ou depois, neste formato:\n` +
+    `"${pergunta || '(nada escrito — descreva o que vê e sugira o próximo passo óbvio)'}"\n` +
+    (parada ? blocoDaParada(parada) : '') +
+    `\nResponda APENAS com um objeto JSON, sem cerca de código e sem texto antes ou depois, neste formato:\n` +
     `{"encontrou": true ou false, "alvo_x": número entre 0.0 e 1.0, "alvo_y": número entre 0.0 e 1.0, ` +
-    `"elemento": "nome curto do que a pessoa deve usar", "explicacao": "frase curta para o operador"}\n\n` +
+    `"elemento": "nome curto do que a pessoa deve usar", "explicacao": "frase curta para o operador"` +
+    (parada ? `, "situacao": "na_etapa" | "outra_tela" | "indefinido"` : '') +
+    `}\n\n` +
     `"alvo_x" e "alvo_y" são a posição NORMALIZADA do CENTRO do elemento — 0.0 é a borda ` +
     `esquerda/superior da imagem, 1.0 é a borda direita/inferior. Nunca pixel absoluto.\n` +
     `Se a dúvida não corresponder a nenhum elemento visível nesta imagem, devolva "encontrou": false ` +
@@ -154,10 +200,36 @@ function extrairObjeto(bruto: string): Record<string, unknown> | null {
  * Duas regras de interpretação para o mesmo contrato é o erro que
  * `Verdade.ts` já nomeia como doença conhecida deste repositório.
  */
-function interpretar(bruto: string): { texto: string; alvo: AlvoVisual | null; procedencia: Procedencia } {
+/**
+ * A situação, só quando ela foi PEDIDA e veio num dos três valores.
+ *
+ * Sem `situada`, um modelo que devolvesse `"situacao"` por conta própria numa
+ * chamada não situada faria a IARA falar de uma parada que não existe. Valor
+ * fora da lista vira `indefinido`, nunca o mais provável: adivinhar aqui é
+ * afirmar sobre a tela de alguém.
+ */
+function lerSituacao(obj: Record<string, unknown>, situada: boolean): SituacaoNaParada | null {
+  if (!situada) return null;
+  const bruto = typeof obj.situacao === 'string' ? obj.situacao.trim() : '';
+  return bruto === 'na_etapa' || bruto === 'outra_tela' ? bruto : 'indefinido';
+}
+
+/* Exportada para o teste: é aqui que mora a regra de nunca adivinhar a
+   situação, e provar isso pela chamada de rede exigiria um provedor de visão
+   ligado — o teste passaria a depender de chave e de acerto do modelo. */
+export function interpretar(
+  bruto: string,
+  situada: boolean,
+): { texto: string; alvo: AlvoVisual | null; procedencia: Procedencia; situacao: SituacaoNaParada | null } {
   const obj = extrairObjeto(bruto);
   if (!obj) {
-    return { texto: 'Não consegui interpretar a imagem agora.', alvo: null, procedencia: 'desconhecido' };
+    return {
+      texto: 'Não consegui interpretar a imagem agora.',
+      alvo: null,
+      procedencia: 'desconhecido',
+      // Não interpretou a resposta é não ter olhado — nunca "está na etapa".
+      situacao: situada ? 'indefinido' : null,
+    };
   }
 
   const explicacao = typeof obj.explicacao === 'string' ? obj.explicacao.trim() : '';
@@ -166,11 +238,17 @@ function interpretar(bruto: string): { texto: string; alvo: AlvoVisual | null; p
   const y = normalizar(obj.alvo_y);
   const elemento = typeof obj.elemento === 'string' ? obj.elemento.trim().slice(0, 120) : '';
 
+  /* A situação é lida ANTES do `encontrou`, e independe dele: "não achei o botão
+     que você procura" e "esta não é a tela da etapa 3" são dois fatos separados,
+     e o segundo continua útil quando o primeiro falha. */
+  const situacao = lerSituacao(obj, situada);
+
   if (!encontrou || x === null || y === null || !elemento) {
     return {
       texto: explicacao || 'Não encontrei, nesta imagem, o que você está procurando.',
       alvo: null,
       procedencia: 'desconhecido',
+      situacao,
     };
   }
 
@@ -178,6 +256,7 @@ function interpretar(bruto: string): { texto: string; alvo: AlvoVisual | null; p
     texto: explicacao || `Encontrei: ${elemento}.`,
     alvo: { x, y, elemento },
     procedencia: 'inferencia',
+    situacao,
   };
 }
 
@@ -359,6 +438,13 @@ export async function analisarImagem(
   mediaType: string,
   duvida: string,
   sinal: AbortSignal,
+  /**
+   * A parada em que o operador está, quando há procedimento em curso. INJETADA
+   * — este módulo não conhece `BaseProcedimentos` nem `ProcedimentosEmCurso`, e
+   * não deve conhecer: quem lê o corpus e a posição é o Kernel, pelo caminho de
+   * sempre. É a mesma disciplina de `MotorAnalise` com o catálogo de efeitos.
+   */
+  parada?: ParadaEsperada,
 ): Promise<ResultadoAnaliseVisual> {
   if (!MEDIA_TYPES_SUPORTADOS.has(mediaType)) {
     throw new VisaoIndisponivel(`formato de imagem não suportado: ${mediaType}`);
@@ -371,18 +457,19 @@ export async function analisarImagem(
     );
   }
 
-  const instrucao = instrucaoDoPedido(duvida);
+  const instrucao = instrucaoDoPedido(duvida, parada);
   const falhas: string[] = [];
 
   for (const elo of elos) {
     if (sinal.aborted) throw new VisaoIndisponivel('turno cancelado');
     try {
       const bruta = await elo.chamar(bytes, mediaType, instrucao, sinal);
-      const { texto, alvo, procedencia } = interpretar(bruta.texto);
+      const { texto, alvo, procedencia, situacao } = interpretar(bruta.texto, Boolean(parada));
       return {
         texto,
         alvo,
         procedencia,
+        situacao,
         tokens_entrada: bruta.tokens_entrada,
         tokens_saida: bruta.tokens_saida,
         provedor: elo.apelido,
