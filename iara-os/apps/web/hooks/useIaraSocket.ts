@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MaquinaDoOperador } from '../lib/execucao';
 import type { NivelLog, PacoteCliente, PacoteServidor } from '../lib/protocolo';
-import { ESPACO_VAZIO, EXPRESSAO_NEUTRA, TELEMETRIA_ZERO, type SnapshotCognitivo } from '../lib/snapshot';
+import { ESPACO_VAZIO, EXPRESSAO_NEUTRA, TELEMETRIA_ZERO, type Ilustracao, type SnapshotCognitivo } from '../lib/snapshot';
 import { LEITURA_INICIAL, LUZES_APAGADAS, METRICAS_INICIAIS } from '../lib/estado';
 import type { PreferenciasOperador } from '../lib/perfil';
 import { enderecoBarramento, origemMotor } from '../lib/supabaseNavegador';
@@ -89,6 +89,8 @@ export interface Fala {
   imagem?: { url: string; largura: number; altura: number } | null;
   /** Para falas da IARA: onde ela aponta na imagem da pergunta que respondeu. */
   marcacao?: { alvo_x: number; alvo_y: number; elemento: string } | null;
+  /** Para falas da IARA: as telas do documento que esta orientação mostra. */
+  ilustracao?: Ilustracao | null;
   /**
    * `performance.now()` do instante em que o turno abriu. É o relógio que a
    * boca da projeção 3D usa para articular — precisa ser monotônico, então
@@ -278,6 +280,7 @@ export function useIaraSocket(credencial: Credencial) {
         voz: f.voz,
         voz_prevista: f.voz_prevista,
         marcacao: f.marcacao ?? null,
+        ilustracao: f.ilustracao ?? null,
         tokens_entrada: s.telemetria.tokens_entrada,
         tokens_saida: s.telemetria.tokens_saida,
         // Carimbado uma vez, na abertura do turno, e PRESERVADO nas
@@ -318,7 +321,11 @@ export function useIaraSocket(credencial: Credencial) {
         antes[i].texto === nova.texto &&
         antes[i].concluida === nova.concluida &&
         antes[i].voz === nova.voz &&
-        antes[i].marcacao === nova.marcacao
+        antes[i].marcacao === nova.marcacao &&
+        // Pela FONTE, não pelo objeto: cada pacote traz uma ilustração recém
+        // desserializada, e comparar referência diria "mudou" a cada snapshot
+        // de uma orientação parada na mesma etapa.
+        antes[i].ilustracao?.fonte === nova.ilustracao?.fonte
       ) {
         return antes;
       }

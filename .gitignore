@@ -15,6 +15,14 @@ __pycache__/
 # Shards de memória são por pessoa. Nunca versionar.
 dados/memoria/
 iara-os/apps/web/dados/memoria/
+# Em que etapa de qual POP cada pessoa parou. É por pessoa, e diz o que ela
+# ainda não sabe fazer — mesma classe do shard de memória, nunca versionar.
+dados/procedimentos-em-curso/
+iara-os/apps/web/dados/procedimentos-em-curso/
+# A fila de dúvidas sem resposta, por pessoa. A assinatura é a frase que ela
+# escreveu, com números e e-mails mascarados — mascarar não é anonimizar.
+dados/lacunas/
+iara-os/apps/web/dados/lacunas/
 
 # --- projeto MetaHuman / Unreal Engine ---
 # Assets de MetaHuman são licenciados para uso DENTRO da Unreal Engine. Versionar
@@ -23,7 +31,17 @@ iara-os/apps/web/dados/memoria/
 # não código do produto: o Kernel não conhece renderizador.
 # Se a identidade 3D for adotada, o que entra aqui é só o arquivo final que a
 # licença permitir servir, em public/identidade_iara/.
-IDENTIDADE IARA/
+#
+# ⚠️ ESTE CAMINHO ACOMPANHA A PASTA. A regra antiga era `IDENTIDADE IARA/`, o
+# nome que a pasta tinha na raiz. Ao movê-la para arquivos/ em 14/08/2026 os
+# .mhpkg voltaram a aparecer como não rastreados — uma reorganização de pastas
+# desfazendo, em silêncio, uma proteção de licença. Se mover de novo, mova a
+# regra junto.
+# Ignora o CONTEÚDO, não a pasta: o README precisa entrar para explicar por que
+# o resto não entra. `pasta/` inteira excluída faz o git nem descer nela, e a
+# negação abaixo não teria efeito.
+arquivos/identidade-metahuman/*
+!arquivos/identidade-metahuman/README.md
 *.uasset
 *.umap
 *.pdb
@@ -38,5 +56,8 @@ IDENTIDADE IARA/
 
 # --- local ---
 .claude/settings.local.json
+# Estado efêmero do agendador do Claude Code: PID e sessionId da máquina de
+# quem está rodando. Não descreve o projeto e sujava todo commit.
+.claude/scheduled_tasks.lock
 .DS_Store
 Thumbs.db

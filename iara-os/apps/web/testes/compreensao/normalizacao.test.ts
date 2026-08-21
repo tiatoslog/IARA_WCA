@@ -136,7 +136,22 @@ test('negativo: frase sem conteúdo de domínio não ganha capacidade por corre�
    * "encontrar" habilidades que ela nunca mencionou — conversa virava
    * planejamento por causa de duas letras.
    */
-  assert.equal(descoberta.descobrirCandidatos('preciso saber disso').length, 0);
+  /**
+   * A FRASE MUDOU QUANDO O CATÁLOGO CRESCEU, e o motivo importa mais que a
+   * troca.
+   *
+   * A versão anterior usava « preciso saber disso » como exemplo de frase SEM
+   * conteúdo de domínio. Ela deixou de ser: `treinar_procedimento` entrou no
+   * catálogo com o exemplo « Não entendi por que PRECISO fazer essa etapa », e
+   * daí em diante "preciso" virou vocabulário legítimo da operação. A frase
+   * alcançar a habilidade de treinamento passou a ser CERTO — quem diz isso
+   * está pedindo para aprender.
+   *
+   * O fixture é que envelheceu, não a regra. « saber disso agora » não toca
+   * manifesto nenhum e volta a exercitar o que o teste sempre quis provar: o
+   * corretor não pode fabricar capacidade a partir de português comum.
+   */
+  assert.equal(descoberta.descobrirCandidatos('saber disso agora').length, 0);
 });
 
 // ---------------------------------------------------------------------------

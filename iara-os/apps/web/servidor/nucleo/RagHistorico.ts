@@ -15,7 +15,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AssinaturaErro } from '../../lib/estado';
-import { contar, normalizar } from './texto';
+import { contar } from './texto';
+import { cosseno, trigramas } from './Lexico';
 import { supabase } from './ClienteSupabase';
 
 export interface AchadoRag {
@@ -64,30 +65,6 @@ const UMA_LINHA = (texto: string, teto: number): string => {
   const plano = String(texto ?? '').replace(/\s+/g, ' ').trim();
   return plano.length > teto ? `${plano.slice(0, teto - 1)}…` : plano;
 };
-
-function trigramas(texto: string): Map<string, number> {
-  const base = ` ${normalizar(texto)} `;
-  const mapa = new Map<string, number>();
-  for (let i = 0; i + 3 <= base.length; i += 1) {
-    const g = base.slice(i, i + 3);
-    mapa.set(g, (mapa.get(g) ?? 0) + 1);
-  }
-  return mapa;
-}
-
-function cosseno(a: Map<string, number>, b: Map<string, number>): number {
-  let produto = 0;
-  let normaA = 0;
-  let normaB = 0;
-  for (const peso of a.values()) normaA += peso * peso;
-  for (const [g, peso] of b) {
-    normaB += peso * peso;
-    const outro = a.get(g);
-    if (outro) produto += outro * peso;
-  }
-  if (normaA === 0 || normaB === 0) return 0;
-  return produto / (Math.sqrt(normaA) * Math.sqrt(normaB));
-}
 
 export class RagHistorico {
   private registros: AssinaturaErro[] = [];

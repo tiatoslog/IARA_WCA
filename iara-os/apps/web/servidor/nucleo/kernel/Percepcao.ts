@@ -15,6 +15,28 @@ import { corrigirTypos, normalizar } from '../texto';
 import { ehElipseFactual, ehPerguntaDeContratoFactual } from './ContratoFactual';
 import { TeoriaDaMente, type SinalTemporal } from '../TeoriaDaMente';
 import {
+  INFINITIVO_OPERACIONAL,
+  INTENCAO_PROCEDIMENTAL,
+  PERGUNTA_DE_DADO,
+  TENTATIVA_DE_ATALHO,
+  VOCABULARIO_GW,
+} from './IntencaoProcedimento';
+import {
+  CONTESTA_O_POP,
+  ELEMENTO_AUSENTE,
+  PEDE_AVALIACAO,
+  PEDE_CONCEITO,
+  PEDE_ENSINO,
+  PEDE_PRATICA,
+  PEDE_RETOMADA,
+} from './IntencaoPedagogica';
+import {
+  AUTORIZA_OBSERVACAO,
+  PEDE_OBSERVACAO,
+  PEDE_PARAR,
+  PERGUNTA_SE_OBSERVA,
+} from './IntencaoDePercepcao';
+import {
   ehPerguntaSobreResolver,
   periodoEhIrrealis,
   separarVozes,
@@ -490,6 +512,110 @@ const ANCORAS: ReadonlyArray<Ancora> = [
      * confirmar não pode resolver a pendência. Ver `ehPerguntaSobreResolver`.
      */
     interrogavel: true,
+  },
+  /**
+   * PROCEDIMENTO DO GW — a âncora que impede a LLM de ser a autoridade sobre se
+   * o POP é consultado.
+   *
+   * O DEFEITO QUE ELA FECHA: sem rota determinística, "como faço o agendamento"
+   * dependia de a `DescobertaCapacidades` convencer a LLM a escolher
+   * `consultar_procedimento`. Quando ela não escolhia, o Kernel caía em
+   * `raciocinio_direto` e a IARA respondia de conhecimento geral — sem POP, sem
+   * citação, sem lacuna registrada. "Ignore o POP" e "use sua experiência" não
+   * tinham defesa nenhuma, porque a defesa morava DENTRO da habilidade e quem
+   * decidia invocá-la estava fora dela.
+   *
+   * FICA POR ÚLTIMO NA LISTA de propósito: toda âncora existente tem
+   * prioridade, e esta só recolhe o que ninguém mais reivindicou.
+   *
+   * O REGEX É COMPOSTO, nunca copiado. `Percepcao` já pagou por uma cópia de
+   * regra que não recebeu a correção da original (`pesquis\b`, ver a âncora
+   * `busca`). O vocabulário e as formas de pedido moram em
+   * `IntencaoProcedimento.ts`, e a mesma fonte alimenta a habilidade.
+   *
+   * As duas primeiras alternativas dispensam intenção: um código `IT-ADMLUFT-NNN`
+   * e a palavra `sos` só existem nesta conversa para pedir procedimento. A
+   * terceira EXIGE intenção procedimental E vocabulário do GW — substantivo
+   * solto capturaria toda frase que mencionasse "coleta", que é a doença que a
+   * âncora `infraestrutura` já pagou caro com `frota`.
+   */
+  /**
+   * OBSERVAÇÃO DA TELA — a âncora que vem antes de todas as do SOS.
+   *
+   * A PRECEDÊNCIA É A DECISÃO. "Me acompanha fazendo esse procedimento" casa
+   * `treinamento` (por `me acompanh\w+`) e casa esta. A resposta certa é ligar a
+   * observação, não recitar o POP — quem pediu para ser acompanhado FAZENDO já
+   * está com o sistema aberto na frente.
+   *
+   * E `PEDE_PARAR` casa antes de tudo por dentro do próprio classificador: uma
+   * frase que manda parar de olhar nunca pode ligar a câmera de ninguém.
+   *
+   * Os regexes são IMPORTADOS de `IntencaoDePercepcao.ts`. Uma cópia aqui seria
+   * a terceira vez que este arquivo paga por copiar regra — e desta vez o preço
+   * seria uma captura de tela ligada por engano.
+   */
+  {
+    re: new RegExp(
+      `${PEDE_PARAR.source}|${AUTORIZA_OBSERVACAO.source}|${PEDE_OBSERVACAO.source}` +
+        `|${PERGUNTA_SE_OBSERVA.source}`,
+    ),
+    nome: 'percepcao_de_tela',
+    acionavel: true,
+  },
+  /**
+   * TREINAMENTO — a âncora da instrutora, e ela vem ANTES de `procedimento_gw`.
+   *
+   * A ordem entre as duas é a decisão: "me ensina a encerrar o manifesto" casa
+   * as duas, e a resposta certa é a instrutora, não a consulta. Consultar
+   * devolve o passo a passo a quem pediu para APRENDER — que é a diferença entre
+   * um manual interativo e alguém que ensina.
+   *
+   * O QUE FICOU DE FORA, e a omissão é medida: `RELATA_ERRO` ("deu erro") e
+   * `HESITACAO` ("acho que fiz") são genéricas demais para virar âncora. "Deu
+   * erro no meu computador" é assunto de `lentidao`/`sistema`, âncoras que vêm
+   * antes desta e continuariam vencendo — mas "deu erro" solto, sem
+   * procedimento em curso, cairia aqui e a IARA responderia sobre POP a quem
+   * falava de outra coisa. Dentro de um procedimento em curso o caso é coberto
+   * por `avancar_procedimento`, que lê a mesma classificação pedagógica antes de
+   * redigir a recusa.
+   *
+   * Os regexes são IMPORTADOS de `IntencaoPedagogica.ts`, nunca copiados — a
+   * mesma disciplina que este arquivo já aplica a `IntencaoProcedimento`.
+   */
+  {
+    re: new RegExp(
+      `${PEDE_RETOMADA.source}|${PEDE_AVALIACAO.source}|${PEDE_PRATICA.source}` +
+        `|${CONTESTA_O_POP.source}|${ELEMENTO_AUSENTE.source}` +
+        // Ensinar e explicar só contam com vocabulário do GW: "me ensina a
+        // fazer café" não é procedimento operacional.
+        `|(?=[\\s\\S]*(?:${PEDE_ENSINO.source}|${PEDE_CONCEITO.source}))(?=[\\s\\S]*${VOCABULARIO_GW.source})`,
+    ),
+    nome: 'treinamento',
+    acionavel: true,
+    /** "Quantas OCIs temos hoje" é a planilha — mesma exclusão da irmã. */
+    exceto: PERGUNTA_DE_DADO,
+  },
+  {
+    re: new RegExp(
+      // Dispensam intenção: só existem nesta conversa para pedir procedimento.
+      '\\bit[\\s-]*admluft[\\s-]*\\d{3}\\b|\\bsos\\b|\\b(?:ignor\\w+|sem)\\s+(?:o\\s+)?pop\\b|' +
+        // Exigem intenção E vocabulário do GW. A intenção pode ser uma forma de
+        // pedido ("como faço"), um verbo operacional no infinitivo ("emitir
+        // CTE") ou uma TENTATIVA DE ATALHO ("o jeito mais rápido de encerrar o
+        // manifesto") — esta última porque pedir para contornar o procedimento
+        // É um pedido sobre o procedimento, e mandá-la ao raciocínio livre
+        // entregava exatamente o que ela pedia: resposta sem POP.
+        `(?=[\\s\\S]*(?:${INTENCAO_PROCEDIMENTAL.source}|${INFINITIVO_OPERACIONAL.source}` +
+        `|${TENTATIVA_DE_ATALHO.source}))(?=[\\s\\S]*${VOCABULARIO_GW.source})`,
+    ),
+    nome: 'procedimento_gw',
+    acionavel: true,
+    /**
+     * "Quantas OCIs temos hoje" é a PLANILHA, não o POP. Sem esta exclusão a
+     * âncora roubaria as frases de `consultar_estatisticas_cargas_luft` — o
+     * vocabulário é o mesmo, a pergunta é outra.
+     */
+    exceto: PERGUNTA_DE_DADO,
   },
 ];
 

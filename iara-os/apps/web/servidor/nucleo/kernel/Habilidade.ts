@@ -12,6 +12,7 @@
  */
 
 import type { CapacidadeAtiva } from '../../../lib/estado';
+import type { Ilustracao } from '../../../lib/snapshot';
 import type { Dominio } from '../../../lib/capacidades';
 /* Ciclo APENAS de tipo — `Investigacao` importa `Risco` daqui e este arquivo
    importa `Evidencia` de lá. Os dois lados são `import type`, apagados na
@@ -402,6 +403,19 @@ export interface ResultadoHabilidade {
    * COMO retomar. Nenhum dos dois conhece o outro além deste campo.
    */
   readonly pendencia?: { readonly parametro: string };
+  /**
+   * AS TELAS QUE ESTA RESPOSTA MOSTRA, quando a habilidade orienta a partir de
+   * um documento que tinha captura. Vira `FalaProjetada.ilustracao`.
+   *
+   * Sobe pelo caminho de `texto`, e junto com ele: o Kernel só aproveita a
+   * ilustração do passo cujo texto ele aproveitou. Um passo que o mundo
+   * desmentiu perde os dois — a imagem sozinha continuaria orientando alguém a
+   * clicar, calada, depois de a frase ter sido retirada por ser falsa.
+   *
+   * SÓ RECORTE DE DOCUMENTO. Ver `lib/snapshot.ts#Ilustracao`: nenhuma
+   * habilidade tem licença para pôr aqui imagem que ela mesma desenhou.
+   */
+  readonly ilustracao?: Ilustracao | null;
   /**
    * OS NÚMEROS QUE ESTA HABILIDADE CALCULOU, TIPADOS — não a frase sobre eles.
    *

@@ -13,8 +13,8 @@ import type { Habilidade } from '../Habilidade';
 import { supabase } from '../../ClienteSupabase';
 import { CONSULTAS, listarConsultas, type SeletorSupabase } from './consultasNomeadas';
 import { validar } from '../Habilidade';
-import { normalizar } from '../../texto';
 import { contar } from '../../texto';
+import { cosseno, trigramas } from '../../Lexico';
 
 // ---------------------------------------------------------------------------
 // 1. Banco operacional — consultas nomeadas
@@ -98,37 +98,11 @@ export const executarConsultaSql: Habilidade = {
 const RAIZ_DADOS = path.resolve(process.cwd(), 'dados');
 
 /**
- * Índice lexical sobre os documentos internos. Mesma técnica do RAG de
- * incidentes — trigramas com cosseno — e pela mesma razão: determinístico,
- * offline, sem dependência nativa e sem custo por consulta.
- *
- * Honesto sobre o que é: busca lexical, não semântica. Para um corpus de
- * procedimentos internos com vocabulário próprio da casa, isso acerta mais que
- * embedding genérico — "baixa de CT-e" aqui não significa o que significa fora.
+ * Índice lexical sobre os documentos internos — `trigramas`/`cosseno` vêm do
+ * `Lexico.ts`, compartilhados com o RAG de incidentes e com o de procedimentos.
+ * O LIMIAR (`0.06`, abaixo) continua aqui de propósito: é calibração deste
+ * corpus, não propriedade da técnica.
  */
-function trigramas(texto: string): Map<string, number> {
-  const base = ` ${normalizar(texto)} `;
-  const m = new Map<string, number>();
-  for (let i = 0; i + 3 <= base.length; i += 1) {
-    const g = base.slice(i, i + 3);
-    m.set(g, (m.get(g) ?? 0) + 1);
-  }
-  return m;
-}
-
-function cosseno(a: Map<string, number>, b: Map<string, number>): number {
-  let prod = 0;
-  let na = 0;
-  let nb = 0;
-  for (const p of a.values()) na += p * p;
-  for (const [g, p] of b) {
-    nb += p * p;
-    const o = a.get(g);
-    if (o) prod += o * p;
-  }
-  return na === 0 || nb === 0 ? 0 : prod / (Math.sqrt(na) * Math.sqrt(nb));
-}
-
 interface Trecho {
   titulo: string;
   texto: string;
@@ -158,13 +132,23 @@ export const consultarMemoriaCorporativa: Habilidade = {
   manifesto: {
     id: 'consultar_memoria_corporativa',
     nome: 'Memória corporativa',
+    /**
+     * A descrição foi estreitada em 19/08/2026 para desfazer colisão com
+     * `consultar_procedimento`. As duas diziam "procedimentos internos" e
+     * brigavam na `DescobertaCapacidades`, que indexa exatamente estes campos.
+     * A divisão: aqui mora POLÍTICA, VOCABULÁRIO e fato institucional; lá mora
+     * PASSO A PASSO de tarefa no GW.
+     */
     descricao:
-      'Consulta procedimentos, políticas e vocabulário interno da Atos Log. Use quando a pergunta depende de como A CASA faz algo, não de conhecimento geral.',
+      'Consulta política, vocabulário e fatos institucionais da Atos Log (o que significa um ' +
+      'termo da casa, quais são as centrais, qual a regra geral). NÃO é passo a passo de ' +
+      'sistema: para "como faço X no GW", use consultar_procedimento.',
     exemplos: [
-      'Como a gente faz a baixa de CT-e aqui?',
-      'Qual o procedimento interno para reembolso?',
+      'O que significa "baixa" aqui na empresa?',
+      'Qual a política interna para reembolso?',
+      'Em que estados a gente opera?',
     ],
-    capacidades: ['procedimentos e políticas internas'],
+    capacidades: ['política interna', 'vocabulário da casa', 'fatos institucionais'],
     dominio: 'memoria',
     capacidade: 'conhecimento',
     permissoes: ['banco'],

@@ -1,0 +1,158 @@
+{
+  "codigo": "IT-ADMLUFT-003",
+  "titulo": "CONSULTAR ORDEM DE COLETA",
+  "sistema": "GW",
+  "revisao": "REV.:02",
+  "estado": "oficial",
+  "qualidade": "incompleto",
+  "arquivo_origem": "IT - ADMLUFT - 003 - CONSULTAR ORDEM DE COLETA.pptx",
+  "hash_origem": "29ec80ede2fdf348",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "CONSULTAR ORDEM DE COLETA",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "1. Entrar com login e senha no sistema;\n2. Clicar em Lançamentos;\n3. Clicar em coletas OS;",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-003/0755019f38cc.png",
+                "x": 0.1147,
+                "y": 0.0291
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-003/0755019f38cc.png",
+                "x": 0.1766,
+                "y": 0.4829
+              }
+            },
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-003/0755019f38cc.png",
+                "x": 0.1897,
+                "y": 0.8779
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-003/0755019f38cc.png",
+              "largura": 868,
+              "altura": 342,
+              "caixa": {
+                "x": 35.99456692913386,
+                "y": 112.55118110236221,
+                "w": 695.7820472440945,
+                "h": 324.4496850393701
+              }
+            }
+          ]
+        },
+        {
+          "indice": 2,
+          "texto": "4. Podemos pesquisar OCI de diversas formas:\nNº Coleta  (que é o número da OCI)\nData solicitação (Data que foi Criada)\nData Previsão\nData Programada\nData Coleta (data que será realizada coleta)\nEtc.\n5. Só selecionar o melhor filtro que te atende e clicar em pesquisar.",
+          "passos": [
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-003/85f6cb78bdee.png",
+                "x": 0.0158,
+                "y": 0.3565
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-003/85f6cb78bdee.png",
+                "x": 0.0448,
+                "y": 0.9296
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-003/85f6cb78bdee.png",
+              "largura": 1319,
+              "altura": 671,
+              "caixa": {
+                "x": 43.29188976377953,
+                "y": 102.32897637795276,
+                "w": 733.5900787401575,
+                "h": 372.02582677165356
+              }
+            }
+          ]
+        },
+        {
+          "indice": 3,
+          "texto": "6. A ordem de coleta aparecerá no visor;\n7. Caso queira imprimir só selecionar a ordem;\n8. E clicar em imprimir\nSeleciona a coleta\nimprimir",
+          "passos": [
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-003/069f4e49f077.png",
+                "x": 0.3742,
+                "y": 0.2809
+              }
+            },
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-003/069f4e49f077.png",
+                "x": 0.2942,
+                "y": 0.252
+              }
+            },
+            {
+              "ordem": 8,
+              "rotulo": "8",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-003/069f4e49f077.png",
+                "x": 0.8428,
+                "y": 0.8995
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-003/069f4e49f077.png",
+              "largura": 1319,
+              "altura": 674,
+              "caixa": {
+                "x": 68.32740157480315,
+                "y": 112.55118110236221,
+                "w": 736.2202362204724,
+                "h": 327.5418897637795
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "particularidades": [],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "o documento não declara exceções ou casos particulares",
+    "o documento não cataloga mensagens de erro"
+  ]
+}

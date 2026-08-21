@@ -89,7 +89,7 @@ const PEDIDOS_FABRICADOS: readonly { bruto: string; contrato: AtoDoTurno }[] = [
     contrato: { ato: 'perguntar', objetivo: 'ver_agenda_calendario', operacao: 'leitura' },
   },
   {
-    bruto: 'preciso saber disso',
+    bruto: 'saber disso agora',
     contrato: { ato: 'solicitar_acao', objetivo: 'listar_arquivos', operacao: 'leitura' },
   },
   {
@@ -117,14 +117,14 @@ test('sem a camada injetada, a decisão é a de antes — o contrato é o que mu
    * `plano_cognitivo` passaria em todos os testes acima e pareceria correto.
    * Aqui a mesma frase, sem contrato, tem de cair no comportamento antigo.
    */
-  const semContrato = decidirCom('preciso saber disso', null);
+  const semContrato = decidirCom('saber disso agora', null);
   assert.equal(
     semContrato.rota,
     'raciocinio_direto',
     'sem compreensão injetada esta frase não tem sinal nenhum — tem que cair em conversa',
   );
 
-  const comContrato = decidirCom('preciso saber disso', {
+  const comContrato = decidirCom('saber disso agora', {
     ato: 'solicitar_acao',
     objetivo: 'listar_arquivos',
     operacao: 'leitura',

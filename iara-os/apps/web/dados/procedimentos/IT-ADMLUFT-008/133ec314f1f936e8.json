@@ -1,0 +1,334 @@
+{
+  "codigo": "IT-ADMLUFT-008",
+  "titulo": "FOLLOW-UP",
+  "sistema": "GW",
+  "revisao": "REV.:02",
+  "estado": "oficial",
+  "qualidade": "incompleto",
+  "arquivo_origem": "IT - ADMLUFT - 008 - FOLLOW-UP E ACOMPANHAMENTO DE DOCUMENTOS.pptx",
+  "hash_origem": "133ec314f1f936e8",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "Planilha de Follow-up",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "A planilha fica no mesmo caminho do controle de OCIS 2025\nEntrar no arquivo Follow up postos - centrais",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/4639caa856da.png",
+                "x": 0.0143,
+                "y": 0.0488
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/4639caa856da.png",
+                "x": 0.1886,
+                "y": 0.7021
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-008/4639caa856da.png",
+              "largura": 918,
+              "altura": 202,
+              "caixa": {
+                "x": 57.464330708661414,
+                "y": 143.19543307086613,
+                "w": 688.5,
+                "h": 151.5
+              }
+            }
+          ]
+        },
+        {
+          "indice": 2,
+          "texto": "3. Clicar em mais e fazer uma aba com a data do dia",
+          "passos": [
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/0f2608bf1f8a.png",
+                "x": 0.8906,
+                "y": 0.9355
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-008/0f2608bf1f8a.png",
+              "largura": 831,
+              "altura": 473,
+              "caixa": {
+                "x": 90.08929133858268,
+                "y": 112.55118110236221,
+                "w": 623.25,
+                "h": 354.75
+              }
+            }
+          ]
+        },
+        {
+          "indice": 3,
+          "texto": "4. Pegar a planilha do dia anterior e colar alterando a data e limpando os dados",
+          "passos": [
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/9dbcb27167d1.png",
+                "x": 0.0775,
+                "y": 0.0469
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-008/9dbcb27167d1.png",
+              "largura": 1291,
+              "altura": 430,
+              "caixa": {
+                "x": 44.86944881889764,
+                "y": 143.19543307086613,
+                "w": 704.4281889763779,
+                "h": 234.6275590551181
+              }
+            }
+          ]
+        },
+        {
+          "indice": 4,
+          "texto": "5. Entrar na planilha de controle de OCIS e pegar todas as viagens para o dia;\n6. Pegar a informação de pedagio, OCI, Origem, UF de origem, destino, UF de destino, motorista e data de coleta",
+          "passos": [
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/169b1f4afacb.png",
+                "x": 0.1775,
+                "y": 0.8613
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/10c5743b4da8.png",
+                "x": 0.029,
+                "y": 0.37
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-008/169b1f4afacb.png",
+              "largura": 1434,
+              "altura": 316,
+              "caixa": {
+                "x": 28.465039370078742,
+                "y": 102.32897637795276,
+                "w": 688.3796850393701,
+                "h": 151.69314960629922
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-008/10c5743b4da8.png",
+              "largura": 692,
+              "altura": 323,
+              "caixa": {
+                "x": 290.2856692913386,
+                "y": 250.5692125984252,
+                "w": 469.85094488188975,
+                "h": 219.30905511811022
+              }
+            }
+          ]
+        },
+        {
+          "indice": 5,
+          "texto": "7. Preencher também a data de descarga",
+          "passos": [
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/68834aad8827.png",
+                "x": 0.8639,
+                "y": 0.0295
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-008/68834aad8827.png",
+              "largura": 1295,
+              "altura": 303,
+              "caixa": {
+                "x": 0,
+                "y": 157.69110236220473,
+                "w": 788.5714173228347,
+                "h": 224.61779527559054
+              }
+            }
+          ]
+        },
+        {
+          "indice": 6,
+          "texto": "8. O horário da coleta quem vai passar é o motorista via BOT ou WhatsApp, ele vai enviar a localização ou sst assinada pelo posto e vamos preencher o horário que ele colocou aqui;\n9. Depois entramos em contato com o posto e anotamos o nome da pessoa que conversamos;\n10. Colocamos o horário que conversamos;\n11. E ao falar com o posto vamos preencher o questionário que perguntaremos a pessoa do posto ;\n12. Na descarga ligamos para Central e anotamos o nome da pessoa que falamos\n13. E Horário que falamos com a central.\nSalvamos a planilha pois a mesma será uada para auditoria",
+          "passos": [
+            {
+              "ordem": 8,
+              "rotulo": "8",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/b2a058d274e1.png",
+                "x": 0.0403,
+                "y": 0.0785
+              }
+            },
+            {
+              "ordem": 9,
+              "rotulo": "9",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/b2a058d274e1.png",
+                "x": 0.1286,
+                "y": 0.0853
+              }
+            },
+            {
+              "ordem": 10,
+              "rotulo": "10",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/b2a058d274e1.png",
+                "x": 0.2214,
+                "y": 0.0853
+              }
+            },
+            {
+              "ordem": 11,
+              "rotulo": "11",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/b2a058d274e1.png",
+                "x": 0.4534,
+                "y": 0.0771
+              }
+            },
+            {
+              "ordem": 12,
+              "rotulo": "12",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/b2a058d274e1.png",
+                "x": 0.8496,
+                "y": 0.0771
+              }
+            },
+            {
+              "ordem": 13,
+              "rotulo": "13",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/b2a058d274e1.png",
+                "x": 0.9609,
+                "y": 0.0771
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-008/b2a058d274e1.png",
+              "largura": 680,
+              "altura": 415,
+              "caixa": {
+                "x": 137.33519685039371,
+                "y": 112.55118110236221,
+                "w": 588.521968503937,
+                "h": 359.1714960629921
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "numero": 2,
+      "titulo": "PLANILHA DE LIBERAÇÃO:",
+      "slides": [
+        {
+          "indice": 7,
+          "texto": "Na mesma pasta da agenda tem a planilha de Liberação fazer uma Aba para o dia\n1. Trazer informações SST + OCI + ORIGEM + DESTINO + Motorista+ DATA da coleta + Data da descarga\n2. Liberação da MDFE – colocar o numero 1 no horário que o motorista vai sair e enviar a MDFE (print para ele neste horário e pintar de amarelo que está ok)\n3. Encerramento de MDFE – colocar 1 no horário de encerramento e encerrar no horário combinado\n4. Depois colocar ok em encerrada MDFE e ok no comprovante quando receber o comprovante   IMPORTANTE: SE GUIAR COM OS HORÁRIOS TAMBÉM PELO FOLLOW-UP FEITO POSTO X CENTRAL X MOTORISTA",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/bfcc2f982927.png",
+                "x": 0.3398,
+                "y": 0.1242
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/bfcc2f982927.png",
+                "x": 0.6211,
+                "y": 0.0358
+              }
+            },
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/bfcc2f982927.png",
+                "x": 0.786,
+                "y": 0.034
+              }
+            },
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-008/bfcc2f982927.png",
+                "x": 0.9408,
+                "y": 0.0276
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-008/bfcc2f982927.png",
+              "largura": 1217,
+              "altura": 329,
+              "caixa": {
+                "x": 22.43472440944882,
+                "y": 115.98070866141732,
+                "w": 912.75,
+                "h": 246.75
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "particularidades": [],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o rodapé \"Página: N/M\" diverge da ordem real em 6 de 7 slides",
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "o documento não declara exceções ou casos particulares",
+    "2 de 7 slides trazem pouca instrução escrita — a informação está na captura de tela",
+    "o documento não cataloga mensagens de erro"
+  ]
+}

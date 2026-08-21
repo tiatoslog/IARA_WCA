@@ -1,0 +1,108 @@
+{
+  "codigo": "IT-ADMLUFT-010",
+  "titulo": "EMISSÃO DE MANIFESTO MANUAL",
+  "sistema": "GW",
+  "revisao": "REV.:01",
+  "estado": "oficial",
+  "qualidade": "contraditorio",
+  "arquivo_origem": "IT - ADMLUFT - 010 - EMISSÃO DE MANIFESTO MANUAL.pptx",
+  "hash_origem": "6aed70cb3874ceb1",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "EMISSÃO DE MANIFESTO NO GW",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "1. Lançamento\n2. Manifestos\n3. Novo manifesto 4. selecionar CTES > salvar\nPARTICULARIDADES",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-010/f75d40fccb8e.png",
+                "x": 0.3203,
+                "y": 0.4129
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-010/f75d40fccb8e.png",
+                "x": 0.3203,
+                "y": 0.9301
+              }
+            },
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-010/3c2dc8723b67.png",
+                "x": 0.4323,
+                "y": 0.2401
+              }
+            },
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-010/079a5f945f7f.png",
+                "x": 0.0104,
+                "y": 0.8471
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-010/f75d40fccb8e.png",
+              "largura": 450,
+              "altura": 405,
+              "caixa": {
+                "x": 63.32669291338583,
+                "y": 97.8140157480315,
+                "w": 221.5428346456693,
+                "h": 162.1172440944882
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-010/3c2dc8723b67.png",
+              "largura": 348,
+              "altura": 257,
+              "caixa": {
+                "x": 305.05456692913384,
+                "y": 95.4303937007874,
+                "w": 221.5428346456693,
+                "h": 163.61062992125983
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-010/079a5f945f7f.png",
+              "largura": 800,
+              "altura": 408,
+              "caixa": {
+                "x": 544.2605511811024,
+                "y": 88.5007874015748,
+                "w": 241.72787401574803,
+                "h": 175.8907874015748
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "particularidades": [
+    "O manifesto gera sempre no automático, porém se for necessário geramos da forma descrita acima."
+  ],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o cabeçalho traz \"IT-ADMLUF-010\", diferente do código do arquivo (IT-ADMLUFT-010)",
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "o documento não cataloga mensagens de erro"
+  ]
+}

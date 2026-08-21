@@ -1,0 +1,10 @@
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
+const t = new MsEdgeTTS();
+await t.setMetadata('pt-BR-FranciscaNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+const { audioStream, metadataStream } = await t.toStream('A LUFT envia a ordem de coleta por e-mail.');
+const meta = [];
+const pa = (async () => { const b=[]; for await (const c of audioStream) b.push(c); return Buffer.concat(b).length; })();
+const pm = (async () => { for await (const c of metadataStream) meta.push(c); })();
+const [bytes] = await Promise.all([pa, pm]);
+console.log('bytes audio:', bytes, '| eventos meta:', meta.length);
+console.log(JSON.stringify(meta.slice(0,4), null, 1).slice(0,800));

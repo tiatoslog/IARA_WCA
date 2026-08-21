@@ -298,11 +298,11 @@ const LEXICO_VERBAL: ReadonlyArray<readonly [Operacao, readonly string[]]> = [
    * `descrev` e `relat` pela mesma razão: `descrever_planilha` e
    * `relatorio_executivo_luft` são leituras e não eram legíveis como tal.
    */
-  ['leitura', ['listar', 'list', 'mostr', 'exib', 'consult', 'verific', 'confer', 'checar', 'olh', 'le', 'ler', 'lei', 'ver', 'vej', 'descrev', 'relat', 'busc', 'procur', 'acompanh', 'saber', 'sab', 'ter', 'tenh', 'tem', 'hav']],
+  ['leitura', ['listar', 'list', 'mostr', 'exib', 'consult', 'verific', 'confer', 'checar', 'olh', 'observ', 'le', 'ler', 'lei', 'ver', 'vej', 'descrev', 'relat', 'busc', 'procur', 'acompanh', 'saber', 'sab', 'ter', 'tenh', 'tem', 'hav']],
   ['contagem', ['cont', 'som', 'totaliz', 'quantific']],
-  ['analise', ['analis', 'investig', 'diagnostic', 'audit', 'compar', 'avali', 'entend', 'explic', 'declar']],
+  ['analise', ['analis', 'investig', 'diagnostic', 'audit', 'compar', 'avali', 'entend', 'explic', 'declar', 'revis']],
   ['criacao', ['cri', 'ger', 'faz', 'fiz', 'mont', 'agend', 'marc', 'salv', 'lembr', 'anot', 'registr', 'abr']],
-  ['alteracao', ['renome', 'mov', 'lev', 'copi', 'atualiz', 'alter', 'troc', 'edit', 'ajust', 'corrig']],
+  ['alteracao', ['renome', 'mov', 'lev', 'copi', 'atualiz', 'alter', 'troc', 'edit', 'ajust', 'corrig', 'avanc']],
   ['remocao', ['cancel', 'remov', 'apag', 'exclu', 'delet', 'encerr', 'fech', 'par', 'desfaz', 'esquec', 'desconsider']],
   ['envio', ['envi', 'mand', 'avis', 'encaminh', 'repass', 'comunic', 'respond']],
   /**
@@ -325,7 +325,7 @@ const LEXICO_VERBAL: ReadonlyArray<readonly [Operacao, readonly string[]]> = [
    * casa. A régua: o léxico não pode reivindicar um verbo cujo sentido dominante
    * NESTE domínio é outro.
    */
-  ['execucao', ['execut', 'acion', 'captur', 'extra', 'tir', 'desli', 'reinici', 'suspend', 'instal', 'pesquis', 'recus', 'resolv', 'assum']],
+  ['execucao', ['execut', 'acion', 'inici', 'trein', 'captur', 'extra', 'tir', 'desli', 'reinici', 'suspend', 'instal', 'pesquis', 'recus', 'resolv', 'assum']],
 ];
 
 /**

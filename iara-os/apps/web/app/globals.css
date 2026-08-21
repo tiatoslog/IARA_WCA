@@ -1313,7 +1313,13 @@ ol.plano {
    print com a marcação da IARA por cima. */
 .balao-imagem {
   position: relative;
+  /* `fit-content`, não `block`: a marcação é posicionada em % DESTA caixa, e um
+     bloco que ocupa a largura do balão inteiro empurra o círculo para a direita
+     sempre que a imagem é mais estreita que a bolha. A coordenada estava certa;
+     a caixa de referência é que era outra. */
   display: block;
+  width: fit-content;
+  max-width: 100%;
   margin-bottom: 8px;
   border-radius: 10px;
   overflow: hidden;
@@ -1354,6 +1360,73 @@ ol.plano {
     transform: scale(1.08);
     opacity: 1;
   }
+}
+
+/* AS TELAS DO POP dentro do balão — recorte de documento, não mídia gerada.
+   Todas as capturas da parada, empilhadas: esconder a segunda seria esconder
+   metade da instrução em um terço dos slides. */
+.ilustracao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ilustracao-tela {
+  position: relative;
+  /* Mesma razão de `.balao-imagem`: a caixa precisa abraçar a imagem, senão o
+     ponto em % sai do lugar. */
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--c-linha);
+  line-height: 0;
+}
+
+.ilustracao-tela img {
+  display: block;
+  max-width: 100%;
+  max-height: 340px;
+  width: auto;
+}
+
+/* O NÚMERO DA SETA, no lugar em que a seta do slide aponta. Mesma família coral
+   da marcação da IARA — nunca vermelho saturado —, e legível: o rótulo quase
+   sempre é um dígito, mas um deles é "Clicar sim 2x", e a pílula cresce. */
+.ilustracao-ponto {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 2px solid var(--luz-alerta, #e2876b);
+  background: rgba(20, 18, 17, 0.82);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 0 0 3px rgba(226, 135, 107, 0.22);
+  pointer-events: none;
+}
+
+/* A PROCEDÊNCIA COLADA NA IMAGEM. Uma captura sem fonte vira "print que a IARA
+   mandou" na cabeça de quem lê — e é justamente a fonte que faz ela valer. */
+.ilustracao-fonte {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--c-tinta-3);
+}
+
+.ilustracao-lacuna {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--luz-alerta, #e2876b);
 }
 
 @keyframes surgir {

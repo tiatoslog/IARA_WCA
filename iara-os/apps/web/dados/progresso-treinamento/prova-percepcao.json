@@ -1,0 +1,24 @@
+{
+  "id_usuario": "prova-percepcao",
+  "progressos": {
+    "IT-ADMLUFT-001|6b3f7fd537a43fe2": {
+      "id_usuario": "prova-percepcao",
+      "codigo": "IT-ADMLUFT-001",
+      "hash_origem": "6b3f7fd537a43fe2",
+      "revisao": "REV.:02",
+      "estado": "aprendendo",
+      "iniciado_em": "2026-08-21T17:14:49.498Z",
+      "atualizado_em": "2026-08-21T17:16:04.045Z",
+      "paradas_ensinadas": [
+        "1/1"
+      ],
+      "paradas_praticadas": [],
+      "dificuldades": [],
+      "avaliacoes": [],
+      "conceitos_explicados": [],
+      "pergunta_pendente": null,
+      "socraticas_na_parada": 0,
+      "parada_socratica": null
+    }
+  }
+}

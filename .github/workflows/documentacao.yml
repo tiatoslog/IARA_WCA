@@ -1,0 +1,105 @@
+# Regenera a documentação técnica a cada publicação na branch principal.
+#
+# ⚠️ O FILTRO DE CAMINHO EXCLUI `docs/gerado/**`, e essa exclusão é o que impede
+# o workflow de disparar a si mesmo. Sem ela: o job commita a documentação, o
+# commit dispara o job, que commita de novo — laço infinito, cobrado por minuto.
+#
+# O commit leva `[skip ci]` pelo mesmo motivo, em segunda camada: o `verificar`
+# não precisa rodar de novo por causa de um documento.
+#
+# ⚠️ A versão do Node é a mesma de verificar.yml. Ver o aviso lá.
+
+name: Documentação
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/gerado/**'
+  workflow_dispatch:
+
+concurrency:
+  group: documentacao
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # O passo de commit precisa do histórico para empurrar de volta.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: iara-os/apps/web/package-lock.json
+
+      - name: Instalar dependências
+        working-directory: iara-os/apps/web
+        run: npm ci
+
+      - name: Gerar documentação
+        working-directory: iara-os/apps/web
+        run: npm run docs
+
+      # Word e PDF também como artefato do run: quem precisa do documento nem
+      # sempre tem o repositório clonado.
+      - name: Publicar Word e PDF como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentacao-iara-os
+          path: |
+            docs/gerado/IARA-OS-Documentacao.docx
+            docs/gerado/IARA-OS-Documentacao.pdf
+            docs/gerado/IARA-OS-Documentacao.html
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Recommitar se mudou
+        run: |
+          if [ -z "$(git status --porcelain docs/gerado)" ]; then
+            echo "Documentação já estava atualizada — nada a commitar."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/gerado
+          git commit -m "A documentação acompanha o código [skip ci]"
+          git push
+
+      - name: Diagnóstico da falha
+        if: failure()
+        run: |
+          {
+            echo "## A geração da documentação falhou"
+            echo ""
+            echo "Causas prováveis, em ordem de frequência:"
+            echo ""
+            echo "1. **A varredura de segredos reprovou o documento.** É a falha mais"
+            echo "   importante desta lista: alguma coisa que não pode sair do repositório"
+            echo "   chegou ao documento. O log diz a linha e o tipo (chave, CPF, telefone,"
+            echo "   string de conexão). **Corrija a ORIGEM — o código ou a seção manual em"
+            echo "   \`docs/manual/\` — nunca o arquivo gerado.**"
+            echo "2. **Uma seção derivada leu uma estrutura que mudou de forma.** O catálogo"
+            echo "   de habilidades é importado de verdade; se um manifesto mudou de campo,"
+            echo "   \`scripts/docs/derivar.mjs\` precisa acompanhar."
+            echo "3. **\`docs/manual/\` sem permissão de escrita ou ausente.** Seção manual"
+            echo "   faltando é aviso, não erro — mas a pasta \`docs/gerado/\` precisa poder"
+            echo "   ser criada."
+            echo "4. **O push foi recusado.** Outro commit entrou em \`main\` no meio do run."
+            echo "   Rode o workflow de novo pelo botão."
+            echo ""
+            echo "Reproduzir local, da pasta \`iara-os/apps/web\`:"
+            echo ""
+            echo '```bash'
+            echo "npm ci && npm run docs"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

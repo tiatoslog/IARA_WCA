@@ -1,0 +1,464 @@
+{
+  "codigo": "IT-ADMLUFT-007",
+  "titulo": "MANIFESTO: ALTERAR - ENVIAR - ENCERRAR",
+  "sistema": "GW",
+  "revisao": "REV.:02",
+  "estado": "oficial",
+  "qualidade": "incompleto",
+  "arquivo_origem": "IT - ADMLUFT - 007 - MANIFESTO ALTERAR - ENVIAR - ENCERRAR.pptx",
+  "hash_origem": "28d759b352576dc4",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "ALTERAR MANIFESTO:",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "Lançamentos;\nManifestos;",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/b0d5de3a94c3.png",
+                "x": 0.0198,
+                "y": 0.1642
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/b0d5de3a94c3.png",
+                "x": 0.1003,
+                "y": 0.5577
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/b0d5de3a94c3.png",
+              "largura": 326,
+              "altura": 478,
+              "caixa": {
+                "x": 318.5156692913386,
+                "y": 71.86992125984251,
+                "w": 284.0755118110236,
+                "h": 416.527874015748
+              }
+            }
+          ]
+        },
+        {
+          "indice": 2,
+          "texto": "3. Transmitir MDFE",
+          "passos": [
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/7f456104a4cb.png",
+                "x": 0.7144,
+                "y": 0.1505
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/7f456104a4cb.png",
+              "largura": 1323,
+              "altura": 511,
+              "caixa": {
+                "x": 12.571338582677166,
+                "y": 104.76685039370079,
+                "w": 772.6956692913386,
+                "h": 370.79362204724407
+              }
+            }
+          ]
+        },
+        {
+          "indice": 3,
+          "texto": "4. Colocar Data De (criação MDFE)\n5. Colocar data para (criação MDFE)\n6. Mostrar MDFEs criados por mim;\n7. Com Status Pendente\n8. Pesquisar",
+          "passos": [
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/9664d57fb6c7.png",
+                "x": 0.1439,
+                "y": 0.3125
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/9664d57fb6c7.png",
+                "x": 0.3716,
+                "y": 0.3125
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/9664d57fb6c7.png",
+                "x": 0.3822,
+                "y": 0.4675
+              }
+            },
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/9664d57fb6c7.png",
+                "x": 0.6751,
+                "y": 0.366
+              }
+            },
+            {
+              "ordem": 8,
+              "rotulo": "8",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/9664d57fb6c7.png",
+                "x": 0.924,
+                "y": 0.3402
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/9664d57fb6c7.png",
+              "largura": 1243,
+              "altura": 384,
+              "caixa": {
+                "x": 20.795748031496064,
+                "y": 119.15614173228346,
+                "w": 752.9822047244095,
+                "h": 288
+              }
+            }
+          ]
+        },
+        {
+          "indice": 4,
+          "texto": "9. clicar no numero em azul do manifesto para abrir o mesmo",
+          "passos": [
+            {
+              "ordem": 9,
+              "rotulo": "9",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/60dba6bac2b9.png",
+                "x": 0.065,
+                "y": 0.6423
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/60dba6bac2b9.png",
+              "largura": 1215,
+              "altura": 265,
+              "caixa": {
+                "x": 22.43472440944882,
+                "y": 143.19543307086613,
+                "w": 727.6250393700788,
+                "h": 198.75
+              }
+            }
+          ]
+        },
+        {
+          "indice": 5,
+          "texto": "10. Alterar a data para data do dia;\n11. Alterar o horário para o horário em que você está emitindo o manifesto",
+          "passos": [
+            {
+              "ordem": 10,
+              "rotulo": "10",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/faaef6f86c6d.png",
+                "x": 0.8928,
+                "y": 0.3008
+              }
+            },
+            {
+              "ordem": 11,
+              "rotulo": "11",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/faaef6f86c6d.png",
+                "x": 0.802,
+                "y": 0.4272
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/faaef6f86c6d.png",
+              "largura": 1218,
+              "altura": 537,
+              "caixa": {
+                "x": 45.6636220472441,
+                "y": 117.77078740157481,
+                "w": 710.464251968504,
+                "h": 313.23425196850394
+              }
+            }
+          ]
+        },
+        {
+          "indice": 6,
+          "texto": "12. Clicar em salvar",
+          "passos": [
+            {
+              "ordem": 12,
+              "rotulo": "12",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/b25da5176ea5.png",
+                "x": 0.4538,
+                "y": 0.9471
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/b25da5176ea5.png",
+              "largura": 1075,
+              "altura": 486,
+              "caixa": {
+                "x": 18.961653543307087,
+                "y": 109.6975590551181,
+                "w": 756.6503937007874,
+                "h": 342.07637795275593
+              }
+            }
+          ]
+        },
+        {
+          "indice": 7,
+          "texto": "Lançamentos;\nManifestos;\nTransmitir MDFE\nFiltrar por pendentes;\nSeleciona o manifesto\nClica em enviar",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/b0d5de3a94c3.png",
+                "x": 0.0644,
+                "y": 0.1434
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/b0d5de3a94c3.png",
+                "x": 0.0638,
+                "y": 0.5484
+              }
+            },
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": null
+            },
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/4bff6f9fc4d8.png",
+                "x": 0.6813,
+                "y": 0.9963
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/9fa78aa8023c.png",
+                "x": 0.0134,
+                "y": 0.528
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/9fa78aa8023c.png",
+                "x": 0.8632,
+                "y": 0.9355
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/b0d5de3a94c3.png",
+              "largura": 326,
+              "altura": 478,
+              "caixa": {
+                "x": 45.6636220472441,
+                "y": 114.5503937007874,
+                "w": 190.1624409448819,
+                "h": 211.1071653543307
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/4bff6f9fc4d8.png",
+              "largura": 757,
+              "altura": 189,
+              "caixa": {
+                "x": 247.36968503937007,
+                "y": 128.77212598425197,
+                "w": 496.28818897637797,
+                "h": 141.75
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/9fa78aa8023c.png",
+              "largura": 1270,
+              "altura": 495,
+              "caixa": {
+                "x": 214.3667716535433,
+                "y": 200.69748031496064,
+                "w": 551.5462992125985,
+                "h": 262.7665354330709
+              }
+            }
+          ]
+        },
+        {
+          "indice": 8,
+          "texto": "Lançamentos;\nManifestos;\nTransmitir mdfe;\nFiltrar por Confirmado;\nSeleciona  o Manifesto;\nSeleciona encerrar manifesto;\nClicar em sim 2x.",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/b0d5de3a94c3.png",
+                "x": 0.0644,
+                "y": 0.1434
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/b0d5de3a94c3.png",
+                "x": 0.0638,
+                "y": 0.5484
+              }
+            },
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/4bff6f9fc4d8.png",
+                "x": 0.8931,
+                "y": 0.0826
+              }
+            },
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/aae860ab08dc.png",
+                "x": 0.663,
+                "y": 0.2276
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/aae860ab08dc.png",
+                "x": 0.0355,
+                "y": 0.6813
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/aae860ab08dc.png",
+                "x": 0.8489,
+                "y": 0.8495
+              }
+            },
+            {
+              "ordem": null,
+              "rotulo": "Clicar sim 2x 7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-007/a3637efb0d1c.png",
+                "x": 0.7056,
+                "y": 0.5302
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/aae860ab08dc.png",
+              "largura": 1230,
+              "altura": 321,
+              "caixa": {
+                "x": 260.91425196850395,
+                "y": 78.20874015748032,
+                "w": 528.9988188976378,
+                "h": 181.1371653543307
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/a3637efb0d1c.png",
+              "largura": 1163,
+              "altura": 512,
+              "caixa": {
+                "x": 340.17393700787403,
+                "y": 289.2870078740157,
+                "w": 437.21732283464564,
+                "h": 197.54779527559054
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/b0d5de3a94c3.png",
+              "largura": 326,
+              "altura": 478,
+              "caixa": {
+                "x": 65.64409448818898,
+                "y": 103.38937007874016,
+                "w": 190.1624409448819,
+                "h": 211.1071653543307
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-007/4bff6f9fc4d8.png",
+              "largura": 757,
+              "altura": 189,
+              "caixa": {
+                "x": 13.540629921259843,
+                "y": 312.5111023622047,
+                "w": 311.02574803149605,
+                "h": 115.36299212598425
+              }
+            }
+          ]
+        },
+        {
+          "indice": 9,
+          "texto": "Manifestos criados no fim do dia anterior 17h devem ser encerrados às 14h;\nManifestos criados às 07h30 devem ser encerrados às 14h;\nManifestos criados às 11h30 devem ser encerrados 17h;\nManifestos criados às 11h30 com entrega no dia seguinte devem ser encerrados 7h30 no dia seguinte.\nAcompanhar a viagem do motorista podendo encerrar um pouco antes destes horários ou um pouco depois, mas para não se perder nos horários seguir os cortes como regra na maioria dos casos.",
+          "passos": [],
+          "capturas": []
+        }
+      ]
+    }
+  ],
+  "particularidades": [],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "o documento não declara exceções ou casos particulares",
+    "4 de 9 slides trazem pouca instrução escrita — a informação está na captura de tela",
+    "o documento não cataloga mensagens de erro"
+  ]
+}

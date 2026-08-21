@@ -1,0 +1,119 @@
+[
+  {
+    "arquivo": "42a3607a3cf2.png",
+    "descricao": "Planilha CONTATOS LUFT — postos e centrais",
+    "dimensoes": "1259×438",
+    "faixas": 6,
+    "sha256_origem": "42a3607a3cf2e446",
+    "sha256_saida": "5ba120668c8f6b88",
+    "motivos": [
+      "nome de contato do posto",
+      "telefone do posto",
+      "nome do motorista",
+      "telefone do motorista",
+      "nome do contato da central",
+      "telefone da central"
+    ],
+    "preservado": [
+      "cabeçalho das colunas (é o conteúdo didático do passo 2.10)",
+      "coluna CENTRAL — nomes de cidade não são dado pessoal"
+    ]
+  },
+  {
+    "arquivo": "b6e615e3f096.png",
+    "descricao": "E-mail de recebimento da OCI",
+    "dimensoes": "1284×398",
+    "faixas": 6,
+    "sha256_origem": "b6e615e3f09632c4",
+    "sha256_saida": "f5f527ad65ee134c",
+    "motivos": [
+      "remetente: nome + e-mail",
+      "destinatários: nomes + e-mails",
+      "continuação dos destinatários",
+      "saudação nominal",
+      "assinatura: nome da remetente",
+      "marca d'água Ativar o Windows"
+    ],
+    "preservado": [
+      "linha Assunto — descreve origem e destino da carga (passo 1.1)",
+      "as duas linhas OCI 184957 / 184958 — é o que o aluno precisa reconhecer",
+      "corpo da mensagem e data de envio",
+      "razão social no rodapé — pessoa jurídica"
+    ]
+  },
+  {
+    "arquivo": "242b460e7efd.png",
+    "descricao": "Planilha de controle de OCIs — linha de lançamento",
+    "dimensoes": "1042×225",
+    "faixas": 1,
+    "sha256_origem": "242b460e7efd87b7",
+    "sha256_saida": "cd2c6ce0524d0330",
+    "motivos": [
+      "primeiro nome de motorista"
+    ],
+    "preservado": [
+      "OCI, ORIGEM, DESTINO, U.F., DATA REC. — os campos que o aluno preenche",
+      "coluna ROTA — objeto do passo 2.7"
+    ]
+  },
+  {
+    "arquivo": "e93c9a811c0e.png",
+    "descricao": "Bloco AGENDAMENTO — postos, central e TAC",
+    "dimensoes": "528×224",
+    "faixas": 2,
+    "sha256_origem": "e93c9a811c0ecb20",
+    "sha256_saida": "3ecb3c973ab0a34b",
+    "motivos": [
+      "nome do contato do posto",
+      "nome do contato da central"
+    ],
+    "preservado": [
+      "colunas DATA e HORA — o que o passo manda registrar",
+      "cabeçalhos POSTOS / CENTRAL / TAC"
+    ]
+  },
+  {
+    "arquivo": "c55adba2c23c.png",
+    "descricao": "Colunas DATA COLETA e DATA DESCARGA",
+    "dimensoes": "463×252",
+    "faixas": 1,
+    "sha256_origem": "c55adba2c23c0c72",
+    "sha256_saida": "c87feb3fc3308dbb",
+    "motivos": [
+      "nome de motorista"
+    ],
+    "preservado": [
+      "DATA REC. OCI, DATA COLETA, DATA DESCARGA — objeto dos passos 2.14/2.15"
+    ]
+  },
+  {
+    "arquivo": "1c66b4f5a0c3.png",
+    "descricao": "Caminho de rede da planilha",
+    "dimensoes": "898×227",
+    "faixas": 0,
+    "sha256_origem": "1c66b4f5a0c3db5d",
+    "sha256_saida": "f0b9a6561f587659",
+    "motivos": [],
+    "preservado": []
+  },
+  {
+    "arquivo": "294247ef05fb.png",
+    "descricao": "Lista de arquivos — planilha de contatos",
+    "dimensoes": "419×138",
+    "faixas": 0,
+    "sha256_origem": "294247ef05fb35fc",
+    "sha256_saida": "6d6100cee9758504",
+    "motivos": [],
+    "preservado": []
+  },
+  {
+    "arquivo": "d5c9b293e917.png",
+    "descricao": "Trilha de pastas CtrFrete",
+    "dimensoes": "569×73",
+    "faixas": 0,
+    "sha256_origem": "d5c9b293e91748c5",
+    "sha256_saida": "658e015ebfccc755",
+    "motivos": [],
+    "preservado": []
+  }
+]

@@ -20,6 +20,9 @@ import { extrairAssuntoLembrete } from './Quando';
 import { planosPropostos } from './PlanosPropostos';
 import { passosExecutaveis } from './Investigacao';
 import { corrigirTypos, ehInterrogativa } from '../texto';
+import { classificarIntencao, extrairCodigoPop } from './IntencaoProcedimento';
+import { classificarPedagogica } from './IntencaoPedagogica';
+import { classificarPercepcao, extrairAplicativo } from './IntencaoDePercepcao';
 import {
   ehElipseFactual,
   herdarContrato,
@@ -485,6 +488,126 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
         : 'Responder sobre um plano que não está aberto',
       origem: 'deterministico',
       passos,
+    };
+  },
+
+  /**
+   * PROCEDIMENTO DO GW — a rota que tira da LLM a decisão de consultar o POP.
+   *
+   * Antes desta receita, uma pergunta sobre o GW só chegava ao SOS se a LLM
+   * escolhesse a habilidade no catálogo. Quando não escolhia, o Kernel caía em
+   * `raciocinio_direto` e a IARA respondia de conhecimento geral — sem POP, sem
+   * citação e sem registrar a lacuna. A defesa existia dentro da habilidade, e
+   * quem decidia invocá-la estava fora dela.
+   *
+   * A INTENÇÃO É RESOLVIDA AQUI, por módulo puro, e vai no parâmetro. É a mesma
+   * lei de `agendar_lembrete`: a frase do operador vai crua, e um determinístico
+   * a interpreta — a LLM nunca decide se alguém entra no meio de um
+   * procedimento ou no começo dele.
+   */
+  procedimento_gw: (p) => {
+    const codigo = extrairCodigoPop(p.bruto);
+    const intencao = classificarIntencao(p.bruto);
+    return {
+      objetivo:
+        intencao === 'localizar'
+          ? 'Localizar o ponto do procedimento oficial que responde'
+          : 'Conduzir pelo procedimento oficial, desde o começo',
+      origem: 'deterministico',
+      passos: [
+        passo(0, 'Consultar o POP oficial do GW', 'consultar_procedimento', {
+          consulta: p.bruto,
+          intencao,
+          ...(codigo ? { codigo } : {}),
+        }),
+      ],
+    };
+  },
+
+  /**
+   * TREINAMENTO — a rota da instrutora, irmã de `procedimento_gw`.
+   *
+   * O MODO VAI RESOLVIDO NO PARÂMETRO, por módulo puro, pela mesma lei que
+   * governa a receita vizinha: a frase do operador vai crua para um
+   * determinístico, e a LLM nunca decide se alguém está sendo avaliado ou
+   * ensinado. Se decidisse, "me testa" poderia virar `ensino` — e a IARA
+   * entregaria a resposta a quem pediu para ser testado, que é a forma mais
+   * eficiente de uma avaliação não medir nada.
+   */
+  /**
+   * OBSERVAÇÃO DA TELA — a rota que tira da LLM a decisão de ligar a câmera.
+   *
+   * É a receita cuja ausência mais custava: sem ela, "me acompanha fazendo esse
+   * procedimento" dependia de um modelo escolher `observar_tela` no catálogo. Na
+   * vez em que não escolhesse, a IARA responderia sobre o POP a quem pediu para
+   * ser acompanhado — e, pior, a vez em que escolhesse ERRADO ligaria a
+   * observação de alguém que pediu outra coisa.
+   *
+   * A AÇÃO VAI RESOLVIDA NO PARÂMETRO, por módulo puro. `classificarPercepcao`
+   * põe `encerrar` na frente de tudo: nenhuma frase que manda parar de olhar
+   * pode sair daqui como pedido de observação.
+   */
+  percepcao_de_tela: (p) => {
+    const acao = classificarPercepcao(p.bruto) ?? 'situacao';
+    const aplicativo = extrairAplicativo(p.bruto);
+    return {
+      objetivo:
+        acao === 'encerrar'
+          ? 'Parar de acompanhar a tela do operador'
+          : acao === 'autorizar'
+            ? 'Ligar o acompanhamento da tela, autorizado pelo operador'
+            : acao === 'solicitar'
+              ? 'Pedir autorização para acompanhar a tela do operador'
+              : 'Informar se a tela está sendo acompanhada',
+      origem: 'deterministico',
+      passos: [
+        passo(0, `Percepção de tela: ${acao}`, 'observar_tela', {
+          acao,
+          ...(aplicativo ? { aplicativo } : {}),
+        }),
+      ],
+    };
+  },
+
+  treinamento: (p) => {
+    const { modo } = classificarPedagogica(p.bruto);
+    const codigo = extrairCodigoPop(p.bruto);
+
+    /**
+     * `ensino` NÃO vem para cá — vai para a consulta, desde o começo.
+     *
+     * "Me ensina a encerrar o manifesto" pede a sequência, e
+     * `consultar_procedimento` com `intencao: 'executar'` já a entrega desde a
+     * primeira parada, com fonte e ressalva. Mandar essa frase para a instrutora
+     * trocaria uma resposta útil por uma apresentação seguida de "quer que eu
+     * comece?" — uma volta a mais para entregar o que já estava pronto.
+     *
+     * A instrutora existe para o que a consulta NÃO faz: retomar, avaliar,
+     * praticar, diagnosticar e responder dúvida sem perder a posição.
+     */
+    if (modo === 'ensino' || modo === 'consulta') {
+      return {
+        objetivo: 'Conduzir pelo procedimento oficial, desde o começo',
+        origem: 'deterministico',
+        passos: [
+          passo(0, 'Consultar o POP oficial do GW', 'consultar_procedimento', {
+            consulta: p.bruto,
+            intencao: 'executar',
+            ...(codigo ? { codigo } : {}),
+          }),
+        ],
+      };
+    }
+
+    return {
+      objetivo: `Treinar o operador sobre o procedimento oficial (modo ${modo})`,
+      origem: 'deterministico',
+      passos: [
+        passo(0, `Conduzir o treinamento em modo ${modo}`, 'treinar_procedimento', {
+          modo,
+          ...(codigo ? { codigo } : {}),
+        }),
+      ],
     };
   },
 

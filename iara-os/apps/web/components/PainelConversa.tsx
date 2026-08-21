@@ -559,6 +559,42 @@ export function PainelConversa({
                 </div>
               )}
               {f.texto || <span className="reticencias">…</span>}
+
+              {/* AS TELAS DO PROCEDIMENTO — depois do texto, de propósito: a
+                  instrução se lê, a tela se confere. Invertido, o olho vai para
+                  a imagem e a pessoa clica antes de ler a exceção. */}
+              {f.ilustracao && (
+                <div className="ilustracao">
+                  {f.ilustracao.telas.map((t) => (
+                    <div className="ilustracao-tela" key={t.url}>
+                      {/* SEM `urlAnexo`: anexo é do motor (8787), captura de POP
+                          é estática do Next (`public/procedimentos/`). Prefixar
+                          a origem do motor aqui daria 404 no ambiente separado
+                          e passaria despercebido no unificado. */}
+                      <img src={t.url} alt={`Tela do procedimento — ${f.ilustracao!.fonte}`} loading="lazy" />
+                      {t.pontos.map((q, i) => (
+                        <span
+                          key={`${q.rotulo}#${i}`}
+                          className="ilustracao-ponto"
+                          style={{ left: `${q.x * 100}%`, top: `${q.y * 100}%` }}
+                        >
+                          {q.rotulo}
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                  <p className="ilustracao-fonte">{f.ilustracao.fonte}</p>
+                  {/* O QUE A IMAGEM NÃO MOSTRA, dito na própria imagem. Sem
+                      isto, três círculos num slide de cinco passos leem-se como
+                      cinco — e os dois que faltam somem sem deixar rastro. */}
+                  {f.ilustracao.nao_marcados.length > 0 && (
+                    <p className="ilustracao-lacuna">
+                      O POP numera {f.ilustracao.nao_marcados.join(', ')} sem apontar onde na tela —
+                      esses vão pelo texto.
+                    </p>
+                  )}
+                </div>
+              )}
               {/* A ESPERA DITA COM TODAS AS LETRAS. Sem isto, um pedido atrás do
                   pedido de outra tela é indistinguível de um pedido lento — e a
                   pessoa não sabe se ainda dá tempo de desistir. */}

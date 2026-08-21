@@ -1,0 +1,84 @@
+# Verificação do IARA OS.
+#
+# Roda na mesma ordem que se roda na máquina: caminhos, GLSL, tipos, testes.
+# `npm run verificar` é literalmente esse encadeamento — o workflow não repete a
+# lista, chama o script. Uma verificação nova entra em um lugar só.
+#
+# ⚠️ A versão do Node é a mesma em TODOS os workflows deste repositório
+# (ver documentacao.yml). Divergir aqui produz o pior tipo de falha: passa no CI
+# e morre na rotina que roda com a outra versão.
+
+name: Verificar
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/gerado/**'
+      - '**/*.md'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: verificar-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: iara-os/apps/web
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: iara-os/apps/web/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Verificar (caminhos, GLSL, tipos, testes)
+        run: npm run verificar
+
+      - name: Build de produção
+        run: npm run build
+
+      # `npm run docs` não commita nada aqui — só prova que o gerador continua
+      # rodando. Se ele quebrar, é melhor descobrir no PR do que na publicação,
+      # quando o workflow de documentação falharia sozinho e sem plateia.
+      - name: Gerador de documentação continua funcionando
+        run: npm run docs
+
+      - name: Diagnóstico da falha
+        if: failure()
+        run: |
+          {
+            echo "## A verificação falhou"
+            echo ""
+            echo "Causas prováveis, em ordem de frequência:"
+            echo ""
+            echo "1. **Referência relativa quebrada** — algum arquivo mudou de pasta e um"
+            echo "   \`../\` ficou apontando para o lugar antigo. O passo diz qual."
+            echo "2. **Crase dentro de bloco GLSL** — fecha o template literal e o resto do"
+            echo "   shader vira JavaScript. O erro do compilador aponta para outra linha."
+            echo "3. **Tipos** — \`tsc --noEmit\`. Rode local: \`npm run verificar\`."
+            echo "4. **Teste de invariante** — um dos testes de \`testes/\` protege um"
+            echo "   comportamento que não pode regredir. Leia o cabeçalho do arquivo antes"
+            echo "   de mudar a asserção: ela costuma existir por causa de um defeito real."
+            echo "5. **Gerador de documentação** — se só este passo falhou, provavelmente"
+            echo "   uma seção derivada leu uma estrutura que mudou de forma"
+            echo "   (\`scripts/docs/derivar.mjs\`)."
+            echo ""
+            echo "Reproduzir local, da pasta \`iara-os/apps/web\`:"
+            echo ""
+            echo '```bash'
+            echo "npm ci && npm run verificar"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

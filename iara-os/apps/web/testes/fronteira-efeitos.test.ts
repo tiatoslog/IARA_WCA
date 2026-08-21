@@ -218,6 +218,40 @@ test('A4. shell e filesystem mutável continuam confinados ao AgenteLocal', () =
      * `AgenteLocal` — `G1` prova isso pelo grafo, não pela boa-fé desta linha.
      */
     path.join('servidor', 'nucleo', 'Agenda.ts'),
+    /**
+     * Onde cada operador parou num POP. Escreve `dados/procedimentos-em-curso/`,
+     * do lado do motor, e a justificativa é a mesma da `Agenda` logo acima com
+     * uma diferença que vale escrever: aqui o efeito é ainda MENOR. Um lembrete
+     * pelo menos faz a IARA falar sozinha quando vence; uma posição de
+     * procedimento não dispara nada — ela só volta a existir quando a própria
+     * pessoa pergunta onde parou.
+     *
+     * `mkdir` e `writeFile` são para o JSON por operador; `rename` completa a
+     * escrita atômica. Não abre `child_process`, não alcança o `AgenteLocal`, e
+     * `G1` prova isso pelo grafo — não pela boa-fé desta linha.
+     */
+    path.join('servidor', 'nucleo', 'ProcedimentosEmCurso.ts'),
+    /**
+     * O PROGRESSO PEDAGÓGICO, irmão do ponteiro acima e pela mesma isenção:
+     * grava `dados/progresso-treinamento/<id>.json` com escrita atômica, um por
+     * operador, e ninguém fora da IARA percebe. A distinção que importa é outra
+     * e está provada em `testes/treinamento-fronteira.test.ts`: este módulo
+     * escreve APRENDIZADO e não POSIÇÃO — não importa `ProcedimentosEmCurso`,
+     * não move etapa e não conclui nada.
+     */
+    path.join('servidor', 'nucleo', 'ProgressoDeTreinamento.ts'),
+    /**
+     * A fila de dúvidas sem resposta. Passou a escrever em 19/08/2026, quando
+     * ganhou o consumidor que o próprio módulo previa (o SOS) — sinal que zera
+     * a cada redeploy nunca acumula as cinco ocorrências que fazem um
+     * supervisor escrever um POP.
+     *
+     * Grava `dados/lacunas/<id>.json`, um por operador, e nada disso é
+     * percebido fora da IARA: a fila só volta a existir quando a própria pessoa
+     * pede a auditoria dela. Não abre `child_process` e não alcança o
+     * `AgenteLocal` — `G1` prova pelo grafo.
+     */
+    path.join('servidor', 'nucleo', 'kernel', 'LacunasCapacidade.ts'),
     path.join('servidor', 'nucleo', 'kernel', 'RegistroOperacoes.ts'), // o próprio jornal
     /**
      * A DECLARAÇÃO da fronteira. Ela cita os nomes dos padrões proibidos dentro
@@ -240,6 +274,18 @@ test('A4. shell e filesystem mutável continuam confinados ao AgenteLocal', () =
      * operador que as habilidades tocam.
      */
     path.join('servidor', 'braco', 'principal.ts'),
+    /**
+     * A CAPTURA DE QUADRO da percepção de tela. `spawn` aqui é um helper
+     * PowerShell que lê a tela da máquina onde o braço já roda e devolve uma
+     * matriz 32×32 de cinza — nunca um arquivo, nunca uma imagem. É a mesma
+     * isenção de `braco/principal.ts` logo acima, pelo mesmo motivo: quem
+     * autorizou estas mãos foi o pareamento, e a percepção ainda exige um
+     * segundo aceite, dado no console da própria pessoa.
+     *
+     * `testes/percepcao-p0.test.ts` (S3, S4) confere o que este comentário
+     * afirma: o módulo não abre `node:fs` e o script não sabe salvar imagem.
+     */
+    path.join('servidor', 'braco', 'CapturaDeQuadro.ts'),
     /**
      * O SUPERVISOR (21/08/2026) — mesma isenção do `principal.ts` logo acima, e
      * pelo mesmo motivo, com um detalhe que a torna MAIS estreita, não menos:

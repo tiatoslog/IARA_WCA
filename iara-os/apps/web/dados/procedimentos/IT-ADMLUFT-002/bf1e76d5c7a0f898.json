@@ -1,0 +1,785 @@
+{
+  "codigo": "IT-ADMLUFT-002",
+  "titulo": "EMISSÃO DE ORDEM DE COLETA",
+  "sistema": "GW",
+  "revisao": "REV.:02",
+  "estado": "oficial",
+  "qualidade": "incompleto",
+  "arquivo_origem": "IT - ADMLUFT - 002 - CRIAÇÃO DE OCI.pptx",
+  "hash_origem": "bf1e76d5c7a0f898",
+  "ingerido_em": "2026-08-19T12:51:13.731Z",
+  "objetivo": null,
+  "etapas": [
+    {
+      "numero": 1,
+      "titulo": "CRIAR OCI NO SISTEMA GW",
+      "slides": [
+        {
+          "indice": 1,
+          "texto": "Após Inserirmos na planilha  o numero de OCI enviado pela LUFT no e-mail e agendar a carga (Processo visto na IT – ADMLUFT-001)\nNós vamos criar o Documento no sistema e enviar via autentic para assinatura .\nAcompanhar os passos:\n1. Entrar na página da GW gwsistemas.gwcloud.com.br - com login e senha;\n2. Clicar em Lançamentos;\n3. Clicar em coletas OS;",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/0755019f38cc.png",
+                "x": 0.1167,
+                "y": 0.0269
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/0755019f38cc.png",
+                "x": 0.1694,
+                "y": 0.4882
+              }
+            },
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/0755019f38cc.png",
+                "x": 0.1864,
+                "y": 0.8728
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/0755019f38cc.png",
+              "largura": 868,
+              "altura": 342,
+              "caixa": {
+                "x": 12.720472440944881,
+                "y": 102.32897637795276,
+                "w": 783.9751968503937,
+                "h": 375.88
+              }
+            }
+          ]
+        },
+        {
+          "indice": 2,
+          "texto": "4. Clicar em incluir novo cadastro",
+          "passos": [
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/24543ed3c4a8.png",
+                "x": 0.3573,
+                "y": 0.2499
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/24543ed3c4a8.png",
+              "largura": 1288,
+              "altura": 456,
+              "caixa": {
+                "x": 57.91299212598425,
+                "y": 108.56086614173228,
+                "w": 719.0422047244094,
+                "h": 363.3427559055118
+              }
+            }
+          ]
+        },
+        {
+          "indice": 3,
+          "texto": "5. Preencher no campo Numero o numero da OCI que foi enviado via e-mail pela LUFT;\n6. Preencher Programado para colocar a data do agendamento, não é necessário preencher o horário;\n7. Preencher o cliente – pesquisar por cidade do remetente;\n8. Preencher o Destinatário – pesquisar por cidade do Destinatário;\n9. Preencher o motorista na aba dados da coleta;\n10. Em observações colocar texto pronto de observações;\n11. Salvar em uma pasta de trabalho para enviar via autentic.",
+          "passos": [
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ed9d8e29e3e0.png",
+                "x": 0.3044,
+                "y": 0.2218
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ed9d8e29e3e0.png",
+                "x": 0.4949,
+                "y": 0.2713
+              }
+            },
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ed9d8e29e3e0.png",
+                "x": 0.4663,
+                "y": 0.5068
+              }
+            },
+            {
+              "ordem": 8,
+              "rotulo": "8",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ed9d8e29e3e0.png",
+                "x": 0.4825,
+                "y": 0.7828
+              }
+            },
+            {
+              "ordem": 9,
+              "rotulo": "9",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ed9d8e29e3e0.png",
+                "x": 0.107,
+                "y": 0.3836
+              }
+            },
+            {
+              "ordem": 10,
+              "rotulo": "10",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/906830c1cf3c.png",
+                "x": 0.1648,
+                "y": 0.6918
+              }
+            },
+            {
+              "ordem": 11,
+              "rotulo": "11",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/906830c1cf3c.png",
+                "x": 0.4631,
+                "y": 0.8142
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/ed9d8e29e3e0.png",
+              "largura": 1128,
+              "altura": 489,
+              "caixa": {
+                "x": 12.926614173228346,
+                "y": 93.78417322834646,
+                "w": 656.565905511811,
+                "h": 293.63889763779525
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/906830c1cf3c.png",
+              "largura": 1097,
+              "altura": 130,
+              "caixa": {
+                "x": 22.43472440944882,
+                "y": 384.4432283464567,
+                "w": 442.67165354330706,
+                "h": 98.45291338582678
+              }
+            }
+          ]
+        },
+        {
+          "indice": 4,
+          "texto": "TEXTO PARA ORDEM DE COLETA\nSalvo em controle de frete/ Luft\nINICIAR VIAGEM SOMENTE COM A SST OU N.F. / PESO MÍNIMO 1.500 KGS. (Respvel.: Motorista)\nDECLARO TER ENTREGUE EMBALAGENS TRIPLICES LAVADAS CONFORME OCI ACIMA. (Respvel.: Posto)\nINICIAR VIAGEM SOMENTE COM O RECBTO. DO MDFe E LIBERAÇÃO  DA ATOS.(Respvel:Motorista)",
+          "passos": [],
+          "capturas": []
+        }
+      ]
+    },
+    {
+      "numero": 2,
+      "titulo": "ENVIAR DOCUMENTO NO AUTENTIC",
+      "slides": [
+        {
+          "indice": 5,
+          "texto": "1. Acessar o site: painel.autentique.com.br/pastas (necessário login e senha);\n2. Clicar em Documentos;\n3. Novo Documento.",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/3eadb23c6ae1.png",
+                "x": 0.0975,
+                "y": 0.068
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/3eadb23c6ae1.png",
+                "x": 0.0109,
+                "y": 0.395
+              }
+            },
+            {
+              "ordem": 3,
+              "rotulo": "3",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/3eadb23c6ae1.png",
+                "x": 0.2938,
+                "y": 0.446
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/3eadb23c6ae1.png",
+              "largura": 547,
+              "altura": 471,
+              "caixa": {
+                "x": 195.89023622047245,
+                "y": 102.94055118110236,
+                "w": 410.25,
+                "h": 353.25
+              }
+            }
+          ]
+        },
+        {
+          "indice": 6,
+          "texto": "4. Clica em seleciona arquivo;\n5. Seleciona PDF;\n6. Abrir.",
+          "passos": [
+            {
+              "ordem": 4,
+              "rotulo": "4",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/f5a1204fa62e.png",
+                "x": 0.6469,
+                "y": 0.6231
+              }
+            },
+            {
+              "ordem": 5,
+              "rotulo": "5",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/f5a1204fa62e.png",
+                "x": 0.134,
+                "y": 0.3803
+              }
+            },
+            {
+              "ordem": 6,
+              "rotulo": "6",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/f5a1204fa62e.png",
+                "x": 0.3621,
+                "y": 0.8756
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/f5a1204fa62e.png",
+              "largura": 1245,
+              "altura": 517,
+              "caixa": {
+                "x": 34.75015748031496,
+                "y": 130.44748031496064,
+                "w": 751.7170866141732,
+                "h": 312.1588188976378
+              }
+            }
+          ]
+        },
+        {
+          "indice": 7,
+          "texto": "7. Seleciona a opção Link;\n8. Coloca o nome do motorista;\n9. Seleciona a opção link;\n10. Coloca o nome do posto;\n11. Avançar.",
+          "passos": [
+            {
+              "ordem": 7,
+              "rotulo": "7",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ff9d0b87e847.png",
+                "x": 0.2599,
+                "y": 0.2015
+              }
+            },
+            {
+              "ordem": 8,
+              "rotulo": "8",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ff9d0b87e847.png",
+                "x": 0.0651,
+                "y": 0.1299
+              }
+            },
+            {
+              "ordem": 9,
+              "rotulo": "9",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ff9d0b87e847.png",
+                "x": 0.265,
+                "y": 0.4816
+              }
+            },
+            {
+              "ordem": 10,
+              "rotulo": "10",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ff9d0b87e847.png",
+                "x": 0.0709,
+                "y": 0.5451
+              }
+            },
+            {
+              "ordem": 11,
+              "rotulo": "11",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/ff9d0b87e847.png",
+                "x": 0.1979,
+                "y": 0.9189
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/ff9d0b87e847.png",
+              "largura": 1298,
+              "altura": 535,
+              "caixa": {
+                "x": 22.43472440944882,
+                "y": 125.42251968503938,
+                "w": 728.338188976378,
+                "h": 300.2010236220472
+              }
+            }
+          ]
+        },
+        {
+          "indice": 8,
+          "texto": "12. Seleciona assinatura motorista;\n13. Arrasta e coloca em motorista;\n14. Seleciona data motorista;\n15. Arrasta em data motorista;\n16. Seleciona assinatura posto;\n17. Arrasta em assinatura posto;\n18. Seleciona data posto;\n19. Arrasta em data posto;\n20. clicar em avançar",
+          "passos": [
+            {
+              "ordem": 12,
+              "rotulo": "12",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+                "x": 0.0555,
+                "y": 0.4509
+              }
+            },
+            {
+              "ordem": 13,
+              "rotulo": "13",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+                "x": 0.5349,
+                "y": 0.6454
+              }
+            },
+            {
+              "ordem": 14,
+              "rotulo": "14",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+                "x": 0.2874,
+                "y": 0.4509
+              }
+            },
+            {
+              "ordem": 15,
+              "rotulo": "15",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+                "x": 0.6167,
+                "y": 0.9023
+              }
+            },
+            {
+              "ordem": 16,
+              "rotulo": "16",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+                "x": 0.0508,
+                "y": 0.6792
+              }
+            },
+            {
+              "ordem": 17,
+              "rotulo": "17",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+                "x": 0.7505,
+                "y": 0.6919
+              }
+            },
+            {
+              "ordem": 18,
+              "rotulo": "18",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+                "x": 0.2781,
+                "y": 0.6669
+              }
+            },
+            {
+              "ordem": 19,
+              "rotulo": "19",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+                "x": 0.8103,
+                "y": 0.8471
+              }
+            },
+            {
+              "ordem": 20,
+              "rotulo": "20",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+                "x": 0.2334,
+                "y": 0.8225
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/a12896131ed0.png",
+              "largura": 1250,
+              "altura": 507,
+              "caixa": {
+                "x": 1.7859842519685039,
+                "y": 112.65968503937007,
+                "w": 790.2140157480314,
+                "h": 331.63700787401575
+              }
+            }
+          ]
+        },
+        {
+          "indice": 9,
+          "texto": "21. Clicar em enviar para assinatura vai gerar 2 links – 1 para motorista e outro para o posto",
+          "passos": [
+            {
+              "ordem": 21,
+              "rotulo": "21",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/c9570350fde1.png",
+                "x": 0.1511,
+                "y": 0.8921
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/c9570350fde1.png",
+              "largura": 1232,
+              "altura": 509,
+              "caixa": {
+                "x": 40.52244094488189,
+                "y": 114.29283464566929,
+                "w": 720.6268503937008,
+                "h": 297.72653543307086
+              }
+            }
+          ]
+        },
+        {
+          "indice": 10,
+          "texto": "Enviar via SMBOT para deixar registrado.\n22. Entrar no site: www.smsolucoesdigitail.com.br com login e senha;\n23. Seleciona o link de atendimento;\n24. Pesquisa o contato da pessoa que você vai enviar o link\n25. Digita um texto padrão segue OCI numero xxx da carga de amanha e cola o link e dá enter",
+          "passos": [
+            {
+              "ordem": 22,
+              "rotulo": "22",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/895b548e4498.png",
+                "x": 0.0589,
+                "y": 0.0314
+              }
+            },
+            {
+              "ordem": 23,
+              "rotulo": "23",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/895b548e4498.png",
+                "x": 0.0606,
+                "y": 0.5505
+              }
+            },
+            {
+              "ordem": 24,
+              "rotulo": "24",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/895b548e4498.png",
+                "x": 0.0408,
+                "y": 0.3383
+              }
+            },
+            {
+              "ordem": 25,
+              "rotulo": "25",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/895b548e4498.png",
+                "x": 0.3485,
+                "y": 0.9427
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/895b548e4498.png",
+              "largura": 1307,
+              "altura": 693,
+              "caixa": {
+                "x": 32.34795275590551,
+                "y": 107.15488188976379,
+                "w": 672,
+                "h": 356.3091338582677
+              }
+            }
+          ]
+        },
+        {
+          "indice": 11,
+          "texto": "Se Não tiver atendimento registrado do motorista ou do posto devemos criar um.\n26. Pegue o contato do posto ou motorista na planilha salva em: C:\\Users\\CristianyKellyMirand\\Atoslog\\atoslogdocumentos - Atoslog - Documentos\\CtrFrete\\4 – LUFT > Contato LUFT postos e centrais\n27.  Em atendimentos clicar no sinal de mais +",
+          "passos": [
+            {
+              "ordem": 26,
+              "rotulo": "26",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/9040dd8f820d.png",
+                "x": 0.0701,
+                "y": 0.0305
+              }
+            },
+            {
+              "ordem": 27,
+              "rotulo": "27",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/061d12ec5534.png",
+                "x": 0.4491,
+                "y": 0.2993
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/9040dd8f820d.png",
+              "largura": 455,
+              "altura": 383,
+              "caixa": {
+                "x": 44.86944881889764,
+                "y": 119.53110236220472,
+                "w": 341.25,
+                "h": 287.25
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/061d12ec5534.png",
+              "largura": 882,
+              "altura": 435,
+              "caixa": {
+                "x": 327.3194488188976,
+                "y": 150.17543307086615,
+                "w": 460.42165354330706,
+                "h": 227.07874015748033
+              }
+            }
+          ]
+        },
+        {
+          "indice": 12,
+          "texto": "28. Seleciona o whatsapp do BOT;\n29. Coloca o numero da pessoa;\n30. O nome e de onde é (posto x central);\n31. departamento atendimento;\n32. Nome do atendente (o seu).\n33. Clica em enviar e o atendimento já vai aparecer na lista de atendimentos",
+          "passos": [
+            {
+              "ordem": 28,
+              "rotulo": "28",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/9e99d27a534c.png",
+                "x": 0.0303,
+                "y": 0.0605
+              }
+            },
+            {
+              "ordem": 29,
+              "rotulo": "29",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/9e99d27a534c.png",
+                "x": 0.0167,
+                "y": 0.3044
+              }
+            },
+            {
+              "ordem": 30,
+              "rotulo": "30",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/9e99d27a534c.png",
+                "x": 0.0138,
+                "y": 0.4329
+              }
+            },
+            {
+              "ordem": 31,
+              "rotulo": "31",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/9e99d27a534c.png",
+                "x": 0.0138,
+                "y": 0.5551
+              }
+            },
+            {
+              "ordem": 32,
+              "rotulo": "32",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/9e99d27a534c.png",
+                "x": 0.0167,
+                "y": 0.6655
+              }
+            },
+            {
+              "ordem": 33,
+              "rotulo": "33",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/9e99d27a534c.png",
+                "x": 0.6911,
+                "y": 0.9562
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/9e99d27a534c.png",
+              "largura": 587,
+              "altura": 613,
+              "caixa": {
+                "x": 238.0776377952756,
+                "y": 100.04354330708661,
+                "w": 370.38582677165357,
+                "h": 386.79133858267716
+              }
+            }
+          ]
+        },
+        {
+          "indice": 13,
+          "texto": "Importante: este link é enviado 1 dia antes da coleta.\n29. Precisa conferir no autentic se motorista e Posto assinaram antes do inicio da coleta. É só conferir em Meus documentos\n30. SE o nome estiver azul é que foi assinado, se estiver cinza não foi assinado.",
+          "passos": [
+            {
+              "ordem": 29,
+              "rotulo": "29",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/8ed001fa1937.png",
+                "x": 0.0653,
+                "y": 0.315
+              }
+            },
+            {
+              "ordem": 30,
+              "rotulo": "30",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/8ed001fa1937.png",
+                "x": 0.5765,
+                "y": 0.3544
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/8ed001fa1937.png",
+              "largura": 1124,
+              "altura": 504,
+              "caixa": {
+                "x": 57.91299212598425,
+                "y": 126.6676377952756,
+                "w": 656.4850393700788,
+                "h": 294.36692913385826
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "numero": 3,
+      "titulo": "PREENCHER NA PLANILHA",
+      "slides": [
+        {
+          "indice": 14,
+          "texto": "Preencher na agenda de controle de OCIS a data de envio da OCI e salvar\nA planilha fica salva no caminho",
+          "passos": [
+            {
+              "ordem": 1,
+              "rotulo": "1",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/baac6a6f92b1.png",
+                "x": 0.9601,
+                "y": 0.0178
+              }
+            },
+            {
+              "ordem": 2,
+              "rotulo": "2",
+              "ancora": {
+                "captura": "/procedimentos/IT-ADMLUFT-002/418006a376c8.png",
+                "x": 0.4044,
+                "y": 0.3127
+              }
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/baac6a6f92b1.png",
+              "largura": 1285,
+              "altura": 222,
+              "caixa": {
+                "x": 16.656771653543306,
+                "y": 111.74755905511812,
+                "w": 768.358188976378,
+                "h": 132.7435433070866
+              }
+            },
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/418006a376c8.png",
+              "largura": 690,
+              "altura": 388,
+              "caixa": {
+                "x": 91.57834645669291,
+                "y": 262.7461417322835,
+                "w": 405.97385826771654,
+                "h": 207.93574803149608
+              }
+            }
+          ]
+        },
+        {
+          "indice": 15,
+          "texto": "MODELO ORDEM DE COLETA",
+          "passos": [
+            {
+              "ordem": null,
+              "rotulo": "",
+              "ancora": null
+            }
+          ],
+          "capturas": [
+            {
+              "url": "/procedimentos/IT-ADMLUFT-002/00d63e5082ef.png",
+              "largura": 620,
+              "altura": 505,
+              "caixa": {
+                "x": 430.35716535433073,
+                "y": 97.76787401574803,
+                "w": 465,
+                "h": 378.75
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "particularidades": [],
+  "aprovado_por": null,
+  "vigente_desde": null,
+  "lacunas": [
+    "o rodapé \"Página: N/M\" diverge da ordem real em 14 de 15 slides",
+    "o documento não informa quem aprovou",
+    "o documento não informa data de vigência",
+    "o documento não declara exceções ou casos particulares",
+    "3 de 15 slides trazem pouca instrução escrita — a informação está na captura de tela",
+    "o documento não cataloga mensagens de erro"
+  ]
+}
