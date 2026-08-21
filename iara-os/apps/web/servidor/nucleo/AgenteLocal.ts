@@ -1745,8 +1745,26 @@ export class AgenteLocal {
   }
 
   private auditar(idUsuario: string, acao: string, permitido: boolean, detalhe: string): void {
+    /**
+     * `instante` e `pid` entraram em 21/08/2026, quando estas linhas passaram a
+     * ser gravadas em disco pelo supervisor em vez de morrerem na janela de
+     * console. Um registro sem hora responde "aconteceu" e não responde
+     * "quando" — e a pergunta que se faz de um log é sempre a segunda.
+     *
+     * O `pid` correlaciona a linha com a árvore de processos que uma auditoria
+     * externa enxerga, que é o único jeito de casar o que o braço DIZ que fez
+     * com o que o Windows mostra.
+     */
     console.log(
-      JSON.stringify({ canal: 'agente_local', usuario: idUsuario, acao, permitido, detalhe }),
+      JSON.stringify({
+        instante: new Date().toISOString(),
+        canal: 'agente_local',
+        pid: process.pid,
+        usuario: idUsuario,
+        acao,
+        permitido,
+        detalhe,
+      }),
     );
   }
 

@@ -35,7 +35,7 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, openSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { lerEstadoInstalado, pastaDeInstalacao } from './instalacao';
@@ -208,8 +208,42 @@ export async function supervisionar(opcoes: OpcoesDoSupervisor = {}): Promise<Es
  * saudável com um supervisor morto.
  */
 function padraoIniciar(executavel: string): ChildProcess {
+  /**
+   * O QUE O RUNTIME DIZ VAI PARA DISCO, e não só para a janela.
+   *
+   * Até 21/08/2026 o `auditar` do `AgenteLocal` escrevia por `console.log` e
+   * mais nada. Cada ação executada no computador da operadora — o que foi
+   * pedido, se foi permitido, qual o desfecho — existia apenas na janela de
+   * console do supervisor, e morria com ela.
+   *
+   * Isso apareceu como problema no minuto exato em que a evidência foi
+   * necessária: a IARA abriu o Bloco de Notas, e para saber SE ELA TROUXE A
+   * JANELA PARA A FRENTE eu precisava da linha
+   *
+   *     {"acao":"abrir_aplicativo","detalhe":"… janela=1 foco=em_foco"}
+   *
+   * que só existia numa janela na tela de outra pessoa. Medir o foco depois
+   * não serve: a operadora já tinha voltado para a IARA, e o Windows já
+   * mostrava outra coisa. Evidência que não persiste não é evidência — ela
+   * vira "me manda um print", e é assim que uma auditoria passa a depender da
+   * memória de quem estava lá.
+   *
+   * `a` e não `w`: o arquivo sobrevive ao reinício do runtime, que é
+   * justamente quando alguém vai querer ler o que aconteceu antes da queda.
+   * Falhar em abrir o arquivo NÃO derruba o braço — cai para `ignore`, porque
+   * ficar sem log é ruim e ficar sem mãos é pior.
+   */
+  let saida: number | 'ignore' = 'ignore';
+  try {
+    const pasta = path.join(pastaDeInstalacao(), 'registro');
+    mkdirSync(pasta, { recursive: true });
+    saida = openSync(path.join(pasta, `runtime-${new Date().toISOString().slice(0, 10)}.log`), 'a');
+  } catch {
+    /* sem log, com mãos */
+  }
+
   return spawn(executavel, ['--runtime'], {
-    stdio: 'inherit',
+    stdio: ['ignore', saida, saida],
     windowsHide: true,
     detached: false,
   });
