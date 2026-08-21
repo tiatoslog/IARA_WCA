@@ -124,7 +124,23 @@ export interface AtoDoTurno {
   readonly ato: string;
   /** `null` quando nenhuma habilidade se sustenta, ou quando falta contexto. */
   readonly objetivo: string | null;
+  /**
+   * A operação pedida: `leitura`, `envio`, `criacao`… `null` quando a frase não
+   * pede nada.
+   *
+   * Entrou em 21/08/2026 porque o `PortaoSigilo` precisa dela para distinguir
+   * LER o registro de alguém de MANDAR alguma coisa para alguém — ver
+   * `decidir()`. Sem a operação, as duas frases são a mesma coisa para ele.
+   */
+  readonly operacao: string | null;
 }
+
+/**
+ * Ler, contar e analisar NÃO alteram nada. A partição é a mesma que a camada de
+ * compreensão usa para admitir candidato, e ela existe aqui porque o sigilo é
+ * uma política sobre LEITURA de registro alheio.
+ */
+const OPERACOES_DE_LEITURA = new Set(['leitura', 'contagem', 'analise']);
 
 export class FuncaoExecutiva {
   private readonly sigilo: PortaoSigilo;
@@ -176,22 +192,73 @@ export class FuncaoExecutiva {
    * escolhida a receita já é tarde para perguntar.
    */
   decidir(percepcao: Percepcao, contexto: ContextoDecisao = CONTEXTO_VAZIO): Decisao {
+    /**
+     * 0. A COMPREENSÃO VEM PRIMEIRO — e esta ordem é a correção de 21/08/2026.
+     *
+     * O Arnês C mediu dois defeitos da MESMA família: `PortaoSigilo` (etapa 1) e
+     * `DetectorAmbiguidade` (etapa 2) decidiam a rota ANTES de o contrato
+     * semântico existir, e por isso podiam contradizê-lo sem nunca tê-lo visto.
+     *
+     *     « manda mensagem pro João no whatsapp »  → rota `sigilo`
+     *     « esse relatório me destruiu hoje »      → rota `esclarecer`
+     *
+     * Na primeira, a IARA recusou um ENVIO como se fosse uma SONDAGEM. Na
+     * segunda, perguntou "qual relatório?" para um desabafo.
+     *
+     * As duas etapas CONTINUAM EXISTINDO e continuam podendo vencer — o que
+     * muda é que agora elas CONSULTAM o contrato antes, e a razão de terem
+     * vencido fica registrada na justificativa. A regra é a de `Autonomia.ts`:
+     * a camada de cima pode IMPEDIR, nunca PERMITIR o que as travas de baixo
+     * não permitiriam.
+     */
+    const compreensao = this.compreender?.(percepcao.bruto) ?? null;
+    const pedeLeitura =
+      compreensao?.operacao !== null && OPERACOES_DE_LEITURA.has(compreensao?.operacao ?? '');
+
     // 1. Sigilo antes de tudo. Nem percepção nem plano importam se o pedido é
     //    sobre o shard de outra pessoa.
     if (this.sigilo.ehSondagem(percepcao.bruto)) {
-      return {
-        rota: 'sigilo',
-        acao: 'recusar',
-        justificativa: 'Sondagem sobre registro de terceiro detectada antes do planejamento.',
-        custo_estimado: 'zero',
-      };
+      /**
+       * SONDAR É LER O REGISTRO DE ALGUÉM. Mandar mensagem PARA alguém não é.
+       *
+       * O reconhecedor de sondagem olha a frase e vê o nome de outro operador;
+       * ele não tem como saber se o pedido LÊ ou ALCANÇA essa pessoa, e as duas
+       * coisas se escrevem parecido. A operação do contrato é exatamente essa
+       * informação — e sem ela o portão errava para o lado de recusar trabalho
+       * legítimo, que é o erro que ninguém reporta porque parece segurança.
+       *
+       * A trava continua fechada onde importa: sem contrato, ou com contrato de
+       * LEITURA, o sigilo vence como sempre venceu. Só uma operação que não lê
+       * — enviar, criar, alterar — pode atravessá-la, e mesmo assim ela segue
+       * sujeita ao porteiro de risco e ao portal de efeitos mais adiante.
+       */
+      const sondagemDeVerdade = compreensao === null || pedeLeitura;
+      if (sondagemDeVerdade) {
+        return {
+          rota: 'sigilo',
+          acao: 'recusar',
+          justificativa:
+            compreensao === null
+              ? 'Sondagem sobre registro de terceiro detectada antes do planejamento.'
+              : `Sondagem sobre registro de terceiro: a operação pedida (${compreensao.operacao ?? 'indeterminada'}) LÊ o registro de outro operador.`,
+          custo_estimado: 'zero',
+        };
+      }
     }
 
     // 2. Falta alguma coisa que o contexto NÃO responde? Então pergunte.
     //    O detector já consultou o histórico: o que chega aqui é lacuna real,
     //    não preguiça de olhar para trás.
     const lacunas = this.ambiguidade.detectar(percepcao.bruto, contexto);
-    if (lacunas.length > 0) {
+    /**
+     * SÓ SE PERGUNTA SOBRE O QUE ALGUÉM PEDIU. Um desabafo não tem alvo a
+     * esclarecer — a anáfora dele aponta para a conversa, não para um objeto de
+     * trabalho. Perguntar "qual relatório?" para quem só reclamou do dia é o
+     * tipo de ruído que ensina o operador a ignorar as perguntas da IARA,
+     * inclusive as necessárias.
+     */
+    const alguemPediu = compreensao === null || compreensao.ato !== 'conversar';
+    if (lacunas.length > 0 && alguemPediu) {
       const lacuna = lacunas[0];
       return {
         rota: 'esclarecer',
@@ -255,7 +322,6 @@ export class FuncaoExecutiva {
      *
      * Quando não há camada injetada, o portão é exatamente o de antes.
      */
-    const compreensao = this.compreender?.(percepcao.bruto) ?? null;
     const ATOS_DE_PEDIDO = ['perguntar', 'solicitar_acao', 'recapitular'];
     const pedeAlgo = compreensao !== null && ATOS_DE_PEDIDO.includes(compreensao.ato);
 

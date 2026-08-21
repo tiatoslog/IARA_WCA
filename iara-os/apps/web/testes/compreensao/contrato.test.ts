@@ -25,7 +25,7 @@ import { DISTINTOS, EQUIVALENTES, NAO_COLAPSAM, type CasoDeCompreensao } from '.
 
 const MANIFESTOS = CATALOGO.map((h) => h.manifesto);
 const descoberta = new DescobertaCapacidades(MANIFESTOS);
-const habilidades = MANIFESTOS.map((m) => m.id);
+const habilidades = MANIFESTOS;
 const conceitual = new IndiceConceitual(MANIFESTOS);
 /** Relógio congelado: « amanhã » não pode significar coisas diferentes por dia. */
 const AGORA = new Date('2026-08-19T10:00:00');
@@ -202,4 +202,52 @@ test('o relógio entra por parâmetro — a compreensão não muda com o dia', (
   assert.equal(cedo.ato, tarde.ato, 'o ato não pode depender da data');
   assert.equal(cedo.operacao, tarde.operacao, 'a operação também não');
   assert.notEqual(cedo.periodo, tarde.periodo, 'só o período muda — e muda porque é dele que o tempo é assunto');
+});
+
+// ---------------------------------------------------------------------------
+// 7. Traços gramaticais que DESQUALIFICAM o verbo como fonte da operação
+// ---------------------------------------------------------------------------
+
+test('verbo sob negação não define a operação pedida', () => {
+  /**
+   * « não me deixe esquecer de ligar pro cliente » saía com `operacao: remocao`,
+   * por causa de "esquecer" — e a frase pede exatamente o CONTRÁRIO: criar um
+   * lembrete. Um verbo negado diz o que NÃO se quer, e disso não se deduz o que
+   * se quer.
+   *
+   * A camada passou a NÃO SABER em vez de saber errado. `null` aqui é a resposta
+   * honesta: nenhum verbo da frase expressa a operação pedida, porque a
+   * construção é uma dupla negação idiomática. Errar para `remocao` mandaria a
+   * IARA cancelar coisas para quem pediu para ser lembrado.
+   */
+  const c = ler('não me deixe esquecer de ligar pro cliente daqui a 20 minutos');
+  assert.notEqual(c.operacao, 'remocao', 'verbo negado não pode virar a operação da frase');
+
+  /** E a habilidade certa continua sendo alcançada por outro caminho. */
+  assert.equal(c.objetivo, 'agendar_lembrete');
+});
+
+test('negação em outra oração NÃO desqualifica o verbo', () => {
+  /**
+   * O LADO SIMÉTRICO, e ele derrubou a primeira versão da regra. Em
+   * « não, cancela isso » o "não" é MARCADOR DE DISCURSO — não nega nada. As
+   * duas frases têm as mesmas palavras na mesma ordem que « não me deixe
+   * esquecer »; o que as separa é a vírgula.
+   *
+   * O alcance de uma negação termina na fronteira da oração, e é isso que a
+   * implementação passou a respeitar.
+   */
+  const c = ler('não, cancela isso');
+  assert.equal(c.ato, 'cancelar', 'o marcador de discurso não pode apagar o verbo da oração seguinte');
+});
+
+test('preposição não é lida como verbo', () => {
+  /**
+   * « qual a previsão PARA hoje? » saía com `operacao: remocao`: o radical de
+   * *parar* casa com a preposição *para*, e uma consulta de clima virava pedido
+   * de parada.
+   */
+  const c = ler('qual a previsão para hoje?');
+  assert.notEqual(c.operacao, 'remocao');
+  assert.equal(c.operacao, 'leitura');
 });

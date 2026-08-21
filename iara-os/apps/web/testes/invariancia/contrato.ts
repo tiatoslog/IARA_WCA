@@ -94,7 +94,7 @@ export type Dimensao = (typeof DIMENSOES)[number];
 
 const MANIFESTOS = CATALOGO.map((h) => h.manifesto);
 const descoberta = new DescobertaCapacidades(MANIFESTOS);
-const habilidades = MANIFESTOS.map((m) => m.id);
+const habilidades = MANIFESTOS;
 const conceitual = new IndiceConceitual(MANIFESTOS);
 const percepcao = new MotorPercepcao();
 
@@ -121,7 +121,7 @@ function decidirRota(bruto: string, camada: Camada): string {
     camada === 'semantica'
       ? (b) => {
           const c = compreender({ bruto: b, descoberta, conceitual, agora: AGORA, habilidades });
-          return { ato: c.ato, objetivo: c.objetivo };
+          return { ato: c.ato, objetivo: c.objetivo, operacao: c.operacao };
         }
       : null,
   );

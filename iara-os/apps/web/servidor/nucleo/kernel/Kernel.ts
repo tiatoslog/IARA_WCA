@@ -461,9 +461,9 @@ export class Kernel {
           descoberta: this.descoberta,
           conceitual,
           agora: new Date(),
-          habilidades: manifestos.map((m) => m.id),
+          habilidades: manifestos,
         });
-        return { ato: c.ato, objetivo: c.objetivo };
+        return { ato: c.ato, objetivo: c.objetivo, operacao: c.operacao };
       },
     );
   }

@@ -340,6 +340,14 @@ export const informacoesSistema: Habilidade = {
       'segundos — nunca diga que vai avisar depois, porque não há um "depois" aqui.',
     exemplos: ['Quanto de memória meu computador está usando?', 'Como está o PC agora?'],
     capacidades: ['memória, processador e rede da máquina'],
+    /**
+     * DECLARADA porque o `id` começa por substantivo: `informacoes_sistema` não
+     * tem verbo para a inferência ler, e a trava de compatibilidade RECUSAVA
+     * esta habilidade por não conseguir classificá-la — « como está o PC
+     * agora? » perdia a única habilidade que responde isso.
+     */
+    operacao_semantica: 'leitura',
+    conceitos: [{ nome: 'computador', termos: ['maquina', 'memoria', 'processador', 'cpu', 'pc'] }],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],
@@ -396,6 +404,8 @@ export const capturarTela: Habilidade = {
       '"captura a tela", "salva uma foto do que está aberto".',
     exemplos: ['Tira um print da tela', 'Captura a tela e salva nos Documentos'],
     capacidades: ['capturar tela em PNG local'],
+    /** « faz um print aí » não alcançava: "print" só existia no exemplo. */
+    conceitos: [{ nome: 'tela', termos: ['print', 'captura', 'screenshot', 'foto'] }],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],

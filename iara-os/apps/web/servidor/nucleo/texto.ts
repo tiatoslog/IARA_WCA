@@ -93,7 +93,7 @@ const PALAVRAS_ANCORA = [
  * "aconteceo"); qualquer coisa al\u00e9m disso j\u00e1 \u00e9 palavra diferente, n\u00e3o erro de
  * dedo, e corrigir "al\u00e9m disso" \u00e9 quando o corretor come\u00e7a a inventar.
  */
-function distanciaAteUm(a: string, b: string): boolean {
+export function distanciaAteUm(a: string, b: string): boolean {
   if (a === b) return false;
   const dif = a.length - b.length;
   if (dif < -1 || dif > 1) return false;
@@ -142,11 +142,69 @@ function distanciaAteUm(a: string, b: string): boolean {
  * que fabricado por esta fun\u00e7\u00e3o em vez de evitado por ela.
  */
 export function corrigirTypos(textoNormalizado: string): string {
+  return corrigirContra(textoNormalizado, PALAVRAS_ANCORA);
+}
+
+/**
+ * O MESMO MECANISMO, CONTRA UM VOCABULÁRIO QUALQUER — e a generalização é o que
+ * tira a lista de palavras do caminho.
+ *
+ * O DEFEITO QUE ISTO FECHA (Arnês C, 21/08/2026). Das 14 falhas da cadeia, 8
+ * eram erro de digitação matando a descoberta: « me lista os lembrets »,
+ * « vai chove hoje », « quantas cargass », « qual motorosta ». O corretor já
+ * existia neste arquivo e nunca era chamado pela descoberta — e o vocabulário
+ * dele é `PALAVRAS_ANCORA`, escrito à mão, que não conhece "lembrete" no plural
+ * nem "carga" nem "motorista".
+ *
+ * A correção ERRADA seria acrescentar essas palavras à lista. Ela cresceria com
+ * o catálogo, ficaria desatualizada no primeiro manifesto novo, e seria a lista
+ * de formulações que este projeto inteiro persegue.
+ *
+ * A correção CERTA é o vocabulário vir de fora: a `DescobertaCapacidades` já
+ * tem o vocabulário do catálogo indexado, e corrige contra ele. Habilidade nova
+ * traz as próprias palavras e passa a tolerar erro de digitação nelas sem que
+ * ninguém escreva nada.
+ *
+ * AMBÍGUO NÃO CORRIGE, e é a trava que impede o corretor de inventar: token a
+ * uma letra de MAIS de uma palavra do vocabulário fica como está. Corrigir
+ * errado é pior que não reconhecer — vira o mesmo defeito de "tema não é
+ * pergunta", só que fabricado por esta função em vez de evitado por ela.
+ */
+export function corrigirContra(
+  textoNormalizado: string,
+  vocabulario: Iterable<string>,
+  /**
+   * PALAVRAS QUE NUNCA SÃO ERRO — e este parâmetro nasceu de um dano medido.
+   *
+   * Sem ele, « qual motorosta tem MAIS cargas? » virava « tem MAIL cargas »:
+   * "mais" está a uma letra de "mail", que é termo declarado do conceito
+   * `email`. O corretor consertou o typo de "motorista" e estragou uma palavra
+   * que estava certa — trocando o significado da frase.
+   *
+   * A régua: o vocabulário do catálogo diz o que É ALVO de correção; este
+   * conjunto diz o que já é português legítimo e sai intacto. Sem a segunda
+   * metade, quanto mais rico o catálogo, mais palavras comuns ele engole.
+   */
+  imunes: Iterable<string> = [],
+): string {
+  const palavras = [...vocabulario];
+  if (palavras.length === 0) return textoNormalizado;
+  const conhecidas = new Set(palavras);
+  const intocaveis = new Set(imunes);
+  /**
+   * A DIVISÃO É POR NÃO-ALFANUMÉRICO, não por espaço — e a diferença custou uma
+   * regressão medida. Com `split(/(\s+)/)` o token de « como você está? » é
+   * `esta?`, COM a interrogação, e `esta?` fica a uma letra de `estao`. O
+   * corretor trocava o verbo da frase por causa da pontuação colada nele.
+   *
+   * O vocabulário do catálogo não tem pontuação; o texto a corrigir também não
+   * pode ter na hora da comparação. Os separadores sobrevivem no `join`.
+   */
   return textoNormalizado
-    .split(/(\s+)/)
+    .split(/([^a-z0-9]+)/)
     .map((token) => {
-      if (token.length < 4 || PALAVRAS_ANCORA.includes(token)) return token;
-      const candidatas = PALAVRAS_ANCORA.filter((p) => distanciaAteUm(token, p));
+      if (token.length < 4 || conhecidas.has(token) || intocaveis.has(token)) return token;
+      const candidatas = palavras.filter((p) => distanciaAteUm(token, p));
       return candidatas.length === 1 ? candidatas[0] : token;
     })
     .join('');

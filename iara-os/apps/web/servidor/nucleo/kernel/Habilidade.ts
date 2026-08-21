@@ -106,6 +106,28 @@ export interface ConceitoDeclarado {
   readonly termos: readonly string[];
 }
 
+/**
+ * O QUE ESTA HABILIDADE FAZ COM O OBJETO — o vocabulário em que a compreensão e
+ * o catálogo se comparam.
+ *
+ * Mora AQUI, e não na camada de compreensão, pela mesma razão que `risco` e
+ * `conceitos`: o catálogo é a fonte de verdade e a política o lê. Se o tipo
+ * vivesse do outro lado, o manifesto passaria a depender do interpretador.
+ *
+ * A fronteira que importa é leitura↔escrita. `leitura`, `contagem` e `analise`
+ * não alteram nada e são intercambiáveis para efeito de rota; as outras cinco
+ * só casam consigo mesmas.
+ */
+export type OperacaoSemantica =
+  | 'leitura'
+  | 'contagem'
+  | 'analise'
+  | 'criacao'
+  | 'alteracao'
+  | 'remocao'
+  | 'envio'
+  | 'execucao';
+
 export interface ManifestoHabilidade {
   /** Verbo + objeto, em português: `consultar_clima`, `buscar_historico`. */
   readonly id: string;
@@ -218,6 +240,31 @@ export interface ManifestoHabilidade {
    * opostas, e nenhuma similaridade pode fazer uma virar a outra.
    */
   readonly conceitos?: readonly ConceitoDeclarado[];
+  /**
+   * A OPERAÇÃO QUE ESTA HABILIDADE EXECUTA — declarada, não adivinhada.
+   *
+   * O DEFEITO QUE ISTO FECHA (Arnês C, 21/08/2026). A trava de compatibilidade
+   * lia a operação do PREFIXO DO ID: `listar_arquivos` → leitura,
+   * `criar_arquivo` → criação. Funciona porque o CLAUDE.md obriga `verbo_objeto`
+   * — até a habilidade cujo id começa por substantivo. `informacoes_sistema`
+   * saía `null`, e a trava RECUSAVA a habilidade por não conseguir classificá-la:
+   *
+   *     « como está o PC agora? »  →  informacoes_sistema INCOMPATÍVEL
+   *
+   * Uma trava que não sabe classificar barra o inocente, e o sintoma aparece
+   * longe da causa — a habilidade certa some da lista sem explicação.
+   *
+   * O PROBLEMA NÃO É O `null`, É A FONTE. Inferir semântica de convenção de
+   * nomenclatura mistura duas coisas: como a habilidade se CHAMA e o que ela
+   * FAZ. São independentes, e no dia em que divergirem quem paga é a decisão.
+   *
+   * DECLARE quando o id não disser, ou quando disser errado. A inferência
+   * continua existindo como conveniência para as 45 habilidades cujo id já é
+   * honesto — mas ela é o padrão, não a verdade. `testes/compreensao/
+   * conceitos.test.ts` recusa habilidade sem operação legível por nenhum dos
+   * dois caminhos.
+   */
+  readonly operacao_semantica?: OperacaoSemantica;
   /**
    * ESTE EFEITO SÓ FECHA ALGO QUE O OPERADOR JÁ ABRIU — nunca origina nada.
    *

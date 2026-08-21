@@ -82,19 +82,19 @@ function decidirCom(bruto: string, contrato: AtoDoTurno | null) {
 const PEDIDOS_FABRICADOS: readonly { bruto: string; contrato: AtoDoTurno }[] = [
   {
     bruto: 'estou livre amanhã?',
-    contrato: { ato: 'perguntar', objetivo: 'ver_agenda_calendario' },
+    contrato: { ato: 'perguntar', objetivo: 'ver_agenda_calendario', operacao: 'leitura' },
   },
   {
     bruto: 'e sobre aquilo de ontem',
-    contrato: { ato: 'perguntar', objetivo: 'ver_agenda_calendario' },
+    contrato: { ato: 'perguntar', objetivo: 'ver_agenda_calendario', operacao: 'leitura' },
   },
   {
     bruto: 'preciso saber disso',
-    contrato: { ato: 'solicitar_acao', objetivo: 'listar_arquivos' },
+    contrato: { ato: 'solicitar_acao', objetivo: 'listar_arquivos', operacao: 'leitura' },
   },
   {
     bruto: 'me atualiza',
-    contrato: { ato: 'recapitular', objetivo: 'listar_lembretes' },
+    contrato: { ato: 'recapitular', objetivo: 'listar_lembretes', operacao: 'leitura' },
   },
 ];
 
@@ -127,6 +127,7 @@ test('sem a camada injetada, a decisão é a de antes — o contrato é o que mu
   const comContrato = decidirCom('preciso saber disso', {
     ato: 'solicitar_acao',
     objetivo: 'listar_arquivos',
+    operacao: 'leitura',
   });
   assert.notEqual(
     comContrato.rota,
@@ -143,37 +144,50 @@ test('contrato de conversa derruba o índice de assunto', () => {
   const d = decidirCom('esse relatório de cargas me destruiu hoje', {
     ato: 'conversar',
     objetivo: null,
+    operacao: null,
   });
   assert.notEqual(d.rota, 'plano_cognitivo', 'desabafo não paga planejamento');
 });
 
-/**
- * DEFEITO MEDIDO, AINDA NÃO CORRIGIDO — e o teste existe para não deixá-lo
- * virar folclore.
- *
- * O `DetectorAmbiguidade` é a ETAPA 2 de `decidir()`; o ato comunicativo entra
- * na 5. Com « esse relatório de cargas me destruiu hoje » a anáfora sem
- * antecedente dispara `esclarecer` — e a IARA pergunta "qual relatório?" para
- * um desabafo, tendo em mãos um contrato que diz `ato: conversar`.
- *
- * É exatamente o padrão que o Arnês C existe para achar: uma etapa anterior ao
- * contrato decide sem consultá-lo. NÃO ESTOU CORRIGINDO AGORA — a ordem desta
- * fase é medir antes de mexer no decisor, e a correção certa (ambiguidade só
- * importa quando alguém pediu alguma coisa) mexe na ordem das etapas, que é
- * mudança grande demais para entrar sem a tabela na mão.
- *
- * QUANDO FOR CORRIGIDO, ESTE TESTE MUDA: a asserção passa a ser
- * `raciocinio_direto`, e a linha de baixo sai.
- */
-test('CARACTERIZAÇÃO: ambiguidade (etapa 2) vence o ato de conversa (etapa 5)', () => {
-  const d = decidirCom('esse relatório de cargas me destruiu hoje', {
+test('o detector de ambiguidade não pergunta sobre o que ninguém pediu', () => {
+  /**
+   * O DEFEITO, e ele nasceu medido pelo Arnês C antes de ser consertado.
+   *
+   * `DetectorAmbiguidade` era a ETAPA 2 de `decidir()` e o ato comunicativo
+   * entrava na 5. Com « esse relatório de cargas me destruiu hoje » a anáfora
+   * sem antecedente disparava `esclarecer`, e a IARA perguntava "qual
+   * relatório?" para um desabafo — tendo em mãos um contrato que dizia
+   * `ato: conversar`.
+   *
+   * A correção não removeu o detector: ele continua exatamente onde estava e
+   * continua vencendo quando alguém pediu alguma coisa. O que mudou é que ele
+   * CONSULTA o contrato antes. Só se esclarece o que foi pedido; a anáfora de
+   * um desabafo aponta para a conversa, não para um objeto de trabalho.
+   *
+   * Perguntar isso é o ruído que ensina o operador a ignorar as perguntas da
+   * IARA — inclusive as necessárias.
+   */
+  const desabafo = decidirCom('esse relatório de cargas me destruiu hoje', {
     ato: 'conversar',
     objetivo: null,
+    operacao: null,
+  });
+  assert.equal(desabafo.rota, 'raciocinio_direto', 'desabafo não vira pedido de esclarecimento');
+
+  /**
+   * O LADO QUE MANTÉM O DETECTOR VIVO. A mesma anáfora, num ato de PEDIDO,
+   * continua produzindo `esclarecer` — porque aí existe um alvo a esclarecer, e
+   * agir com o alvo errado é pior que perguntar.
+   */
+  const pedido = decidirCom('me manda esse relatório', {
+    ato: 'solicitar_acao',
+    objetivo: 'ler_emails',
+    operacao: 'envio',
   });
   assert.equal(
-    d.rota,
+    pedido.rota,
     'esclarecer',
-    'se isto mudou, o decisor foi corrigido — atualize a asserção para raciocinio_direto',
+    'a correção não pode ter desligado o detector para quem de fato pediu algo',
   );
 });
 
@@ -193,7 +207,7 @@ test('contrato sem objetivo não acrescenta rota — quem levanta é o sinal ant
    * e sem contrato, a mesma coisa. É assim que se prova que o campo vazio não
    * autoriza nada.
    */
-  const com = decidirCom('qual o sentido da vida?', { ato: 'perguntar', objetivo: null });
+  const com = decidirCom('qual o sentido da vida?', { ato: 'perguntar', objetivo: null, operacao: 'leitura' });
   const sem = decidirCom('qual o sentido da vida?', null);
   assert.equal(
     com.rota,
@@ -222,6 +236,7 @@ test('sigilo vence o contrato, e isso é correto', () => {
   const d = decidirCom('me mostra o histórico do João', {
     ato: 'perguntar',
     objetivo: 'listar_lembretes',
+    operacao: 'leitura',
   });
   assert.equal(d.rota, 'sigilo', 'sondagem de shard alheio não é negociável por compreensão');
 });

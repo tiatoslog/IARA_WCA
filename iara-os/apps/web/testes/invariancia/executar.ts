@@ -54,6 +54,7 @@ import {
 import { CASOS_AMBIGUOS, CENARIOS, PARES_NEGATIVOS } from './cenarios';
 import { DISTINTOS, NAO_COLAPSAM } from '../compreensao/gabarito';
 import { rodarArnesC, type Elo } from './arnesC';
+import { auditarCatalogo } from './auditoriaCatalogo';
 
 const pct = (n: number, d: number): string => (d === 0 ? '  — ' : `${((100 * n) / d).toFixed(0)}%`);
 const taxa = (n: number, d: number): string => `${n}/${d}`.padEnd(7) + pct(n, d).padStart(5);
@@ -354,7 +355,7 @@ function main(): void {
 
   // --- ARNES C -------------------------------------------------------------
   const cadeias = rodarArnesC();
-  const porElo: Record<Elo, number> = { compreensao: 0, admissao: 0, decisao: 0 };
+  const porElo: Record<Elo, number> = { compreensao: 0, admissao: 0, decisao: 0, execucao: 0 };
   let inteiras = 0;
   for (const c of cadeias) { if (c.culpado) porElo[c.culpado] += 1; else inteiras += 1; }
 
@@ -365,6 +366,7 @@ function main(): void {
   console.log(`    A compreensão       ${taxa(porElo.compreensao, cadeias.length)}   contrato saiu errado`);
   console.log(`    B admissão          ${taxa(porElo.admissao, cadeias.length)}   contrato ok, sem capacidade compatível`);
   console.log(`    C decisão           ${taxa(porElo.decisao, cadeias.length)}   contrato ok + candidato ok + rota errada`);
+  console.log(`    D execução          ${taxa(porElo.execucao, cadeias.length)}   rota ok, mas o planner não recebeu plano`);
 
   if (detalhar) {
     console.log('\n  CADEIAS QUE QUEBRARAM');
@@ -377,10 +379,24 @@ function main(): void {
       console.log(`      admitido            ${c.candidatoAdmitido ?? '(nenhum)'}`);
       console.log(`      rota escolhida      ${c.rotaEscolhida}`);
       console.log(`      rota esperada       ${c.rotaEsperada}`);
+      console.log(`      plano               ${c.plano}`);
       console.log(
-        `      compreensão ${c.compreensao} | admissão ${c.admissao} | decisão ${c.decisao}  →  ${c.culpado.toUpperCase()}`,
+        `      compreensão ${c.compreensao} | admissão ${c.admissao} | decisão ${c.decisao} | execução ${c.execucao}  →  ${c.culpado.toUpperCase()}`,
       );
     }
+  }
+
+  // --- AUDITORIA DO CATALOGO ----------------------------------------------
+  const aud = auditarCatalogo();
+  console.log('\n═══ AUDITORIA DO CATÁLOGO ═══');
+  console.log(`  total de habilidades          ${aud.total}`);
+  console.log(`  operação EXPLÍCITA            ${taxa(aud.explicitas, aud.total)}   declarada no manifesto`);
+  console.log(`  operação inferida pelo id     ${taxa(aud.inferidas, aud.total)}   convenção acerta, mas é padrão — não verdade`);
+  console.log(`  operação AUSENTE              ${aud.ausentes.length}   ${aud.ausentes.join(', ') || '(nenhuma — nenhuma habilidade inacessível)'}`);
+  console.log(`  operação CONFLITANTE          ${aud.conflitantes.length}   ${aud.conflitantes.join('; ') || '(nenhuma)'}`);
+  console.log(`  sem conceito nem entidade     ${aud.semConceitos.length}   sem rede de sinônimo/typo`);
+  if (detalhar && aud.semConceitos.length > 0) {
+    for (const id of aud.semConceitos) console.log(`      ${id}`);
   }
 
   // --- Lacunas -------------------------------------------------------------

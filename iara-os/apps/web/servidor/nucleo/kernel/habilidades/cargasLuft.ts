@@ -1256,6 +1256,8 @@ export const relatorioExecutivoLuft: Habilidade = {
   manifesto: {
     id: 'relatorio_executivo_luft',
     nome: 'Relatório executivo — operação LUFT',
+    /** `relatorio` é substantivo, não verbo — o `id` não diz o que ela faz. */
+    operacao_semantica: 'analise',
     descricao:
       'Consolida num único relatório: total de cargas cadastradas, contagem e faturamento do período ' +
       'pedido, os motoristas com mais cargas no período e a distribuição por status. "periodo" recebe a ' +

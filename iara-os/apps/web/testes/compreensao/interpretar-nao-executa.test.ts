@@ -62,6 +62,17 @@ const IMPORTS_PERMITIDOS = [
   './PeriodoOperacional',
   './DescobertaCapacidades',
   './IndiceConceitual',
+  /**
+   * `Habilidade` é o CONTRATO do catálogo: tipos e nada mais — nenhum executor,
+   * nenhuma porta para o mundo. Entrou quando a operação de uma habilidade
+   * deixou de ser inferida do `id` e passou a ser lida do manifesto, que é a
+   * direção certa da dependência (o catálogo declara, a política lê).
+   *
+   * A régua desta lista continua sendo a mesma: só módulo PURO. Um dia em que
+   * alguém quiser acrescentar aqui algo que alcança o mundo, a discussão é
+   * arquitetural — não se resolve editando esta linha.
+   */
+  './Habilidade',
 ];
 
 test('a camada de compreensão só importa módulos puros', () => {
@@ -114,7 +125,7 @@ test('a camada não lê o relógio por conta própria', () => {
 // ---------------------------------------------------------------------------
 
 const descoberta = new DescobertaCapacidades(CATALOGO.map((h) => h.manifesto));
-const habilidades = CATALOGO.map((h) => h.manifesto.id);
+const habilidades = CATALOGO.map((h) => h.manifesto);
 const AGORA = new Date('2026-08-19T10:00:00');
 const ler = (bruto: string) => compreender({ bruto, descoberta, agora: AGORA, habilidades });
 

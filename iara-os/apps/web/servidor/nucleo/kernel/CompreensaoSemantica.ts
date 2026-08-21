@@ -85,6 +85,7 @@
 import { normalizar, corrigirTypos, ehInterrogativa } from '../texto';
 import { interpretarPeriodo } from './PeriodoOperacional';
 import type { Candidato, DescobertaCapacidades } from './DescobertaCapacidades';
+import type { ManifestoHabilidade } from './Habilidade';
 import type {
   ConceitoRecuperado,
   IndiceConceitual,
@@ -203,6 +204,17 @@ export interface HipoteseSemantica {
 }
 
 export interface ContratoSemantico {
+  /**
+   * O QUE O OPERADOR ESCREVEU, intacto. A normalizacao nao pode apaga-lo: a
+   * auditoria precisa poder ver a frase real, e a decisao precisa da corrigida.
+   */
+  readonly texto_original: string;
+  /**
+   * A frase depois da correcao de digitacao contra o vocabulario do catalogo —
+   * ver . Igual ao original quando
+   * nao havia o que corrigir, que e o caso comum.
+   */
+  readonly texto_normalizado: string;
   readonly ato: AtoComunicativo;
   /**
    * O QUE O OPERADOR QUER — em vocabulário de SIGNIFICADO, não de catálogo.
@@ -300,7 +312,20 @@ const LEXICO_VERBAL: ReadonlyArray<readonly [Operacao, readonly string[]]> = [
    * tinham operação legível — e habilidade que a trava não classifica é
    * habilidade que a trava recusa.
    */
-  ['execucao', ['execut', 'rod', 'acion', 'captur', 'extra', 'tir', 'desli', 'reinici', 'suspend', 'instal', 'pesquis', 'recus', 'resolv', 'assum']],
+  /**
+   * `rod` SAIU em 21/08/2026, e a remoção é uma decisão de DOMÍNIO.
+   *
+   * Ele entrou pensando em "roda o script". Numa transportadora, "rodar" quer
+   * dizer DIRIGIR — e « qual motorista mais rodou? » saía com `operacao:
+   * execucao` e ia parar em `pesquisar_web`, uma pergunta sobre a operação
+   * respondida pela internet.
+   *
+   * Nenhuma habilidade do catálogo se chama `rodar_*`, então o custo é nulo; o
+   * ganho é uma pergunta central da operação parar de ser roteada para fora de
+   * casa. A régua: o léxico não pode reivindicar um verbo cujo sentido dominante
+   * NESTE domínio é outro.
+   */
+  ['execucao', ['execut', 'acion', 'captur', 'extra', 'tir', 'desli', 'reinici', 'suspend', 'instal', 'pesquis', 'recus', 'resolv', 'assum']],
 ];
 
 /**
@@ -380,14 +405,74 @@ const DETERMINANTES = new Set([
   'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'ao', 'aos', 'pelo', 'pela',
 ]);
 
+/**
+ * PREPOSIÇÕES E CONJUNÇÕES — classe fechada que NUNCA é verbo.
+ *
+ * O DEFEITO MEDIDO (Arnês C): « qual a previsão PARA hoje? » saía com
+ * `operacao: remocao`. O radical `par` do verbo *parar* casa com a preposição
+ * *para*, e uma consulta de clima passava a ser lida como pedido de parada.
+ *
+ * A ambiguidade é real em português — « para o computador » é uma ordem — e a
+ * escolha aqui é declarada: a preposição é ordens de grandeza mais frequente, e
+ * o dano de ler consulta como remoção é muito pior que o de perder uma ordem
+ * de parada, que continua alcançável por `pare` e `parar`.
+ */
+const PREPOSICOES = new Set([
+  'para', 'por', 'com', 'sem', 'sobre', 'entre', 'ate', 'desde', 'apos', 'contra',
+  'durante', 'perante', 'conforme', 'segundo', 'mediante', 'que', 'como', 'quando',
+]);
+
+/**
+ * NEGAÇÃO PRÓXIMA — « não me deixe esquecer » não é um pedido de esquecer.
+ *
+ * O DEFEITO MEDIDO: a frase saía com `operacao: remocao` por causa de
+ * "esquecer", e ela pede exatamente o CONTRÁRIO — criar um lembrete. Um verbo
+ * sob negação não diz o que se quer; diz o que NÃO se quer, e disso não se
+ * deduz a operação pedida.
+ *
+ * É a mesma família da regra do particípio: traço gramatical que DESQUALIFICA o
+ * verbo como fonte da operação, em vez de inverter o significado dele — inverter
+ * seria adivinhar.
+ */
+const NEGACAO_PROXIMA = /\b(nao|nunca|jamais|nem)\b/;
+
 function verbosDaFrase(t: string, interrogativa: boolean): readonly VerboReconhecido[] {
-  const palavras = t.split(/[^a-z0-9]+/).filter(Boolean);
+  /**
+   * A LEITURA É ORAÇÃO A ORAÇÃO, e a pontuação marca as fronteiras.
+   *
+   * Existe por causa do veto de negação: o alcance de um "não" termina onde a
+   * oração termina. As palavras seguem numa lista única — as posições precisam
+   * ser comparáveis com as do resto da frase — e `inicios` guarda onde cada
+   * oração começa.
+   */
+  const palavras: string[] = [];
+  const inicios = new Set<number>();
+  for (const oracao of t.split(/[,;.!?]+/)) {
+    inicios.add(palavras.length);
+    for (const p of oracao.split(/[^a-z0-9]+/).filter(Boolean)) palavras.push(p);
+  }
+
   const achados: VerboReconhecido[] = [];
   for (let i = 0; i < palavras.length; i += 1) {
     const c = classificarForma(palavras[i]);
     if (!c) continue;
+    // Preposição não é verbo, por mais que o radical case. Ver `PREPOSICOES`.
+    if (PREPOSICOES.has(palavras[i])) continue;
     // Precedido de determinante é substantivo, não verbo. Ver `DETERMINANTES`.
     if (i > 0 && DETERMINANTES.has(palavras[i - 1])) continue;
+    /**
+     * Sob negação DA MESMA ORAÇÃO, o verbo não é fonte da operação.
+     *
+     * O alcance para trás para na fronteira de oração — ver `inicios`. Sem
+     * isso, « não, cancela isso » perdia o verbo: o "não" ali é MARCADOR DE
+     * DISCURSO e não nega nada, ao contrário de « não me deixe esquecer ». As
+     * duas frases têm as mesmas palavras na mesma ordem, e o que as separa é a
+     * vírgula.
+     */
+    let inicioDaOracao = i;
+    while (inicioDaOracao > 0 && !inicios.has(inicioDaOracao)) inicioDaOracao -= 1;
+    const anteriores = palavras.slice(Math.max(inicioDaOracao, i - 3), i).join(' ');
+    if (NEGACAO_PROXIMA.test(anteriores)) continue;
     const antes = palavras.slice(Math.max(0, i - 2), i).join(' ');
     const passivo = c.participio && (interrogativa || AUXILIAR_PASSIVO.test(`${antes} `.trim()));
     achados.push({
@@ -414,6 +499,23 @@ function verbosDaFrase(t: string, interrogativa: boolean): readonly VerboReconhe
  */
 export function operacaoDaHabilidade(id: string): Operacao | null {
   return classificarForma(id.split('_')[0])?.operacao ?? null;
+}
+
+/**
+ * A OPERAÇÃO DE UMA HABILIDADE — declarada primeiro, inferida depois.
+ *
+ * O DEFEITO (Arnês C): `informacoes_sistema` começa por substantivo, a
+ * inferência devolvia `null`, e a trava de compatibilidade RECUSAVA a
+ * habilidade por não conseguir classificá-la. Uma trava que não sabe
+ * classificar barra o inocente.
+ *
+ * A INFERÊNCIA CONTINUA, e continua sendo útil: 45 das 47 habilidades têm `id`
+ * honesto e não precisam declarar nada. Mas ela é o PADRÃO, não a verdade — no
+ * dia em que o nome e o comportamento divergirem, quem manda é a declaração.
+ * Mesma disciplina de `risco`, `idempotencia` e `conceitos`.
+ */
+export function operacaoDoManifesto(m: ManifestoHabilidade): Operacao | null {
+  return (m.operacao_semantica as Operacao | undefined) ?? operacaoDaHabilidade(m.id);
 }
 
 /** O objeto do `id`: `listar_arquivos` → `arquivos`. Vazio quando não há. */
@@ -508,8 +610,15 @@ export interface EntradaDeCompreensao {
   readonly bruto: string;
   /** O índice do catálogo. Fonte do objeto e das hipóteses. */
   readonly descoberta: DescobertaCapacidades;
-  /** Os ids do catálogo. Fonte da admissão estrutural — ver `ranquear`. */
-  readonly habilidades: readonly string[];
+  /**
+   * OS MANIFESTOS do catálogo — não os ids.
+   *
+   * Passou a ser o manifesto inteiro em 21/08/2026 porque a operação de uma
+   * habilidade deixou de ser inferida do `id` e passou a poder ser DECLARADA
+   * (`operacao_semantica`). Um id não carrega o que a habilidade faz; o
+   * manifesto sim.
+   */
+  readonly habilidades: readonly ManifestoHabilidade[];
   /** Injetado, nunca lido do relógio — o módulo é puro e testável 100×. */
   readonly agora: Date;
   /**
@@ -584,6 +693,7 @@ function operacoesCompativeis(daFrase: Operacao, daHabilidade: Operacao): boolea
 
 export function compreender(entrada: EntradaDeCompreensao): ContratoSemantico {
   const { bruto, descoberta, agora, habilidades } = entrada;
+  const operacaoPorId = new Map(habilidades.map((m) => [m.id, operacaoDoManifesto(m)] as const));
   const evidencias: EvidenciaSemantica[] = [];
   const anota = (fonte: string, trecho: string, conclusao: string) =>
     evidencias.push({ fonte, trecho, conclusao });
@@ -692,7 +802,19 @@ export function compreender(entrada: EntradaDeCompreensao): ContratoSemantico {
    * é dizer de que a frase fala; quem pode ser chamado por causa disso é
    * decidido depois, com a operação na mão.
    */
-  const declarados = entrada.conceitual?.recuperar(bruto) ?? [];
+  /**
+   * O ÍNDICE CONCEITUAL LÊ O MESMO TEXTO QUE A DESCOBERTA — e não lia.
+   *
+   * Defeito medido pelo Arnês C: « vai chove hoje » era normalizada para « vai
+   * chover hoje » pela descoberta, e o índice conceitual recebia o texto BRUTO.
+   * O conceito `clima` existia, estava declarado, e não era recuperado porque
+   * os dois componentes liam strings diferentes da mesma frase.
+   *
+   * É a mesma classe de defeito que já apareceu duas vezes nesta camada: duas
+   * peças perguntando a mesma coisa sobre entradas diferentes divergem sempre.
+   */
+  const paraConceito = descoberta.normalizarConsulta(bruto);
+  const declarados = entrada.conceitual?.recuperar(paraConceito) ?? [];
   const conceitos = entrada.conceitual
     ? entrada.conceitual.mesclar(declarados, entrada.conceitosRecuperados ?? [])
     : declarados;
@@ -701,7 +823,7 @@ export function compreender(entrada: EntradaDeCompreensao): ContratoSemantico {
   }
 
   // --- Ato comunicativo ---------------------------------------------------
-  const ato = decidirAto({ t, bruto, interrogativa, operacao, objeto, periodo, acionaveis, anota });
+  const ato = decidirAto({ t, bruto, interrogativa, operacao, objeto, periodo, acionaveis, conceitos, anota });
 
   /**
    * PERGUNTA PEDE LEITURA — e este passo vem DEPOIS do ato de propósito.
@@ -808,7 +930,9 @@ export function compreender(entrada: EntradaDeCompreensao): ContratoSemantico {
 
   // --- Hipóteses ----------------------------------------------------------
   const candidatos = descoberta.descobrirCandidatos(bruto);
-  const hipoteses = ranquear(candidatos, operacao, objeto, habilidades, conceitos, anota);
+  const operacaoDe = (id: string): Operacao | null =>
+    operacaoPorId.get(id) ?? operacaoDaHabilidade(id);
+  const hipoteses = ranquear(candidatos, operacao, objeto, habilidades, operacaoDe, conceitos, anota);
 
   /**
    * REFERENTE DESCONHECIDO NÃO PRODUZ OBJETIVO — e as hipóteses ficam de pé.
@@ -864,6 +988,8 @@ export function compreender(entrada: EntradaDeCompreensao): ContratoSemantico {
   for (const s of substantivos) if (s.token !== objeto) restricoes.push(`qualificador:${s.token}`);
 
   return {
+    texto_original: bruto,
+    texto_normalizado: descoberta.normalizarConsulta(bruto),
     ato,
     objetivoSemantico: comporObjetivoSemantico(operacao, referente, objeto),
     objetivo,
@@ -891,6 +1017,7 @@ interface TracosDoAto {
   readonly objeto: string | null;
   readonly periodo: string | null;
   readonly acionaveis: readonly VerboReconhecido[];
+  readonly conceitos: readonly ConceitoRecuperado[];
   readonly anota: (fonte: string, trecho: string, conclusao: string) => void;
 }
 
@@ -913,7 +1040,7 @@ interface TracosDoAto {
  * "Sintaxe não é proxy de intenção" vira, aqui, uma conjunção verificável.
  */
 function decidirAto(x: TracosDoAto): AtoComunicativo {
-  const { t, interrogativa, operacao, objeto, periodo, acionaveis, anota } = x;
+  const { t, interrogativa, operacao, objeto, periodo, acionaveis, conceitos, anota } = x;
 
   if (SAUDACAO.test(t) && t.length < 40) {
     anota('social', t.slice(0, 20), 'ato conversar');
@@ -944,7 +1071,42 @@ function decidirAto(x: TracosDoAto): AtoComunicativo {
     return 'continuar';
   }
 
-  if (interrogativa) {
+  /**
+   * PERGUNTA SEM PONTO DE INTERROGAÇÃO AINDA É PERGUNTA.
+   *
+   * O Arnês C mediu SEIS falhas com a mesma assinatura — `op=null`,
+   * `ato=informar` — e todas eram consultas reais digitadas como a operadora
+   * digita no celular:
+   *
+   *     « vai chove hoje »          « como ta o pc »
+   *     « como ta o tempo ai hoje » « qnts cargas essa semana »
+   *
+   * Nenhuma tem "?" nem abertura interrogativa que `ehInterrogativa` reconheça,
+   * e por isso caíam em `informar` — um ato que não deriva operação nenhuma e
+   * termina em conversa. Seis casos, UMA causa.
+   *
+   * O SINAL QUE RESOLVE NÃO É SINTÁTICO, e é aí que esta camada tem vantagem:
+   * a frase RECUPERA UM CONCEITO DECLARADO do catálogo e não pede ação nenhuma
+   * (nenhum verbo acionável). Quem escreve sobre um assunto que a IARA declara
+   * atender, sem mandar fazer nada, está perguntando. Conceito declarado é a
+   * evidência de maior prioridade que existe aqui — muito acima de "tem alguma
+   * palavra de domínio".
+   *
+   * O CUSTO, declarado: um desabafo com vocabulário de trabalho e conceito
+   * declarado ("esse relatório de cargas me destruiu hoje") passa a pagar uma
+   * chamada de planejamento. É o erro BARATO — volta com raciocínio puro e a
+   * resposta certa, só mais lenta — e é a mesma régua que o cabeçalho da
+   * `DescobertaCapacidades` já declara: o erro barato absorve o caro. A fila de
+   * lacunas não é contaminada: `Kernel` tem o próprio guarda de FORMA DE PEDIDO
+   * antes de registrar.
+   */
+  const consultaSemForma =
+    !interrogativa && acionaveis.length === 0 && conceitos.length > 0;
+  if (consultaSemForma) {
+    anota('conceito', conceitos[0].conceito, 'assunto declarado sem pedido de ação → consulta');
+  }
+
+  if (interrogativa || consultaSemForma) {
     const temConteudo = operacao !== null || objeto !== null || periodo !== null;
     if (!temConteudo || (SOBRE_OS_INTERLOCUTORES.test(t) && !objeto && !periodo)) {
       anota('interrogacao', t, 'pergunta sem objeto, operação nem tempo → conversa');
@@ -1056,12 +1218,13 @@ function ranquear(
   candidatos: readonly Candidato[],
   operacao: Operacao | null,
   objeto: string | null,
-  habilidades: readonly string[],
+  habilidades: readonly ManifestoHabilidade[],
+  operacaoDe: (id: string) => Operacao | null,
   conceitos: readonly ConceitoRecuperado[],
   anota: (fonte: string, trecho: string, conclusao: string) => void,
 ): readonly HipoteseSemantica[] {
   const avaliar = (id: string, base: number, evidencias: readonly string[]): HipoteseSemantica => {
-    const daHabilidade = operacaoDaHabilidade(id);
+    const daHabilidade = operacaoDe(id);
     const compativel =
       operacao !== null && daHabilidade !== null && operacoesCompativeis(operacao, daHabilidade);
 
@@ -1152,9 +1315,9 @@ function ranquear(
    */
   if (operacao !== null && objeto !== null) {
     const jaTem = new Set(hipoteses.map((h) => h.objetivo));
-    for (const id of habilidades) {
+    for (const { id } of habilidades) {
       if (jaTem.has(id)) continue;
-      const daHabilidade = operacaoDaHabilidade(id);
+      const daHabilidade = operacaoDe(id);
       if (daHabilidade === null || !operacoesCompativeis(operacao, daHabilidade)) continue;
       if (!objetoDaHabilidade(id).includes(objeto)) continue;
       hipoteses.push(avaliar(id, BASE_ESTRUTURAL, [`estrutura:${operacao}+${objeto}`]));
@@ -1187,7 +1350,7 @@ function ranquear(
     for (const c of conceitos) {
       for (const id of c.capacidades) {
         if (jaTem.has(id)) continue;
-        const daHabilidade = operacaoDaHabilidade(id);
+        const daHabilidade = operacaoDe(id);
         if (daHabilidade === null || !operacoesCompativeis(operacao, daHabilidade)) {
           anota(
             'compatibilidade',

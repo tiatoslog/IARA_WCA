@@ -46,6 +46,8 @@ export const agendarLembrete: Habilidade = {
       'Não me deixe esquecer da reunião amanhã às 9',
     ],
     capacidades: ['marcar lembrete com horário'],
+    /** O verbo de criar lembrete é "lembrar"; o substantivo é o conceito. */
+    conceitos: [{ nome: 'lembrete', termos: ['alarme', 'aviso'] }],
     dominio: 'memoria',
     capacidade: 'memoria',
     // `memoria`, não `escrita`: o lembrete mora no shard privado do operador,

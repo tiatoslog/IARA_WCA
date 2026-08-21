@@ -78,7 +78,7 @@ test('habilidade nova é classificada pelo `id`, sem editar a camada', () => {
 
 test('frase sobre domínio que a camada nunca viu é interpretada corretamente', () => {
   const descoberta = new DescobertaCapacidades(CATALOGO_NOVO);
-  const habilidades = CATALOGO_NOVO.map((m) => m.id);
+  const habilidades = CATALOGO_NOVO;
   const ler = (bruto: string) => compreender({ bruto, descoberta, agora: AGORA, habilidades });
 
   const leitura = ler('lista os contêineres do pátio');
@@ -101,7 +101,7 @@ test('frase sobre domínio que a camada nunca viu é interpretada corretamente',
 
 test('formulação nova da mesma intenção não exige edição', () => {
   const descoberta = new DescobertaCapacidades(CATALOGO_NOVO);
-  const habilidades = CATALOGO_NOVO.map((m) => m.id);
+  const habilidades = CATALOGO_NOVO;
   const ler = (bruto: string) => compreender({ bruto, descoberta, agora: AGORA, habilidades });
 
   /** Quatro jeitos de pedir a mesma coisa; nenhum está escrito em lugar nenhum. */

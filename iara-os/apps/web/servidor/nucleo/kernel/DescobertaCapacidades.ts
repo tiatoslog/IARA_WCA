@@ -61,7 +61,7 @@
  */
 
 import type { ManifestoHabilidade } from './Habilidade';
-import { normalizar } from '../texto';
+import { distanciaAteUm, normalizar } from '../texto';
 
 /**
  * Palavras funcionais que aparecem em qualquer manifesto e em qualquer frase.
@@ -205,6 +205,14 @@ export class DescobertaCapacidades {
   private readonly siglas = new Set<string>();
   /** Plural de sigla → singular: `ocis` → `oci`, para os dois lados casarem. */
   private readonly singularDeSigla = new Map<string, string>();
+  /**
+   * OS SUBSTANTIVOS QUE O CATÁLOGO DECLARA — `entidades` e os conceitos.
+   *
+   * Não é o vocabulário indexado (esse vem do texto inteiro do manifesto, prosa
+   * incluída): é o que alguém AFIRMOU ser substantivo do domínio. Só sobre eles
+   * uma correção de digitação é confiável. Ver `descobrirCandidatos`.
+   */
+  private readonly substantivosDeclarados = new Set<string>();
 
   constructor(manifestos: readonly ManifestoHabilidade[]) {
     /**
@@ -215,6 +223,10 @@ export class DescobertaCapacidades {
      * palavra para o lado da frase encontrar.
      */
     for (const m of manifestos) {
+      for (const e of m.entidades ?? []) this.substantivosDeclarados.add(radical(normalizar(e)));
+      for (const c of m.conceitos ?? []) {
+        for (const p of [c.nome, ...c.termos]) this.substantivosDeclarados.add(radical(normalizar(p)));
+      }
       const cru = [m.nome, m.descricao, ...(m.capacidades ?? []), ...(m.exemplos ?? [])].join(' ');
       for (const achado of cru.matchAll(SIGLA)) {
         const inteiro = normalizar(achado[0]);
@@ -282,6 +294,33 @@ export class DescobertaCapacidades {
     return this.tokensComPosicao(texto).map((x) => x.token);
   }
 
+  /** Tokens de uma CONSULTA: com correcao de digitacao. Ver . */
+  /**
+   * TOKENS DE UMA CONSULTA — e a correção de digitação é RECURSO, não rotina.
+   *
+   * A primeira versão corrigia sempre, contra o vocabulário do catálogo, e o
+   * dano apareceu na medida:
+   *
+   *     « preciso saber disso »              →  « precisa sabe disso »
+   *     « qual motorosta tem MAIS cargas? »  →  « tem MAIL cargas »
+   *
+   * "preciso", "saber" e "mais" são português correto e ficam a uma letra de
+   * "precisa", "sabe" e "mail" — que estão no catálogo. Sem um léxico da língua,
+   * distância de edição contra vocabulário de DOMÍNIO não distingue um typo de
+   * uma palavra legítima que o catálogo por acaso não usa.
+   *
+   * A REGRA QUE RESOLVE ISSO SEM DICIONÁRIO: só corrige quem não achou NADA. Se
+   * a frase já alcançou algum token do catálogo, ela está sendo entendida e não
+   * há o que consertar — e nada que hoje funciona pode regredir por causa desta
+   * função. É o "você quis dizer?" clássico, e a propriedade de segurança é
+   * justamente ser um segundo tento, nunca o primeiro.
+   */
+  private tokensParaObjeto(bruto: string): readonly { token: string; posicao: number }[] {
+    const direto = this.tokensComPosicao(bruto);
+    if (this.buscar(new Set(direto.map((x) => x.token))).length > 0) return direto;
+    return this.tokensComPosicao(bruto, true);
+  }
+
   /**
    * O mesmo que `tokens`, guardando ONDE cada um estava na frase.
    *
@@ -291,11 +330,81 @@ export class DescobertaCapacidades {
    * trabalho » só se distingue de « lista os arquivos da ÁREA de trabalho »
    * pela ordem. Ver `CompreensaoSemantica`.
    */
-  private tokensComPosicao(texto: string): readonly { token: string; posicao: number }[] {
+  /**
+   * O TEXTO DA CONSULTA, JÁ SEM ERRO DE DIGITAÇÃO — contra o vocabulário DESTE
+   * índice, que é o vocabulário do catálogo.
+   *
+   * O Arnês C mediu 8 falhas de cadeia causadas por typo: « me lista os
+   * lembrets » não alcançava `listar_lembretes`, « vai chove hoje » não
+   * alcançava o clima. `corrigirTypos` existia em `texto.ts` e nunca era chamada
+   * daqui — e a lista de palavras dela é escrita à mão, sem conhecer o catálogo.
+   *
+   * Aqui o vocabulário é o índice: habilidade nova traz as próprias palavras e
+   * passa a tolerar erro de digitação nelas sem que ninguém edite lista nenhuma.
+   *
+   * SÓ NA CONSULTA, nunca na indexação — o índice é quem DEFINE o vocabulário, e
+   * corrigir o manifesto contra ele mesmo não faria sentido. É por isso que este
+   * método é público e separado: quem indexa chama `tokensComPosicao` direto.
+   */
+  normalizarConsulta(bruto: string): string {
+    return normalizar(bruto)
+      .split(/([^a-z0-9]+)/)
+      .map((t) => this.normalizarTermo(t).token)
+      .join('');
+  }
+
+  /**
+   * UM TOKEN PODE SER NORMALIZADO? — decisao por EVIDENCIA, nunca por distancia
+   * sozinha.
+   *
+   * O DEFEITO QUE ISTO FECHA, medido em 21/08/2026. Correcao por distancia
+   * contra o vocabulario do catalogo transformava portugues correto em outro
+   * significado:
+   *
+   *     « preciso saber disso »  ->  « precisa sabe disso »
+   *     « tem MAIS cargas »      ->  « tem MAIL cargas »
+   *
+   * Nenhuma dessas e erro de digitacao. Sao palavras legitimas que por acaso
+   * ficam a uma letra de um termo do dominio — e trocar uma pela outra muda a
+   * frase, o que e uma violacao de seguranca semantica, nao um detalhe de
+   * qualidade.
+   *
+   * QUATRO SINAIS, e a distancia e o ULTIMO deles. Tres sao VETO e um e a
+   * evidencia positiva:
+   *
+   *   1. VETO  palavra funcional (`FUNCIONAIS`) — tem papel gramatical proprio;
+   *   2. VETO  token ja conhecido pelo indice — nao ha o que consertar;
+   *   3. VETO  candidato ambiguo — duas correcoes possiveis nao sao correcao;
+   *   4. POSITIVO  o candidato tem de ser um substantivo DECLARADO no catalogo
+   *      (`entidades`, `conceitos`).
+   *
+   * O quarto e o que separa « lembrets » -> « lembrete » (declarado por
+   * `listar_lembretes`) de « preciso » -> « precisa » (que ninguem declarou).
+   * Semelhanca lexical sozinha nunca ganha de uma leitura valida: e a ordem de
+   * prioridade de evidencia, aplicada literalmente.
+   *
+   * NA DUVIDA, NAO CORRIGE. `provavel` nao vira `confirmado` — o token original
+   * sobrevive e a frase segue sendo o que a pessoa escreveu.
+   */
+  private normalizarTermo(t: string): { token: string; corrigido: boolean } {
+    const intacto = { token: t, corrigido: false };
+    if (t.length < 4 || FUNCIONAIS.has(t)) return intacto;
+    if (this.porToken.has(t) || this.porToken.has(radical(t))) return intacto;
+
+    const alvos = [...this.substantivosDeclarados].filter((p) => distanciaAteUm(t, p));
+    if (alvos.length !== 1) return intacto;
+    return { token: alvos[0], corrigido: true };
+  }
+
+  private tokensComPosicao(
+    texto: string,
+    corrigir = false,
+  ): readonly { token: string; posicao: number }[] {
     const saida: { token: string; posicao: number }[] = [];
     const palavras = normalizar(texto).split(/[^a-z0-9]+/);
     for (let i = 0; i < palavras.length; i += 1) {
-      const t = this.singularDeSigla.get(palavras[i]) ?? palavras[i];
+      const bruto = corrigir ? this.normalizarTermo(palavras[i]).token : palavras[i];
+      const t = this.singularDeSigla.get(bruto) ?? bruto;
       if ((t.length >= 4 || this.siglas.has(t)) && !FUNCIONAIS.has(t)) {
         saida.push({ token: radical(t), posicao: i });
       }
@@ -324,7 +433,57 @@ export class DescobertaCapacidades {
    * o mesmo descarte que este método veio consertar, só que uma camada acima.
    */
   descobrirCandidatos(bruto: string): readonly Candidato[] {
-    const daFrase = new Set(this.tokens(bruto));
+    /**
+     * O RECURSO DE DIGITACAO ACONTECE NO NIVEL DO RESULTADO, nao no do token — e
+     * a granularidade custou uma medida errada.
+     *
+     * A primeira versao caia no corretor so quando a frase nao produzia TOKEN
+     * nenhum. « me lista os lembrets » tem "lista", que e token do catalogo,
+     * entao ela nunca chegava ao corretor e o typo em "lembrets" continuava
+     * matando a descoberta. Ter alguma palavra reconhecida nao e o mesmo que ter
+     * entendido.
+     *
+     * A regra certa: se a busca direta nao achou CANDIDATO nenhum, tenta de novo
+     * com o texto corrigido. A propriedade de seguranca continua de pe — nenhuma
+     * frase que hoje encontra alguma coisa muda de resultado, porque o corretor
+     * so roda depois do fracasso.
+     */
+    const direto = this.buscar(new Set(this.tokensComPosicao(bruto).map((x) => x.token)));
+    if (direto.length > 0) return direto;
+
+    /**
+     * PALPITE EXIGE EVIDÊNCIA FORTE. Uma correção de digitação é uma hipótese
+     * sobre o que a pessoa quis escrever; aceitar em cima dela uma admissão
+     * FRACA multiplica duas incertezas.
+     *
+     * Medido: « preciso saber disso » não tem conteúdo de domínio nenhum, e o
+     * corretor a transformava em « precisa sabe disso » — dois verbos genéricos
+     * que aparecem em meio catálogo. A frase passava a "encontrar" habilidades
+     * por coincidência dupla e saía de conversa para planejamento.
+     *
+     * QUATRO GUARDAS FORAM TENTADAS E MEDIDAS, e as três primeiras furaram:
+     * evidência específica ainda aceitava « saber » → « sabe » (token
+     * quase-exclusivo de `auditar_sistema`); um conjunto de imunes fechado
+     * salvava "mais" e não "preciso"; o corpus do catálogo tem 898 palavras e
+     * não é dicionário do português.
+     *
+     * A CONCLUSÃO É ESTREITA E HONESTA: sem léxico da língua, distância de
+     * edição não distingue typo de palavra legítima. O que dá para afirmar com
+     * segurança é outra coisa — se a correção cai sobre um substantivo que o
+     * CATÁLOGO DECLAROU (`entidades`, `conceitos`), ela não é palpite sobre
+     * português, é reconhecimento de vocabulário próprio.
+     *
+     * O custo está declarado: « vai chove hoje » continua sem alcançar o clima,
+     * porque `consultar_clima` não declara entidade nem conceito nenhum. O
+     * incentivo fica no lugar certo — declare os seus substantivos e ganhe
+     * tolerância a erro de digitação de graça, sem ninguém editar código.
+     */
+    return this.buscar(new Set(this.tokensComPosicao(bruto, true).map((x) => x.token))).filter((c) =>
+      c.evidencias.some((e) => this.substantivosDeclarados.has(e)),
+    );
+  }
+
+  private buscar(daFrase: Set<string>): readonly Candidato[] {
 
     const lexical = new Map<string, number>();
     const exemplo = new Map<string, number>();
@@ -405,7 +564,7 @@ export class DescobertaCapacidades {
     bruto: string,
   ): readonly { readonly token: string; readonly habilidades: number; readonly posicao: number }[] {
     const vistos = new Map<string, { habilidades: number; posicao: number }>();
-    for (const { token, posicao } of this.tokensComPosicao(bruto)) {
+    for (const { token, posicao } of this.tokensParaObjeto(bruto)) {
       const ids = this.porToken.get(token);
       // A PRIMEIRA ocorrência manda: a posição serve para achar o objeto que o
       // verbo rege, e a repetição de uma palavra não a move na frase.

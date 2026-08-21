@@ -28,7 +28,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { compreender } from '../../servidor/nucleo/kernel/CompreensaoSemantica';
+import {
+  compreender,
+  operacaoDoManifesto as compreenderOperacao,
+} from '../../servidor/nucleo/kernel/CompreensaoSemantica';
 import { DescobertaCapacidades } from '../../servidor/nucleo/kernel/DescobertaCapacidades';
 import { IndiceConceitual } from '../../servidor/nucleo/kernel/IndiceConceitual';
 import type { ManifestoHabilidade } from '../../servidor/nucleo/kernel/Habilidade';
@@ -37,7 +40,7 @@ import { CATALOGO } from '../../servidor/nucleo/kernel/habilidades';
 const MANIFESTOS = CATALOGO.map((h) => h.manifesto);
 const descoberta = new DescobertaCapacidades(MANIFESTOS);
 const conceitual = new IndiceConceitual(MANIFESTOS);
-const habilidades = MANIFESTOS.map((m) => m.id);
+const habilidades = MANIFESTOS;
 const AGORA = new Date('2026-08-19T10:00:00');
 
 const ler = (bruto: string) =>
@@ -247,7 +250,7 @@ test('conceito de um domínio inventado funciona sem editar nada', () => {
     descoberta: new DescobertaCapacidades(catalogo),
     conceitual: new IndiceConceitual(catalogo),
     agora: AGORA,
-    habilidades: catalogo.map((m) => m.id),
+    habilidades: catalogo,
   });
 
   assert.equal(c.conceitos[0]?.conceito, 'lacre', 'a palavra nova recupera o conceito declarado');
@@ -274,45 +277,53 @@ test('toda habilidade do catálogo tem operação legível no `id`', () => {
    * por verbo. Habilidade nova que não seja legível fica vermelha aqui, e a
    * correção é o `id` ou o léxico — nunca um caso especial silencioso.
    */
-  const SEM_VERBO_NO_ID = new Set(['informacoes_sistema', 'relatorio_executivo_luft']);
-
-  const mudas = MANIFESTOS.map((m) => m.id)
-    .filter((id) => !SEM_VERBO_NO_ID.has(id))
-    .filter((id) => {
-      const [verbo] = id.split('_');
-      // Mesmo classificador que a camada usa — se ele não lê, a trava não lê.
-      return !verbo || !/^[a-z]+$/.test(verbo)
-        ? false
-        : compreenderOperacao(id) === null;
-    });
+  const mudas = MANIFESTOS.filter((m) => compreenderOperacao(m) === null).map((m) => m.id);
 
   assert.deepEqual(
     mudas,
     [],
-    `habilidades cuja operação a camada não consegue ler: ${mudas.join(', ')}.\n` +
-      `    A trava de compatibilidade recusa o que não classifica — id ilegível vira ` +
-      `habilidade inalcançável, e o sintoma aparece longe da causa.`,
+    `habilidades cuja operação a camada não consegue ler: ${mudas.join(', ')}.
+` +
+      `    A trava de compatibilidade recusa o que não classifica — habilidade ilegível vira ` +
+      `habilidade inalcançável, e o sintoma aparece longe da causa. A correção é declarar ` +
+      `\`operacao_semantica\` no manifesto, nunca abrir exceção aqui.`,
   );
 });
 
-/** Importado aqui embaixo para o teste acima ler como prosa. */
-import { operacaoDaHabilidade as compreenderOperacao } from '../../servidor/nucleo/kernel/CompreensaoSemantica';
+// ---------------------------------------------------------------------------
+// 6. NORMALIZAÇÃO DE RUÍDO — o recurso existe e é conservador
+// ---------------------------------------------------------------------------
 
-test('conceitos declarados nunca colidem com significados opostos', () => {
+test('erro de digitação em substantivo declarado ainda alcança a habilidade', () => {
   /**
-   * Um termo que aparece em conceitos de habilidades com operações OPOSTAS não
-   * é erro — `disponibilidade` faz isso de propósito, e a operação resolve. O
-   * que seria erro é um termo declarado por muitas habilidades: aí ele deixou
-   * de ser conceito e virou palavra comum, e recuperar por ele é ruído.
+   * O Arnês C mediu 8 falhas de cadeia causadas por typo. `corrigirTypos` já
+   * existia em `texto.ts` e nunca era chamada pela descoberta — e o vocabulário
+   * dela é escrito à mão, sem conhecer o catálogo.
+   *
+   * « me lista os lembrets » tem "lista", que É token do catálogo: a frase não
+   * está muda, só não encontra nada. Por isso o recurso acontece no nível do
+   * RESULTADO, não no do token.
    */
-  for (const conceito of conceitual.conceitos) {
-    const donos = MANIFESTOS.filter((m) =>
-      (m.conceitos ?? []).some((c) => c.nome === conceito),
-    ).map((m) => m.id);
-    assert.ok(
-      donos.length <= 4,
-      `o conceito "${conceito}" é declarado por ${donos.length} habilidades (${donos.join(', ')}) — ` +
-        `conceito que todo mundo atende não distingue nada`,
-    );
-  }
+  assert.equal(
+    descoberta.descobrirCandidatos('me lista os lembrets')[0]?.habilidade,
+    'listar_lembretes',
+  );
+});
+
+test('a correção NÃO age sobre palavra legítima do português', () => {
+  /**
+   * A METADE QUE IMPEDE O CORRETOR DE INVENTAR, e ela custou quatro guardas
+   * medidas. « preciso saber disso » não tem conteúdo de domínio; corrigido
+   * contra o catálogo virava « precisa sabe disso » e passava a "encontrar"
+   * habilidades. "preciso", "saber" e "mais" são português correto.
+   *
+   * A régua final: só se confia na correção quando ela cai sobre um substantivo
+   * que o catálogo DECLAROU (`entidades`, `conceitos`) — aí não é palpite sobre
+   * a língua, é reconhecimento de vocabulário próprio.
+   */
+  assert.equal(descoberta.descobrirCandidatos('preciso saber disso').length, 0);
+  assert.ok(
+    descoberta.normalizarConsulta('qual motorosta tem mais cargas?').includes(' mais '),
+    '"mais" e portugues correto e fica a uma letra de "mail" — nao pode ser corrigida',
+  );
 });

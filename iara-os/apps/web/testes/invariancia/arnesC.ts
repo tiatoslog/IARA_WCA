@@ -65,13 +65,15 @@ import { FuncaoExecutiva } from '../../servidor/nucleo/kernel/FuncaoExecutiva';
 import { Planejador } from '../../servidor/nucleo/kernel/Planejador';
 import { MemoriaTrabalho } from '../../servidor/nucleo/kernel/MemoriaTrabalho';
 import { MotorPercepcao } from '../../servidor/nucleo/kernel/Percepcao';
+import { operacaoDoManifesto } from '../../servidor/nucleo/kernel/CompreensaoSemantica';
+import type { Percepcao } from '../../servidor/nucleo/kernel/Evento';
 import { CATALOGO } from '../../servidor/nucleo/kernel/habilidades';
 import { CENARIOS } from './cenarios';
 
 const MANIFESTOS = CATALOGO.map((h) => h.manifesto);
 const descoberta = new DescobertaCapacidades(MANIFESTOS);
 const conceitual = new IndiceConceitual(MANIFESTOS);
-const habilidades = MANIFESTOS.map((m) => m.id);
+const habilidades = MANIFESTOS;
 const percepcao = new MotorPercepcao();
 export const AGORA_C = new Date('2026-08-19T10:00:00');
 
@@ -93,7 +95,7 @@ const FAMILIA_LEITURA = new Set(['leitura', 'contagem', 'analise']);
 const familiaDeOperacao = (op: string): string => (FAMILIA_LEITURA.has(op) ? 'leitura' : op);
 const ATOS_DE_PEDIDO = new Set(['perguntar', 'solicitar_acao', 'recapitular']);
 
-export type Elo = 'compreensao' | 'admissao' | 'decisao';
+export type Elo = 'compreensao' | 'admissao' | 'decisao' | 'execucao';
 export type Veredito = 'PASS' | 'FAIL' | 'N/A';
 
 export interface CadeiaDeDiagnostico {
@@ -111,11 +113,14 @@ export interface CadeiaDeDiagnostico {
   readonly compreensao: Veredito;
   readonly admissao: Veredito;
   readonly decisao: Veredito;
+  readonly execucao: Veredito;
+  /** O que o planner recebeu: passos, ou o catálogo oferecido. */
+  readonly plano: string;
   /** O primeiro elo que quebrou, ou `null` quando a cadeia inteira passou. */
   readonly culpado: Elo | null;
 }
 
-function decidirRota(bruto: string, contrato: ContratoSemantico): string {
+function decidir(bruto: string, contrato: ContratoSemantico) {
   /**
    * A `FuncaoExecutiva` nasce por chamada: `MemoriaTrabalho` compartilhada faria
    * o caso 40 depender do caso 39, que é medir sequência e não decisão.
@@ -130,12 +135,61 @@ function decidirRota(bruto: string, contrato: ContratoSemantico): string {
     ['João Silva', 'Marina Alves'],
     () => true,
     descoberta,
-    () => ({ ato: contrato.ato, objetivo: contrato.objetivo }),
+    () => ({ ato: contrato.ato, objetivo: contrato.objetivo, operacao: contrato.operacao }),
   );
-  return executiva.decidir(percepcao.perceber(bruto), {
+  const p = percepcao.perceber(bruto);
+  const decisao = executiva.decidir(p, {
     historicoRecente: [],
     pessoasConhecidas: ['João Silva', 'Marina Alves'],
-  }).rota;
+  });
+  return { decisao, percepcao: p };
+}
+
+/**
+ * ELO D — A DECISÃO CHEGA AO PLANNER COM O QUE ELE PRECISA?
+ *
+ * Decidir a rota certa e entregar um plano vazio ao planejador é uma cadeia que
+ * termina em nada, e nenhum dos elos anteriores acusa isso. Aqui a pergunta é a
+ * última da corrente: o que o planner recebeu?
+ *
+ *   `plano_local`      a receita determinística tem de produzir PASSOS. Se
+ *                      produz zero, a rota prometeu execução e não entregou.
+ *   `plano_cognitivo`  o catálogo é oferecido à LLM. Sem rede aqui, o que se
+ *                      verifica é o que É verificável offline: existe candidato
+ *                      compatível para ela escolher.
+ *   `esclarecer`       a decisão tem de trazer a PERGUNTA. Perguntar sem
+ *                      pergunta é a rota mais inútil que existe.
+ *   `raciocinio_direto` nada a planejar — o elo não se aplica.
+ *
+ * NENHUM EFEITO ACONTECE: `planejar` monta a estrutura do plano; quem executa é
+ * o Kernel, e ele não é chamado aqui.
+ */
+function verificarPlano(
+  rota: string,
+  decisao: { pergunta?: string },
+  p: Percepcao,
+  temCandidato: boolean,
+): { veredito: Veredito; plano: string } {
+  if (rota === 'plano_local') {
+    const plano = new Planejador().planejar(p);
+    return {
+      veredito: plano.passos.length > 0 ? 'PASS' : 'FAIL',
+      plano: `receita:${plano.passos.length} passo(s)`,
+    };
+  }
+  if (rota === 'plano_cognitivo') {
+    return {
+      veredito: temCandidato ? 'PASS' : 'FAIL',
+      plano: temCandidato ? 'catálogo oferecido com candidato compatível' : 'catálogo sem candidato',
+    };
+  }
+  if (rota === 'esclarecer') {
+    return {
+      veredito: decisao.pergunta ? 'PASS' : 'FAIL',
+      plano: decisao.pergunta ? `pergunta: ${decisao.pergunta}` : 'esclarecer SEM pergunta',
+    };
+  }
+  return { veredito: 'N/A', plano: 'sem plano — conversa' };
 }
 
 function diagnosticar(
@@ -146,7 +200,8 @@ function diagnosticar(
   operacaoEsperada: string,
 ): CadeiaDeDiagnostico {
   const c = compreender({ bruto: frase, descoberta, conceitual, agora: AGORA_C, habilidades });
-  const rotaEscolhida = decidirRota(frase, c);
+  const { decisao: dec, percepcao: perc } = decidir(frase, c);
+  const rotaEscolhida = dec.rota;
 
   // --- ELO A: a compreensão está correta? -----------------------------------
   /**
@@ -185,8 +240,18 @@ function diagnosticar(
   const decisao: Veredito =
     compreensao === 'FAIL' || admissao === 'FAIL' ? 'N/A' : rotaOk ? 'PASS' : 'FAIL';
 
+  const d = decisao === 'PASS' ? verificarPlano(rotaEscolhida, dec, perc, admitido !== null) : { veredito: 'N/A' as Veredito, plano: '—' };
+
   const culpado: Elo | null =
-    compreensao === 'FAIL' ? 'compreensao' : admissao === 'FAIL' ? 'admissao' : decisao === 'FAIL' ? 'decisao' : null;
+    compreensao === 'FAIL'
+      ? 'compreensao'
+      : admissao === 'FAIL'
+        ? 'admissao'
+        : decisao === 'FAIL'
+          ? 'decisao'
+          : d.veredito === 'FAIL'
+            ? 'execucao'
+            : null;
 
   return {
     frase,
@@ -203,6 +268,8 @@ function diagnosticar(
     compreensao,
     admissao,
     decisao,
+    execucao: d.veredito,
+    plano: d.plano,
     culpado,
   };
 }
