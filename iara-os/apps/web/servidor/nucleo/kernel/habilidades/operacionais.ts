@@ -36,6 +36,15 @@ export const consultarClima: Habilidade = {
       'Qual a previsão para amanhã?',
     ],
     capacidades: ['previsão do tempo', 'medição de chuva e temperatura'],
+    /**
+     * DECLARADO porque a auditoria mediu: `consultar_clima` era uma das 37
+     * habilidades sem conceito nem entidade — alcançável só pelas palavras
+     * exatas do manifesto, sem rede de sinônimo nem de erro de digitação.
+     * « qual a previsão para hoje? » e « vai chove hoje » morriam nisso.
+     */
+    conceitos: [
+      { nome: 'clima', termos: ['tempo', 'chuva', 'chover', 'previsao', 'temperatura', 'sol'] },
+    ],
     dominio: 'pesquisa',
     capacidade: 'percepcao',
     permissoes: ['rede'],

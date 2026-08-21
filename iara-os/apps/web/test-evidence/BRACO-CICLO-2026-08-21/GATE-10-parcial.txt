@@ -1,0 +1,14 @@
+C:\Users\daian\AppData\Local\IARA\braco\atual.json
+C:\Users\daian\AppData\Local\IARA\braco\marcador-tarefa.txt
+C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe
+C:\Users\daian\AppData\Local\IARA\braco\supervisor.json
+C:\Users\daian\AppData\Local\IARA\braco\versoes
+C:\Users\daian\AppData\Local\IARA\braco\versoes\1.3.0
+C:\Users\daian\AppData\Local\IARA\braco\versoes\1.4.0
+C:\Users\daian\AppData\Local\IARA\braco\versoes\1.3.0\iara-braco.exe
+C:\Users\daian\AppData\Local\IARA\braco\versoes\1.4.0\iara-braco.exe
+{
+  "versao": "1.3.0",
+  "versao_anterior": null,
+  "instalado_em": "2026-08-21T13:35:28.555Z"
+}

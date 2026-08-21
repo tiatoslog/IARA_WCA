@@ -48,6 +48,21 @@ export const lerEmails: Habilidade = {
       'Tem email novo sobre a fatura?',
     ],
     capacidades: ['ler e-mails recentes', 'filtrar e-mail por remetente ou assunto'],
+    /**
+     * O nome da habilidade já é "Caixa de entrada" e mesmo assim « me mostra a
+     * caixa » não a alcançava: o índice de assunto indexa o texto do manifesto,
+     * mas "caixa" sozinha é comum demais para admitir sozinha. Declarada como
+     * TERMO do conceito `email`, ela passa a recuperar — e a normalizar o
+     * referente, que é o outro trabalho do campo.
+     */
+    /**
+     * `mail` está aqui porque "e-mails" perde o hífen na normalização e vira
+     * `mail` — a realização mais comum da palavra não casava com o próprio
+     * conceito. Declarar é o lugar certo de consertar isso; um caso especial de
+     * hífen dentro do tokenizador seria a regra de código que este campo existe
+     * para evitar.
+     */
+    conceitos: [{ nome: 'email', termos: ['caixa', 'correio', 'mensagem', 'inbox', 'mail'] }],
     dominio: 'comunicacao',
     capacidade: 'conhecimento',
     permissoes: ['rede', 'memoria'],

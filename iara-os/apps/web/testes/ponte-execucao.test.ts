@@ -390,71 +390,211 @@ test('F2. processo que não aparece na tabela é DIVERGENTE — o lançador sair
   assert.equal(r.codigo_erro, 'APP_NAO_ENCONTRADO');
 });
 
-test('F3. processo novo na tabela é PROVA — e a evidência não exagera o que apurou', async () => {
-  // Nada antes, um processo depois: a diferença entre as duas fotos É a prova.
-  let vez = 0;
-  const semNada = new AgenteLocal(
+/**
+ * O AGENTE COM AS TRÊS SONDAS QUE IMPORTAM aqui, por nome em vez de posição.
+ *
+ * `sondaJanelas` é o 12º parâmetro do construtor — ela entrou no fim
+ * justamente para não mexer nos testes que já existiam. Escrever oito
+ * `undefined` em cada caso esconderia o que cada teste está de fato variando.
+ */
+function agenteDeJanela(o: {
+  lancador?: (comando: string, argumentos: string[]) => Promise<{ subiu: boolean; motivo: string }>;
+  processos?: () => Promise<number[] | null>;
+  janelas?: (imagem: string, ignorar?: readonly number[], esperarMs?: number) => Promise<number[] | null>;
+  foco?: (imagem: string) => Promise<'em_foco' | 'atras' | null>;
+}): AgenteLocal {
+  return new AgenteLocal(
     () => undefined,
     async () => 0,
-    async () => ({ subiu: true, motivo: '' }),
-    async () => (vez++ === 0 ? [] : [4321]),
+    o.lancador ?? (async () => ({ subiu: true, motivo: '' })),
+    o.processos ?? (async () => [4321]),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    o.janelas,
+    o.foco ?? (async () => 'em_foco'),
   );
-  const r = await semNada.abrirAplicativo('daiane', 'abra o bloco de notas');
-  assert.equal(r.ok, true);
-  assert.equal(r.prova.confirmado, true);
-  assert.match(r.prova.evidencia, /4321/);
-  assert.match(r.prova.evidencia, /ausente antes/);
-});
+}
 
-test('F4. REGRESSÃO: com processos já rodando, a evidência diz os DOIS números', async () => {
+test('F3. JANELA nova é a prova — processo novo, sozinho, deixou de bastar', async () => {
   /**
-   * Pego na primeira bateria real. Abrir o Chrome com quinze processos dele já
-   * ativos criou um processo novo — prova legítima — acompanhada da frase
-   * "ausente antes do pedido", que era falsa sobre o estado anterior da
-   * máquina. Uma prova que exagera o que apurou está estragada mesmo quando a
-   * conclusão está certa: a próxima pessoa confia na frase, não refaz a medição.
+   * Este teste afirmava o contrário até 21/08/2026: "processo novo na tabela e
+   * PROVA". A operadora provou que não é. Ela pediu o Bloco de Notas, o
+   * processo nasceu (pid 25908, filho do runtime, na sessão interativa), a IARA
+   * disse "Pronto. Abri o Bloco de Notas" e a tela ficou vazia.
+   *
+   * Processo criado é uma condição INTERMEDIÁRIA; janela na tela é o efeito que
+   * a frase promete. O oráculo passou a medir o segundo.
    */
   let vez = 0;
-  const agente = new AgenteLocal(
-    () => undefined,
-    async () => 0,
-    async () => ({ subiu: true, motivo: '' }),
-    async () => (vez++ === 0 ? [1, 2, 3] : [1, 2, 3, 9]),
-  );
-
-  const r = await agente.abrirAplicativo('daiane', 'abra o chrome');
-  assert.equal(r.prova.confirmado, true);
-  assert.doesNotMatch(r.prova.evidencia, /ausente antes/, 'não estava ausente: havia 3 processos');
-  assert.match(r.prova.evidencia, /3 para 4/);
-});
-
-test('F5. aplicativo já aberto NÃO é sucesso provado nem falha — é a ressalva honesta', async () => {
-  const agente = new AgenteLocal(
-    () => undefined,
-    async () => 0,
-    async () => ({ subiu: true, motivo: '' }),
-    async () => [77], // a mesma contagem antes e depois
-  );
-
-  const r = await agente.abrirAplicativo('daiane', 'abra o chrome');
-  assert.equal(r.ok, true, 'o lançamento deu certo');
-  assert.equal(r.prova.confirmado, false);
-  assert.equal(r.prova.motivo, 'sem_meio_de_verificar');
-  assert.match(r.texto, /já estava aberto/i);
-});
-
-test('F6. sem sonda de processos, a resposta declara a limitação em vez de afirmar', async () => {
-  const agente = new AgenteLocal(
-    () => undefined,
-    async () => 0,
-    async () => ({ subiu: true, motivo: '' }),
-    async () => null, // plataforma sem `tasklist`
-  );
+  const agente = agenteDeJanela({
+    processos: async () => [4321],
+    janelas: async () => (vez++ === 0 ? [] : [0xa1]),
+  });
 
   const r = await agente.abrirAplicativo('daiane', 'abra o bloco de notas');
   assert.equal(r.ok, true);
+  assert.equal(r.prova.confirmado, true);
+  assert.match(r.prova.evidencia, /janela/i, 'a evidência precisa falar de janela, não de processo');
+});
+
+test('F4. PROCESSO SUBIU E NENHUMA JANELA APARECEU: falha declarada, jamais "Pronto"', async () => {
+  /**
+   * O TESTE QUE FALTAVA, e o único motivo de ele existir é o campo:
+   *
+   *   11:36:58  a operadora pede o Bloco de Notas
+   *   11:36:58  notepad 25908 nasce, pai 6168, sessão 1
+   *   11:36:58  IARA: "Pronto. Abri o Bloco de Notas no computador."
+   *   11:44:59  EnumWindows na sessão 1: nenhuma janela desse PID
+   *
+   * Ela pediu de novo e ouviu a mesma frase. Duas afirmações de feito, zero
+   * janelas. Nenhum dos 2196 testes verdes cobria este caso, porque todos
+   * mediam a mesma coisa que o código media.
+   *
+   * Repare que isto NÃO é `sem_meio_de_verificar`: a sonda funcionou, olhou e
+   * não achou. Ausência de evidência seria a ressalva; isto é evidência de
+   * ausência, e vira falha.
+   */
+  const agente = agenteDeJanela({
+    processos: async () => [25908],
+    janelas: async () => [], // olhei; não há janela
+  });
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o bloco de notas');
+
+  assert.equal(r.ok, false, 'processo sem janela não pode ser sucesso');
+  assert.equal(r.prova.confirmado, false);
+  assert.equal(r.prova.motivo, 'divergente');
+  assert.equal(r.codigo_erro, 'APP_SEM_JANELA');
+  assert.doesNotMatch(r.texto, /\bpronto\b|\babri\b/i, 'a frase afirmou abertura sem janela');
+  assert.match(r.texto, /nenhuma janela/i, 'a frase precisa dizer o que faltou');
+});
+
+test('F4b. janela nova que ficou ATRÁS: a frase diz isso, e não "Pronto"', async () => {
+  /**
+   * O terceiro relato de campo do mesmo pedido, 21/08/2026 12:26 — e o mais
+   * sutil dos três, porque desta vez a IARA estava dizendo a verdade.
+   *
+   *     Notepad pid 6168 — janela visível, normal, ATRÁS
+   *     em foco: chrome (a própria IARA, em tela cheia)
+   *
+   * O oráculo de janela já estava correto e afirmou "Pronto. Abri". A janela
+   * existia mesmo. A operadora continuou sem ver nada além do piscar na barra
+   * de tarefas, e escreveu: "o bloco de notas nasce apenas na barra de tarefa".
+   *
+   * Abrir sem trazer para a frente não é abrir, do ponto de vista de quem
+   * pediu. Então há um segundo efeito a verificar — o foco — e ele tem a mesma
+   * regra do primeiro: conferido, nunca presumido. `SetForegroundWindow` falha
+   * em silêncio para quem não detém o primeiro plano.
+   */
+  let vez = 0;
+  const agente = agenteDeJanela({
+    processos: async () => [6168],
+    janelas: async () => (vez++ === 0 ? [] : [0xe5]),
+    foco: async () => 'atras', // o Windows recusou o foco
+  });
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o bloco de notas');
+
+  assert.equal(r.ok, true, 'a janela nasceu — isto não é falha');
+  assert.equal(r.prova.confirmado, true, 'o efeito principal foi observado');
+  assert.doesNotMatch(r.texto, /^Pronto\./, 'a frase não pode soar como se ele tivesse aparecido na frente');
+  assert.match(r.texto, /barra de tarefas/i, 'a pessoa precisa saber onde procurar');
+  assert.match(r.prova.evidencia, /foco/i, 'a evidência precisa registrar o desfecho do foco');
+});
+
+test('F4c. janela nova E foco obtido: aí sim "Pronto"', async () => {
+  let vez = 0;
+  const agente = agenteDeJanela({
+    processos: async () => [6168],
+    janelas: async () => (vez++ === 0 ? [] : [0xe6]),
+    foco: async () => 'em_foco',
+  });
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o bloco de notas');
+  assert.equal(r.prova.confirmado, true);
+  assert.match(r.texto, /^Pronto\. Abri/);
+  assert.doesNotMatch(r.texto, /barra de tarefas/i);
+});
+
+test('F5. já havia janela e nenhuma nova: ressalva honesta, nem sucesso nem falha', async () => {
+  /**
+   * O caso legítimo do programa que traz a janela existente para a frente.
+   * Chamar de sucesso seria afirmar uma janela que ninguém viu nascer; chamar
+   * de falha seria negar um lançamento que deu certo sobre um programa que
+   * está na tela.
+   */
+  const agente = agenteDeJanela({
+    processos: async () => [77],
+    janelas: async () => [0xb2], // a MESMA janela antes e depois
+  });
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o chrome');
+  assert.equal(r.ok, true);
+  assert.equal(r.prova.confirmado, false);
+  /**
+   * `ja_estava_aberto` e NAO `sem_meio_de_verificar`. Os dois chegam por
+   * caminhos opostos: o segundo e ignorancia — agi e nao tenho como olhar; o
+   * primeiro e conhecimento — olhei, contei as janelas antes e depois, e o
+   * efeito ja estava no mundo. Dizer "nao consigo provar" sobre algo
+   * perfeitamente observavel ensina o operador a ignorar as ressalvas que sao
+   * verdadeiras.
+   */
+  assert.equal(r.prova.motivo, 'ja_estava_aberto');
+  assert.match(r.texto, /já estava aberto/i);
+});
+
+test('F6. sem sonda de janelas, a resposta declara a limitação em vez de afirmar', async () => {
+  const agente = agenteDeJanela({
+    processos: async () => [4321],
+    janelas: async () => null, // outra plataforma, ou a enumeração falhou
+  });
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o bloco de notas');
+  assert.equal(r.ok, true);
+  assert.equal(r.prova.confirmado, false);
   assert.equal(r.prova.motivo, 'sem_meio_de_verificar');
   assert.match(r.texto, /não tenho como te garantir/i);
+});
+
+test('F6b. a janela pode ser de OUTRO processo — app empacotado não invalida a prova', async () => {
+  /**
+   * Medido no Windows real: `notepad.exe` (stub, pid 10616) ativa o
+   * `Notepad.exe` do WindowsApps (pid 26328), e a janela pertence ao SEGUNDO.
+   * Um oráculo que casasse pelo PID lançado diria "sem janela" com a janela na
+   * tela — trocando um falso positivo por um falso negativo.
+   *
+   * Por isso a sonda casa por NOME DE IMAGEM. Aqui o processo lançado nem
+   * aparece na lista, e a prova continua valendo.
+   */
+  let vez = 0;
+  const agente = agenteDeJanela({
+    processos: async () => [26328], // o pid do app empacotado, não o do stub
+    janelas: async () => (vez++ === 0 ? [] : [0xc3]),
+  });
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o bloco de notas');
+  assert.equal(r.prova.confirmado, true);
+});
+
+test('F6c. o processo nem apareceu: continua sendo APP_NAO_ENCONTRADO, não APP_SEM_JANELA', async () => {
+  /**
+   * As duas causas são diferentes e as duas frases também. "Não está
+   * instalado" sobre um programa instalado é um diagnóstico que manda a pessoa
+   * procurar no lugar errado.
+   */
+  const agente = agenteDeJanela({
+    processos: async () => [],
+    janelas: async () => [],
+  });
+
+  const r = await agente.abrirAplicativo('daiane', 'abra a calculadora');
+  assert.equal(r.ok, false);
+  assert.equal(r.codigo_erro, 'APP_NAO_ENCONTRADO');
 });
 
 test('F7. fechar NUNCA força: aplicativo que resiste é relatado como resistente', async () => {
@@ -614,6 +754,12 @@ test('H3. URL inválida é recusada ANTES do spawn — nenhum processo é lança
 });
 
 test('H4. URL válida chega ao spawn como argumento próprio, e a resposta cita o endereço', async () => {
+  /**
+   * A sonda de JANELAS entra injetada aqui de proposito. Sem ela, este teste
+   * passaria a rodar o PowerShell de verdade e a medir o Chrome da maquina de
+   * quem roda a suite — e um teste que depende de o Chrome estar aberto na sua
+   * mesa nao esta testando o produto, esta testando a sua mesa.
+   */
   let argumentosRecebidos: string[] = [];
   let vez = 0;
   const agente = new AgenteLocal(
@@ -624,6 +770,15 @@ test('H4. URL válida chega ao spawn como argumento próprio, e a resposta cita 
       return { subiu: true, motivo: '' };
     },
     async () => (vez++ === 0 ? [] : [4321]),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    async () => (vez > 1 ? [0xd4] : []),
+    async () => 'em_foco',
   );
 
   const r = await agente.abrirAplicativo('daiane', 'abra o chrome', 'https://youtube.com');
@@ -637,6 +792,12 @@ test('H4. URL válida chega ao spawn como argumento próprio, e a resposta cita 
 });
 
 test('H5. sem URL, o comportamento de sempre continua idêntico (argv sem site nenhum)', async () => {
+  /**
+   * A sonda de JANELAS entra injetada aqui de proposito. Sem ela, este teste
+   * passaria a rodar o PowerShell de verdade e a medir o Chrome da maquina de
+   * quem roda a suite — e um teste que depende de o Chrome estar aberto na sua
+   * mesa nao esta testando o produto, esta testando a sua mesa.
+   */
   let argumentosRecebidos: string[] = [];
   let vez = 0;
   const agente = new AgenteLocal(
@@ -647,6 +808,15 @@ test('H5. sem URL, o comportamento de sempre continua idêntico (argv sem site n
       return { subiu: true, motivo: '' };
     },
     async () => (vez++ === 0 ? [] : [4321]),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    async () => (vez > 1 ? [0xd4] : []),
+    async () => 'em_foco',
   );
 
   const r = await agente.abrirAplicativo('daiane', 'abra o chrome');

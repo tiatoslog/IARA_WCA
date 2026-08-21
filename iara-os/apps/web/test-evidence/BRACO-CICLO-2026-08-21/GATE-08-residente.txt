@@ -1,0 +1,11 @@
+﻿EXPERIMENTO D â€
+   notepads antes: 1
+   pid lancado: 13252
+   processos depois: 2
+   JANELAS VISIVEIS: 1
+      26328|8063008|* .env.local - Bloco de notas
+
+Fechando a(s) janela(s) com WM_CLOSE, sem matar o processo...
+   processos notepad ainda vivos: 2 -> 26328, 13252
+   janelas visiveis agora: 0
+

@@ -1,0 +1,147 @@
+﻿OLHO DE FORA - 2026-08-21T10:36:25.3375694-03:00
+quem: COMPUTADOR\daian
+sessao: 1
+
+=============== 1. OS ARQUIVOS NO DISCO REAL ===============
+pasta: C:\Users\daian\AppData\Local\IARA\braco
+  [DIR ] C:\Users\daian\AppData\Local\IARA\braco\versoes
+  [FILE] C:\Users\daian\AppData\Local\IARA\braco\atual.json
+         tamanho=96  escrito=2026-08-21T10:35:28.5577281-03:00
+         sha256=5F4147C763D50C9ECA2BAE54EAC364F7E259AD088DDB52CDB3C056964B23947A
+         acl: AUTORIDADE NT\SISTEMA=FullControl | BUILTIN\Administradores=FullControl | computador\daian=FullControl
+  [FILE] C:\Users\daian\AppData\Local\IARA\braco\marcador-tarefa.txt
+         tamanho=139  escrito=2026-08-21T10:09:06.5106048-03:00
+         sha256=9C9F261203B7F810BED90A0C5D9A43A5BBDC142AC903A0DBEEC4B5DA1CDED297
+         acl: AUTORIDADE NT\SISTEMA=FullControl | BUILTIN\Administradores=FullControl | computador\daian=FullControl
+  [FILE] C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe
+         tamanho=85861376  escrito=2026-08-21T10:35:00.1991518-03:00
+         sha256=8B3775BD1B58665BE77E44326966D2D158E7DBC4424025CE62B30654147A4347
+         versao-arquivo=22.17.0 produto=22.17.0
+         acl: AUTORIDADE NT\SISTEMA=FullControl | BUILTIN\Administradores=FullControl | computador\daian=FullControl
+  [FILE] C:\Users\daian\AppData\Local\IARA\braco\supervisor.json
+         tamanho=168  escrito=2026-08-21T10:35:32.4403474-03:00
+         sha256=481755815200CEC70067AC33C82FE48764918D216A2C2D3199087BE69BA024B1
+         acl: AUTORIDADE NT\SISTEMA=FullControl | BUILTIN\Administradores=FullControl | computador\daian=FullControl
+  [DIR ] C:\Users\daian\AppData\Local\IARA\braco\versoes\1.3.0
+  [FILE] C:\Users\daian\AppData\Local\IARA\braco\versoes\1.3.0\iara-braco.exe
+         tamanho=85861376  escrito=2026-08-21T10:35:00.1991518-03:00
+         sha256=8B3775BD1B58665BE77E44326966D2D158E7DBC4424025CE62B30654147A4347
+         versao-arquivo=22.17.0 produto=22.17.0
+         acl: AUTORIDADE NT\SISTEMA=FullControl | BUILTIN\Administradores=FullControl | computador\daian=FullControl
+
+=============== 2. atual.json ===============
+{
+  "versao": "1.3.0",
+  "versao_anterior": null,
+  "instalado_em": "2026-08-21T13:35:28.555Z"
+}
+
+=============== 3. supervisor.json ===============
+{
+  "versao": "1.3.0",
+  "runtime": "vivo",
+  "pid_supervisor": 23296,
+  "pid": 26684,
+  "reinicios": 0,
+  "ultima_saida": null,
+  "desde": "2026-08-21T13:35:30.536Z"
+}
+
+=============== 4. IDENTIDADE (fora da instalacao, de proposito) ===============
+  existe: C:\Users\daian\AppData\Roaming\iara\braco.json  tamanho=202  escrito=2026-08-15T22:11:13.4097265-03:00
+  campos: motor, token_dispositivo, email, atualizado_em
+
+=============== 5. TAREFAS AGENDADAS COM 'IARA' ===============
+  quantidade: 4
+  --- \IARA-Braco  estado=Ready
+      acao: [C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe] [--supervisor] wd=[C:\Users\daian\AppData\Local\IARA\braco]
+      ultima=21/08/2026 10:17:26 resultado=2147942402 proxima=
+  --- \IARA-Campanha-Adversarial-3h  estado=Ready
+      acao: [cmd.exe] [/c "C:\Users\daian\Desktop\IARA\IARA_WCA\iara-os\apps\web\scripts\campanha-noturna.cmd"] wd=[C:\Users\daian\Desktop\IARA\IARA_WCA\iara-os\apps\web]
+      ultima=16/08/2026 03:00:00 resultado=1 proxima=
+  --- \IARA-Instalar  estado=Ready
+      acao: [C:\Windows\System32\cmd.exe] [/c "C:\Users\daian\Desktop\IARA\IARA_WCA\iara-os\apps\web\test-evidence\BRACO-CICLO-2026-08-21\rodar-instalador.bat"] wd=[]
+      ultima=21/08/2026 10:35:25 resultado=0 proxima=
+  --- \IARA-OlhoDeFora  estado=Running
+      acao: [C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe] [-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "C:\Users\daian\Desktop\IARA\IARA_WCA\iara-os\apps\web\test-evidence\BRACO-CICLO-2026-08-21\olho-de-fora.ps1" GATE-03-pos-instalacao] wd=[]
+      ultima=21/08/2026 10:36:24 resultado=267009 proxima=
+
+=============== 6. XML DA TAREFA IARA-Braco ===============
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.3" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Mantém o braço da IARA de pé nesta máquina.</Description>
+    <URI>\IARA-Braco</URI>
+  </RegistrationInfo>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-21-181986890-2303518322-2160230991-1004</UserId>
+      <LogonType>InteractiveToken</LogonType>
+    </Principal>
+  </Principals>
+  <Settings>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <RestartOnFailure>
+      <Count>3</Count>
+      <Interval>PT1M</Interval>
+    </RestartOnFailure>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
+  </Settings>
+  <Triggers>
+    <LogonTrigger>
+      <Delay>PT20S</Delay>
+      <UserId>COMPUTADOR\daian</UserId>
+    </LogonTrigger>
+  </Triggers>
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe</Command>
+      <Arguments>--supervisor</Arguments>
+      <WorkingDirectory>C:\Users\daian\AppData\Local\IARA\braco</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>
+
+=============== 7. PROCESSOS AGORA ===============
+  pid=2328 pai=14136(CCXProcess.exe) nome=node.exe
+     criado=21/08/2026 07:19:32
+     linha="C:\Program Files\Adobe\Adobe Creative Cloud Experience\libs\node.exe" "C:\Program Files\Adobe\Adobe Creative Cloud Experience\js\main.js"
+  pid=23296 pai=14304() nome=supervisor.exe
+     criado=21/08/2026 10:35:30
+     linha=C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe --supervisor
+  pid=26684 pai=23296(supervisor.exe) nome=iara-braco.exe
+     criado=21/08/2026 10:35:32
+     linha=C:\Users\daian\AppData\Local\IARA\braco\versoes\1.3.0\iara-braco.exe --runtime
+
+=============== 8. LEGADO ===============
+  iara-motor.vbs no Startup?
+    pasta: C:\Users\daian\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+    - desktop.ini
+    - Ollama.lnk
+  chaves Run (HKCU e HKLM):
+    HKCU:\Software\Microsoft\Windows\CurrentVersion\Run: OneDrive = "C:\Program Files\Microsoft OneDrive\OneDrive.exe" /background
+    HKCU:\Software\Microsoft\Windows\CurrentVersion\Run: Docker Desktop = C:\Program Files\Docker\Docker\Docker Desktop.exe
+    HKCU:\Software\Microsoft\Windows\CurrentVersion\Run: Teams = "C:\Users\daian\AppData\Local\Microsoft\WindowsApps\MSTeams_8wekyb3d8bbwe\ms-teams.exe" msteams:system-initiated
+    HKCU:\Software\Microsoft\Windows\CurrentVersion\Run: Microsoft.Lists = C:\Program Files\Microsoft OneDrive\26.139.0720.0007\OneDrive.Sync.Service.exe
+    HKCU:\Software\Microsoft\Windows\CurrentVersion\Run: GoogleChromeAutoLaunch_193F107EA88A044E37F6DA65172E347F = "C:\Program Files\Google\Chrome\Application\chrome.exe" --no-startup-window /prefetch:5
+    HKCU:\Software\Microsoft\Windows\CurrentVersion\Run: MicrosoftCopilotAutoLaunch_779B57F64D82F3D7340E2E6FD2246319 = "C:\Program Files (x86)\Microsoft\Copilot\Application\mscopilot.exe" --no-startup-window --win-session-start
+    HKCU:\Software\Microsoft\Windows\CurrentVersion\Run: MicrosoftEdgeAutoLaunch_31A96F0E60CF2B8D534A0BD7DF71FB00 = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --no-startup-window --win-session-start
+    HKLM:\Software\Microsoft\Windows\CurrentVersion\Run: SecurityHealth = C:\WINDOWS\system32\SecurityHealthSystray.exe
+    HKLM:\Software\Microsoft\Windows\CurrentVersion\Run: RtkAudUService = "C:\WINDOWS\System32\DriverStore\FileRepository\realtekservice.inf_amd64_d4e2f40b8460b254\RtkAudUService64.exe" -background
+    HKLM:\Software\Microsoft\Windows\CurrentVersion\Run: WavesSvc = "C:\WINDOWS\System32\DriverStore\FileRepository\wavesapo10de.inf_amd64_b61618eddd37956d\WavesSvc64.exe" -Jack
+    HKLM:\Software\Microsoft\Windows\CurrentVersion\Run: Focusrite Notifier = "C:\Program Files\Focusrite\Drivers\Focusrite Notifier.exe"
+  porta 3000 ocupada?
+    livre
+  vestigios do vbs:
+
+=============== 9. BOOT ===============
+  ultimo boot: 21/08/2026 07:18:14
+  agora:       21/08/2026 10:36:28

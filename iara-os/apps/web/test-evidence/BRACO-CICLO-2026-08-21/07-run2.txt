@@ -1,0 +1,4 @@
+[IARA] mesma versão já instalada; conferindo os arquivos e a tarefa do Windows
+[IARA] instalado em C:\Users\daian\AppData\Local\IARA\braco
+[IARA] início automático agendado — o braço volta sozinho depois do reboot.
+[IARA] a IARA já estava de pé aqui (supervisor 14512). Nada a subir.

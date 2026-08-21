@@ -165,3 +165,22 @@ interface** em vez de improvisar resposta.
 
 ⚠️ Não rode `npm run build` com o `npm run dev` ativo — os dois compartilham
 `.next` e o dev quebra. Se acontecer: `npm run limpar`.
+
+## O push confere os commits, não o disco
+
+Existe um `pre-push` em `.githooks/` que recusa o push se algum commit dele tem
+import cujo arquivo não está no mesmo commit. Numa cópia nova do repositório ele
+não vem ligado — uma vez, na raiz:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Ele existe porque `tsc --noEmit` **não** cobre essa classe: tsc lê o disco, e o
+disco está certo: o arquivo está lá, só não entrou no `git add`. Compila aqui e
+morre no build do host com `Cannot find module`. Foi o deploy vermelho de
+20/08/2026 (`Cobertura.ts`, commit `eb30c75`).
+
+Confere TODOS os commits do push, não só a ponta — o Railway construiu um
+commit do meio, com a ponta já verde. Custa ~0,6 s por commit. Avulso:
+`npm run importacoes [ref]`, e já entra em `npm run verificar`.

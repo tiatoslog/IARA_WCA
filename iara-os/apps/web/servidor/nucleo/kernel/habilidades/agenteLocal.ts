@@ -283,6 +283,14 @@ export const listarArquivos: Habilidade = {
       'trabalho", "liste os arquivos de Downloads".',
     exemplos: ['O que tem na minha área de trabalho?', 'Lista os arquivos de Downloads'],
     capacidades: ['listar arquivos de local autorizado'],
+    /**
+     * "documento" é o conceito, e ele NÃO é a pasta Documentos — a descrição
+     * usa a palavra nos dois sentidos, e era por isso que « quais arquivos estão
+     * nos documentos? » ia parar na planilha de cargas.
+     */
+    conceitos: [
+      { nome: 'arquivo', termos: ['documento', 'pasta', 'conteudo', 'diretorio'] },
+    ],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],
@@ -332,6 +340,14 @@ export const informacoesSistema: Habilidade = {
       'segundos — nunca diga que vai avisar depois, porque não há um "depois" aqui.',
     exemplos: ['Quanto de memória meu computador está usando?', 'Como está o PC agora?'],
     capacidades: ['memória, processador e rede da máquina'],
+    /**
+     * DECLARADA porque o `id` começa por substantivo: `informacoes_sistema` não
+     * tem verbo para a inferência ler, e a trava de compatibilidade RECUSAVA
+     * esta habilidade por não conseguir classificá-la — « como está o PC
+     * agora? » perdia a única habilidade que responde isso.
+     */
+    operacao_semantica: 'leitura',
+    conceitos: [{ nome: 'computador', termos: ['maquina', 'memoria', 'processador', 'cpu', 'pc'] }],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: [],
@@ -388,6 +404,8 @@ export const capturarTela: Habilidade = {
       '"captura a tela", "salva uma foto do que está aberto".',
     exemplos: ['Tira um print da tela', 'Captura a tela e salva nos Documentos'],
     capacidades: ['capturar tela em PNG local'],
+    /** « faz um print aí » não alcançava: "print" só existia no exemplo. */
+    conceitos: [{ nome: 'tela', termos: ['print', 'captura', 'screenshot', 'foto'] }],
     dominio: 'automacao',
     capacidade: 'automacao',
     permissoes: ['escrita'],
@@ -595,6 +613,8 @@ export const acionarEnergia: Habilidade = {
 export const resolverConfirmacao: Habilidade = {
   manifesto: {
     id: 'resolver_confirmacao',
+    /** Só fecha o que o operador abriu antes. Ver ManifestoHabilidade. */
+    fecha_interacao_aberta: true,
     nome: 'Resolver confirmação pendente',
     descricao:
       'Fecha o ciclo de uma ação que ficou aguardando confirmação: executa se o operador confirmou, ' +

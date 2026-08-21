@@ -46,6 +46,8 @@ export const agendarLembrete: Habilidade = {
       'Não me deixe esquecer da reunião amanhã às 9',
     ],
     capacidades: ['marcar lembrete com horário'],
+    /** O verbo de criar lembrete é "lembrar"; o substantivo é o conceito. */
+    conceitos: [{ nome: 'lembrete', termos: ['alarme', 'aviso'] }],
     dominio: 'memoria',
     capacidade: 'memoria',
     // `memoria`, não `escrita`: o lembrete mora no shard privado do operador,
@@ -149,6 +151,7 @@ export const listarLembretes: Habilidade = {
       'distante. Use para "quais lembretes eu tenho", "o que eu marquei", "minha agenda".',
     exemplos: ['Quais lembretes eu tenho?', 'O que eu marquei com você?'],
     capacidades: ['listar lembretes pendentes'],
+    entidades: ['lembrete'],
     dominio: 'memoria',
     capacidade: 'memoria',
     permissoes: ['memoria'],
@@ -180,6 +183,8 @@ export const listarLembretes: Habilidade = {
 export const cancelarLembrete: Habilidade = {
   manifesto: {
     id: 'cancelar_lembrete',
+    /** Só fecha o que o operador abriu antes. Ver ManifestoHabilidade. */
+    fecha_interacao_aberta: true,
     nome: 'Cancelar lembrete',
     descricao:
       'Remove um lembrete pendente. O parâmetro "termo" é um trecho do assunto ("a reunião", ' +

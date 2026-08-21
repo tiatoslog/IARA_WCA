@@ -716,8 +716,22 @@ export class Braco {
      * fato não tem como provar, e é a quinta porta que carrega a ressalva
      * adiante.
      */
+    /**
+     * `ja_estava_aberto` entra na lista em 21/08/2026, ao lado de
+     * `sem_meio_de_verificar`, e a razão é a mesma dos dois: nenhum dos dois é
+     * uma prova que NEGA o desfecho.
+     *
+     * Eles chegam aqui por caminhos opostos, e é isso que quase me fez errar.
+     * `sem_meio_de_verificar` é ignorância — a IARA agiu e não tem como olhar.
+     * `ja_estava_aberto` é conhecimento — ela olhou, e o efeito pedido já
+     * estava no mundo antes dela. Tratar o segundo como negativa transformaria
+     * "o Bloco de Notas já estava aberto" em `falhou`, e a operadora ouviria
+     * que a IARA não conseguiu fazer algo que está na tela dela.
+     */
     const provaNega =
-      !bruto.prova.confirmado && bruto.prova.motivo !== 'sem_meio_de_verificar';
+      !bruto.prova.confirmado &&
+      bruto.prova.motivo !== 'sem_meio_de_verificar' &&
+      bruto.prova.motivo !== 'ja_estava_aberto';
     const coerente: EstadoExecucao =
       bruto.estado === 'sucesso' && provaNega
         ? 'falhou'

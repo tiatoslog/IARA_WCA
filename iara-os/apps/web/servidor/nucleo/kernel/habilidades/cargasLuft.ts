@@ -290,6 +290,23 @@ export const consultarCargasLuft: Habilidade = {
       'Me mostra as cargas do dia 17/08',
     ],
     capacidades: ['contar cargas por período', 'listar coletas marcadas'],
+    entidades: ['carga', 'coleta', 'oci', 'motorista', 'rota', 'origem', 'destino', 'cliente'],
+    /**
+     * COLETA E CARGA SÃO O MESMO CONCEITO nesta operação — a planilha chama a
+     * linha de OCI, a operadora fala em coleta, o relatório fala em carga.
+     *
+     * `entidades` já listava as três, mas LISTAR NÃO É NORMALIZAR: o arnês
+     * mediu « quantas coletas essa semana? » divergindo de « quantas cargas
+     * essa semana? » no referente — a mesma pergunta com outra palavra, tratada
+     * como duas perguntas diferentes.
+     *
+     * `nome` é o canônico e `termos` são as realizações; é isso que faz o
+     * referente normalizar sem perder o que o operador de fato escreveu.
+     */
+    conceitos: [
+      { nome: 'carga', termos: ['coleta', 'oci', 'embarque', 'frete'] },
+      { nome: 'motorista', termos: ['condutor', 'caminhoneiro'] },
+    ],
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['rede', 'banco'],
@@ -415,6 +432,13 @@ export const consultarEstatisticasCargasLuft: Habilidade = {
       'faturamento por rota',
       'valor total e médio das cargas',
       'cargas por status',
+    ],
+    entidades: ['carga', 'coleta', 'oci', 'motorista', 'rota', 'origem', 'destino', 'cliente', 'posto'],
+    /** Os mesmos conceitos de `consultar_cargas_luft` — é a mesma planilha. */
+    conceitos: [
+      { nome: 'carga', termos: ['coleta', 'oci', 'embarque', 'frete'] },
+      { nome: 'motorista', termos: ['condutor', 'caminhoneiro'] },
+      { nome: 'central', termos: ['posto', 'unidade', 'base'] },
     ],
     dominio: 'operacoes',
     capacidade: 'automacao',
@@ -1147,6 +1171,7 @@ export const compararSemanasLuft: Habilidade = {
       'Faturamento dessa semana comparado com a semana anterior',
     ],
     capacidades: ['comparar contagem entre semanas', 'comparar faturamento entre semanas'],
+    entidades: ['carga', 'coleta', 'oci'],
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['rede', 'banco'],
@@ -1231,6 +1256,8 @@ export const relatorioExecutivoLuft: Habilidade = {
   manifesto: {
     id: 'relatorio_executivo_luft',
     nome: 'Relatório executivo — operação LUFT',
+    /** `relatorio` é substantivo, não verbo — o `id` não diz o que ela faz. */
+    operacao_semantica: 'analise',
     descricao:
       'Consolida num único relatório: total de cargas cadastradas, contagem e faturamento do período ' +
       'pedido, os motoristas com mais cargas no período e a distribuição por status. "periodo" recebe a ' +
@@ -1369,6 +1396,7 @@ export const compararAnosLuft: Habilidade = {
       'comparar volume, faturamento e margem entre anos',
       'decompor a diferença por posto, central, rota ou motorista',
     ],
+    entidades: ['carga', 'coleta', 'oci', 'motorista', 'rota', 'posto'],
     dominio: 'operacoes',
     capacidade: 'automacao',
     permissoes: ['rede', 'banco'],

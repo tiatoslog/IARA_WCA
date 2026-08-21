@@ -1,0 +1,3 @@
+[IARA] primeira instalação nesta máquina
+[IARA] instalado em C:\Users\daian\AppData\Local\IARA\braco
+[IARA] pronto. A IARA já tem as mãos neste computador.

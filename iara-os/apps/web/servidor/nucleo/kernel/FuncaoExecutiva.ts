@@ -112,6 +112,36 @@ const CONFIANCA_SUFICIENTE = 0.85;
  */
 const PERGUNTA_DE_FATO = /\b(quantos?|quantas?|qual|quais)\b/i;
 
+/**
+ * O QUE A CAMADA DE COMPREENSÃO DEVOLVE PARA ESTA DECISÃO — e só isto.
+ *
+ * Deliberadamente menor que o `ContratoSemantico` inteiro: a rota não precisa
+ * de atributos, restrições nem evidências, e receber o contrato completo
+ * convidaria a próxima pessoa a usar um campo qualquer para desempatar uma
+ * decisão que deveria continuar simples.
+ */
+export interface AtoDoTurno {
+  readonly ato: string;
+  /** `null` quando nenhuma habilidade se sustenta, ou quando falta contexto. */
+  readonly objetivo: string | null;
+  /**
+   * A operação pedida: `leitura`, `envio`, `criacao`… `null` quando a frase não
+   * pede nada.
+   *
+   * Entrou em 21/08/2026 porque o `PortaoSigilo` precisa dela para distinguir
+   * LER o registro de alguém de MANDAR alguma coisa para alguém — ver
+   * `decidir()`. Sem a operação, as duas frases são a mesma coisa para ele.
+   */
+  readonly operacao: string | null;
+}
+
+/**
+ * Ler, contar e analisar NÃO alteram nada. A partição é a mesma que a camada de
+ * compreensão usa para admitir candidato, e ela existe aqui porque o sigilo é
+ * uma política sobre LEITURA de registro alheio.
+ */
+const OPERACOES_DE_LEITURA = new Set(['leitura', 'contagem', 'analise']);
+
 export class FuncaoExecutiva {
   private readonly sigilo: PortaoSigilo;
   private readonly ambiguidade = new DetectorAmbiguidade();
@@ -128,6 +158,25 @@ export class FuncaoExecutiva {
      * o injeta. Sem ele, o portão volta a depender só da forma da frase.
      */
     private readonly descoberta: DescobertaCapacidades | null = null,
+    /**
+     * A CAMADA DE COMPREENSÃO — ver `CompreensaoSemantica`. OPCIONAL pela mesma
+     * razão que `descoberta`: os testes que provam as outras etapas isoladamente
+     * não a injetam, e o Kernel sempre injeta.
+     *
+     * Entra como FUNÇÃO e não como módulo importado de propósito. A `FuncaoExecutiva`
+     * decide rota; ela não pode ganhar uma dependência de compilação sobre quem
+     * interpreta, ou a fronteira que `interpretar-nao-executa.test.ts` protege
+     * passaria a valer nos dois sentidos e nenhum dos dois lados poderia ser
+     * testado sozinho.
+     *
+     * O QUE ELA ACRESCENTA, e só isso: o ATO comunicativo. O índice de assunto
+     * responde "esta frase fala do que eu faço?" e responde SIM para um desabafo
+     * com vocabulário de trabalho. O ato responde "esta frase PEDE alguma
+     * coisa?" — e são perguntas diferentes, o que a auditoria de 21/08/2026
+     * mediu ao ver « como você está? » e « estou livre amanhã? » saindo pela
+     * mesma rota.
+     */
+    private readonly compreender: ((bruto: string) => AtoDoTurno) | null = null,
   ) {
     this.sigilo = new PortaoSigilo(outrosOperadores);
   }
@@ -143,22 +192,73 @@ export class FuncaoExecutiva {
    * escolhida a receita já é tarde para perguntar.
    */
   decidir(percepcao: Percepcao, contexto: ContextoDecisao = CONTEXTO_VAZIO): Decisao {
+    /**
+     * 0. A COMPREENSÃO VEM PRIMEIRO — e esta ordem é a correção de 21/08/2026.
+     *
+     * O Arnês C mediu dois defeitos da MESMA família: `PortaoSigilo` (etapa 1) e
+     * `DetectorAmbiguidade` (etapa 2) decidiam a rota ANTES de o contrato
+     * semântico existir, e por isso podiam contradizê-lo sem nunca tê-lo visto.
+     *
+     *     « manda mensagem pro João no whatsapp »  → rota `sigilo`
+     *     « esse relatório me destruiu hoje »      → rota `esclarecer`
+     *
+     * Na primeira, a IARA recusou um ENVIO como se fosse uma SONDAGEM. Na
+     * segunda, perguntou "qual relatório?" para um desabafo.
+     *
+     * As duas etapas CONTINUAM EXISTINDO e continuam podendo vencer — o que
+     * muda é que agora elas CONSULTAM o contrato antes, e a razão de terem
+     * vencido fica registrada na justificativa. A regra é a de `Autonomia.ts`:
+     * a camada de cima pode IMPEDIR, nunca PERMITIR o que as travas de baixo
+     * não permitiriam.
+     */
+    const compreensao = this.compreender?.(percepcao.bruto) ?? null;
+    const pedeLeitura =
+      compreensao?.operacao !== null && OPERACOES_DE_LEITURA.has(compreensao?.operacao ?? '');
+
     // 1. Sigilo antes de tudo. Nem percepção nem plano importam se o pedido é
     //    sobre o shard de outra pessoa.
     if (this.sigilo.ehSondagem(percepcao.bruto)) {
-      return {
-        rota: 'sigilo',
-        acao: 'recusar',
-        justificativa: 'Sondagem sobre registro de terceiro detectada antes do planejamento.',
-        custo_estimado: 'zero',
-      };
+      /**
+       * SONDAR É LER O REGISTRO DE ALGUÉM. Mandar mensagem PARA alguém não é.
+       *
+       * O reconhecedor de sondagem olha a frase e vê o nome de outro operador;
+       * ele não tem como saber se o pedido LÊ ou ALCANÇA essa pessoa, e as duas
+       * coisas se escrevem parecido. A operação do contrato é exatamente essa
+       * informação — e sem ela o portão errava para o lado de recusar trabalho
+       * legítimo, que é o erro que ninguém reporta porque parece segurança.
+       *
+       * A trava continua fechada onde importa: sem contrato, ou com contrato de
+       * LEITURA, o sigilo vence como sempre venceu. Só uma operação que não lê
+       * — enviar, criar, alterar — pode atravessá-la, e mesmo assim ela segue
+       * sujeita ao porteiro de risco e ao portal de efeitos mais adiante.
+       */
+      const sondagemDeVerdade = compreensao === null || pedeLeitura;
+      if (sondagemDeVerdade) {
+        return {
+          rota: 'sigilo',
+          acao: 'recusar',
+          justificativa:
+            compreensao === null
+              ? 'Sondagem sobre registro de terceiro detectada antes do planejamento.'
+              : `Sondagem sobre registro de terceiro: a operação pedida (${compreensao.operacao ?? 'indeterminada'}) LÊ o registro de outro operador.`,
+          custo_estimado: 'zero',
+        };
+      }
     }
 
     // 2. Falta alguma coisa que o contexto NÃO responde? Então pergunte.
     //    O detector já consultou o histórico: o que chega aqui é lacuna real,
     //    não preguiça de olhar para trás.
     const lacunas = this.ambiguidade.detectar(percepcao.bruto, contexto);
-    if (lacunas.length > 0) {
+    /**
+     * SÓ SE PERGUNTA SOBRE O QUE ALGUÉM PEDIU. Um desabafo não tem alvo a
+     * esclarecer — a anáfora dele aponta para a conversa, não para um objeto de
+     * trabalho. Perguntar "qual relatório?" para quem só reclamou do dia é o
+     * tipo de ruído que ensina o operador a ignorar as perguntas da IARA,
+     * inclusive as necessárias.
+     */
+    const alguemPediu = compreensao === null || compreensao.ato !== 'conversar';
+    if (lacunas.length > 0 && alguemPediu) {
       const lacuna = lacunas[0];
       return {
         rota: 'esclarecer',
@@ -200,7 +300,47 @@ export class FuncaoExecutiva {
     //    interrogativo de fato, e ainda assim fala do que a operação faz. Ver
     //    `DescobertaCapacidades` — a decisão de qual habilidade (ou nenhuma)
     //    continua sendo da LLM com o catálogo à frente, nunca daqui.
-    if (!this.mereceDecomposicao(percepcao) && !this.descoberta?.pareceOperacional(percepcao.bruto)) {
+    /**
+     * O ATO COMUNICATIVO ENTRA AQUI — e ele é o sinal que faltava.
+     *
+     * Os dois sinais anteriores respondem perguntas diferentes da que importa:
+     * `mereceDecomposicao` olha a FORMA, `pareceOperacional` olha o ASSUNTO. Nem
+     * um nem outro sabe se a frase PEDE alguma coisa, e é por isso que
+     * « como você está? » e « estou livre amanhã? » saíam pela mesma rota — as
+     * duas são interrogativas e nenhuma das duas tem vocabulário de catálogo.
+     *
+     * A COMPREENSÃO SÓ FALA QUANDO TEM O QUE DIZER, e nas duas direções:
+     *
+     *   · `conversar` DERRUBA — é a única forma de um desabafo com vocabulário
+     *     de trabalho ("esse relatório me destruiu hoje") parar de pagar
+     *     planejamento. Vale mesmo contra o índice de assunto, porque o ato é
+     *     evidência mais específica: o assunto diz que a frase FALA de trabalho,
+     *     o ato diz que ela não PEDE nada;
+     *   · ato de pedido com objetivo LEVANTA — pergunta ou ordem que alcançou
+     *     uma habilidade merece o catálogo, mesmo sem forma de comando e sem
+     *     interrogativo de fato.
+     *
+     * Quando não há camada injetada, o portão é exatamente o de antes.
+     */
+    const ATOS_DE_PEDIDO = ['perguntar', 'solicitar_acao', 'recapitular'];
+    const pedeAlgo = compreensao !== null && ATOS_DE_PEDIDO.includes(compreensao.ato);
+
+    if (compreensao?.ato === 'conversar') {
+      return {
+        rota: 'raciocinio_direto',
+        acao: 'responder',
+        justificativa: 'Ato comunicativo é conversa — a frase não pede nada.',
+        custo_estimado: 'tokens',
+      };
+    }
+
+    const alcancouHabilidade = pedeAlgo && compreensao.objetivo !== null;
+
+    if (
+      !this.mereceDecomposicao(percepcao) &&
+      !this.descoberta?.pareceOperacional(percepcao.bruto) &&
+      !alcancouHabilidade
+    ) {
       return {
         rota: 'raciocinio_direto',
         acao: 'responder',

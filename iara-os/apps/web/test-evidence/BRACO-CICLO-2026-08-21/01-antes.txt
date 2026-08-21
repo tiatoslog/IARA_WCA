@@ -1,0 +1,26 @@
+﻿ANTES DA INSTALACAO - 2026-08-21T09:46:30.6154493-03:00
+
+TAREFA AGENDADA IARA-Braco: AUSENTE (schtasks /query respondeu 'O sistema nao pode encontrar o arquivo especificado')
+PASTA C:\Users\daian\AppData\Local\IARA\braco : NAO EXISTE
+CREDENCIAL C:\Users\daian\AppData\Roaming\iara\braco.json : EXISTE
+
+PROCESSO DO BRACO EM EXECUCAO:
+
+  Id ProcessName    Path                                       
+  -- -----------    ----                                       
+3556 iara-braco (4) C:\Users\daian\Downloads\iara-braco (4).exe
+
+
+
+COPIAS EM Downloads (a assinatura forense do defeito):
+
+Name                 Length LastWriteTime      
+----                 ------ -------------      
+iara-braco (1).exe 85760512 15/08/2026 21:48:48
+iara-braco (2).exe 85761536 15/08/2026 22:10:24
+iara-braco (3).exe 85761536 20/08/2026 13:34:07
+iara-braco (4).exe 85761536 21/08/2026 08:58:49
+iara-braco.exe     85753856 15/08/2026 20:15:16
+
+
+
