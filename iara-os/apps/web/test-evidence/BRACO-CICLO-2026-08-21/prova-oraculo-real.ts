@@ -57,9 +57,9 @@ async function principal(): Promise<void> {
 
   console.log('=== VEREDITO ===');
   const caso1 = r1.prova.confirmado === true;
-  const caso2 = r2.prova.confirmado === false && r2.prova.motivo === 'sem_meio_de_verificar';
+  const caso2 = r2.prova.confirmado === false && r2.prova.motivo === 'ja_estava_aberto';
   console.log('   caso 1 (abriu e provou):', caso1 ? 'PASS' : 'FAIL');
-  console.log('   caso 2 (já aberto, ressalva):', caso2 ? 'PASS' : 'FAIL');
+  console.log('   caso 2 (já aberto, estado próprio):', caso2 ? 'PASS' : 'FAIL');
   if (!caso1) {
     console.log('   ATENÇÃO: o oráculo novo reprovou uma abertura legítima — falso negativo.');
   }

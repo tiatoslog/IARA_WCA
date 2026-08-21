@@ -392,7 +392,17 @@ export interface Verificacao {
   /** Uma linha: o que foi conferido e o que se encontrou. */
   readonly evidencia: string;
   /** Preenchido quando `confirmado` é falso. */
-  readonly motivo?: 'nao_encontrado' | 'divergente' | 'sem_meio_de_verificar';
+  /**
+   * Espelha `ProvaExecucao.motivo` de `lib/execucao.ts` — os relatos do braço
+   * atravessam a fronteira e chegam aqui como `Verificacao`. Duas listas que
+   * precisam concordar são duas chances de divergir; `ja_estava_aberto` entrou
+   * nas duas no mesmo commit, e o `tsc` foi quem cobrou a segunda.
+   */
+  readonly motivo?:
+    | 'nao_encontrado'
+    | 'divergente'
+    | 'sem_meio_de_verificar'
+    | 'ja_estava_aberto';
 }
 
 export interface Habilidade {

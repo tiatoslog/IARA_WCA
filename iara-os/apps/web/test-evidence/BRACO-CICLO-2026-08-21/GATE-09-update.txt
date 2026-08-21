@@ -1,0 +1,10 @@
+(node:15176) Warning: Currently the require() provided to the main script embedded into single-executable applications only supports loading built-in modules.
+To load a module from disk after the single executable application is launched, use require("module").createRequire().
+Support for bundled module loading or virtual file systems are under discussions in https://github.com/nodejs/single-executable
+(Use `iara-braco --trace-warnings ...` to show where the warning was created)
+(node:15176) ExperimentalWarning: Single executable application is an experimental feature and might change at any time
+[IARA] atualizando de 1.3.0 para 1.4.0
+[IARA] instalado em C:\Users\daian\AppData\Local\IARA\braco
+[IARA] início automático agendado — o braço volta sozinho depois do reboot.
+[IARA] pronto. A IARA já tem as mãos neste computador.
+exit=0 

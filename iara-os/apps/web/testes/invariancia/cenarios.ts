@@ -76,6 +76,39 @@ export interface Cenario {
   readonly familia: string;
   /** A frase de manual. É a REFERÊNCIA contra a qual as outras são comparadas. */
   readonly limpa: string;
+  /**
+   * O QUE ESTA INTENÇÃO QUER, em vocabulário de SIGNIFICADO — nunca id de
+   * habilidade: `contar_carga`, `consultar_disponibilidade`.
+   *
+   * Escrito à mão, e é o que permite ao Arnês C separar "entendi errado" de
+   * "não tenho a ferramenta". Se o objetivo esperado fosse o id da habilidade,
+   * toda lacuna de catálogo entraria na conta como falha de compreensão — que é
+   * exatamente a mistura que esta fase veio desfazer.
+   */
+  readonly objetivoSemantico: string;
+  /**
+   * A OPERAÇÃO que esta intenção pede — e é ELA que o Arnês C usa como portão
+   * do elo de compreensão, não a string de `objetivoSemantico`.
+   *
+   * POR QUE NÃO O OBJETIVO INTEIRO, medido antes de ser escrito: exigir a string
+   * exata reprovou 8 das 13 formulações LIMPAS, e a maioria por desacordo
+   * legítimo sobre qual substantivo nomeia o assunto —
+   *
+   *     « Tira um print da tela »   `executar_print` ou `executar_tela`?
+   *     « O que tem na área de trabalho? »  `consultar_area` ou `consultar_arquivo`?
+   *
+   * As duas leituras estão certas, e um gabarito que reprova as duas mede o meu
+   * gosto, não a compreensão da IARA. Pior: com o elo A reprovando 61% dos
+   * casos, os elos B e C ficavam `N/A` e a tabela não respondia a pergunta que
+   * ela existe para responder.
+   *
+   * A OPERAÇÃO é a granularidade que a PRÓPRIA ARQUITETURA declara significativa
+   * — é o que a trava de compatibilidade compara e o que separa ler de escrever
+   * no disco do operador. Medir ali não é afrouxar: é medir onde a decisão
+   * acontece. O assunto continua saindo na cadeia de diagnóstico, como
+   * observação.
+   */
+  readonly operacaoEsperada: string;
   readonly variacoes: readonly Formulacao[];
 }
 
@@ -99,6 +132,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'contar cargas no período corrente',
     familia: 'cargas',
     limpa: 'Quantas cargas foram coletadas essa semana?',
+    objetivoSemantico: 'contar_carga',
+    operacaoEsperada: 'contagem',
     variacoes: [
       { frase: 'quantas cargas tivemos essa semana?', registro: 'parafrase' },
       { frase: 'me diz quantas cargas essa semana', registro: 'parafrase' },
@@ -115,6 +150,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'ranking de motorista por carga',
     familia: 'cargas',
     limpa: 'Qual motorista tem mais cargas?',
+    objetivoSemantico: 'consultar_motorista',
+    operacaoEsperada: 'leitura',
     variacoes: [
       { frase: 'quem é o motorista com mais cargas?', registro: 'parafrase' },
       { frase: 'qual motorista mais rodou?', registro: 'parafrase' },
@@ -129,6 +166,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'ler os lembretes marcados',
     familia: 'lembrete_ler',
     limpa: 'Quais lembretes eu tenho?',
+    objetivoSemantico: 'consultar_lembrete',
+    operacaoEsperada: 'leitura',
     variacoes: [
       { frase: 'o que eu marquei com você?', registro: 'parafrase' },
       { frase: 'me lista os lembretes pendentes', registro: 'parafrase' },
@@ -143,6 +182,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'marcar um lembrete',
     familia: 'lembrete_criar',
     limpa: 'Me lembre de ligar para o cliente em 20 minutos',
+    objetivoSemantico: 'criar_lembrete',
+    operacaoEsperada: 'criacao',
     variacoes: [
       { frase: 'me lembra de ligar pro cliente em 20 minutos', registro: 'parafrase' },
       { frase: 'não me deixe esquecer de ligar pro cliente daqui a 20 minutos', registro: 'parafrase' },
@@ -155,6 +196,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'ler a caixa de entrada',
     familia: 'email',
     limpa: 'Leia meus emails recentes',
+    objetivoSemantico: 'consultar_email',
+    operacaoEsperada: 'leitura',
     variacoes: [
       { frase: 'chegou algum email novo?', registro: 'parafrase' },
       { frase: 'tem email da LUFT hoje?', registro: 'parafrase' },
@@ -168,6 +211,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'listar arquivos de um local',
     familia: 'arquivos_ler',
     limpa: 'O que tem na minha área de trabalho?',
+    objetivoSemantico: 'consultar_arquivo',
+    operacaoEsperada: 'leitura',
     variacoes: [
       { frase: 'lista os arquivos da área de trabalho', registro: 'parafrase' },
       { frase: 'me mostra o que tem na area de trabalho', registro: 'parafrase' },
@@ -180,6 +225,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'previsão do tempo',
     familia: 'clima',
     limpa: 'Vai chover hoje?',
+    objetivoSemantico: 'consultar_clima',
+    operacaoEsperada: 'leitura',
     variacoes: [
       { frase: 'como está o tempo hoje?', registro: 'parafrase' },
       { frase: 'qual a previsão para hoje?', registro: 'parafrase' },
@@ -192,6 +239,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'estado da máquina',
     familia: 'maquina',
     limpa: 'Quanto de memória meu computador está usando?',
+    objetivoSemantico: 'consultar_computador',
+    operacaoEsperada: 'leitura',
     variacoes: [
       { frase: 'como está o PC agora?', registro: 'parafrase' },
       { frase: 'quanto de memória o computador tá gastando?', registro: 'parafrase' },
@@ -216,6 +265,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'ver a agenda da semana',
     familia: 'agenda_ler',
     limpa: 'O que eu tenho essa semana?',
+    objetivoSemantico: 'consultar_agenda',
+    operacaoEsperada: 'leitura',
     variacoes: [
       { frase: 'me mostra minha agenda dessa semana', registro: 'parafrase' },
       { frase: 'quais compromissos eu tenho essa semana?', registro: 'parafrase' },
@@ -228,6 +279,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'ver a agenda de amanhã',
     familia: 'agenda_ler',
     limpa: 'Tenho alguma reunião amanhã?',
+    objetivoSemantico: 'consultar_agenda',
+    operacaoEsperada: 'leitura',
     variacoes: [
       { frase: 'o que eu tenho amanhã?', registro: 'parafrase' },
       { frase: 'quais são meus compromissos de amanhã?', registro: 'parafrase' },
@@ -240,6 +293,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'mandar mensagem no WhatsApp',
     familia: 'whatsapp',
     limpa: 'Manda um whatsapp para o João avisando do atraso',
+    objetivoSemantico: 'enviar_whatsapp',
+    operacaoEsperada: 'envio',
     variacoes: [
       { frase: 'avisa o João no zap que vai atrasar', registro: 'parafrase' },
       { frase: 'manda mensagem pro João no whatsapp sobre o atraso', registro: 'parafrase' },
@@ -251,6 +306,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'tirar print da tela',
     familia: 'captura',
     limpa: 'Tira um print da tela',
+    objetivoSemantico: 'executar_tela',
+    operacaoEsperada: 'execucao',
     variacoes: [
       { frase: 'captura a tela e salva nos documentos', registro: 'parafrase' },
       { frase: 'faz um print aí', registro: 'parafrase' },
@@ -262,6 +319,8 @@ export const CENARIOS: readonly Cenario[] = [
     nome: 'centrais e frota por estado',
     familia: 'infraestrutura',
     limpa: 'Quantas centrais temos ativas?',
+    objetivoSemantico: 'contar_central',
+    operacaoEsperada: 'contagem',
     variacoes: [
       { frase: 'quantos veículos tem a frota no MT?', registro: 'parafrase' },
       { frase: 'como está a operação por estado?', registro: 'parafrase' },

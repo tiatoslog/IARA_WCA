@@ -53,6 +53,7 @@ import {
 } from './contrato';
 import { CASOS_AMBIGUOS, CENARIOS, PARES_NEGATIVOS } from './cenarios';
 import { DISTINTOS, NAO_COLAPSAM } from '../compreensao/gabarito';
+import { rodarArnesC, type Elo } from './arnesC';
 
 const pct = (n: number, d: number): string => (d === 0 ? '  — ' : `${((100 * n) / d).toFixed(0)}%`);
 const taxa = (n: number, d: number): string => `${n}/${d}`.padEnd(7) + pct(n, d).padStart(5);
@@ -349,6 +350,37 @@ function main(): void {
   if (bDepois.erros.length > 0) {
     console.log('\n  ainda errado:');
     for (const e of bDepois.erros) console.log(`    ${e}`);
+  }
+
+  // --- ARNES C -------------------------------------------------------------
+  const cadeias = rodarArnesC();
+  const porElo: Record<Elo, number> = { compreensao: 0, admissao: 0, decisao: 0 };
+  let inteiras = 0;
+  for (const c of cadeias) { if (c.culpado) porElo[c.culpado] += 1; else inteiras += 1; }
+
+  console.log('\n═══ ARNÊS C (a compreensão chega até a rota?) ═══');
+  console.log('quando a IARA entende, ela escolhe a rota correspondente?\n');
+  console.log(`  CADEIA INTEIRA        ${taxa(inteiras, cadeias.length)}`);
+  console.log('\n  ONDE CADA FALHA MORREU  (primeiro elo que quebrou)');
+  console.log(`    A compreensão       ${taxa(porElo.compreensao, cadeias.length)}   contrato saiu errado`);
+  console.log(`    B admissão          ${taxa(porElo.admissao, cadeias.length)}   contrato ok, sem capacidade compatível`);
+  console.log(`    C decisão           ${taxa(porElo.decisao, cadeias.length)}   contrato ok + candidato ok + rota errada`);
+
+  if (detalhar) {
+    console.log('\n  CADEIAS QUE QUEBRARAM');
+    for (const c of cadeias) {
+      if (!c.culpado) continue;
+      console.log(`\n    « ${c.frase} »  [${c.registro}]`);
+      console.log(`      contrato esperado   ${c.objetivoEsperado}`);
+      console.log(`      contrato produzido  ${c.objetivoProduzido}   (ato ${c.ato}, op ${c.operacao})`);
+      console.log(`      candidatos          ${c.candidatos.join(', ') || '(nenhum)'}`);
+      console.log(`      admitido            ${c.candidatoAdmitido ?? '(nenhum)'}`);
+      console.log(`      rota escolhida      ${c.rotaEscolhida}`);
+      console.log(`      rota esperada       ${c.rotaEsperada}`);
+      console.log(
+        `      compreensão ${c.compreensao} | admissão ${c.admissao} | decisão ${c.decisao}  →  ${c.culpado.toUpperCase()}`,
+      );
+    }
   }
 
   // --- Lacunas -------------------------------------------------------------

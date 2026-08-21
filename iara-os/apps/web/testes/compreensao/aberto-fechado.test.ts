@@ -150,7 +150,22 @@ test('nenhum substantivo do domínio aparece no CÓDIGO da camada', () => {
   const doDominio = [
     ...new Set(
       MANIFESTOS.flatMap((m) => [...(m.entidades ?? []), ...m.id.split('_').slice(1)]).filter(
-        (p) => p.length >= 4 && !NAO_SAO_DOMINIO.has(p),
+        (p) =>
+          p.length >= 4 &&
+          !NAO_SAO_DOMINIO.has(p) &&
+          /**
+           * PALAVRA QUE NOMEIA UMA OPERAÇÃO NÃO É VOCABULÁRIO DE DOMÍNIO.
+           *
+           * `executar_consulta_sql` põe "consulta" na lista de partes de `id`, e
+           * a camada legitimamente contém `consultar` — o verbo canônico da
+           * operação `leitura`, uma das oito entradas de `VERBO_CANONICO`.
+           * Acusar isso obrigaria a camada a batizar suas operações com palavras
+           * que o catálogo nunca use, que é ceder a arquitetura ao teste.
+           *
+           * A regra é a mesma que classifica habilidade: se o classificador de
+           * verbos lê a palavra, ela é operação, não assunto.
+           */
+          operacaoDaHabilidade(p) === null,
       ),
     ),
   ];

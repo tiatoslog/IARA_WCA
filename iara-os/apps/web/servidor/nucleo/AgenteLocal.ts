@@ -1215,6 +1215,113 @@ Write-Output ($achadas -join ',')
 `;
 
 /**
+ * TRAZER PARA A FRENTE — e conferir se veio.
+ *
+ * 21/08/2026, depois de o oráculo de janela já estar consertado: a IARA disse
+ * *"Pronto. Abri o Bloco de Notas"*, e desta vez a frase era VERDADEIRA — havia
+ * janela, visível, não minimizada. A operadora mesmo assim não a viu:
+ *
+ *     Notepad pid 6168, criado 12:26:01
+ *     janela "Sem título - Bloco de notas" → visível, normal, ATRÁS
+ *     em foco: chrome (a própria IARA, em tela cheia)
+ *
+ * Abrir sem trazer para a frente não é abrir, do ponto de vista de quem pediu.
+ * O que ela via era o piscar na barra de tarefas — a assinatura exata do
+ * bloqueio de foreground do Windows: um processo que não detém o primeiro
+ * plano não o rouba, e `SetForegroundWindow` FALHA EM SILÊNCIO, devolvendo
+ * `false` e piscando o botão.
+ *
+ * Por isso duas coisas aqui, e a segunda é a que importa:
+ *
+ *  1. `AttachThreadInput` na thread que detém o foreground antes de pedir.
+ *     É o caminho documentado para um processo legítimo ceder o foco a outro,
+ *     e sem ele o pedido é ignorado.
+ *  2. A CONFERÊNCIA. Depois de tentar, lê-se `GetForegroundWindow` e compara
+ *     com o alvo. Sem isso eu teria trocado um oráculo que mede a coisa errada
+ *     por uma tentativa que não mede nada — e a frase voltaria a prometer o
+ *     que ninguém verificou.
+ *
+ * `'em_foco'` | `'atras'` | `null` (não sei olhar). Três estados porque são
+ * três situações distintas para o operador, e achatá-las produziria de novo a
+ * frase que não corresponde à tela.
+ */
+export type TrazerParaFrente = (imagem: string) => Promise<'em_foco' | 'atras' | null>;
+
+const trazerParaFrenteReal: TrazerParaFrente = (imagem) =>
+  new Promise((resolver) => {
+    if (process.platform !== 'win32' || !NOME_DE_PROCESSO.test(imagem)) {
+      resolver(null);
+      return;
+    }
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', SCRIPT_FRENTE],
+      {
+        windowsHide: true,
+        encoding: 'utf8',
+        timeout: 15_000,
+        env: { ...process.env, IARA_FRENTE_IMAGEM: imagem.replace(/[^A-Za-z0-9._-]/g, '') },
+      },
+      (erro, saida) => {
+        if (erro) {
+          resolver(null);
+          return;
+        }
+        const r = String(saida).trim().split(/\r?\n/).pop();
+        resolver(r === 'EM_FOCO' ? 'em_foco' : r === 'ATRAS' ? 'atras' : null);
+      },
+    );
+  });
+
+/** Constante, com o parâmetro entrando por ambiente. Mesma regra de `SCRIPT_JANELAS`. */
+const SCRIPT_FRENTE = `
+$ErrorActionPreference = 'Stop'
+try {
+  Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class IaraFrente {
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
+  [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr h);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr p);
+  [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint a, uint b, bool anexar);
+  [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+  public static void Trazer(IntPtr alvo) {
+    IntPtr frente = GetForegroundWindow();
+    uint tFrente = GetWindowThreadProcessId(frente, IntPtr.Zero);
+    uint tNosso  = GetCurrentThreadId();
+    // Sem o anexo o Windows ignora o pedido em silencio e apenas pisca a barra.
+    if (tFrente != tNosso) AttachThreadInput(tNosso, tFrente, true);
+    ShowWindow(alvo, 9);
+    BringWindowToTop(alvo);
+    SetForegroundWindow(alvo);
+    if (tFrente != tNosso) AttachThreadInput(tNosso, tFrente, false);
+  }
+}
+"@
+} catch { Write-Output 'SEM_MEIO'; exit 0 }
+
+$imagem = $env:IARA_FRENTE_IMAGEM -replace '\\.exe$',''
+$alvos = @(Get-Process -Name $imagem -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero })
+if ($alvos.Count -eq 0) { Write-Output 'ATRAS'; exit 0 }
+
+$h = $alvos[0].MainWindowHandle
+[IaraFrente]::Trazer($h)
+Start-Sleep -Milliseconds 350
+
+# A CONFERENCIA: quem esta no primeiro plano AGORA?
+$frente = [IaraFrente]::GetForegroundWindow()
+$pids = @($alvos | ForEach-Object { $_.Id })
+$pidFrente = 0
+foreach ($p in Get-Process) {
+  if ($p.MainWindowHandle -eq $frente) { $pidFrente = $p.Id; break }
+}
+if ($pids -contains $pidFrente) { Write-Output 'EM_FOCO' } else { Write-Output 'ATRAS' }
+`;
+
+/**
  * A SONDA DETALHADA — quem consome o processador, agora.
  *
  * Mora aqui, e não em `SondasDesempenho.ts`, por causa da regra `A4` da
@@ -1613,6 +1720,7 @@ export class AgenteLocal {
      * precisa saber que este oráculo nasceu.
      */
     private readonly sondaJanelas: SondaJanelas = sondaJanelasReal,
+    private readonly trazerParaFrente: TrazerParaFrente = trazerParaFrenteReal,
   ) {}
 
   /** As sessões de agente de código deste processo, por id. */
@@ -2032,15 +2140,42 @@ export class AgenteLocal {
 
     /* 1. JANELA NOVA — o efeito prometido, observado. */
     if (novasJanelas !== null && novasJanelas.length > 0) {
-      this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} janela=${novasJanelas.length}`);
+      /**
+       * ABRIR SEM TRAZER PARA A FRENTE NÃO É ABRIR, do ponto de vista de quem
+       * pediu. Medido em 21/08/2026, com o oráculo de janela já correto:
+       *
+       *     Notepad pid 6168 — janela visível, normal, ATRÁS
+       *     em foco: chrome (a própria IARA, em tela cheia)
+       *
+       * A frase estava certa e a operadora continuava sem ver nada além do
+       * piscar na barra de tarefas. O pedido dela é que o programa apareça.
+       *
+       * E o resultado é CONFERIDO, não presumido: `SetForegroundWindow` falha
+       * em silêncio quando quem chama não detém o primeiro plano. Uma
+       * tentativa não conferida seria trocar um oráculo que media a coisa
+       * errada por um gesto que não mede nada.
+       */
+      const foco = await this.trazerParaFrente(app.processo);
+      this.auditar(
+        idUsuario,
+        'abrir_aplicativo',
+        true,
+        `${app.rotulo} janela=${novasJanelas.length} foco=${foco ?? 'desconhecido'}`,
+      );
+      const emFoco = foco === 'em_foco';
       return {
         ok: true,
-        texto: `Pronto. Abri ${artigoDe(app.rotulo)} ${app.rotulo} no computador${urlLimpa ? `, já em ${urlLimpa}` : ''}.`,
+        texto: emFoco
+          ? `Pronto. Abri ${artigoDe(app.rotulo)} ${app.rotulo} no computador${urlLimpa ? `, já em ${urlLimpa}` : ''}.`
+          : `Abri ${artigoDe(app.rotulo)} ${app.rotulo} no computador${urlLimpa ? `, já em ${urlLimpa}` : ''}, ` +
+            'mas ele ficou ATRÁS desta janela em vez de vir para a frente — o Windows não deixa um ' +
+            'programa de fundo roubar o foco. Está na barra de tarefas, é só clicar.',
         prova: {
           confirmado: true,
           evidencia:
             `${novasJanelas.length} janela(s) visível(is) de ${app.processo} que não existiam antes do pedido ` +
-            `(a sessão tinha ${janelasAntes?.length ?? 0} antes, ${janelasDepois?.length ?? 0} depois)`,
+            `(a sessão tinha ${janelasAntes?.length ?? 0} antes, ${janelasDepois?.length ?? 0} depois); ` +
+            `foco depois do pedido: ${foco === 'em_foco' ? 'no aplicativo' : foco === 'atras' ? 'em outra janela' : 'não verificável'}`,
         },
         codigo_erro: null,
       };
@@ -2067,18 +2202,38 @@ export class AgenteLocal {
        frente". Não é sucesso: eu não vi nada acontecer. Também não é falha: o
        programa está lá, na tela, e pode ter recebido foco. */
     if (janelasAntes !== null && janelasAntes.length > 0) {
-      this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} (ja tinha janela)`);
+      /**
+       * `ja_estava_aberto`, e NÃO `sem_meio_de_verificar`.
+       *
+       * A primeira redação usava o segundo, e era um achatamento — o mesmo
+       * defeito desta auditoria em escala menor. `sem_meio_de_verificar` é
+       * IGNORÂNCIA: agi e não tenho como olhar. Aqui há CONHECIMENTO: eu olhei,
+       * contei as janelas antes, contei depois, e o que a pessoa pediu já
+       * estava no mundo. Dizer "não consigo provar" sobre algo perfeitamente
+       * observável é mentir por modéstia, e ensina a ignorar as ressalvas que
+       * são verdadeiras.
+       *
+       * E aqui trazer para a frente é MAIS útil que no caso da janela nova:
+       * quem pede um programa que já está aberto quase sempre quer olhar para
+       * ele.
+       */
+      const foco = await this.trazerParaFrente(app.processo);
+      this.auditar(idUsuario, 'abrir_aplicativo', true, `${app.rotulo} (já estava aberto, foco=${foco ?? '?'})`);
+      const artigo = artigoDe(app.rotulo) === 'a' ? 'A' : 'O';
       return {
         ok: true,
         texto:
-          `${artigoDe(app.rotulo) === 'a' ? 'A' : 'O'} ${app.rotulo} já estava aberto com janela na tela e eu mandei abrir de novo` +
-          `${urlLimpa ? ` em ${urlLimpa}` : ''}. ` +
-          'Nenhuma janela nova apareceu — ele deve ter trazido a que já existia para a frente, ' +
-          'e isso eu não consigo te provar.',
+          foco === 'em_foco'
+            ? `${artigo} ${app.rotulo} já estava aberto${urlLimpa ? ` e mandei o endereço ${urlLimpa} para ele` : ''} — ` +
+              'trouxe a janela dele para a frente para você.'
+            : `${artigo} ${app.rotulo} já estava aberto${urlLimpa ? ` e mandei o endereço ${urlLimpa} para ele` : ''}. ` +
+              'Tentei trazer a janela para a frente e o Windows não deixou — ela está na barra de tarefas.',
         prova: {
           confirmado: false,
-          evidencia: `${app.processo} já tinha ${janelasAntes.length} janela(s) visível(is) antes do pedido; nenhuma nova depois`,
-          motivo: 'sem_meio_de_verificar',
+          evidencia:
+            `${app.processo} já tinha ${janelasAntes.length} janela(s) visível(is) antes do pedido; ` +
+            `nenhuma nova depois; foco depois: ${foco ?? 'não verificável'}`,
+          motivo: 'ja_estava_aberto',
         },
         codigo_erro: null,
       };

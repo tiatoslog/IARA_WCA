@@ -273,7 +273,25 @@ export const RETENTAVEL: Record<CodigoErro, boolean> = {
 export interface ProvaExecucao {
   readonly confirmado: boolean;
   readonly evidencia: string;
-  readonly motivo?: 'nao_encontrado' | 'divergente' | 'sem_meio_de_verificar';
+  readonly motivo?:
+    | 'nao_encontrado'
+    | 'divergente'
+    | 'sem_meio_de_verificar'
+    /**
+     * O EFEITO JÁ ESTAVA NO MUNDO ANTES DO PEDIDO.
+     *
+     * Nasceu em 21/08/2026, de um achatamento que eu mesmo tinha feito: pedir
+     * o Bloco de Notas com ele já aberto devolvia `sem_meio_de_verificar`, e
+     * os dois estados não são o mesmo. `sem_meio_de_verificar` é IGNORÂNCIA —
+     * não tenho como olhar. Este é CONHECIMENTO: eu olhei, e o que você pediu
+     * já estava feito antes de eu chegar.
+     *
+     * A diferença muda a frase e muda o que a IARA pode concluir depois. Dizer
+     * "não consigo provar" sobre algo que se observa perfeitamente é uma
+     * mentira por modéstia — e ensina o operador a ignorar as ressalvas
+     * verdadeiras.
+     */
+    | 'ja_estava_aberto';
 }
 
 // ---------------------------------------------------------------------------

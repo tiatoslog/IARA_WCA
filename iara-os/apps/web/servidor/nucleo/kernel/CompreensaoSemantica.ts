@@ -204,7 +204,34 @@ export interface HipoteseSemantica {
 
 export interface ContratoSemantico {
   readonly ato: AtoComunicativo;
-  /** A habilidade mais provável, ou `null` quando nenhuma se sustenta. */
+  /**
+   * O QUE O OPERADOR QUER — em vocabulário de SIGNIFICADO, não de catálogo.
+   *
+   *     « estou livre amanhã? »  →  consultar_disponibilidade
+   *
+   * SEPARADO DE `objetivo` DE PROPÓSITO, e a distinção não é acadêmica. Até
+   * 21/08/2026 o contrato tinha só `objetivo`, que era o `id` de uma habilidade
+   * — ou seja, uma DECISÃO OPERACIONAL vestida de compreensão. O efeito era que
+   * a métrica "a IARA entendeu?" descia toda vez que o catálogo não tinha a
+   * ferramenta, misturando duas falhas que se consertam em lugares diferentes:
+   *
+   *     entendi errado          →  conserta na camada de compreensão
+   *     não tenho a capacidade  →  conserta no catálogo
+   *
+   * Composto, nunca digitado: `<verbo da operação>_<conceito ou objeto>`. É por
+   * isso que ele existe mesmo quando o catálogo não tem nada a oferecer — a
+   * IARA pode entender perfeitamente um pedido que ela não sabe atender, e
+   * dizer isso é melhor que fingir que não entendeu.
+   */
+  readonly objetivoSemantico: string | null;
+  /**
+   * A HABILIDADE mais provável, ou `null` quando nenhuma se sustenta.
+   *
+   * É a resposta operacional — "quem executa isto?" — e vem DEPOIS do
+   * significado. Uma frase pode ter `objetivoSemantico` e não ter `objetivo`:
+   * significa que a IARA entendeu e não tem ferramenta, que é uma lacuna de
+   * capacidade e não de compreensão.
+   */
   readonly objetivo: string | null;
   readonly operacao: Operacao | null;
   /** O substantivo de domínio de que a frase trata. */
@@ -838,6 +865,7 @@ export function compreender(entrada: EntradaDeCompreensao): ContratoSemantico {
 
   return {
     ato,
+    objetivoSemantico: comporObjetivoSemantico(operacao, referente, objeto),
     objetivo,
     operacao,
     objeto,
@@ -947,6 +975,50 @@ function decidirAto(x: TracosDoAto): AtoComunicativo {
     return 'ambigua';
   }
   return 'conversar';
+}
+
+/**
+ * O VERBO CANÔNICO DE CADA OPERAÇÃO — o vocabulário em que o significado é
+ * escrito.
+ *
+ * Uma tabela de OITO entradas, uma por operação, e ela não cresce com o
+ * catálogo nem com a língua: é a nomenclatura do próprio `Operacao`. Serve para
+ * `objetivoSemantico` ser legível por gente — `consultar_disponibilidade` diz
+ * mais num relatório de auditoria do que `leitura+disponibilidade`.
+ */
+const VERBO_CANONICO: Record<Operacao, string> = {
+  leitura: 'consultar',
+  contagem: 'contar',
+  analise: 'analisar',
+  criacao: 'criar',
+  alteracao: 'alterar',
+  remocao: 'remover',
+  envio: 'enviar',
+  execucao: 'executar',
+};
+
+/**
+ * O SIGNIFICADO, COMPOSTO — nunca uma tabela de frases.
+ *
+ * `leitura` + `disponibilidade` → `consultar_disponibilidade`.
+ *
+ * O CONCEITO VEM ANTES DO OBJETO LITERAL, de propósito: « estou livre amanhã? »
+ * e « tenho horário amanhã? » têm objetos diferentes ("livre", "horario") e o
+ * MESMO conceito normalizado. É o conceito que define o que a pessoa quis; o
+ * literal serve à auditoria, não à identidade do objetivo.
+ *
+ * `null` quando falta operação ou assunto, e a ausência é honesta: sem verbo e
+ * sem objeto não há o que a frase queira — há só forma.
+ */
+function comporObjetivoSemantico(
+  operacao: Operacao | null,
+  referente: Referente,
+  objeto: string | null,
+): string | null {
+  if (operacao === null) return null;
+  const assunto = referente.conceito ?? objeto;
+  if (!assunto || assunto === REFERENTE_DESCONHECIDO) return null;
+  return `${VERBO_CANONICO[operacao]}_${assunto}`;
 }
 
 function propositoDe(ato: AtoComunicativo, operacao: Operacao | null): Proposito | null {

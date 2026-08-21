@@ -398,9 +398,10 @@ test('F2. processo que não aparece na tabela é DIVERGENTE — o lançador sair
  * `undefined` em cada caso esconderia o que cada teste está de fato variando.
  */
 function agenteDeJanela(o: {
-  lancador?: () => Promise<{ subiu: boolean; motivo: string }>;
+  lancador?: (comando: string, argumentos: string[]) => Promise<{ subiu: boolean; motivo: string }>;
   processos?: () => Promise<number[] | null>;
   janelas?: (imagem: string, ignorar?: readonly number[], esperarMs?: number) => Promise<number[] | null>;
+  foco?: (imagem: string) => Promise<'em_foco' | 'atras' | null>;
 }): AgenteLocal {
   return new AgenteLocal(
     () => undefined,
@@ -415,6 +416,7 @@ function agenteDeJanela(o: {
     undefined,
     undefined,
     o.janelas,
+    o.foco ?? (async () => 'em_foco'),
   );
 }
 
@@ -472,6 +474,53 @@ test('F4. PROCESSO SUBIU E NENHUMA JANELA APARECEU: falha declarada, jamais "Pro
   assert.match(r.texto, /nenhuma janela/i, 'a frase precisa dizer o que faltou');
 });
 
+test('F4b. janela nova que ficou ATRÁS: a frase diz isso, e não "Pronto"', async () => {
+  /**
+   * O terceiro relato de campo do mesmo pedido, 21/08/2026 12:26 — e o mais
+   * sutil dos três, porque desta vez a IARA estava dizendo a verdade.
+   *
+   *     Notepad pid 6168 — janela visível, normal, ATRÁS
+   *     em foco: chrome (a própria IARA, em tela cheia)
+   *
+   * O oráculo de janela já estava correto e afirmou "Pronto. Abri". A janela
+   * existia mesmo. A operadora continuou sem ver nada além do piscar na barra
+   * de tarefas, e escreveu: "o bloco de notas nasce apenas na barra de tarefa".
+   *
+   * Abrir sem trazer para a frente não é abrir, do ponto de vista de quem
+   * pediu. Então há um segundo efeito a verificar — o foco — e ele tem a mesma
+   * regra do primeiro: conferido, nunca presumido. `SetForegroundWindow` falha
+   * em silêncio para quem não detém o primeiro plano.
+   */
+  let vez = 0;
+  const agente = agenteDeJanela({
+    processos: async () => [6168],
+    janelas: async () => (vez++ === 0 ? [] : [0xe5]),
+    foco: async () => 'atras', // o Windows recusou o foco
+  });
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o bloco de notas');
+
+  assert.equal(r.ok, true, 'a janela nasceu — isto não é falha');
+  assert.equal(r.prova.confirmado, true, 'o efeito principal foi observado');
+  assert.doesNotMatch(r.texto, /^Pronto\./, 'a frase não pode soar como se ele tivesse aparecido na frente');
+  assert.match(r.texto, /barra de tarefas/i, 'a pessoa precisa saber onde procurar');
+  assert.match(r.prova.evidencia, /foco/i, 'a evidência precisa registrar o desfecho do foco');
+});
+
+test('F4c. janela nova E foco obtido: aí sim "Pronto"', async () => {
+  let vez = 0;
+  const agente = agenteDeJanela({
+    processos: async () => [6168],
+    janelas: async () => (vez++ === 0 ? [] : [0xe6]),
+    foco: async () => 'em_foco',
+  });
+
+  const r = await agente.abrirAplicativo('daiane', 'abra o bloco de notas');
+  assert.equal(r.prova.confirmado, true);
+  assert.match(r.texto, /^Pronto\. Abri/);
+  assert.doesNotMatch(r.texto, /barra de tarefas/i);
+});
+
 test('F5. já havia janela e nenhuma nova: ressalva honesta, nem sucesso nem falha', async () => {
   /**
    * O caso legítimo do programa que traz a janela existente para a frente.
@@ -487,7 +536,15 @@ test('F5. já havia janela e nenhuma nova: ressalva honesta, nem sucesso nem fal
   const r = await agente.abrirAplicativo('daiane', 'abra o chrome');
   assert.equal(r.ok, true);
   assert.equal(r.prova.confirmado, false);
-  assert.equal(r.prova.motivo, 'sem_meio_de_verificar');
+  /**
+   * `ja_estava_aberto` e NAO `sem_meio_de_verificar`. Os dois chegam por
+   * caminhos opostos: o segundo e ignorancia — agi e nao tenho como olhar; o
+   * primeiro e conhecimento — olhei, contei as janelas antes e depois, e o
+   * efeito ja estava no mundo. Dizer "nao consigo provar" sobre algo
+   * perfeitamente observavel ensina o operador a ignorar as ressalvas que sao
+   * verdadeiras.
+   */
+  assert.equal(r.prova.motivo, 'ja_estava_aberto');
   assert.match(r.texto, /já estava aberto/i);
 });
 
@@ -697,6 +754,12 @@ test('H3. URL inválida é recusada ANTES do spawn — nenhum processo é lança
 });
 
 test('H4. URL válida chega ao spawn como argumento próprio, e a resposta cita o endereço', async () => {
+  /**
+   * A sonda de JANELAS entra injetada aqui de proposito. Sem ela, este teste
+   * passaria a rodar o PowerShell de verdade e a medir o Chrome da maquina de
+   * quem roda a suite — e um teste que depende de o Chrome estar aberto na sua
+   * mesa nao esta testando o produto, esta testando a sua mesa.
+   */
   let argumentosRecebidos: string[] = [];
   let vez = 0;
   const agente = new AgenteLocal(
@@ -707,6 +770,15 @@ test('H4. URL válida chega ao spawn como argumento próprio, e a resposta cita 
       return { subiu: true, motivo: '' };
     },
     async () => (vez++ === 0 ? [] : [4321]),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    async () => (vez > 1 ? [0xd4] : []),
+    async () => 'em_foco',
   );
 
   const r = await agente.abrirAplicativo('daiane', 'abra o chrome', 'https://youtube.com');
@@ -720,6 +792,12 @@ test('H4. URL válida chega ao spawn como argumento próprio, e a resposta cita 
 });
 
 test('H5. sem URL, o comportamento de sempre continua idêntico (argv sem site nenhum)', async () => {
+  /**
+   * A sonda de JANELAS entra injetada aqui de proposito. Sem ela, este teste
+   * passaria a rodar o PowerShell de verdade e a medir o Chrome da maquina de
+   * quem roda a suite — e um teste que depende de o Chrome estar aberto na sua
+   * mesa nao esta testando o produto, esta testando a sua mesa.
+   */
   let argumentosRecebidos: string[] = [];
   let vez = 0;
   const agente = new AgenteLocal(
@@ -730,6 +808,15 @@ test('H5. sem URL, o comportamento de sempre continua idêntico (argv sem site n
       return { subiu: true, motivo: '' };
     },
     async () => (vez++ === 0 ? [] : [4321]),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    async () => (vez > 1 ? [0xd4] : []),
+    async () => 'em_foco',
   );
 
   const r = await agente.abrirAplicativo('daiane', 'abra o chrome');
