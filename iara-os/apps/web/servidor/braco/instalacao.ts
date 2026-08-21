@@ -59,6 +59,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import caminho from 'node:path';
+import { deslocamentoDoSubsistema, SUBSISTEMA_CONSOLE, tornarSemConsole } from './pe';
 import type path from 'node:path';
 
 /** `%LOCALAPPDATA%\IARA\braco` — um lugar só, sempre o mesmo. */
@@ -415,12 +416,33 @@ export function lerEstadoInstalado(pasta = pastaDeInstalacao()): EstadoInstalado
  */
 function mesmoConteudo(a: string, b: string): boolean {
   try {
-    const hash = (f: string) => createHash('sha256').update(readFileSync(f)).digest('hex');
-    return hash(a) === hash(b);
+    return hashNormalizado(a) === hashNormalizado(b);
   } catch {
     /* Destino ausente é o caso normal da primeira instalação, não erro. */
     return false;
   }
+}
+
+/**
+ * O HASH IGNORA O CAMPO DO SUBSISTEMA, e sem isso eu teria criado um defeito
+ * novo ao consertar a janela preta.
+ *
+ * A instalação patcheia as CÓPIAS (`supervisor.exe` e o runtime) para o
+ * subsistema GUI, enquanto o arquivo baixado continua console. Com um hash
+ * ingênuo, origem e destino passariam a diferir SEMPRE — e o reparo, que existe
+ * justamente para não recopiar, voltaria a copiar por cima de um executável em
+ * execução. `EBUSY`, stack trace, e a operadora de volta ao ponto de partida.
+ *
+ * Dois bytes de diferença conhecida e deliberada não são conteúdo diferente.
+ * Normalizar antes de comparar é o que faz a pergunta ser "é o mesmo programa?"
+ * em vez de "os arquivos são idênticos?".
+ */
+function hashNormalizado(arquivo: string): string {
+  const conteudo = readFileSync(arquivo);
+  const onde = deslocamentoDoSubsistema(conteudo);
+  /* O buffer é nosso e morre aqui — a escrita não alcança o disco. */
+  if (onde !== null) conteudo.writeUInt16LE(SUBSISTEMA_CONSOLE, onde);
+  return createHash('sha256').update(conteudo).digest('hex');
 }
 
 /**
@@ -465,6 +487,38 @@ export function aplicarInstalacao(plano: PlanoDeInstalacao, executavel: string):
    * em execução.
    */
   copiarSePreciso(executavel, plano.destino_supervisor);
+
+  /**
+   * O SUPERVISOR PERDE O CONSOLE AQUI, e é o único lugar onde isso pode
+   * acontecer: é o instante em que o arquivo existe, ainda não está em
+   * execução, e portanto não está trancado.
+   *
+   * O defeito que isto fecha foi visto em produção em 21/08/2026: a tarefa
+   * agendada abria uma janela preta na tela da operadora, e fechá-la matava o
+   * supervisor — que levava o runtime junto. Um clique num "X" derrubava a
+   * infraestrutura.
+   *
+   * `windowsHide` não resolve porque não existe na rota da tarefa: lá quem cria
+   * o processo é o Agendador, e ele não aceita flag de janela. Esconder,
+   * minimizar ou mandar para trás seriam apostas em ninguém clicar. O que
+   * resolve é o processo não pedir console — ver `pe.ts`.
+   *
+   * NÃO derruba a instalação se falhar. Um braço com janela preta é um
+   * incômodo; um computador sem braço é o problema que este trabalho inteiro
+   * existe para acabar.
+   */
+  for (const [papel, alvo] of [
+    ['supervisor', plano.destino_supervisor],
+    ['runtime', plano.destino_runtime],
+  ] as const) {
+    const r = tornarSemConsole(alvo);
+    if (r !== 'convertido' && r !== 'ja_sem_console') {
+      console.warn(
+        `[IARA] não consegui tirar o console do ${papel} (${r}). ` +
+          'A IARA vai funcionar, mas uma janela preta pode aparecer.',
+      );
+    }
+  }
 
   const estado: EstadoInstalado = {
     versao: plano.versao,

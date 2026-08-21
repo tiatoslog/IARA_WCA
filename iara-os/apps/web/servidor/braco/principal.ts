@@ -88,7 +88,7 @@ import { supervisionar } from './supervisor';
 carregarEnv({ path: '.env.local' });
 carregarEnv();
 
-const VERSAO = '1.6.0';
+const VERSAO = '1.8.0';
 
 /**
  * O ENDEREÇO DA IARA, assado no executável em tempo de empacotamento.

@@ -405,6 +405,21 @@ export const PONTE_DE_EXECUCAO: readonly string[] = [
    */
   'servidor/braco/instalacao.ts',
   'servidor/braco/supervisor.ts',
+  /**
+   * `pe.ts` vira DOIS BYTES do cabeçalho de um executável — o campo `Subsystem`,
+   * de console para GUI —, e é por isso que abre `node:fs`.
+   *
+   * Fica nesta classe e não em `EFEITO_EXTERNO` pelo mesmo argumento dos dois
+   * acima: não há destinatário, não há requisição saindo, não há efeito que
+   * alguém de fora perceba. É o instalador preparando o próprio binário antes
+   * de ele rodar.
+   *
+   * E o alcance é o mais estreito do arquivo inteiro: um único caminho, vindo
+   * de `plano.destino_supervisor`, e uma escrita de 2 bytes num deslocamento
+   * que só existe se o arquivo já se provou um PE válido. Não lê conteúdo, não
+   * lista diretório, não apaga nada.
+   */
+  'servidor/braco/pe.ts',
 ];
 
 /**

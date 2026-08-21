@@ -35,10 +35,63 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync, openSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { lerEstadoInstalado, pastaDeInstalacao } from './instalacao';
+
+/**
+ * O SUPERVISOR REGISTRA EM ARQUIVO, e isso é PRÉ-REQUISITO da janela sumir.
+ *
+ * A partir de 21/08/2026 `supervisor.exe` é convertido para o subsistema GUI
+ * na instalação (ver `pe.ts`), justamente para o Windows não lhe dar console.
+ * Sem console, `process.stdout` não tem para onde escrever: um `console.log`
+ * ali é uma linha que ninguém nunca mais vai ler.
+ *
+ * A ORDEM IMPORTA e é a diferença entre consertar e trocar de defeito. Se o
+ * console saísse primeiro, "a janela preta sumiu" viria acompanhado de "não sei
+ * mais por que o runtime caiu" — e o segundo problema é pior, porque não
+ * aparece na tela de ninguém.
+ *
+ * `console.log` continua sendo chamado ao lado: em desenvolvimento
+ * (`--supervisor` num terminal) o console existe e é onde a pessoa está
+ * olhando.
+ */
+function registrar(pasta: string, evento: string, dados: Record<string, unknown> = {}): void {
+  const linha = JSON.stringify({
+    instante: new Date().toISOString(),
+    canal: 'supervisor',
+    pid: process.pid,
+    evento,
+    ...dados,
+  });
+  console.log(linha);
+  try {
+    /**
+     * A PASTA VEM DE FORA, e isso não é preferência de estilo.
+     *
+     * A primeira redação chamava `pastaDeInstalacao()` aqui dentro. O resultado
+     * apareceu no próprio arquivo que eu tinha acabado de criar: 25 KB de
+     * linhas com `pid_runtime: 4242` — o PID falso dos testes de unidade —
+     * gravadas no registro de PRODUÇÃO, porque `supervisionar()` recebe a pasta
+     * por injeção e o logger a ignorava.
+     *
+     * Um diário de auditoria contaminado por teste é pior que nenhum: ele
+     * parece evidência, e faz alguém investigar um reinício que nunca
+     * aconteceu naquela máquina.
+     */
+    const destino = path.join(pasta, 'registro');
+    mkdirSync(destino, { recursive: true });
+    appendFileSync(
+      path.join(destino, `supervisor-${new Date().toISOString().slice(0, 10)}.log`),
+      `${linha}\r\n`,
+      'utf8',
+    );
+  } catch {
+    /* Ficar sem registro é ruim; derrubar o supervisor por causa disso seria
+       pior. Ele existe para manter o braço de pé, e isso continua possível. */
+  }
+}
 
 /** Espera antes de reerguer, por tentativa consecutiva. Ver o cabeçalho. */
 const FREIO_MS = [1_000, 2_000, 5_000, 10_000, 30_000, 60_000] as const;
@@ -121,6 +174,7 @@ export async function supervisionar(opcoes: OpcoesDoSupervisor = {}): Promise<Es
         ultima_saida: 'atual.json ausente — a instalação não terminou',
         desde: new Date(agora()).toISOString(),
       };
+      registrar(pasta, 'sem_versao', { motivo: 'atual.json ausente — a instalação não terminou' });
       escreverEstado(pasta, estado);
       return estado;
     }
@@ -140,6 +194,7 @@ export async function supervisionar(opcoes: OpcoesDoSupervisor = {}): Promise<Es
 
     const filho = (opcoes.iniciar ?? padraoIniciar)(executavel);
 
+    registrar(pasta, 'runtime_iniciado', { versao: instalado.versao, pid_runtime: filho.pid ?? null });
     escreverEstado(pasta, {
       versao: instalado.versao,
       runtime: 'vivo',
@@ -183,10 +238,13 @@ export async function supervisionar(opcoes: OpcoesDoSupervisor = {}): Promise<Es
 
     const espera = FREIO_MS[Math.min(consecutivas, FREIO_MS.length - 1)];
     consecutivas += 1;
-    console.log(
-      `[supervisor] runtime ${instalado.versao} saiu (${saida}) depois de ${Math.round(viveu / 1000)}s; ` +
-        `reerguendo em ${espera / 1000}s`,
-    );
+    registrar(pasta, 'runtime_caiu', {
+      versao: instalado.versao,
+      saida,
+      viveu_s: Math.round(viveu / 1000),
+      reerguendo_em_s: espera / 1000,
+      reinicios,
+    });
     await esperar(espera);
   }
 

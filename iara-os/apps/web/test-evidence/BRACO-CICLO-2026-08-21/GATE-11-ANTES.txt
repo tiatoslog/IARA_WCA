@@ -1,0 +1,36 @@
+﻿SUPERVISOR-HEADLESS - 2026-08-21T13:43:21.4272062-03:00
+quem: COMPUTADOR\daian  sessao: 1
+sanidade da enumeracao: 318 janelas de topo no total
+
+=============== 1. PROCESSOS ===============
+  pid=13296 pai=19136() sessao=1 nome=supervisor.exe criado=21/08/2026 13:29:36
+  pid=21500 pai=13296(supervisor.exe) sessao=1 nome=iara-braco.exe criado=21/08/2026 13:29:39
+
+=============== 2. SUBSISTEMA DO PE ===============
+  2 = WINDOWS_GUI (sem console)   3 = WINDOWS_CUI (com console)
+  supervisor.exe -> Subsystem=3 (CONSOLE)
+  1.3.0 -> Subsystem=3
+  1.4.0 -> Subsystem=3
+  1.5.0 -> Subsystem=3
+  1.6.0 -> Subsystem=3
+
+=============== 3. JANELAS DESSES PROCESSOS ===============
+  janelas de topo do braco: 1
+     21500;590882;oculta;C:\Users\daian\AppData\Local\IARA\braco\versoes\1.6.0\iara-braco.exe
+
+=============== 4. JANELAS COM O NOME DO BRACO NO TITULO ===============
+  encontradas: 1
+     21500;590882;oculta;C:\Users\daian\AppData\Local\IARA\braco\versoes\1.6.0\iara-braco.exe
+
+=============== 5. CONHOST ASSOCIADO ===============
+  conhost.exe hospeda console. Um conhost filho do braco significa console
+  associado, mesmo que nenhuma janela esteja visivel.
+  conhost filhos do braco: 1
+     pid=28464 pai=21500
+
+=============== VEREDITO ===============
+  supervisor e runtime vivos ......... PASS
+  zero janelas do braco .............. FAIL
+  zero janelas com nome do braco ..... FAIL
+  zero conhost associado ............. FAIL
+  supervisor sem console no PE ....... FAIL

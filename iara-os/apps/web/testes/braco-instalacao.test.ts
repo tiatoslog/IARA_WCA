@@ -40,6 +40,8 @@ import { mkdtempSync, readdirSync, readFileSync, statSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { subsistemaAtual } from '../servidor/braco/pe';
+
 import {
   aplicarInstalacao,
   comandoDaTarefa,
@@ -334,6 +336,53 @@ test('BI-19. reparar com o mesmo arquivo NÃO reescreve o executável', () => {
 
   assert.equal(statSync(reparo.destino_runtime).mtimeMs, marca, 'reescreveu o runtime à toa');
   assert.equal(statSync(reparo.destino_supervisor).mtimeMs, marcaSup, 'reescreveu o supervisor à toa');
+});
+
+test('BI-19b. depois de tirar o console, o REPARO ainda não recopia', async () => {
+  /**
+   * A armadilha que eu quase criei ao consertar a janela preta.
+   *
+   * A instalação patcheia as cópias para o subsistema GUI (ver `pe.ts`), e o
+   * arquivo baixado continua console. Com um hash ingênuo, origem e destino
+   * passariam a diferir SEMPRE — e o reparo, que existe exatamente para não
+   * recopiar, voltaria a copiar por cima de um executável em execução. `EBUSY`,
+   * stack trace, e a operadora de volta ao ponto de partida de BI-19.
+   *
+   * Dois bytes de diferença conhecida e deliberada não são conteúdo diferente.
+   */
+  const casa = mkdtempSync(join(tmpdir(), 'iara-inst-'));
+  const baixado = join(casa, 'baixado.exe');
+  /* Um PE mínimo de verdade: o patch precisa achar o campo para exercer o caso. */
+  const buf = Buffer.alloc(1024);
+  buf.writeUInt16LE(0x5a4d, 0);
+  buf.writeUInt32LE(0x80, 0x3c);
+  buf.writeUInt32LE(0x0000_4550, 0x80);
+  buf.writeUInt16LE(0x20b, 0x80 + 24);
+  buf.writeUInt16LE(3, 0x80 + 24 + 68); // console
+  writeFileSync(baixado, buf);
+
+  const p = planoDeInstalacao({
+    executavel: baixado,
+    pasta: join(casa, 'instalado'),
+    versao: '1.7.0',
+    versaoInstalada: null,
+  });
+
+  aplicarInstalacao(p, baixado);
+  assert.equal(subsistemaAtual(p.destino_supervisor), 2, 'o supervisor instalado continua com console');
+  assert.equal(subsistemaAtual(p.destino_runtime), 2, 'o runtime instalado continua com console');
+  assert.equal(subsistemaAtual(baixado), 3, 'o arquivo BAIXADO foi alterado — ele tem de continuar console');
+
+  const marca = statSync(p.destino_supervisor).mtimeMs;
+  const marcaR = statSync(p.destino_runtime).mtimeMs;
+
+  aplicarInstalacao(
+    { ...p, acao: 'reparar', versao_anterior: '1.7.0' },
+    baixado,
+  );
+
+  assert.equal(statSync(p.destino_supervisor).mtimeMs, marca, 'recopiou o supervisor por causa do patch');
+  assert.equal(statSync(p.destino_runtime).mtimeMs, marcaR, 'recopiou o runtime por causa do patch');
 });
 
 test('BI-20. conteúdo diferente com a mesma versão AINDA é copiado', () => {

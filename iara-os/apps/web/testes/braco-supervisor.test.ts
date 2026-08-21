@@ -19,7 +19,7 @@
  */
 
 import { EventEmitter } from 'node:events';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -301,6 +301,35 @@ test('SV-09. o pid do runtime vivo aparece em disco', async () => {
   });
 
   assert.equal(visto, 4242);
+});
+
+test('SV-11. o registro NUNCA sai da pasta injetada', async () => {
+  /**
+   * DEFEITO REAL, achado no próprio arquivo que ele suja: depois de eu dar ao
+   * supervisor um diário em disco, o registro de PRODUÇÃO apareceu com 25 KB de
+   * linhas de teste — `pid_runtime: 4242`, o processo de mentira daqui.
+   * `supervisionar()` recebe a pasta por injeção e o logger chamava
+   * `pastaDeInstalacao()` por conta própria.
+   *
+   * Um diário de auditoria contaminado por teste é pior que nenhum: ele parece
+   * evidência, e faz alguém investigar um reinício que nunca aconteceu naquela
+   * máquina.
+   */
+  const pasta = pastaComVersao('1.3.0');
+  await supervisionar({
+    pasta,
+    iniciar: () => runtimeQueMorre(),
+    esperar: async () => {},
+    voltas: 2,
+  });
+
+  const registro = path.join(pasta, 'registro');
+  assert.ok(existsSync(registro), 'o registro precisa nascer DENTRO da pasta injetada');
+  const arquivos = readdirSync(registro);
+  assert.ok(arquivos.length > 0, 'nada foi registrado');
+  const conteudo = readFileSync(path.join(registro, arquivos[0]), 'utf8');
+  assert.match(conteudo, /runtime_caiu/, 'a queda precisa estar no diário');
+  assert.match(conteudo, /"instante"/, 'sem hora, o diário responde "aconteceu" e não "quando"');
 });
 
 // ===========================================================================
