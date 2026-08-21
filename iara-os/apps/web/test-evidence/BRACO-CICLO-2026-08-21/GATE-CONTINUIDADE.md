@@ -49,15 +49,40 @@ Confirmado no XML que o Windows guardou (não no que eu mandei):
 
 ### Linha de base do motor, antes do reboot
 
+O commit `64f82e1` foi para `main` às 13:46 e o Railway redeployou. O backend em
+produção passou de `28b63bf` para **`64f82e1`** — é este SHA que `/saude` deve
+reportar daqui em diante.
+
 ```
 https://iara.up.railway.app/saude
   ok=true  modo=producao  autenticacao=supabase
-  backend 1.0.0 (28b63bf)  ambiente=producao
-  dispositivos=2   maos_no_motor=false
+  backend 1.0.0 (64f82e1)  ambiente=producao
 ```
 
-Esta máquina contribui com **1** (supervisor 23296 → runtime 26684). O segundo
-dispositivo não é esta máquina — a resolver depois do reboot.
+### Reconexão já provada, de graça, pelo próprio deploy
+
+O redeploy derrubou todas as conexões e é uma interrupção de transporte real:
+
+```
+13:47:20   sha 28b63bf   uptime 6629s   dispositivos 1
+13:47:41   sha 64f82e1   uptime    2s   dispositivos 0   <- backend novo, todos caíram
+13:48:02   sha 64f82e1   uptime   23s   dispositivos 1   <- o braço voltou sozinho
+```
+
+**~21 segundos, sem intervenção.** E o que prova que foi RECONEXÃO e não
+renascimento: os PIDs não mudaram. Supervisor `23296` e runtime `26684`, criados
+às 10:35:30 e 10:35:32, seguem os mesmos depois do episódio — o supervisor não
+precisou reerguer nada, o próprio runtime restabeleceu o socket.
+
+Isso cobre a parte de transporte do item 10 (perda de conexão). Falta a variante
+de rede local caindo, que se testa depois do reboot.
+
+### Contagem de dispositivos: pendência declarada
+
+`dispositivos` oscilou entre 1 e 2 nas medições (2 às 10:39, 1 às 13:46, 2 às
+13:49, 1 às 13:49). Esta máquina contribui com exatamente **1**. O segundo não é
+daqui — outro computador ou socket órfão. **A resolver depois do reboot**, e não
+pode ser confundido com o braço desta máquina ao avaliar o gate.
 
 ## O QUE FAZER AO VOLTAR
 
