@@ -383,6 +383,28 @@ export const PONTE_DE_EXECUCAO: readonly string[] = [
   'servidor/barramento/PonteDispositivos.ts',
   // O processo que roda na máquina do operador e tem as mãos de verdade.
   'servidor/braco/principal.ts',
+  /**
+   * O CICLO DE VIDA DO BRAÇO (21/08/2026) — os dois módulos que fazem o
+   * programa existir na máquina entre um logon e o seguinte.
+   *
+   * `instalacao.ts` copia o executável e registra a tarefa do Windows;
+   * `supervisor.ts` inicia o runtime e o reergue quando ele cai. Os dois abrem
+   * `node:fs` e `node:child_process`, e por isso precisam estar aqui.
+   *
+   * A distinção que os mantém DENTRO desta classe e fora de `EFEITO_EXTERNO`:
+   * nada aqui alcança o mundo em nome de alguém. Não há destinatário, não há
+   * requisição saindo, não há efeito que uma pessoa de fora perceba. É o
+   * programa da operadora cuidando da própria existência no computador dela —
+   * a mesma isenção, e pelo mesmo argumento, que `principal.ts` já tinha para
+   * se atualizar (ver `A4` em `fronteira-efeitos.test.ts`).
+   *
+   * O `spawn` do supervisor tem alvo FIXO, derivado do disco:
+   * `<instalação>/versoes/<atual.json>/iara-braco.exe`. Nenhum parâmetro de
+   * habilidade, nenhuma frase de operador e nada vindo da rede escolhe o que
+   * ele executa.
+   */
+  'servidor/braco/instalacao.ts',
+  'servidor/braco/supervisor.ts',
 ];
 
 /**

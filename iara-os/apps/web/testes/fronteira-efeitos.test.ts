@@ -240,6 +240,21 @@ test('A4. shell e filesystem mutável continuam confinados ao AgenteLocal', () =
      * operador que as habilidades tocam.
      */
     path.join('servidor', 'braco', 'principal.ts'),
+    /**
+     * O SUPERVISOR (21/08/2026) — mesma isenção do `principal.ts` logo acima, e
+     * pelo mesmo motivo, com um detalhe que a torna MAIS estreita, não menos:
+     * o único `spawn` deste arquivo tem alvo fixo e derivado do disco —
+     * `<instalação>/versoes/<atual.json>/iara-braco.exe`. Nada que venha de
+     * fora escolhe o que ele executa: não há parâmetro de habilidade, não há
+     * frase de operador, não há caminho vindo da rede. Ele sobe um processo,
+     * sempre o mesmo, sempre o próprio produto.
+     *
+     * Ele existe justamente para RETIRAR de `principal.ts` a troca do
+     * executável — o `.bat` de retry copiando por cima do `process.execPath`.
+     * Se um dia esta linha precisar ser removida, é porque o supervisor ganhou
+     * competência que não é dele.
+     */
+    path.join('servidor', 'braco', 'supervisor.ts'),
   ];
   const infratores = fontes(path.join(RAIZ, 'servidor'))
     .filter((f) => /\bspawn\(|\bexecFile\(|\bwriteFile\(|\bappendFile\(|\bmkdir\(/.test(readFileSync(f, 'utf8')))

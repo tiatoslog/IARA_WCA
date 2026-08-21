@@ -72,6 +72,18 @@ import {
   PareamentoRecusado,
   pedirCodigo,
 } from './pareamento';
+import {
+  aplicarInstalacao,
+  ArquivoEmUso,
+  lerEstadoInstalado,
+  pastaDeInstalacao,
+  planoDeInstalacao,
+  registrarTarefa,
+  supervisorVivo,
+  tarefaRegistrada,
+} from './instalacao';
+import { papelDoProcesso } from './papel';
+import { supervisionar } from './supervisor';
 
 carregarEnv({ path: '.env.local' });
 carregarEnv();
@@ -856,13 +868,167 @@ const encerrar = () => {
 process.on('SIGINT', encerrar);
 process.on('SIGTERM', encerrar);
 
-console.log(`[IARA] IARA — Automação v${VERSAO} em ${NOME} (${platform()} ${release()})`);
+// ---------------------------------------------------------------------------
+// OS TRÊS PAPÉIS — instalador, supervisor, runtime (21/08/2026)
+//
+// Até esta data o programa tinha um papel só: ser o braço. A consequência
+// estava na pasta de Downloads da operadora, em cinco cópias do mesmo
+// executável — `iara-braco.exe` até `iara-braco (4).exe`. Ele nunca saía de
+// Downloads, nada no Windows o iniciava depois do reboot, e a única forma de
+// ter braço era baixar de novo e clicar de novo.
+//
+// A varredura confirmou nas quatro camadas do SO — `HKCU\...\Run`,
+// `HKLM\...\Run`, pasta Inicializar, serviços e tarefas agendadas — e no
+// repositório inteiro: o autostart não quebrou, ele nunca existiu.
+// ---------------------------------------------------------------------------
+
 /**
- * O pareamento acontece ANTES da primeira conexão, e não em paralelo com ela.
+ * INSTALAR: copiar para um lugar estável, agendar o logon, subir o supervisor.
  *
- * Conectar primeiro produziria, na primeira execução de toda máquina nova, uma
- * recusa do motor no console — "este computador não está autorizado" — em cima
- * do código que a pessoa deveria estar lendo. Ela veria um erro e um código, e
- * não teria como saber que o erro era esperado.
+ * Esta função não deixa o processo virar braço. Ela instala e SAI — quem
+ * conecta na IARA é o runtime que o supervisor sobe. Um instalador que também
+ * atendesse ordens seria um quarto lugar onde o braço existe, e o primeiro a
+ * ficar para trás numa atualização.
  */
-void garantirIdentidade().then(() => conectar());
+async function instalarESair(): Promise<void> {
+  const pasta = pastaDeInstalacao();
+  const plano = planoDeInstalacao({
+    executavel: process.execPath,
+    pasta,
+    versao: VERSAO,
+    versaoInstalada: lerEstadoInstalado(pasta)?.versao ?? null,
+  });
+
+  console.log(`[IARA] ${plano.porque}`);
+
+  if (plano.acao === 'recusar_downgrade') {
+    console.warn(
+      `[IARA] este arquivo é a versão ${VERSAO} e o computador já tem a ${plano.versao_anterior}. ` +
+        'Nada foi alterado — a versão instalada é mais nova.',
+    );
+    return;
+  }
+
+  if (plano.acao !== 'ja_instalado') {
+    try {
+      aplicarInstalacao(plano, process.execPath);
+      console.log(`[IARA] instalado em ${pasta}`);
+    } catch (e) {
+      if (e instanceof ArquivoEmUso) {
+        /**
+         * O único caminho que ainda pode ver `EBUSY`: mesma versão instalada,
+         * bytes DIFERENTES, e o programa rodando. Em produção isso quase não
+         * acontece — versão nova tem número novo. Acontece com quem
+         * reempacota a mesma versão, e a resposta honesta é dizer o que fazer,
+         * não tentar 30 vezes esperando o lock soltar.
+         */
+        console.error(
+          '[IARA] a IARA já está rodando neste computador e não posso trocar os arquivos dela ' +
+            'enquanto isso.\n' +
+            '       Feche a IARA (ícone perto do relógio) ou reinicie o computador, ' +
+            'e abra este programa de novo.',
+        );
+        return;
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * A tarefa é reconferida SEMPRE, inclusive no `ja_instalado`. É o reparo que
+   * a idempotência existe para permitir: a pessoa que abre o programa de novo
+   * porque "parou de funcionar" costuma estar certa — e a causa mais provável é
+   * a tarefa ter sido apagada por uma limpeza, um antivírus ou outra pessoa.
+   */
+  if (plano.registrar_tarefa || !tarefaRegistrada()) {
+    const falha = registrarTarefa(plano);
+    if (falha) {
+      console.warn(
+        `[IARA] não consegui agendar o início automático: ${falha}\n` +
+          '       A IARA vai funcionar agora, mas você vai precisar abrir este programa ' +
+          'de novo depois de reiniciar o computador.',
+      );
+    } else {
+      console.log('[IARA] início automático agendado — o braço volta sozinho depois do reboot.');
+    }
+  }
+
+  /**
+   * UM SUPERVISOR SÓ. A operadora que reabre o `.exe` — e ela reabre — ganharia
+   * um segundo supervisor, um segundo runtime, dois lugares no limite de
+   * dispositivos e duas versões possíveis atendendo a mesma pessoa. O
+   * `MultipleInstancesPolicy` do XML não cobre isto: ele governa a tarefa
+   * agendada, não um duplo clique.
+   */
+  const jaDePe = supervisorVivo(pasta);
+  if (jaDePe !== null) {
+    console.log(`[IARA] a IARA já estava de pé aqui (supervisor ${jaDePe}). Nada a subir.`);
+    return;
+  }
+
+  /**
+   * O supervisor sobe DESTACADO e o instalador morre em seguida. É o que faz o
+   * duplo clique terminar com braço de pé sem esperar reboot: `detached` +
+   * `unref` é a diferença entre "a IARA está lá" e "a IARA está lá até você
+   * fechar esta janela preta".
+   */
+  const sup = spawn(plano.destino_supervisor, ['--supervisor'], {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+  });
+  sup.unref();
+  console.log('[IARA] pronto. A IARA já tem as mãos neste computador.');
+}
+
+async function principal(): Promise<void> {
+  const papel = papelDoProcesso({
+    argumentos: process.argv.slice(2),
+    empacotado: await rodandoComoExecutavelEmpacotado(),
+  });
+
+  if (papel === 'instalar') {
+    await instalarESair();
+    return;
+  }
+
+  if (papel === 'supervisor') {
+    console.log(`[IARA] supervisor v${VERSAO} em ${NOME}`);
+    await supervisionar();
+    return;
+  }
+
+  console.log(`[IARA] IARA — Automação v${VERSAO} em ${NOME} (${platform()} ${release()})`);
+  /**
+   * O pareamento acontece ANTES da primeira conexão, e não em paralelo com ela.
+   *
+   * Conectar primeiro produziria, na primeira execução de toda máquina nova, uma
+   * recusa do motor no console — "este computador não está autorizado" — em cima
+   * do código que a pessoa deveria estar lendo. Ela veria um erro e um código, e
+   * não teria como saber que o erro era esperado.
+   */
+  await garantirIdentidade();
+  conectar();
+}
+
+/**
+ * NENHUM CAMINHO TERMINA EM STACK TRACE.
+ *
+ * Foi assim que o `EBUSY` da segunda execução apareceu para mim em 21/08/2026:
+ * uma janela preta com `node:fs:3085` e `binding.copyFile`. Para quem escreveu o
+ * código é um diagnóstico; para a operadora é "o programa quebrou", e o passo
+ * seguinte dela é baixar o `.exe` de novo — a exata espiral que este trabalho
+ * existe para encerrar.
+ *
+ * O detalhe técnico continua indo para o `stderr`, onde serve; o que sai por
+ * cima é uma frase em português com o que fazer.
+ */
+void principal().catch((erro: unknown) => {
+  const detalhe = erro instanceof Error ? erro.message : String(erro);
+  console.error(
+    '[IARA] não consegui concluir esta etapa neste computador.\n' +
+      `       Detalhe técnico: ${detalhe}\n` +
+      '       Se isto se repetir, mande esta janela para quem cuida da IARA.',
+  );
+  process.exitCode = 1;
+});

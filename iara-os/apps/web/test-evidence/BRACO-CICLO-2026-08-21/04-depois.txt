@@ -1,0 +1,106 @@
+﻿DEPOIS DA INSTALACAO - 2026-08-21T09:55:32.4544500-03:00
+
+=== A TAREFA EXISTE NO WINDOWS? ===
+
+Pasta: \
+Nome do host:                                            COMPUTADOR
+Nome da tarefa:                                          \IARA-Braco
+Hora da próxima execução:                                N/A
+Status:                                                  Pronto
+Modo de Logon:                                           Interativo apenas
+Horário da última execução:                              30/11/1999 00:00:00
+Último resultado:                                        267011
+Autor:                                                   N/A
+Tarefa a ser executada:                                  C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe --supervisor
+Iniciar em:                                              N/A
+Comentário:                                              Mantém o braço da IARA de pé nesta máquina.
+Estado de tarefa agendada:                               Habilitado
+Tempo Ocioso:                                            Desativado
+Gerenciamento de Energia:                                
+Executar como Usuário:                                   daian
+Excluir tarefa se não for reagendada:                    Desativado
+Interromper tarefa se for executada X horas e X minutos: Desativado
+Agendar:                                                 O agendamento de dados não está disponível neste formato.
+Tipo de Agendamento:                                     No logon
+Hora de início:                                          N/A
+Data de início:                                          N/A
+Data de término:                                         N/A
+Dias:                                                    N/A
+Meses:                                                   N/A
+Repetir: a cada:                                         N/A
+Repetir: até: horário:                                   N/A
+Repetir: até: duração:                                   N/A
+Repetir: parar se ainda estiver em execução:             N/A
+
+=== XML REGISTRADO (o que o Windows guardou, nao o que eu mandei) ===
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.3" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Mantém o braço da IARA de pé nesta máquina.</Description>
+    <URI>\IARA-Braco</URI>
+  </RegistrationInfo>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-21-181986890-2303518322-2160230991-1004</UserId>
+      <LogonType>InteractiveToken</LogonType>
+    </Principal>
+  </Principals>
+  <Settings>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <RestartOnFailure>
+      <Count>3</Count>
+      <Interval>PT1M</Interval>
+    </RestartOnFailure>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <UseUnifiedSchedulingEngine>true</UseUnifiedSchedulingEngine>
+  </Settings>
+  <Triggers>
+    <LogonTrigger>
+      <Delay>PT20S</Delay>
+      <UserId>COMPUTADOR\daian</UserId>
+    </LogonTrigger>
+  </Triggers>
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe</Command>
+      <Arguments>--supervisor</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+
+=== ARVORE DE PROCESSOS ===
+
+
+ProcessId       : 27628
+ParentProcessId : 27040
+Name            : supervisor.exe
+CommandLine     : C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe --supervisor
+
+ProcessId       : 27136
+ParentProcessId : 27628
+Name            : iara-braco.exe
+CommandLine     : C:\Users\daian\AppData\Local\IARA\braco\versoes\1.3.0\iara-braco.exe --runtime
+
+
+
+
+=== DISCO ===
+
+FullName                                                             Length  
+--------                                                             ------  
+C:\Users\daian\AppData\Local\IARA\braco\versoes                              
+C:\Users\daian\AppData\Local\IARA\braco\atual.json                   96      
+C:\Users\daian\AppData\Local\IARA\braco\supervisor.exe               85857280
+C:\Users\daian\AppData\Local\IARA\braco\supervisor.json              141     
+C:\Users\daian\AppData\Local\IARA\braco\versoes\1.3.0                        
+C:\Users\daian\AppData\Local\IARA\braco\versoes\1.3.0\iara-braco.exe 85857280
+
+
+

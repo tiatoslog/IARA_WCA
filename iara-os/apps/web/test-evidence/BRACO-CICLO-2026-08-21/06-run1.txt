@@ -1,0 +1,4 @@
+[IARA] primeira instalação nesta máquina
+[IARA] instalado em C:\Users\daian\AppData\Local\IARA\braco
+[IARA] início automático agendado — o braço volta sozinho depois do reboot.
+[IARA] pronto. A IARA já tem as mãos neste computador.
