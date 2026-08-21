@@ -1,6 +1,6 @@
 # IARA OS — Documentação Técnica
 
-> Gerado de `npm run docs` no commit `54f7d1e`. Não editar: as seções derivadas do código são reescritas a cada execução.
+> Gerado de `npm run docs` no commit `6f86600`. Não editar: as seções derivadas do código são reescritas a cada execução.
 
 ## Visão geral
 
@@ -164,25 +164,32 @@ cognitivo e a interface são o mesmo processo por padrão.
 | `@anthropic-ai/sdk` | `^0.68.0` | Camada de raciocínio (Claude). Opcional: sem chave o sistema roda local. |
 | `@react-three/drei` | `^10.7.8` | Auxiliares de cena para a projeção "presença". |
 | `@react-three/fiber` | `^9.7.0` | React Three Fiber — o avatar 3D. |
+| `@ricky0123/vad-web` | `^0.0.30` | *(a preencher)* |
 | `@supabase/supabase-js` | `^2.112.2` | Persistência e identidade do operador. |
 | `dotenv` | `^16.4.7` | Leitura de `.env.local` fora do Next. |
 | `msedge-tts` | `^2.0.7` | Voz neural gratuita (pt-BR-FranciscaNeural), sintetizada no servidor. |
 | `next` | `^15.5.23` | Camada de projeção (interface). |
+| `qrcode` | `^1.5.4` | *(a preencher)* |
 | `react` | `^19.0.0` | Interface. |
 | `react-dom` | `^19.0.0` | Interface. |
 | `three` | `^0.180.0` | Motor 3D sob o React Three Fiber. |
 | `tsx` | `^4.19.2` | Execução de TypeScript sem passo de build — é como o motor sobe. |
 | `ws` | `^8.18.0` | WebSocket do barramento entre motor e projeção. |
+| `xlsx` | `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` | *(a preencher)* |
 
 ### Dependências de desenvolvimento
 
 | Pacote | Versão declarada |
 |---|---|
 | `@types/node` | `^22.10.7` |
+| `@types/qrcode` | `^1.5.6` |
 | `@types/react` | `^19.0.7` |
 | `@types/react-dom` | `^19.0.3` |
 | `@types/three` | `^0.180.0` |
 | `@types/ws` | `^8.5.13` |
+| `esbuild` | `^0.28.2` |
+| `playwright` | `^1.62.1` |
+| `postject` | `^1.0.0-alpha.6` |
 | `typescript` | `^5.7.3` |
 
 ### Versões forçadas (`overrides`)
@@ -201,7 +208,11 @@ Derivado de `servidor/principal.ts` e `servidor/canais/`.
 
 | Caminho | Origem no código | O que é |
 |---|---|---|
+| `/anexo` | `servidor/principal.ts` | *(a preencher)* |
+| `/parear/pedir` | `servidor/principal.ts` | *(a preencher)* |
+| `/parear/resgatar` | `servidor/principal.ts` | *(a preencher)* |
 | `/saude` | `servidor/principal.ts` | Healthcheck. É o caminho que o Railway consulta (`railway.toml`). |
+| `/transcrever` | `servidor/principal.ts` | *(a preencher)* |
 | `/canais/whatsapp` | `servidor/canais/PortaWhatsapp.ts` | Webhook da Cloud API oficial da Meta. |
 
 As páginas do Next são servidas pelo mesmo processo em modo unificado. Em
@@ -216,32 +227,66 @@ caminhos acima.
 
 ## Habilidades do kernel
 
-Derivado de `servidor/nucleo/kernel/habilidades/` — **20 habilidades**, lidas do
+Derivado de `servidor/nucleo/kernel/habilidades/` — **54 habilidades**, lidas do
 manifesto em tempo de execução. Esta é literalmente a lista que o planejador
 oferece ao modelo: se um item aparece aqui, a IARA pode planejá-lo.
 
 | id | Nome | Domínio | Risco | Custo | Efeito |
 |---|---|---|---|---|---|
 | `abrir_aplicativo` | Abrir aplicativo | automacao | médio | zero | escrita_nao_idempotente |
+| `abrir_sessao_agente_codigo` | Abrir sessão de agente de código | automacao | ALTO | zero | escrita_nao_idempotente |
 | `acionar_energia` | Energia da máquina | automacao | ALTO | zero | escrita_idempotente |
+| `acompanhar_agente_codigo` | Acompanhar sessões de agente de código | automacao | baixo | zero | só lê |
 | `agendar_lembrete` | Agendar lembrete | memoria | médio | zero | escrita_nao_idempotente |
+| `assumir_plano` | Assumir o plano autorizado | automacao | baixo | zero | escrita_idempotente |
+| `atualizar_repositorio` | Atualizar repositório | automacao | médio | zero | escrita_idempotente |
+| `auditar_sistema` | Auditoria do que a IARA observa | automacao | baixo | zero | só lê |
+| `avancar_procedimento` | Avançar no procedimento | memoria | médio | zero | escrita_nao_idempotente |
 | `buscar_documento_sharepoint` | Busca no SharePoint | operacoes | baixo | zero | só lê |
 | `buscar_historico` | Histórico de incidentes | memoria | baixo | zero | só lê |
 | `cancelar_lembrete` | Cancelar lembrete | memoria | médio | zero | escrita_idempotente |
 | `capturar_tela` | Captura de tela | automacao | médio | zero | escrita_nao_idempotente |
+| `comparar_anos_luft` | Comparação entre anos — operação LUFT | operacoes | baixo | zero | só lê |
+| `comparar_semanas_luft` | Comparação entre semanas — operação LUFT | operacoes | baixo | zero | só lê |
 | `consultar_agenda` | Relógio e calendário | memoria | baixo | zero | só lê |
+| `consultar_cargas_luft` | Cargas da operação LUFT | operacoes | baixo | zero | só lê |
 | `consultar_clima` | Radar meteorológico | pesquisa | baixo | zero | só lê |
+| `consultar_estatisticas_cargas_luft` | Estatísticas da operação LUFT | operacoes | baixo | zero | só lê |
 | `consultar_infraestrutura` | Base de centrais | operacoes | baixo | zero | só lê |
 | `consultar_memoria_corporativa` | Memória corporativa | memoria | baixo | zero | só lê |
+| `consultar_planilha_generica` | Consulta a planilha genérica | automacao | baixo | zero | só lê |
+| `consultar_procedimento` | Procedimento do GW (SOS) | memoria | baixo | zero | só lê |
+| `copiar_arquivo` | Copiar arquivo | automacao | médio | zero | escrita_idempotente |
+| `criar_arquivo` | Criar arquivo | automacao | médio | zero | escrita_idempotente |
+| `criar_evento_calendario` | Criar evento no calendário | comunicacao | ALTO | zero | escrita_nao_idempotente |
 | `criar_pasta` | Criar pasta | automacao | médio | zero | escrita_idempotente |
-| `enviar_whatsapp` | Envio de WhatsApp | comunicacao | ALTO | zero | escrita_nao_idempotente |
+| `declarar_lacuna_de_dado` | Dimensão ausente na planilha da operação | operacoes | baixo | zero | só lê |
+| `descrever_planilha` | Descrever planilha | automacao | baixo | zero | só lê |
+| `diagnosticar_qualidade_planilha` | Diagnóstico de qualidade de planilha | cognicao | baixo | zero | só lê |
+| `diagnosticar_sistema` | Diagnóstico do sistema | automacao | baixo | zero | só lê |
+| `encerrar_agente_codigo` | Encerrar sessão de agente de código | automacao | médio | zero | escrita_idempotente |
+| `encerrar_procedimento` | Encerrar procedimento guiado | memoria | médio | zero | escrita_idempotente |
+| `enviar_para_agente_codigo` | Mandar instrução para uma sessão de agente | automacao | ALTO | zero | escrita_nao_idempotente |
+| `enviar_whatsapp` | Envio de WhatsApp | comunicacao | ALTO | zero | escrita_idempotente |
 | `executar_consulta_sql` | Consulta ao banco operacional | automacao | baixo | zero | só lê |
 | `extrair_texto_documento` | Extração de texto de documento | automacao | baixo | zero | só lê |
+| `fechar_aplicativo` | Fechar aplicativo | automacao | médio | zero | escrita_idempotente |
+| `informacoes_sistema` | Informações do computador | automacao | baixo | zero | só lê |
+| `iniciar_procedimento` | Começar procedimento guiado | memoria | médio | zero | escrita_idempotente |
+| `investigar_lentidao` | Investigar lentidão do computador | automacao | baixo | zero | só lê |
 | `ler_emails` | Caixa de entrada | comunicacao | baixo | zero | só lê |
+| `listar_arquivos` | Listar arquivos | automacao | baixo | zero | só lê |
 | `listar_lembretes` | Lembretes marcados | memoria | baixo | zero | só lê |
+| `mover_arquivo` | Mover arquivo | automacao | médio | zero | escrita_nao_idempotente |
+| `observar_tela` | Acompanhar a tela do operador | automacao | médio | zero | escrita_idempotente |
 | `pesquisar_web` | Pesquisa web | pesquisa | baixo | zero | só lê |
 | `recusar_por_sigilo` | Cláusula de sigilo | memoria | baixo | zero | só lê |
+| `relatorio_executivo_luft` | Relatório executivo — operação LUFT | operacoes | baixo | zero | só lê |
+| `renomear_arquivo` | Renomear arquivo | automacao | médio | zero | escrita_nao_idempotente |
 | `resolver_confirmacao` | Resolver confirmação pendente | automacao | ALTO | zero | escrita_nao_idempotente |
+| `revisar_lacunas` | O que faltou responder | memoria | baixo | zero | só lê |
+| `treinar_procedimento` | Instrutora do procedimento (SOS) | memoria | baixo | zero | escrita_idempotente |
+| `ver_agenda_calendario` | Ver agenda | comunicacao | baixo | zero | só lê |
 
 ### As de risco alto
 
@@ -249,7 +294,10 @@ Risco alto significa **efeito que alcança terceiros ou o mundo fora do processo
 Elas exigem confirmação do operador e permissão `externo` — ver
 `servidor/nucleo/kernel/PoliticaRisco.ts` e `Papeis.ts`.
 
+- `abrir_sessao_agente_codigo` — Abrir sessão de agente de código. Permissões: `escrita`.
 - `acionar_energia` — Energia da máquina. Permissões: `escrita`.
+- `criar_evento_calendario` — Criar evento no calendário. Permissões: `rede`, `externo`.
+- `enviar_para_agente_codigo` — Mandar instrução para uma sessão de agente. Permissões: `escrita`.
 - `enviar_whatsapp` — Envio de WhatsApp. Permissões: `rede`, `externo`.
 - `resolver_confirmacao` — Resolver confirmação pendente. Permissões: `escrita`.
 
@@ -261,6 +309,7 @@ O esquema é a trava: parâmetro não declarado não chega ao provedor
 | Habilidade | Parâmetro | Tipo | Padrão | Valores aceitos |
 |---|---|---|---|---|
 | `consultar_clima` | `horizonte` | texto | `agora` | `agora`, `hoje`, `amanha` |
+| `consultar_clima` | `cidade` | texto | — | — |
 | `consultar_infraestrutura` | `uf` | texto | `GERAL` | `GERAL`, `MT`, `MS`, `GO`, `SP`, `PR`, `RO` |
 | `pesquisar_web` | `consulta` | texto | — | — |
 | `buscar_historico` | `consulta` | texto | — | — |
@@ -273,15 +322,79 @@ O esquema é a trava: parâmetro não declarado não chega ao provedor
 | `enviar_whatsapp` | `destinatario` | texto | — | — |
 | `enviar_whatsapp` | `mensagem` | texto | — | — |
 | `buscar_documento_sharepoint` | `consulta` | texto | — | — |
+| `ver_agenda_calendario` | `dias_a_frente` | numero | `7` | — |
+| `criar_evento_calendario` | `assunto` | texto | — | — |
+| `criar_evento_calendario` | `quando` | texto | — | — |
+| `criar_evento_calendario` | `duracao_minutos` | numero | `60` | — |
+| `criar_evento_calendario` | `local` | texto | — | — |
 | `criar_pasta` | `nome` | texto | — | — |
 | `criar_pasta` | `local` | texto | `area_de_trabalho` | `area_de_trabalho`, `documentos`, `downloads` |
 | `abrir_aplicativo` | `aplicativo` | texto | — | — |
+| `abrir_aplicativo` | `site` | texto | — | — |
+| `fechar_aplicativo` | `aplicativo` | texto | — | — |
+| `listar_arquivos` | `local` | texto | `area_de_trabalho` | `area_de_trabalho`, `documentos`, `downloads` |
 | `capturar_tela` | `local` | texto | `documentos` | `area_de_trabalho`, `documentos`, `downloads` |
 | `acionar_energia` | `acao` | texto | `desligar` | `desligar`, `reiniciar`, `suspender` |
+| `atualizar_repositorio` | `repositorio` | texto | — | — |
 | `resolver_confirmacao` | `resposta` | texto | — | `confirmo`, `cancelar` |
+| `criar_arquivo` | `nome` | texto | — | — |
+| `criar_arquivo` | `conteudo` | texto | — | — |
+| `criar_arquivo` | `local` | texto | `area_de_trabalho` | `area_de_trabalho`, `documentos`, `downloads` |
+| `renomear_arquivo` | `nome` | texto | — | — |
+| `renomear_arquivo` | `nome_novo` | texto | — | — |
+| `renomear_arquivo` | `local` | texto | `area_de_trabalho` | `area_de_trabalho`, `documentos`, `downloads` |
+| `mover_arquivo` | `nome` | texto | — | — |
+| `mover_arquivo` | `local` | texto | `area_de_trabalho` | `area_de_trabalho`, `documentos`, `downloads` |
+| `mover_arquivo` | `local_destino` | texto | `documentos` | `area_de_trabalho`, `documentos`, `downloads` |
+| `copiar_arquivo` | `nome` | texto | — | — |
+| `copiar_arquivo` | `local` | texto | `area_de_trabalho` | `area_de_trabalho`, `documentos`, `downloads` |
+| `copiar_arquivo` | `local_destino` | texto | `documentos` | `area_de_trabalho`, `documentos`, `downloads` |
+| `abrir_sessao_agente_codigo` | `repositorio` | texto | — | — |
+| `abrir_sessao_agente_codigo` | `instrucao` | texto | — | — |
+| `enviar_para_agente_codigo` | `sessao` | texto | — | — |
+| `enviar_para_agente_codigo` | `instrucao` | texto | — | — |
+| `acompanhar_agente_codigo` | `sessao` | texto | — | — |
+| `encerrar_agente_codigo` | `sessao` | texto | — | — |
 | `agendar_lembrete` | `assunto` | texto | — | — |
 | `agendar_lembrete` | `quando` | texto | — | — |
 | `cancelar_lembrete` | `termo` | texto | `` | — |
+| `assumir_plano` | `plano` | texto | `` | — |
+| `consultar_cargas_luft` | `periodo` | texto | — | — |
+| `consultar_estatisticas_cargas_luft` | `periodo` | texto | `` | — |
+| `consultar_estatisticas_cargas_luft` | `agrupar_por` | texto | `nenhum` | `motorista`, `rota`, `origem`, `destino`, `status`, `status_normalizado`, `nenhum` |
+| `consultar_estatisticas_cargas_luft` | `metrica` | texto | `contagem` | `contagem`, `valor_total`, `valor_medio`, `distintos`, `sem_movimento`, `margem` |
+| `consultar_estatisticas_cargas_luft` | `ano` | texto | `` | ``, `2026`, `2025`, `2024` |
+| `comparar_semanas_luft` | `periodo_atual` | texto | `essa semana` | — |
+| `comparar_semanas_luft` | `periodo_anterior` | texto | `semana passada` | — |
+| `relatorio_executivo_luft` | `periodo` | texto | `essa semana` | — |
+| `declarar_lacuna_de_dado` | `dimensao` | texto | — | `cliente`, `veiculo` |
+| `comparar_anos_luft` | `ano_atual` | texto | `2026` | `2026`, `2025`, `2024` |
+| `comparar_anos_luft` | `ano_anterior` | texto | — | `2026`, `2025`, `2024` |
+| `comparar_anos_luft` | `metrica` | texto | `contagem` | `contagem`, `valor_total`, `distintos`, `margem` |
+| `comparar_anos_luft` | `agrupar_por` | texto | `nenhum` | `motorista`, `rota`, `origem`, `destino`, `status`, `status_normalizado`, `nenhum` |
+| `descrever_planilha` | `arquivo` | texto | — | — |
+| `descrever_planilha` | `aba` | texto | `` | — |
+| `consultar_planilha_generica` | `arquivo` | texto | — | — |
+| `consultar_planilha_generica` | `aba` | texto | `` | — |
+| `consultar_planilha_generica` | `agrupar_por` | texto | `` | — |
+| `consultar_planilha_generica` | `metrica` | texto | `contagem` | `contagem`, `soma`, `media`, `minimo`, `maximo` |
+| `consultar_planilha_generica` | `coluna_metrica` | texto | `` | — |
+| `consultar_planilha_generica` | `filtro_coluna` | texto | `` | — |
+| `consultar_planilha_generica` | `filtro_valor` | texto | `` | — |
+| `diagnosticar_qualidade_planilha` | `arquivo` | texto | — | — |
+| `diagnosticar_qualidade_planilha` | `aba` | texto | `` | — |
+| `consultar_procedimento` | `consulta` | texto | — | — |
+| `consultar_procedimento` | `codigo` | texto | — | — |
+| `consultar_procedimento` | `intencao` | texto | `executar` | `localizar`, `executar` |
+| `iniciar_procedimento` | `codigo` | texto | — | — |
+| `iniciar_procedimento` | `modo` | texto | `guiar` | `guiar`, `treinar` |
+| `avancar_procedimento` | `direcao` | texto | `proximo` | `proximo`, `anterior`, `repetir` |
+| `avancar_procedimento` | `resposta` | texto | — | — |
+| `treinar_procedimento` | `modo` | texto | — | `consulta`, `ensino`, `execucao`, `duvida`, `diagnostico`, `pratica`, `avaliacao`, `retomada` |
+| `treinar_procedimento` | `codigo` | texto | — | — |
+| `treinar_procedimento` | `resposta` | texto | — | — |
+| `observar_tela` | `acao` | texto | `situacao` | `solicitar`, `autorizar`, `encerrar`, `situacao` |
+| `observar_tela` | `aplicativo` | texto | — | — |
 
 ## Regras de negócio com valor no código
 
@@ -291,10 +404,12 @@ foi convertido para unidade legível.
 
 | Regra | Valor | Onde | Por que existe |
 |---|---|---|---|
-| `CONFIANCA_SUFICIENTE` | **85%** | `servidor/nucleo/kernel/FuncaoExecutiva.ts`:77 | Acima disto, a percepção reconheceu terreno conhecido e não há por que gastar token para planejar. |
-| `JANELA_ANTECEDENTE` | **6** | `servidor/nucleo/kernel/Kernel.ts`:166 | Turnos que o detector de ambiguidade consulta para procurar antecedente. Deliberadamente menor que a janela do raciocínio (20): resolver "aquele relatório" com algo dito há trinta mensagens não é recuperar contexto, é inventar um vínculo. Se o assunto sumiu por seis turnos, perguntar é o comporta… |
-| `MAX_ESPELHOS` | **4** (máximo) | `servidor/barramento/Porta.ts`:45 | Espelhos simultâneos por operador. O mesmo operador pode estar no app desktop, numa aba do Chrome (a que escuta o "ei IARA") e no celular ao mesmo tempo — cada tela é uma sessão de transporte, o kernel é um só. O teto existe porque sessão zumbi de reconexão (o TCP antigo expira minutos depois) oc… |
-| `APRESENTACOES_POR_MINUTO` | **120/min** | `servidor/barramento/Porta.ts`:77 | ESTRANGULAMENTO PRÉ-AUTENTICAÇÃO — a janela que não tinha dono. `Kernel.processar` já tem `LimiteVazao`, e ele protege bem o que vem DEPOIS da identidade estar resolvida. O `ola` vinha antes: cada apresentação dispara um `verificarToken`, que é uma chamada de rede ao Supabase, e a única guarda er… |
+| `ESPERA_JANELA_MS` | **8 s** | `servidor/nucleo/AgenteLocal.ts`:966 | Quanto esperar por uma janela depois do lançamento. Oito segundos porque a Calculadora numa máquina fria leva um par de segundos para acordar, e o Chrome com sessão grande passa disso — e porque o custo de errar para baixo é dizer "não abriu" sobre um programa que abriu. Errar para cima custa esp… |
+| `CONFIANCA_SUFICIENTE` | **85%** | `servidor/nucleo/kernel/FuncaoExecutiva.ts`:90 | Acima disto, a percepção reconheceu terreno conhecido e não há por que gastar token para planejar. |
+| `MAX_ELOS_EXECUCAO` | **12** (máximo) | `servidor/nucleo/kernel/CompiladorSnapshot.ts`:49 | Tetos da cadeia projetada. O snapshot viaja aglutinado pelo barramento a cada atualização; uma cadeia sem teto crescria com o plano mais longo e seria retransmitida inteira a cada trecho de fala. |
+| `JANELA_ANTECEDENTE` | **6** | `servidor/nucleo/kernel/Kernel.ts`:351 | Turnos que o detector de ambiguidade consulta para procurar antecedente. Deliberadamente menor que a janela do raciocínio (20): resolver "aquele relatório" com algo dito há trinta mensagens não é recuperar contexto, é inventar um vínculo. Se o assunto sumiu por seis turnos, perguntar é o comporta… |
+| `MAX_ESPELHOS` | **4** (máximo) | `servidor/barramento/Porta.ts`:55 | Espelhos simultâneos por operador. O mesmo operador pode estar no app desktop, numa aba do Chrome (a que escuta o "ei IARA") e no celular ao mesmo tempo — cada tela é uma sessão de transporte, o kernel é um só. O teto existe porque sessão zumbi de reconexão (o TCP antigo expira minutos depois) oc… |
+| `APRESENTACOES_POR_MINUTO` | **120/min** | `servidor/barramento/Porta.ts`:112 | ESTRANGULAMENTO PRÉ-AUTENTICAÇÃO — a janela que não tinha dono. `Kernel.processar` já tem `LimiteVazao`, e ele protege bem o que vem DEPOIS da identidade estar resolvida. O `ola` vinha antes: cada apresentação dispara um `verificarToken`, que é uma chamada de rede ao Supabase, e a única guarda er… |
 
 ## Banco de dados
 
@@ -302,7 +417,7 @@ Derivado de `supabase/schema.sql`. **A persistência é opcional**: sem
 `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` o motor lê `dados/*.json` e grava
 shards em arquivo, sem trocar uma linha de código.
 
-Tabelas: **6**.
+Tabelas: **7**.
 
 ### `public.centrais`
 
@@ -378,6 +493,21 @@ Lembretes que o operador deixou marcados. `entregue_em` nulo = ainda espera; é 
 | `assunto` | `text` | `not null` |
 | `entregue_em` | `timestamptz` | — |
 
+### `public.dispositivos_pareados`
+
+----------------------------------------------------------------------------- 3b. Computadores pareados — as mãos que cada operador autorizou  Uma linha por credencial de braço. O que fica guardado é o HASH do token, e não o token: quem obtiver esta tabela inteira não consegue se passar por um computador de ninguém. É a mesma postura do RAG, que guarda assinatura e não log bruto — o que não está armazenado não pode vazar.  `revogado_em` em vez de DELETE, e isso é decisão de auditoria: "esta máquina foi desconectada em tal dia" é uma pergunta que alguém vai fazer depois de um incidente, e uma linha apagada não responde nada. O índice único parcial garante o que importa de verdade — um hash vivo por vez. -----------------------------------------------------------------------------
+
+| Coluna | Tipo | Restrições |
+|---|---|---|
+| `id_credencial` | `text` | `primary key` |
+| `id_usuario` | `text` | `not null` |
+| `nome` | `text` | `not null` |
+| `plataforma` | `text` | `not null` |
+| `hash_token` | `text` | `not null` |
+| `pareado_em` | `timestamptz` | `not null default now()` |
+| `ultimo_uso_em` | `timestamptz` | — |
+| `revogado_em` | `timestamptz` | — |
+
 ### Índices
 
 | Índice | Tabela | Colunas |
@@ -387,10 +517,11 @@ Lembretes que o operador deixou marcados. `entregue_em` nulo = ainda espera; é 
 | `memoria_usuario_instante_idx` | `public.memoria_registros` | `id_usuario, instante desc` |
 | `insights_usuario_proativo_idx` | `public.insights_relacionais` | `id_usuario, proativo` |
 | `agenda_pendentes_idx` | `public.agenda_lembretes` | `id_usuario, vence_em` |
+| `dispositivos_do_operador_idx` | `public.dispositivos_pareados` | `id_usuario, pareado_em desc` |
 
 ### Row Level Security
 
-RLS habilitado em **6 tabelas**: `public.centrais`, `public.erros_assinaturas`, `public.memoria_registros`, `public.insights_relacionais`, `public.operador_preferencias`, `public.agenda_lembretes`.
+RLS habilitado em **7 tabelas**: `public.centrais`, `public.erros_assinaturas`, `public.memoria_registros`, `public.insights_relacionais`, `public.operador_preferencias`, `public.agenda_lembretes`, `public.dispositivos_pareados`.
 
 Nesta arquitetura a política nega tudo para `anon`. Quem lê e escreve é o
 motor, com a `service_role` — que **ignora RLS por definição** e por isso só
@@ -410,6 +541,15 @@ valores vivem em `.env.local` (nunca versionado) e no painel do host.
 | `ANTHROPIC_API_KEY` | vazia — preencher | Sem chave, a IARA roda completa em modo local (clima, banco, RAG, busca) e avisa na interface. Ela não improvisa resposta. |
 | `IARA_MODELO` | declarado | *(a preencher)* |
 | `IARA_ESFORCO` | declarado | *(a preencher)* |
+
+### Raciocínio local via Ollama (opcional)
+
+| Variável | Padrão no exemplo | Para que serve |
+|---|---|---|
+| `IARA_PROVEDOR` | vazia — preencher | Alternativa LOCAL à nuvem: um servidor Ollama (https://ollama.com, MIT) rodando nesta máquina ou em outra da SUA rede privada. Seleção: IARA_PROVEDOR vazio ou `auto` → com ANTHROPIC_API_KEY usa a nuvem; sem chave MAS com OLLAMA_URL declarada usa o Ollama; sem nenhum, modo honesto de sempre. IARA_PROVEDOR=anthropic → força a nuvem, mesmo com Ollama no ar. IARA_PROVEDOR=ollama → força o Ollama. A UR |
+| `OLLAMA_URL` | vazia — preencher | *(a preencher)* |
+| `OLLAMA_MODELO` | declarado | *(a preencher)* |
+| `OLLAMA_CONTEXTO` | vazia — preencher | Janela de contexto pedida ao Ollama. O padrão do BINÁRIO é 4096 e ele trunca o prompt em silêncio quando não cabe — a IARA pede 8192 se nada for declarado. Contexto maior = mais RAM para o cache KV; declare sabendo o custo. |
 
 ### Persistência (opcional)
 
@@ -435,6 +575,39 @@ valores vivem em `.env.local` (nunca versionado) e no painel do host.
 | `CONVAI_VOZ` | vazia — preencher | `voice_value` da voz escolhida. Liste as da sua conta com: npm run vozes Vozes marcadas como "realtime" NÃO funcionam no endpoint de TTS. |
 | `CONVAI_ENCODING` | declarado | wav ou mp3. mp3 é o padrão: mesma fala, uma fração dos bytes na rede. |
 
+### Transcrição de fala (opcional, DESLIGADA) — o caminho oposto da voz
+
+| Variável | Padrão no exemplo | Para que serve |
+|---|---|---|
+| `IARA_STT_CHAVE` | vazia — preencher | SEM ISTO NADA QUEBRA, e hoje o certo é deixar vazio: a fala continua sendo reconhecida pelo navegador, como sempre foi. Isto nasceu para tirar o iPhone da dependência da Web Speech API — e a medição desmentiu a premissa. Em iPhone/iOS 18.7 (15/08/2026) o `webkitSpeechRecognition` transcreveu duas frases em pt-BR, HONROU `continuous` (dois enunciados numa sessão só) e devolveu o primeiro parcial 2  |
+| `IARA_STT_MODELO` | vazia — preencher | Padrão: gpt-4o-mini-transcribe. `whisper-1` é a troca trivial. |
+| `IARA_STT_IDIOMA` | vazia — preencher | Padrão: pt. Sem isto o provedor adivinha pelo áudio, e um "ok" ou um "tá" solto em português vira inglês com frequência desconfortável. |
+
+### Microsoft Graph (opcional) — caixa de entrada e busca no SharePoint
+
+| Variável | Padrão no exemplo | Para que serve |
+|---|---|---|
+| `MS_GRAPH_TOKEN` | vazia — preencher | Achado em auditoria (14/08/2026): MS_GRAPH_TOKEN era lida no código (`servidor/nucleo/kernel/habilidades/integracoes.ts`) mas nunca tinha sido documentada aqui nem registrada em `Configuracao.ts`. Corrigido nos dois lugares. É um ACCESS TOKEN da Graph API — validade típica ~1h. Registre um app em Azure AD (portal.azure.com → Microsoft Entra ID → Registros de aplicativo), conceda os escopos de APLI |
+| `MS_GRAPH_CLIENT_ID` | vazia — preencher | *(a preencher)* |
+| `MS_GRAPH_TENANT_ID` | vazia — preencher | *(a preencher)* |
+| `MS_GRAPH_CLIENT_SECRET` | vazia — preencher | *(a preencher)* |
+| `MS_GRAPH_CAIXA` | vazia — preencher | E-mail da caixa que ler_emails lê (ex.: daiane@atoslog.com.br). Obrigatória para buscarEmails() funcionar com credencial de app — ver o achado acima. |
+| `MS_GRAPH_REGIAO` | vazia — preencher | Só se um dia o tenant não for 'BRA' — a própria Graph diz o valor certo. |
+
+### Google Calendar (opcional) — calendário REAL (distinto do lembrete interno)
+
+| Variável | Padrão no exemplo | Para que serve |
+|---|---|---|
+| `GOOGLE_CALENDAR_CLIENT_EMAIL` | vazia — preencher | Ler e-mail/SharePoint usa a Microsoft Graph (acima). Calendário usa o Google Calendar, escolhido em 17/08/2026 porque a permissão da Microsoft Graph (Calendars.ReadWrite) exige consentimento de administrador do tenant, que não estava disponível — uma conta de serviço do Google Cloud não depende de nenhum admin: quem cria o projeto já pode compartilhar o calendário com ela. NÃO CONFUNDIR com `servi |
+| `GOOGLE_CALENDAR_PRIVATE_KEY` | vazia — preencher | *(a preencher)* |
+| `GOOGLE_CALENDAR_ID` | vazia — preencher | *(a preencher)* |
+
+### Planilha da operação LUFT (opcional)
+
+| Variável | Padrão no exemplo | Para que serve |
+|---|---|---|
+| `MS_GRAPH_OCI_URL` | vazia — preencher | "VANIA - CONTROLE OCIS 2025 - 2" — uma linha da aba "2026" é uma carga real (OCI, origem, destino, motorista, datas, valor). Fase 1 do Workbook Intelligence Layer (ver conversa de 14/08/2026): só responde o que dá para CALCULAR sem regra de negócio nova — "quantas cargas hoje/amanhã/essa semana". Perguntas analíticas (atrasadas, faturamento por rota, anomalias, relatório executivo) exigem regra ai |
+
 ### Canal WhatsApp (opcional)
 
 | Variável | Padrão no exemplo | Para que serve |
@@ -451,8 +624,9 @@ valores vivem em `.env.local` (nunca versionado) e no painel do host.
 | `NEXT_PUBLIC_IARA_WS` | vazia — preencher | Motor e web no mesmo processo, mesma porta, barramento em /barramento. Deixe vazio: o cliente deriva o endereço da página e usa wss:// sozinho quando servido por HTTPS. Só preencha se separar o motor em outro host. ATENÇÃO — NEXT_PUBLIC_* é embutida no bundle em TEMPO DE BUILD. Trocar o domínio do motor exige REDEPLOY do front, não basta editar a variável no painel. O sintoma de esquecer isso é a  |
 | `NEXT_PUBLIC_IARA_MOTOR` | vazia — preencher | Origem HTTP do motor, para o áudio da voz (os bytes vivem na MEMÓRIA dele). Deixe vazio: é derivada de NEXT_PUBLIC_IARA_WS. Só preencha se o WebSocket e o HTTP do motor moram em endereços diferentes — duas variáveis independentes divergem no dia em que alguém troca o domínio e atualiza só uma, e aí a IARA conversa normalmente e fica MUDA. |
 | `IARA_PORTA` | declarado | Porta local. Hosts de nuvem (Railway, Render, Fly) injetam PORT e vencem. |
-| `IARA_MODO` | vazia — preencher | `headless` = motor SEM interface (o Next é servido noutro host: Vercel). Vazio ou qualquer outro valor = unificado, os dois no mesmo processo. Mantenha unificado por padrão: é o interruptor que devolve o sistema inteiro a um endereço só se o front na nuvem quebrar. |
-| `IARA_ORIGENS` | vazia — preencher | Origens autorizadas a abrir o barramento, separadas por vírgula. Navegador NÃO aplica CORS a WebSocket — esta lista é a única trava, e em modo headless ela é a única MESMO: "mesma origem" não existe quando o front mora noutro domínio. Vazio + headless = ninguém consegue conectar. Ex.: https://iara.atoslog.com.br Curinga de subdomínio (https://*.vercel.app) é aceito, mas o motor RECUSA SUBIR com cu |
+| `IARA_MODO` | vazia — preencher | Deixe vazio (= unificado, os dois no mesmo processo). Não use `headless`: decisão de 15/08/2026, não há mais segundo host para servir o Next — um motor headless ficaria sem interface nenhuma. |
+| `IARA_AMBIENTE` | comentada (opcional) | Origens autorizadas a abrir o barramento, separadas por vírgula. Navegador NÃO aplica CORS a WebSocket — esta lista é a única trava. Em unificado, "mesma origem" cobre o caso comum; mesmo assim preencha com o domínio real, porque um motor sem `IARA_ORIGENS` recusa subir em produção. Ex.: https://iara.atoslog.com.br Curinga de subdomínio (ex.: https://*.algum-host.app) é aceito pela função de casam |
+| `IARA_ORIGENS` | vazia — preencher | deploy gratuito em minutos, e o curinga não alarga a lista — substitui ela pela internet. |
 | `IARA_AMBIENTE` | vazia — preencher | Marque `homologacao` APENAS num motor de preview, com banco próprio. Nunca no de produção. |
 
 ### Perímetro operacional (Open-Meteo)
@@ -468,8 +642,18 @@ valores vivem em `.env.local` (nunca versionado) e no painel do host.
 | Variável | Padrão no exemplo | Para que serve |
 |---|---|---|
 | `IARA_CHAVE_PROVA` | comentada (opcional) | O jornal em dados/operacoes/*.jsonl É a trilha de auditoria do sistema: é dele que a IARA reconstrói, depois de um restart, o que pode ter acontecido no mundo. Sem esta chave, a reidratação valida só ESTRUTURA (formato, estado legal e dono do arquivo) — quem conseguir escrever no disco consegue inserir uma operação em estado "verificada" que nunca existiu, e a IARA passa a jurar ter conferido um e |
+| `NEXT_PUBLIC_IARA_INSTALADOR` | vazia — preencher | Sem estas três, a gaveta de Dispositivos mostra só o texto explicando como gerar o instalador — nenhum link de download aparece na PWA. É o mesmo padrão de NEXT_PUBLIC_SUPABASE_*: escritas no bundle em tempo de BUILD, e um ambiente pode subir perfeitamente saudável sem elas (a gaveta degrada com texto, nunca com link quebrado). As três saem juntas de UM comando, depois de publicar o .exe em algum  |
+| `NEXT_PUBLIC_IARA_INSTALADOR_SHA256` | vazia — preencher | SHA256 do .exe gerado — o braço confere o hash antes de trocar a própria versão numa atualização automática; sem bater, recusa e avisa em vez de rodar um binário que não confere com o que foi publicado. |
+| `NEXT_PUBLIC_IARA_INSTALADOR_NOTAS` | vazia — preencher | Texto livre e opcional — o resumo "para leigos" do que mudou nesta versão, mostrado na gaveta ao lado do aviso de versão desatualizada. |
 | `IARA_ADMINS` | comentada (opcional) | Listas separadas por vírgula, casando por id_usuario OU por e-mail. Quem não aparece em lista nenhuma é 'operador', que é o padrão de sempre. administrador acrescenta a permissão 'externo' (agir em nome do operador alcançando terceiros: WhatsApp, e-mail, publicação) somente_leitura remove escrita e limita o catálogo a consultas A restrição vence a concessão: quem estiver nas duas listas fica somen |
 | `IARA_SOMENTE_LEITURA` | comentada (opcional) | *(a preencher)* |
+
+### Delegar trabalho a um agente de código (opcional)
+
+| Variável | Padrão no exemplo | Para que serve |
+|---|---|---|
+| `IARA_REPOS_AGENTE` | vazia — preencher | A IARA abre uma sessão do Claude Code num repositório e acompanha o trabalho: "abra uma sessão do Claude Code no repositório iara e peça para auditar a voz". A ALLOWLIST É A TRAVA, e ela é de FORMA: o operador informa APELIDO, nunca caminho. "Abra o Claude Code em C:\Windows\System32" não é barrado por uma regra sobre System32 — ele simplesmente não resolve para repositório nenhum, do mesmo jeito  |
+| `IARA_COMANDO_AGENTE` | vazia — preencher | COMO LANÇAR O AGENTE. Instale com `npm install -g @anthropic-ai/claude-code` e faça login (`claude`, depois /login) — sem isso toda sessão falha com "Not logged in", e a IARA relata isso em vez de fingir que trabalhou. No WINDOWS esta variável é OBRIGATÓRIA e precisa apontar para o `claude.exe`, não para o atalho `claude.cmd`: desde a CVE-2024-27980 o Node recusa executar `.cmd` sem `shell: true`, |
 
 > Onde obter cada valor está no próprio `.env.example`, junto da variável.
 Chaves de terceiro (Anthropic, Supabase, Convai, Meta/WhatsApp) saem do painel
@@ -719,6 +903,11 @@ Todos rodam a partir de `iara-os/apps/web`.
 | `npm run dev` | `tsx watch --clear-screen=false servidor/principal.ts --dev` |
 | `npm run build` | `next build` |
 | `npm run start` | `tsx servidor/principal.ts` |
+| `npm run braco` | `tsx servidor/braco/principal.ts` |
+| `npm run braco:entrar` | `tsx scripts/braco-entrar.ts` |
+| `npm run empacotar:braco` | `tsx scripts/empacotar-braco.ts` |
+| `npm run celular` | `node scripts/celular.mjs` |
+| `npm run pops` | `tsx scripts/geracao/ingerir-pops.ts` |
 | `npm run marca` | `tsx scripts/geracao/gerar-marca.ts` |
 | `npm run icones` | `tsx scripts/geracao/gerar-icones.ts` |
 | `npm run vozes` | `node scripts/diagnostico/vozes.mjs` |
@@ -727,6 +916,16 @@ Todos rodam a partir de `iara-os/apps/web`.
 | `npm run docs` | `tsx scripts/docs/gerar-documentacao.mjs` |
 | `npm run test` | `node --import tsx --test "testes/**/*.test.ts"` |
 | `npm run verificar` | `node scripts/diagnostico/verificar-caminhos.mjs && node scripts/diagnostico/verificar-g…` |
+| `npm run varrer-segredos` | `node scripts/varrer-segredos.mjs` |
+| `npm run campanha` | `node --import tsx testes/campanha/executar.ts` |
+| `npm run superficie` | `node --import tsx testes/validacao/superficieCLI.ts` |
+| `npm run veredito` | `node --import tsx testes/validacao/veredito.ts` |
+| `npm run bateria` | `node --import tsx testes/validacao/executar.ts` |
+| `npm run confiabilidade` | `node --import tsx testes/confiabilidade/executar.ts` |
+| `npm run benchmark-analitico` | `node --import tsx testes/holdout/benchmark.ts` |
+| `npm run inventario` | `node --import tsx scripts/inventario-habilidades.ts` |
+| `npm run importacoes` | `node scripts/verificar-importacoes.mjs` |
+| `npm run invariancia` | `node --import tsx testes/invariancia/executar.ts` |
 
 ### Organização de `scripts/`
 
@@ -737,8 +936,12 @@ novo precisa saber, pelo nome da pasta, se pode rodar sem medo.
 
 Só LEEM. Podem rodar a qualquer momento, inclusive contra dado real.
 
+- `calibrar-aderencia.ts` — Calibração da ADERÊNCIA — texto observado × `ParadaEsperada`.
+- `calibrar-percepcao.ts` — Calibração da percepção de tela.
+- `calibrar-pops.ts` — Calibração do limiar de similaridade da base de procedimentos.
 - `medir-voz.ts` — Cronômetro do caminho de voz.
 - `sonda-auditoria.ts` — SONDA ADVERSARIAL — auditoria final do cérebro.
+- `sondar-ocr.ts` — Sonda do OCR local.
 - `verificar-caminhos.mjs` — Guarda contra a armadilha que quebra toda reorganização de pastas: o import relativo que ficou apontando para o lugar antigo.
 - `verificar-glsl.mjs` — Guarda contra a armadilha que já custou três compilações quebradas: uma CRASE dentro de um bloco GLSL.
 - `vozes.mjs` — Lista as vozes disponíveis na conta Convai.
@@ -747,6 +950,7 @@ Só LEEM. Podem rodar a qualquer momento, inclusive contra dado real.
 
 Provas ponta a ponta contra o Kernel real. Escrevem apenas em diretório temporário.
 
+- `percepcao-ponta-a-ponta.ts` — PROVA PONTA A PONTA da percepção — pelo caminho de PRODUTO.
 - `prova-cerebro-encerramento.ts` — PROVA DE ENCERRAMENTO — o cérebro inteiro, cenário a cenário.
 - `prova-cognitiva-final.ts` — PROVA COGNITIVA FINAL — auditoria de 11/08/2026.
 - `prova-cognitiva.ts` — *(sem descrição no cabeçalho)*
@@ -759,6 +963,7 @@ ESCREVEM artefatos no repositório (`public/`, ícones do desktop).
 
 - `gerar-icones.ts` — Corta os ícones a partir do símbolo.
 - `gerar-marca.ts` — Recorta a marca a partir das FOTOGRAFIAS de referência.
+- `ingerir-pops.ts` — Ingestão dos POPs — `.pptx` → conhecimento estruturado.
 
 #### `scripts/docs/`
 
