@@ -16,7 +16,7 @@
     "vozes": "node scripts/vozes.mjs",
     "limpar": "node -e \"const f=require('node:fs');for(const d of f.readdirSync('.').filter(n=>n==='.next'||n.startsWith('.next-')))f.rmSync(d,{recursive:true,force:true})\"",
     "test": "node --import tsx --test \"testes/**/*.test.ts\"",
-    "verificar": "node scripts/verificar-glsl.mjs && node scripts/varrer-segredos.mjs --tudo && tsc --noEmit && npm test",
+    "verificar": "node scripts/verificar-glsl.mjs && node scripts/varrer-segredos.mjs --tudo && node scripts/verificar-importacoes.mjs && tsc --noEmit && npm test",
     "varrer-segredos": "node scripts/varrer-segredos.mjs",
     "campanha": "node --import tsx testes/campanha/executar.ts",
     "superficie": "node --import tsx testes/validacao/superficieCLI.ts",
@@ -24,7 +24,8 @@
     "bateria": "node --import tsx testes/validacao/executar.ts",
     "confiabilidade": "node --import tsx testes/confiabilidade/executar.ts",
     "benchmark-analitico": "node --import tsx testes/holdout/benchmark.ts",
-    "inventario": "node --import tsx scripts/inventario-habilidades.ts"
+    "inventario": "node --import tsx scripts/inventario-habilidades.ts",
+    "importacoes": "node scripts/verificar-importacoes.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
