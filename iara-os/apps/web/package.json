@@ -29,7 +29,8 @@
     "benchmark-analitico": "node --import tsx testes/holdout/benchmark.ts",
     "inventario": "node --import tsx scripts/inventario-habilidades.ts",
     "importacoes": "node scripts/verificar-importacoes.mjs",
-    "invariancia": "node --import tsx testes/invariancia/executar.ts"
+    "invariancia": "node --import tsx testes/invariancia/executar.ts",
+    "operacional": "node --import tsx testes/operacional/executar.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
