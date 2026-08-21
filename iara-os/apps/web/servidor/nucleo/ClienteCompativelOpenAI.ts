@@ -99,16 +99,86 @@ export interface PerfilProvedorAberto {
   readonly variavelChave: string;
   readonly variavelModelo: string;
   readonly modeloPadrao: string;
+  /**
+   * QUANTO CABE NUM PEDIDO, em tokens. `undefined` = não medido, e aí a cadeia
+   * tenta — ausência de medição nunca vira recusa.
+   *
+   * MEDIDO, NUNCA COPIADO DA DOCUMENTAÇÃO. O número que vale é o que a conta
+   * DESTA instalação encontra, e ele veio das duas recusas reais de 18/08/2026:
+   *
+   *   429 · "tokens per minute (TPM): Limit 8000, Used 7066, Requested 6448"
+   *   413 · "Request too large ... on tokens per minute (TPM): Limit 8000,
+   *          Requested 10226, please reduce your message size"
+   *
+   * É teto por MINUTO, e é por isso que ele funciona como teto por pedido aqui:
+   * um turno cognitivo faz duas ou três chamadas, então um pedido que já consome
+   * quase toda a janela condena as chamadas seguintes do mesmo turno. Tratar o
+   * limite por minuto como limite por pedido é conservador na direção certa.
+   */
+  readonly limite_entrada_tokens?: number;
 }
 
 export const GROQ: PerfilProvedorAberto = {
   apelido: 'groq',
   base: 'https://api.groq.com/openai/v1',
   variavelChave: 'GROQ_API_KEY',
+  /* 8000 TPM na conta gratuita desta instalação — medido pelas recusas 429 e
+     413 de 18/08/2026, não lido da documentação. */
+  limite_entrada_tokens: 8000,
   variavelModelo: 'GROQ_MODELO',
-  /* 70B na camada gratuita: a maior qualidade disponível sem custo, e ordens
-     de grandeza acima de um 3B local. */
-  modeloPadrao: 'llama-3.3-70b-versatile',
+  /**
+   * `llama-3.3-70b-versatile` SAIU DO CATÁLOGO DA GROQ, e a IARA passou a 404 no
+   * primeiro elo da cadeia — em produção, em todo turno.
+   *
+   * Descoberto em 18/08/2026 pela campanha CO, na primeira rodada que de fato
+   * chegou à Groq: dez das treze missões voltaram com
+   * `groq respondeu 404: The model llama-3.3-70b-versatile does not exist`.
+   * Não era limitação do modelo, era ausência dele. Consultada, a API lista
+   * hoje: `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.6-27b`,
+   * `groq/compound` — e nenhum llama.
+   *
+   * UM MODELO FIXADO NO CÓDIGO É UM PRAZO DE VALIDADE QUE NINGUÉM ANOTOU. A
+   * cadeia mascara isto de propósito (o elo morto cede a vez ao próximo desde
+   * 5c5ac94), então a IARA continua respondendo — pelo elo seguinte, sem o
+   * gratuito, e ninguém percebe até alguém medir. `GROQ_MODELO` no ambiente
+   * continua vencendo, que é a saída sem deploy quando isto acontecer de novo.
+   *
+   * `openai/gpt-oss-120b` E NÃO O `qwen`, e a escolha foi MEDIDA, não deduzida
+   * do tamanho: o Qwen despeja o bloco `<think>` dentro de `content`, e este
+   * cliente lê `delta.content` — o pensamento dele viraria fala da IARA. O
+   * gpt-oss entrega `content: "OK"` com o raciocínio num campo `reasoning`
+   * separado, que é justamente o que o leitor de stream ignora. 120B MoE,
+   * ~0,7 s no teste, gratuito.
+   *
+   * ------------------------------------------------------------------------
+   * O TETO DA GROQ GRATUITA NÃO CABE NA IARA, e isto vale mais que a escolha do
+   * modelo acima. Medido em 18/08/2026, cabeçalhos `x-ratelimit` da própria API:
+   *
+   *     openai/gpt-oss-120b    TPM  8.000    RPM 1.000
+   *     openai/gpt-oss-20b     TPM  8.000    RPM 1.000
+   *     qwen/qwen3.6-27b       TPM  8.000    RPM 1.000
+   *     groq/compound          TPM 70.000    RPM   250
+   *
+   * O prompt de sistema da IARA — persona, camada global e catálogo — custa
+   * ~5.000 tokens de ENTRADA por chamada. Contra um teto de 8.000 por minuto,
+   * isso é UMA chamada a cada ~40 s. Um turno de `plano_cognitivo` faz duas
+   * (decompõe, depois responde), então a segunda 429 por construção. Medido:
+   * cinco chamadas seguidas → 1 ok, 4 `429 … Limit 8000, Used 5036`.
+   *
+   * O limite é da ORGANIZAÇÃO e do minuto, não do modelo: trocar de modelo
+   * dentro da Groq gratuita não resolve, porque os três de chat dividem o mesmo
+   * teto. Groq gratuita é elo de RESERVA, não cérebro primário — e a cadeia já
+   * a trata assim desde 5c5ac94, cedendo a vez ao próximo elo no 429.
+   *
+   * `groq/compound` TEM 8,75× MAIS TETO E MESMO ASSIM ESTÁ FORA. Sondado no
+   * mesmo dia com "Qual o preço do diesel hoje?": ele foi SOZINHO à internet,
+   * devolveu `executed_tools: [{type: "search", …}]` e citou a fonte. Alcançar o
+   * mundo por fora do Porteiro, do jornal e do orçamento é exatamente o que o
+   * invariante "quem raciocina não alcança o mundo" proíbe, e o resultado é uma
+   * afirmação sem `Procedencia` que a IARA repassaria como se fosse dela. Teto
+   * maior não compra essa troca.
+   */
+  modeloPadrao: 'openai/gpt-oss-120b',
 };
 
 /**
@@ -177,11 +247,14 @@ export class ClienteCompativelOpenAI implements ProvedorRaciocinio {
   readonly origem = 'nuvem' as const;
   readonly modelo: string;
   readonly apelido: string;
+  /** Repassado do perfil — ver `PerfilProvedorAberto.limite_entrada_tokens`. */
+  readonly limite_entrada_tokens?: number;
   private readonly base: string;
   private readonly chave: string | null;
 
   constructor(perfil: PerfilProvedorAberto) {
     this.apelido = perfil.apelido;
+    this.limite_entrada_tokens = perfil.limite_entrada_tokens;
     this.base = perfil.base.replace(/\/+$/, '');
     this.chave = lerConfig(perfil.variavelChave);
     this.modelo = lerConfig(perfil.variavelModelo) ?? perfil.modeloPadrao;
@@ -254,29 +327,61 @@ export class ClienteCompativelOpenAI implements ProvedorRaciocinio {
     let entrada = 0;
     let saida = 0;
 
+    const processar = (linha: string): void => {
+      const lida = interpretarLinhaOpenAI(linha);
+      if (!lida) return;
+      if (lida.erro) throw new ProvedorIndisponivel(`${this.apelido}: ${lida.erro}`);
+      if (lida.pedaco) {
+        texto += lida.pedaco;
+        pedido.aoReceberTexto(lida.pedaco);
+      }
+      if (lida.final) {
+        entrada = lida.final.tokens_entrada;
+        saida = lida.final.tokens_saida;
+      }
+    };
+
     try {
       for (;;) {
         const { done, value } = await leitor.read();
-        if (done) break;
+        if (done) {
+          /**
+           * O FIM DO STREAM TAMBÉM É UM SEPARADOR — defeito medido em produção
+           * (18/08/2026).
+           *
+           * A operadora perguntou o que a IARA consegue fazer e recebeu
+           * "...cargas, faturamento, motoristas, cent" — cortado no meio da
+           * palavra, para sempre, sem erro nenhum: o provedor tinha respondido
+           * com SUCESSO. `raciocinio_falhas` ficou vazio, o console limpo, o
+           * jornal sem nada. Não era falha, era AUSÊNCIA.
+           *
+           * O laço abaixo devolve ao buffer a última parte de cada leitura,
+           * porque ela pode estar cortada no meio de um pacote — isso está
+           * certo. O que faltava era o fim: `if (done) break` saía com o buffer
+           * cheio. Quando o servidor fecha sem `\n` depois do último `data:` —
+           * conexão interrompida, proxy impaciente, resposta sem `[DONE]` — o
+           * último pedaço de texto morria ali.
+           *
+           * `decode()` sem argumento esvazia o decodificador: um caractere
+           * multibyte partido entre duas leituras fica pendente até completar, e
+           * sem esta chamada o último acento some. Em português isso não é caso
+           * de borda.
+           *
+           * É pior que um erro. Falha o operador vê e reporta; frase cortada no
+           * meio ele lê como resposta.
+           */
+          restante += decodificador.decode();
+          if (restante.trim()) processar(restante);
+          restante = '';
+          break;
+        }
         restante += decodificador.decode(value, { stream: true });
 
         const linhas = restante.split('\n');
         /* A última pode estar cortada no meio — volta para o buffer. */
         restante = linhas.pop() ?? '';
 
-        for (const linha of linhas) {
-          const lida = interpretarLinhaOpenAI(linha);
-          if (!lida) continue;
-          if (lida.erro) throw new ProvedorIndisponivel(`${this.apelido}: ${lida.erro}`);
-          if (lida.pedaco) {
-            texto += lida.pedaco;
-            pedido.aoReceberTexto(lida.pedaco);
-          }
-          if (lida.final) {
-            entrada = lida.final.tokens_entrada;
-            saida = lida.final.tokens_saida;
-          }
-        }
+        for (const linha of linhas) processar(linha);
       }
     } finally {
       void leitor.cancel().catch(() => undefined);

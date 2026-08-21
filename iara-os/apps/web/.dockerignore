@@ -42,3 +42,19 @@ dados/operacoes
 Dockerfile
 .dockerignore
 README.md
+
+# Evidência de teste. 214 MB e 959 arquivos de PNG, JSONL e log de suíte —
+# artefato de auditoria, não produto. Pela mesma razão de `ativos` acima:
+# testes não rodam na imagem, logo a evidência deles também não tem o que
+# fazer lá dentro.
+#
+# NÃO é a causa de falha de deploy nenhuma, e nada aqui deve sugerir que
+# seja: entrou em 20/08/2026 durante a investigação de um build quebrado que
+# acabou sendo import sem arquivo (ver `Cobertura.ts` em eb30c75). O ganho é
+# só de peso — o contexto de build cai de 235 MB para ~8 MB, e a imagem
+# deixa de carregar a auditoria inteira junto com o produto.
+test-evidence
+
+# Documentação de planejamento. PRD e test plan são para quem escreve o
+# código, não para o processo que sobe.
+docs

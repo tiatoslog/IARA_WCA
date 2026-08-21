@@ -1,0 +1,8 @@
+FUZZ METAMÓRFICO — camada analítica (§22, §23)
+Semente determinística 20260820, 4000 rodadas, montarDossie completo.
+Invariantes: A permutação · B procedência pior · C trava · D sem evidência direta · E contextual · F cobertura pior
+
+rodadas: 4000
+distribuicao degrau: {"nenhum":2278,"descritiva":1722}
+distribuicao veredicto: {"abster":2278,"concluir_com_ressalva":1722}
+NENHUMA VIOLAÇÃO

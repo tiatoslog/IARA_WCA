@@ -50,6 +50,12 @@ const CREDENCIAIS_NEUTRALIZADAS = [
   'ANTHROPIC_API_KEY',
   'GROQ_API_KEY',
   'GEMINI_API_KEY',
+  /* FALTAVA, e a falta era silenciosa: `OPENROUTER_API_KEY` entrou na cadeia de
+     raciocínio em 18/08/2026 e ninguém a acrescentou aqui, então ela atravessava
+     para todo filho de campanha. Não houve gasto — o filho é forçado a `ollama`,
+     que nunca chega a consultar a cadeia — mas a lista É a fronteira, e uma
+     fronteira que depende de outra trava para não vazar já vazou. */
+  'OPENROUTER_API_KEY',
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
   'NEXT_PUBLIC_SUPABASE_URL',
@@ -71,13 +77,140 @@ const CREDENCIAIS_NEUTRALIZADAS = [
   'IARA_ADMINS',
 ] as const;
 
+/**
+ * A credencial de cada cérebro. Duplica de propósito o mapa de
+ * `FabricaRaciocinio`: a campanha não importa nada de `servidor/` — é a mesma
+ * regra que faz `OraculoJornal` reimplementar o HMAC. Um cérebro fora deste mapa
+ * simplesmente não libera credencial nenhuma, e o motor dirá em voz alta que
+ * está sem raciocínio.
+ */
+const CREDENCIAL_DO_CEREBRO: Readonly<Record<string, string>> = {
+  anthropic: 'ANTHROPIC_API_KEY',
+  groq: 'GROQ_API_KEY',
+  gemini: 'GEMINI_API_KEY',
+  openrouter: 'OPENROUTER_API_KEY',
+  /* `ollama` não aparece: `OLLAMA_URL` nunca foi zerada — é local, sem cota e
+     sem custo, e é o padrão da campanha. */
+};
+
+/**
+ * OS CÉREBROS PEDIDOS, normalizados — aceita `'groq'` e `'groq,gemini'`.
+ *
+ * A LISTA EXISTE POR UMA MEDIÇÃO, 18/08/2026. O boot de conversa subiu com
+ * `--cerebro groq` e todo turno cognitivo morreu em ~130 ms; o texto cru era
+ * `429 ... tokens per minute (TPM): Limit 8000, Used 7066, Requested 6448`. Um
+ * turno da rota cognitiva pede ~6,4k tokens, então o segundo turno do mesmo
+ * minuto estoura o teto gratuito da Groq — sempre.
+ *
+ * O ponto não é o 429: `CadeiaDeRaciocinio` classifica `rate_limit` como motivo
+ * de TROCA, e em produção o próximo elo assumiria. O ponto é que ESTE HARNESS
+ * não conseguia enxergar isso: liberando a credencial de um cérebro só, a cadeia
+ * nasce com um elo, e "o provedor estourou a cota" fica INDISTINGUÍVEL de "a
+ * cadeia não faz failover". São o mesmo relatório e defeitos opostos.
+ *
+ * Medir failover exige mais de um elo vivo. Daí a lista.
+ */
+function cerebrosPedidos(cerebro: string | undefined): readonly string[] {
+  if (!cerebro) return [];
+  return cerebro
+    .split(',')
+    .map((c) => c.trim().toLowerCase())
+    .filter((c) => c.length > 0);
+}
+
+/**
+ * FONTES DE LEITURA que uma corrida pode pedir de volta, por apelido.
+ *
+ * Existe para a prova de produção da cardinalidade: "quantos motoristas temos?"
+ * só tem resposta se a planilha da LUFT estiver alcançável, e no sandbox ela
+ * está zerada por padrão — que continua sendo o certo para as campanhas
+ * noturnas.
+ *
+ * SÓ LEITURA. `MS_GRAPH_CAIXA` (enviar e-mail) fica de fora de propósito: a
+ * exceção é para conseguir CONFERIR um número, não para a IARA alcançar
+ * terceiros durante um teste. WhatsApp e Supabase seguem zerados.
+ *
+ * O VALOR DO SEGREDO NÃO PASSA POR AQUI — o mesmo mecanismo do `cerebro`: a
+ * variável apenas deixa de ser sobrescrita por string vazia, e o `dotenv` do
+ * filho a repõe do `.env.local`. Nada é lido, copiado ou repassado.
+ */
+const FONTES_LIBERAVEIS: Readonly<Record<string, readonly string[]>> = {
+  graph: ['MS_GRAPH_TOKEN', 'MS_GRAPH_CLIENT_ID', 'MS_GRAPH_TENANT_ID', 'MS_GRAPH_CLIENT_SECRET', 'MS_GRAPH_OCI_URL'],
+};
+
+/** As zeradas desta corrida: todas, menos as dos cérebros e fontes pedidos. */
+function credenciaisZeradas(
+  cerebro: string | undefined,
+  fontes: readonly string[] = [],
+): readonly string[] {
+  const liberadas = new Set(
+    cerebrosPedidos(cerebro)
+      .map((c) => CREDENCIAL_DO_CEREBRO[c])
+      .filter((v): v is string => Boolean(v)),
+  );
+  for (const apelido of fontes) {
+    for (const v of FONTES_LIBERAVEIS[apelido.trim().toLowerCase()] ?? []) liberadas.add(v);
+  }
+  return CREDENCIAIS_NEUTRALIZADAS.filter((n) => !liberadas.has(n));
+}
+
+/**
+ * O QUE VAI PARA `IARA_PROVEDOR`.
+ *
+ * Um cérebro pedido → força aquele, sem cadeia: quem declarou um sabe o que
+ * quer medir. Mais de um → `auto`, porque é `auto` que faz a `FabricaRaciocinio`
+ * montar a CADEIA na ordem dela. Declarar `'groq,gemini'` em `IARA_PROVEDOR`
+ * cairia no ramo "valor fora da lista" da fábrica, que também vira `auto` — mas
+ * por acidente, e um acerto por acidente é o que este arquivo inteiro combate.
+ */
+function seletorDeProvedor(cerebro: string | undefined): Record<string, string> {
+  const pedidos = cerebrosPedidos(cerebro);
+  if (pedidos.length === 0) return {};
+  return { IARA_PROVEDOR: pedidos.length === 1 ? pedidos[0] : 'auto' };
+}
+
 export interface OpcoesMotor {
   readonly porta: number;
   readonly rotulo: string;
   /** Sobrescritas pontuais — uma missão que precise de admin, por exemplo. */
   readonly ambiente?: Readonly<Record<string, string>>;
+  /**
+   * O CÉREBRO PEDIDO — e a única exceção à neutralização de credenciais.
+   *
+   * Sem ele, o filho roda `ollama` local com todas as chaves de raciocínio
+   * zeradas: a campanha não gasta cota nem dinheiro, que é o padrão e continua
+   * sendo. Com ele, DUAS coisas mudam juntas, e só juntas é que a medição existe:
+   *
+   *   1. `IARA_PROVEDOR` passa a valer o provedor pedido;
+   *   2. a credencial DESSE provedor — só dela — sai da lista de zeradas.
+   *
+   * Fazer (1) sem (2) foi o defeito de 18/08/2026: a campanha CO subiu com
+   * `--cerebro groq`, o seletor mudou, a chave continuou vazia, o provedor
+   * nasceu indisponível e a IARA recusou honestamente durante doze segundos. O
+   * relatório teria chamado aquilo de "resultado da Groq".
+   *
+   * O VALOR DO SEGREDO NÃO PASSA POR AQUI. A credencial não é lida, copiada nem
+   * repassada: ela apenas deixa de ser sobrescrita por string vazia, e o
+   * `dotenv` de `principal.ts` a repõe do `.env.local` dentro do filho — que é
+   * exatamente o mecanismo que o comentário de `CREDENCIAIS_NEUTRALIZADAS`
+   * descreve, usado no sentido contrário.
+   *
+   * ISTO GASTA COTA REAL, e dinheiro real quando o pedido é `anthropic`. É por
+   * isso que a porta é uma opção explícita por corrida e não um padrão.
+   *
+   * ACEITA LISTA SEPARADA POR VÍRGULA — `'groq,gemini,openrouter'`. Um nome
+   * força aquele provedor; vários montam a CADEIA, que é a única forma de medir
+   * failover. Ver `cerebrosPedidos` para o incidente que originou a lista.
+   */
+  readonly cerebro?: string;
   /** Teto para a subida. Ollama frio já levou 20 s para o primeiro turno. */
   readonly prazo_subida_ms?: number;
+  /**
+   * Fontes de LEITURA devolvidas a este filho, por apelido (`graph`). Padrão é
+   * nenhuma — o sandbox segue cego para o mundo, que é o que permite a campanha
+   * rodar de madrugada. Ver `FONTES_LIBERAVEIS`.
+   */
+  readonly liberar?: readonly string[];
 }
 
 export interface MotorVivo {
@@ -250,7 +383,10 @@ export async function subirMotor(opcoes: OpcoesMotor): Promise<MotorVivo> {
      */
     OLLAMA_MODELO: process.env.OLLAMA_MODELO ?? 'llama3.2:3b',
     IARA_ORIGENS: '',
-    ...Object.fromEntries(CREDENCIAIS_NEUTRALIZADAS.map((n) => [n, ''])),
+    ...Object.fromEntries(credenciaisZeradas(opcoes.cerebro, opcoes.liberar).map((n) => [n, ''])),
+    /* Depois das zeradas de propósito: pedir cérebro é justamente sobrepor o
+       `IARA_PROVEDOR: 'ollama'` fixado acima. */
+    ...seletorDeProvedor(opcoes.cerebro),
     ...(opcoes.ambiente ?? {}),
   };
 

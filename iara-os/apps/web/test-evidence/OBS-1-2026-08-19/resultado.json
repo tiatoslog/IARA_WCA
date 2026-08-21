@@ -1,0 +1,31 @@
+{
+  "defeito": "OBS-1 — mensagem perdida em silencio com o indicador dizendo 'barramento aberto'",
+  "causa_raiz": "readyState === OPEN + send() sem excecao era tratado como entrega. O servidor morrendo no meio deixa o socket OPEN do lado do cliente por algum tempo; o quadro morre no caminho e o onclose so chega depois.",
+  "correcao": "VigiaDoEco (lib/vigiaDoEco.ts) — pendencia por op:id, resolvida SO pelo eco em snapshot.pergunta, com prazo de 12s. Nao reenvia sozinho.",
+  "gatilhos": ["relogio de 2s", "visibilitychange quando a aba volta"],
+  "testes_unitarios": { "arquivo": "testes/vigia-do-eco.test.ts", "casos": 12, "passou": 12 },
+  "prova_navegador": {
+    "caso_positivo": {
+      "cenario": "socket OPEN, send() interceptado e engolido (a condicao exata do OBS-1), servidor no ar",
+      "resultado": "balao passou a exibir 'sem confirmacao de entrega'",
+      "evidencia_bruta": "PROVA OBS-1 QUARTA: quantas cargas hoje?\nsem confirmacao de entrega\n16:09"
+    },
+    "controle_negativo": {
+      "cenario": "envio normal, servidor derrubado logo apos — a mensagem chegou e foi respondida",
+      "resultado": "nenhuma marca; a IARA respondeu 'hoje (19 de agosto): 15 cargas.'",
+      "conclusao": "sem falso positivo"
+    },
+    "tentativa_falha_registrada": {
+      "cenario": "duas primeiras tentativas com a aba oculta",
+      "resultado": "o aviso NAO saiu",
+      "causa": "Chrome estrangula setInterval em aba oculta (1x/min, congela depois)",
+      "consequencia": "o conserto ganhou o gatilho de visibilitychange por causa desta falha"
+    }
+  },
+  "regressao_margem": {
+    "pergunta": "qual a margem da operacao?",
+    "resposta": "R$ 1.428.929,02 = 30.1% sobre R$ 4.740.229,52; com pedagio R$ 1.355.129,98 (28.6%); rota tipica 30.2%; cobertura 99.9%",
+    "confere_com_oraculo": true
+  },
+  "suite": { "testes": 1901, "falhas": 0 }
+}

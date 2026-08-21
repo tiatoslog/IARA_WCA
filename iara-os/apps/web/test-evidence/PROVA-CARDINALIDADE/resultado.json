@@ -1,0 +1,55 @@
+{
+  "pergunta": "quantos motoristas temos?",
+  "verdade": 53,
+  "cerebro": "groq,gemini,openrouter,anthropic",
+  "voltas": [
+    {
+      "volta": 1,
+      "fala": "Não tenho esse número de cabeça agora — e não vou chutar. O que existe para puxar isso de verdade é a base de centrais, que traz a frota vinculada por UF, ou as planilhas da operação LUFT, se o que você quer é motorista ",
+      "numeros_na_tela": [],
+      "disse_53": false,
+      "numeros_suspeitos": [],
+      "vereditos": [
+        "verificacao:inconclusivo:entregar — sem oráculo para esta resposta: nenhum oráculo determinístico reconhece esta pergunta"
+      ],
+      "escaladas": 0,
+      "passos_no_jornal": 0,
+      "rota": "rota:plano_cognitivo — Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.",
+      "ms": 17821
+    },
+    {
+      "volta": 2,
+      "fala": "todas as cargas de 2026: 53 motoristas diferentes — 130 cargas sem motorista preenchido, fora dessa conta.",
+      "numeros_na_tela": [
+        53,
+        130
+      ],
+      "disse_53": true,
+      "numeros_suspeitos": [
+        130
+      ],
+      "vereditos": [],
+      "escaladas": 0,
+      "passos_no_jornal": 0,
+      "rota": "rota:plano_cognitivo — Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.",
+      "ms": 15052
+    },
+    {
+      "volta": 3,
+      "fala": "todas as cargas de 2026: 53 motoristas diferentes — 130 cargas sem motorista preenchido, fora dessa conta.",
+      "numeros_na_tela": [
+        53,
+        130
+      ],
+      "disse_53": true,
+      "numeros_suspeitos": [
+        130
+      ],
+      "vereditos": [],
+      "escaladas": 0,
+      "passos_no_jornal": 0,
+      "rota": "rota:plano_cognitivo — Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.",
+      "ms": 3781
+    }
+  ]
+}

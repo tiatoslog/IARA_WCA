@@ -1,0 +1,21 @@
+# tests 2014
+# pass 2010
+# fail 1
+# skipped 3
+=== falhas ===
+not ok 1814 - a superfície avaliável está declarada — nada entrou sem bateria saber
+
+[exited with code 0]
+
+--- ATRIBUICAO DA UNICA FALHA RESTANTE ---
+A falha e o portao de superficie acusando a habilidade `comparar_anos_luft`,
+declarada em cargasLuft.ts:1271, arquivo com mtime 2026-08-19 16:58:09 —
+posterior a ultima edicao desta sessao naquele arquivo.
+Esta sessao NAO criou habilidade nenhuma.
+`npm run superficie -- --aceitar` NAO foi rodado de proposito: aceitar a
+superficie de outra sessao sem as baterias dela e exatamente o falso verde
+que o portao existe para impedir.
+
+BASELINE (31598c8): 1894/1897 pass, 0 fail
+AGORA:              2010/2014 pass, 1 fail (acima), 3 skipped
+DELTA DESTA SESSAO: +117 testes, 0 falhas atribuiveis

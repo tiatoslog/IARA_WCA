@@ -1,0 +1,13 @@
+[iara] motor HEADLESS na porta 3091 — sem interface; ela é servida noutro host
+[iara] barramento em /barramento (o cliente chega por NEXT_PUBLIC_IARA_WS)
+[iara] persistência: arquivos locais (dados/)
+[iara] mãos: NESTE processo (win32) — e em qualquer braço que conectar em /dispositivo
+[iara] raciocínio: openrouter
+[iara] canal WhatsApp: desligado (falta WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN)
+[iara] voz: neural do Edge, voz "pt-BR-FranciscaNeural" (grátis; desligável com IARA_VOZ_NEURAL=0)
+[iara] transcrição: desligada (sem IARA_STT_CHAVE) — a fala continua sendo reconhecida pelo navegador
+[iara] Microsoft Graph: desligado (sem MS_GRAPH_TOKEN nem credencial de app)
+[iara] jornal de operações: selado (IARA_CHAVE_PROVA ativa)
+[iara] autenticação: DESLIGADA — modo local. NÃO EXPONHA ESTE PROCESSO À INTERNET.
+[iara] índice histórico carregado
+{"canal":"auditoria","instante":"2026-08-18T18:43:43.858Z","sessao":"camp202608181543-co01-v1","id_usuario":"camp202608181543-co01-v1","traco":"6b8da229-9b20-411a-b657-3e6deff5308e","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}

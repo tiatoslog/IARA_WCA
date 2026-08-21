@@ -257,6 +257,18 @@ export interface FalaProjetada {
    * degrada para o comportamento de antes, que é acrescentar no fim.
    */
   readonly responde_a?: string | null;
+  /**
+   * QUANDO ESTA FALA APARECEU — ISO 8601, para a bolha carimbar a hora.
+   *
+   * Vem do SERVIDOR e não do relógio do navegador: quem recarrega a página
+   * receberia "agora" em toda mensagem antiga, e uma conversa inteira marcada
+   * com o mesmo minuto é pior que nenhuma marcação. A formatação é do cliente,
+   * que conhece o fuso de quem lê.
+   *
+   * Opcional para o cliente degradar sem quebrar contra um servidor anterior a
+   * 19/08/2026 — a bolha simplesmente não mostra hora.
+   */
+  readonly instante?: string;
   readonly destino: string | null;
   readonly latencia_ms: number | null;
   readonly cache_lido: number;

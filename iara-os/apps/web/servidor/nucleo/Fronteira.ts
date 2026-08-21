@@ -130,12 +130,39 @@ export const ESTADO_INTERNO: readonly string[] = [
    * operador autoriza, o que não descreve nada do que acontece aqui.
    */
   'servidor/nucleo/Pareamento.ts',
+  /**
+   * A IDENTIDADE DO BACKEND. Abre `node:fs` para ler DOIS arquivos e só:
+   * `package.json` (a versão) e `.git/HEAD` (o commit que subiu).
+   *
+   * Leitura pura de metadado do próprio processo, na carga do módulo. Não
+   * alcança o mundo do operador, não escreve nada, não depende de credencial —
+   * e por isso não passa pelo portal, que existe para efeito que a LLM propõe e
+   * o operador autoriza.
+   *
+   * Lê `.git/HEAD` à mão em vez de chamar `git`: um `execFile` aqui a
+   * classificaria como EFEITO EXTERNO, e com razão — abrir processo é abrir
+   * processo. Ler dois arquivos é mais barato, não depende de `git` existir no
+   * contêiner, e mantém este módulo do lado certo da fronteira.
+   */
+  'servidor/nucleo/IdentidadeBackend.ts',
   // O jornal das operações. É a AUDITORIA, não um executor — ver `Fase 3`.
   'servidor/nucleo/kernel/RegistroOperacoes.ts',
   // Estado cognitivo em memória; nada atravessa o processo.
   'servidor/nucleo/EstadoAtomico.ts',
   'servidor/nucleo/kernel/MemoriaTrabalho.ts',
   'servidor/nucleo/kernel/RegistroErros.ts',
+  /**
+   * O VERIFICADOR DE RUNTIME. Abre `node:fs` para LER a base determinística e
+   * comparar com o que a IARA afirmou — leitura, e só.
+   *
+   * A tentação de classificá-lo como efeito existe porque ele participa da
+   * decisão de gastar dinheiro (a escalada ao pool premium). Mas o gasto não
+   * nasce aqui: este módulo devolve `valido | invalido | inconclusivo`, e quem
+   * decide é `EscaladaDoTurno` contra o `OrcamentoDoTurno`. Um verificador que
+   * passasse pelo portal também seria um verificador que a LLM poderia propor
+   * — e o portal existe justamente para o que a LLM propõe.
+   */
+  'servidor/nucleo/kernel/VerificacaoRuntime.ts',
 ];
 
 /**

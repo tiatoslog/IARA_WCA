@@ -1,0 +1,21 @@
+{
+  "_leia": "O AMBIENTE DE PRODUÇÃO, DECLARADO. Este arquivo existe porque em 18/08/2026 a IARA respondeu 18:29 quando eram 15:31, e o defeito era invisível na máquina de quem desenvolve: o Railway roda com TZ=UTC e o Brasil não. Um teste que passa sob o fuso do desenvolvedor não diz nada sobre produção. `Ambiente.ts` compara o processo atual com o que está aqui e NOMEIA cada divergência no relatório — a resposta para 'por que passa aqui e falha lá' deixa de ser investigação e vira uma linha.",
+  "_regra": "Divergência não reprova a campanha por si. Ela é DECLARADA. Reprovar seria impedir que alguém rode a campanha na própria máquina, que é onde ela mais roda; esconder seria repetir 18/08.",
+  "ambiente": "producao",
+  "hospedagem": "Railway",
+  "declarado_em": "2026-08-18",
+  "esperado": {
+    "TZ": "UTC",
+    "LANG": null,
+    "IARA_MODO": "headless",
+    "NODE_MAJOR": 22,
+    "plataforma": "linux"
+  },
+  "critico_para": {
+    "TZ": "hora, data, dia da semana, expiração de convite de pareamento, TTL de sessão, carimbos do jornal, carimbos de memória, heartbeat de dispositivo — um fuso errado aparece em todos, não num só",
+    "plataforma": "AgenteLocal.resolverRaiz e o caminho dos shards mudam entre win32 e linux",
+    "NODE_MAJOR": "o runtime de teste e o de produção precisam concordar para a suíte significar alguma coisa"
+  },
+  "provedores_esperados": ["groq", "gemini", "openrouter", "anthropic"],
+  "_nota_provedores": "A ORDEM É A DA CADEIA, e ela é decisão de custo tomada em 18/08/2026: as três gratuitas primeiro, a Anthropic (única paga) em quarto. Registrada aqui para que uma divergência de ordem entre local e produção seja vista como divergência, e não redescoberta como 'a IARA piorou'."
+}

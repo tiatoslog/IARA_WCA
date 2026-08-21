@@ -295,6 +295,23 @@ test('G3. o EFEITO EXTERNO só é alcançado a partir do portal ou do catálogo'
      * mundo. Ver `testes/repositorios-autorizados.test.ts`.
      */
     'servidor/nucleo/kernel/habilidades/agenteCodigo.ts',
+    /**
+     * A FAMÍLIA DE ARQUIVOS — criar com conteúdo, renomear, mover, copiar
+     * (20/08/2026, lacuna que a auditoria de capacidades classificou como
+     * `NOT_IMPLEMENTED`).
+     *
+     * Importa `AgenteLocal` pela MESMA razão de `habilidades/agenteLocal.ts` e
+     * sob as mesmas regras: nome e local nomeado, nunca caminho; execução pela
+     * ponte do Braço, nunca chamada direta; e a prova lida do disco por
+     * `provaDoArquivo` / `provaDeAusencia`, nunca do texto que a execução
+     * devolveu.
+     *
+     * O que ela acrescenta ao risco em relação a `criar_pasta`: escreve
+     * CONTEÚDO que a LLM redigiu. Por isso `validarNomeArquivo` recusa extensão
+     * executável — `.exe`, `.bat`, `.ps1`, `.lnk` e afins —, e o teto de 2 MB
+     * é conferido antes de qualquer escrita.
+     */
+    'servidor/nucleo/kernel/habilidades/arquivos.ts',
     'servidor/canais/PortaWhatsapp.ts', // usa o portal; não importa o cliente
     'servidor/barramento/Porta.ts',
     'servidor/principal.ts',

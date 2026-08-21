@@ -14,6 +14,11 @@
 import type { CapacidadeAtiva } from '../../../lib/estado';
 import type { Ilustracao } from '../../../lib/snapshot';
 import type { Dominio } from '../../../lib/capacidades';
+/* Ciclo APENAS de tipo — `Investigacao` importa `Risco` daqui e este arquivo
+   importa `Evidencia` de lá. Os dois lados são `import type`, apagados na
+   compilação: não existe aresta em runtime, e o vocabulário fica num lugar só
+   em vez de ganhar uma cópia por conveniência de grafo. */
+import type { Evidencia } from './Investigacao';
 import type { Operacao, SemanticaEfeito } from './Operacao';
 import type { RegistroOperacoes } from './RegistroOperacoes';
 import type { RegistroErros } from './RegistroErros';
@@ -40,6 +45,31 @@ export interface CampoEsquema {
   obrigatorio?: boolean;
   /** Valores aceitos. Ausente = qualquer um do tipo. */
   dentre?: readonly string[];
+  /**
+   * SINÔNIMOS DECLARADOS — a tradução do vocabulário de gente para o da API.
+   *
+   * O DEFEITO (produção, 18/08/2026). A operadora perguntou "quantas cargas
+   * temos no total?" e recebeu: *"Não executei isso. (…) `agrupar_por` fora dos
+   * valores aceitos."* O `dentre` de `agrupar_por` é
+   * `nenhum|motorista|rota|origem|destino|status`, e a LLM emitiu outra palavra
+   * para dizer a mesma coisa. O turno morreu, e o nome de um parâmetro interno
+   * foi parar na tela de quem só queria um número.
+   *
+   * A causa não é a validação — ela é trava de segurança e fica rígida. A causa
+   * é ACOPLAMENTO: o modelo precisava adivinhar o vocabulário exato da API
+   * interna, e uma palavra fora do enum matava o turno inteiro.
+   *
+   * TRADUÇÃO DECLARADA, NUNCA APROXIMAÇÃO. Nada de distância de edição nem de
+   * "parece com": cada sinônimo é escrito à mão por quem conhece o domínio, o
+   * mapa é dado do esquema como `dentre`, e o que não estiver nele continua
+   * sendo recusado. Casamento aproximado transformaria `destino` em `origem`
+   * num dia ruim — e responder a pergunta errada é o defeito que esta auditoria
+   * inteira persegue.
+   *
+   * Comparado sem acento e em minúsculas, porque "rota" e "ROTA" e "rótulo de
+   * rota" não são decisões de domínio diferentes.
+   */
+  sinonimos?: Readonly<Record<string, string>>;
   padrao?: unknown;
   /**
    * Teto de tamanho para `texto`. Ausente = `MAX_TEXTO_PADRAO`.
@@ -220,6 +250,29 @@ export interface ResultadoHabilidade {
    * habilidade tem licença para pôr aqui imagem que ela mesma desenhou.
    */
   readonly ilustracao?: Ilustracao | null;
+  /**
+   * OS NÚMEROS QUE ESTA HABILIDADE CALCULOU, TIPADOS — não a frase sobre eles.
+   *
+   * O DEFEITO QUE ESTE CAMPO FECHA: até aqui, todo número que uma habilidade
+   * apurava virava `string` antes de sair dela. `dizerCobertura()` mora dentro
+   * de `cargasLuft.ts` e é uma convenção de redação — nada obriga a próxima
+   * habilidade a chamá-la, e o kernel não tem como SABER que a cobertura foi
+   * 71%. Sem saber, ele não pode recusar uma afirmação sobre a população, não
+   * pode calcular confiança e não pode se abster. As propriedades analíticas
+   * boas deste repositório eram texto escrito à mão, habilidade por habilidade.
+   *
+   * OPCIONAL, E VAI CONTINUAR SENDO. A imensa maioria das habilidades — abrir
+   * aplicativo, criar pasta, mandar mensagem — não apura número nenhum, e
+   * obrigá-las a declarar evidência vazia seria cerimônia sem informação. O
+   * campo é para quem calcula sobre um CONJUNTO de registros, que é onde "18%"
+   * pode ser 18% de tudo ou 18% do que tinha preço, com a mesma frase.
+   *
+   * AUSÊNCIA NÃO É COBERTURA COMPLETA: `MotorCritica` trata evidência ausente
+   * ou sem `cobertura` como "não declarada" e rebaixa a conclusão para
+   * descritiva. Supor completa no silêncio transformaria esquecimento de quem
+   * escreveu a habilidade em garantia sobre o mundo.
+   */
+  readonly evidencias?: readonly Evidencia[];
 }
 
 /**
@@ -282,6 +335,24 @@ export class HabilidadeExpirou extends Error {}
  * que ninguém declarou é a porta por onde entra injeção vinda de um plano
  * gerado por LLM.
  */
+/**
+ * A palavra que a LLM emitiu vira a palavra que a API entende — ou fica como
+ * está e a trava a recusa. Ver `CampoEsquema.sinonimos`.
+ *
+ * Comparação sem acento e em minúsculas: "MOTORISTA", "motorista" e "Motorista"
+ * não são três decisões de domínio. O mapa continua sendo casamento EXATO da
+ * forma normalizada — nunca aproximado.
+ */
+function traduzirSinonimo(valor: unknown, campo: CampoEsquema): unknown {
+  if (typeof valor !== 'string' || !campo.sinonimos) return valor;
+  const chave = valor
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .toLowerCase();
+  return campo.sinonimos[chave] ?? valor;
+}
+
 export function validar(esquema: Esquema, entrada: Record<string, unknown>): Record<string, unknown> {
   const saida: Record<string, unknown> = {};
 
@@ -312,21 +383,38 @@ export function validar(esquema: Esquema, entrada: Record<string, unknown>): Rec
   }
 
   for (const [chave, campo] of Object.entries(esquema)) {
-    const valor = entrada[chave] ?? campo.padrao;
+    const bruto = entrada[chave] ?? campo.padrao;
 
-    if (valor === undefined || valor === null) {
+    if (bruto === undefined || bruto === null) {
       if (campo.obrigatorio) throw new ParametroInvalido(`falta "${chave}"`);
       continue;
     }
 
-    const tipoReal = typeof valor;
+    const tipoReal = typeof bruto;
     const esperado =
       campo.tipo === 'texto' ? 'string' : campo.tipo === 'numero' ? 'number' : 'boolean';
     if (tipoReal !== esperado) {
       throw new ParametroInvalido(`"${chave}" deveria ser ${campo.tipo}, veio ${tipoReal}`);
     }
+
+    /**
+     * A TRADUÇÃO VEM ANTES DA TRAVA, E NÃO NO LUGAR DELA.
+     *
+     * O valor traduzido segue por TODAS as checagens seguintes — tamanho,
+     * caractere de controle, o que vier depois. Um `continue` aqui pouparia
+     * duas comparações e criaria um campo que atravessa a validação pela
+     * metade; este arquivo já documenta, algumas linhas acima, por que uma
+     * trava que só não falha porque outra a compensa é uma trava que já falhou.
+     */
+    const valor = campo.dentre ? traduzirSinonimo(bruto, campo) : bruto;
+
     if (campo.dentre && !campo.dentre.includes(String(valor))) {
-      throw new ParametroInvalido(`"${chave}" fora dos valores aceitos`);
+      /* O enum ENTRA na mensagem. Sem ele, nem a operadora nem o modelo têm
+         como saber o que era aceitável — e foi assim que "quantas cargas
+         temos?" morreu sem resposta em produção, em 18/08/2026. */
+      throw new ParametroInvalido(
+        `"${chave}" fora dos valores aceitos (use um de: ${campo.dentre.join(', ')})`,
+      );
     }
     if (campo.tipo === 'texto') {
       const teto = campo.max ?? MAX_TEXTO_PADRAO;

@@ -1,0 +1,507 @@
+TAP version 13
+# {"canal":"auditoria","instante":"2026-08-19T19:52:07.936Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"6518157f-013e-47cf-bf3d-3252b6f764ed","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:07.949Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"6518157f-013e-47cf-bf3d-3252b6f764ed","acao":"analise:gerencial:concluir_com_ressalva","detalhe":"{\\"analise_id\\":\\"6518157f-013e-47cf-bf3d-3252b6f764ed\\",\\"nivel\\":\\"gerencial\\",\\"marcadores\\":[\\"comparativo\\"],\\"dimensoes\\":[\\"financeiro\\"],\\"tipo_pretendido\\":\\"comparativa\\",\\"degrau_sustentado\\":\\"descritiva\\",\\"veredicto\\":\\"concluir_com_ressalva\\",\\"confianca\\":\\"media\\",\\"pontuacao\\":0.795,\\"fontes\\":[\\"planilha_lab\\"],\\"ferramentas\\":[\\"lab.medir\\"],\\"evidencias\\":[{\\"metrica\\":\\"margem_bruta_pct\\",\\"fonte\\":\\"planilha_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":88.06594488188976,\\"consideradas\\":3579,\\"elegiveis\\":4064}],\\"ressalvas\\":[{\\"codigo\\":\\"cobertura_parcial\\",\\"gravidade\\":\\"seria\\"},{\\"codigo\\":\\"procedencia_fraca\\",\\"gravidade\\":\\"seria\\"}],\\"o_que_falta\\":[\\"completar o que ficou de fora do recorte\\",\\"apurar o dado numa fonte, em vez de deduzir\\"]}","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:07.964Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"6518157f-013e-47cf-bf3d-3252b6f764ed","acao":"custo_desconhecido","detalhe":"sem preço declarado para \\"undefined\\" — o turno não sabe quanto custou","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:07.972Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"6518157f-013e-47cf-bf3d-3252b6f764ed","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 3/12 · tempo 58ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.001Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"7953466e-eee1-4f10-a101-ce85a548bf89","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.009Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"7953466e-eee1-4f10-a101-ce85a548bf89","acao":"custo_desconhecido","detalhe":"sem preço declarado para \\"undefined\\" — o turno não sabe quanto custou","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.011Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"7953466e-eee1-4f10-a101-ce85a548bf89","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 3/12 · tempo 26ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.027Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"40615b1f-ce04-404a-ba14-8d6a3d4486b0","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.042Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"40615b1f-ce04-404a-ba14-8d6a3d4486b0","acao":"analise:gerencial:abster","detalhe":"{\\"analise_id\\":\\"40615b1f-ce04-404a-ba14-8d6a3d4486b0\\",\\"nivel\\":\\"gerencial\\",\\"marcadores\\":[\\"comparativo\\"],\\"dimensoes\\":[\\"financeiro\\"],\\"tipo_pretendido\\":\\"comparativa\\",\\"degrau_sustentado\\":\\"nenhum\\",\\"veredicto\\":\\"abster\\",\\"confianca\\":\\"baixa\\",\\"pontuacao\\":0.623,\\"fontes\\":[\\"planilha_lab\\"],\\"ferramentas\\":[\\"lab.medir\\"],\\"evidencias\\":[{\\"metrica\\":\\"cargas_atrasadas\\",\\"fonte\\":\\"planilha_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":0,\\"consideradas\\":0,\\"elegiveis\\":30}],\\"ressalvas\\":[{\\"codigo\\":\\"ausencia_como_zero\\",\\"gravidade\\":\\"impeditiva\\"},{\\"codigo\\":\\"cobertura_parcial\\",\\"gravidade\\":\\"seria\\"},{\\"codigo\\":\\"procedencia_fraca\\",\\"gravidade\\":\\"seria\\"}],\\"o_que_falta\\":[\\"confirmar se realmente não houve registro no período ou se a fonte não foi lida inteira\\",\\"completar o que ficou de fora do recorte\\",\\"apurar o dado numa fonte, em vez de deduzir\\"]}","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.049Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"40615b1f-ce04-404a-ba14-8d6a3d4486b0","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 2/12 · tempo 25ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.054Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"8388538c-7aea-411f-a95b-615552093de6","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.057Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"8388538c-7aea-411f-a95b-615552093de6","acao":"analise:gerencial:abster","detalhe":"{\\"analise_id\\":\\"8388538c-7aea-411f-a95b-615552093de6\\",\\"nivel\\":\\"gerencial\\",\\"marcadores\\":[\\"comparativo\\"],\\"dimensoes\\":[\\"financeiro\\"],\\"tipo_pretendido\\":\\"comparativa\\",\\"degrau_sustentado\\":\\"nenhum\\",\\"veredicto\\":\\"abster\\",\\"confianca\\":\\"baixa\\",\\"pontuacao\\":0.591,\\"fontes\\":[\\"planilha_lab\\",\\"memoria_do_turno\\"],\\"ferramentas\\":[\\"lab.medir\\"],\\"evidencias\\":[{\\"metrica\\":\\"motoristas\\",\\"fonte\\":\\"planilha_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":null,\\"consideradas\\":null,\\"elegiveis\\":null},{\\"metrica\\":\\"motoristas\\",\\"fonte\\":\\"memoria_do_turno\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":null,\\"consideradas\\":null,\\"elegiveis\\":null}],\\"ressalvas\\":[{\\"codigo\\":\\"contradicao_entre_fontes\\",\\"gravidade\\":\\"impeditiva\\"},{\\"codigo\\":\\"cobertura_nao_declarada\\",\\"gravidade\\":\\"leve\\"}],\\"o_que_falta\\":[\\"resolver qual das fontes está certa antes de eu dar um número\\"]}","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.058Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"8388538c-7aea-411f-a95b-615552093de6","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 2/12 · tempo 5ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.065Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"02ccb24c-1982-48f8-accb-bbf2409fdaa7","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.069Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"02ccb24c-1982-48f8-accb-bbf2409fdaa7","acao":"analise:gerencial:concluir","detalhe":"{\\"analise_id\\":\\"02ccb24c-1982-48f8-accb-bbf2409fdaa7\\",\\"nivel\\":\\"gerencial\\",\\"marcadores\\":[\\"comparativo\\"],\\"dimensoes\\":[\\"financeiro\\"],\\"tipo_pretendido\\":\\"comparativa\\",\\"degrau_sustentado\\":\\"comparativa\\",\\"veredicto\\":\\"concluir\\",\\"confianca\\":\\"alta\\",\\"pontuacao\\":0.982,\\"fontes\\":[\\"planilha_lab\\",\\"tabela_lab\\",\\"cadastro_lab\\"],\\"ferramentas\\":[\\"lab.medir\\"],\\"evidencias\\":[{\\"metrica\\":\\"cargas\\",\\"fonte\\":\\"planilha_lab\\",\\"procedencia\\":\\"fato_verificado\\",\\"cobertura_pct\\":100,\\"consideradas\\":412,\\"elegiveis\\":412},{\\"metrica\\":\\"receita\\",\\"fonte\\":\\"tabela_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":100,\\"consideradas\\":412,\\"elegiveis\\":412},{\\"metrica\\":\\"motoristas\\",\\"fonte\\":\\"cadastro_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":100,\\"consideradas\\":412,\\"elegiveis\\":412}],\\"ressalvas\\":[],\\"o_que_falta\\":[]}","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.071Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"02ccb24c-1982-48f8-accb-bbf2409fdaa7","acao":"custo_desconhecido","detalhe":"sem preço declarado para \\"undefined\\" — o turno não sabe quanto custou","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:52:08.073Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"02ccb24c-1982-48f8-accb-bbf2409fdaa7","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 3/12 · tempo 10ms/900000ms","permitido":true}
+# Subtest: 1.1 cobertura parcial vira ressalva NA RESPOSTA, mesmo com síntese afirmativa
+ok 1 - 1.1 cobertura parcial vira ressalva NA RESPOSTA, mesmo com síntese afirmativa
+  ---
+  duration_ms: 70.7798
+  type: 'test'
+  ...
+# Subtest: 1.2 sem evidência tipada, o turno sai IDÊNTICO ao de antes da camada
+ok 2 - 1.2 sem evidência tipada, o turno sai IDÊNTICO ao de antes da camada
+  ---
+  duration_ms: 37.117
+  type: 'test'
+  ...
+# Subtest: 2.1 ausência apresentada como zero encerra o turno ANTES da síntese
+ok 3 - 2.1 ausência apresentada como zero encerra o turno ANTES da síntese
+  ---
+  duration_ms: 38.2086
+  type: 'test'
+  ...
+# Subtest: 2.2 fontes discordando também encerra antes da síntese
+ok 4 - 2.2 fontes discordando também encerra antes da síntese
+  ---
+  duration_ms: 8.6582
+  type: 'test'
+  ...
+# Subtest: 3.1 evidência limpa e completa não ganha rodapé nenhum
+ok 5 - 3.1 evidência limpa e completa não ganha rodapé nenhum
+  ---
+  duration_ms: 14.8013
+  type: 'test'
+  ...
+# Subtest: A1. cobertura calcula o derivado e não aceita percentual de fora
+ok 6 - A1. cobertura calcula o derivado e não aceita percentual de fora
+  ---
+  duration_ms: 3.4788
+  type: 'test'
+  ...
+# Subtest: A2. 0 de 0 é null, nunca 0% — a lição de MargemOperacional
+ok 7 - A2. 0 de 0 é null, nunca 0% — a lição de MargemOperacional
+  ---
+  duration_ms: 0.5469
+  type: 'test'
+  ...
+# Subtest: A3. considerar mais que o elegível fica no teto em vez de estourar
+ok 8 - A3. considerar mais que o elegível fica no teto em vez de estourar
+  ---
+  duration_ms: 0.2862
+  type: 'test'
+  ...
+# Subtest: A4. só cobertura completa sustenta afirmação sobre a população
+ok 9 - A4. só cobertura completa sustenta afirmação sobre a população
+  ---
+  duration_ms: 0.2768
+  type: 'test'
+  ...
+# Subtest: A5. ausência não é zero
+ok 10 - A5. ausência não é zero
+  ---
+  duration_ms: 0.3002
+  type: 'test'
+  ...
+# Subtest: A6. comparável exige mesmas dimensões de recorte E mesma classe
+ok 11 - A6. comparável exige mesmas dimensões de recorte E mesma classe
+  ---
+  duration_ms: 0.5669
+  type: 'test'
+  ...
+# Subtest: A7. o recorte é conjunto, não lista ordenada
+ok 12 - A7. o recorte é conjunto, não lista ordenada
+  ---
+  duration_ms: 0.4298
+  type: 'test'
+  ...
+# Subtest: A8. cobertura completa não vira ruído na resposta
+ok 13 - A8. cobertura completa não vira ruído na resposta
+  ---
+  duration_ms: 0.7359
+  type: 'test'
+  ...
+# Subtest: A9. o adaptador do join da margem traduz sem que o kernel conheça carga
+ok 14 - A9. o adaptador do join da margem traduz sem que o kernel conheça carga
+  ---
+  duration_ms: 1.1791
+  type: 'test'
+  ...
+# Subtest: A10. os limiares são convenção declarada, não número solto
+ok 15 - A10. os limiares são convenção declarada, não número solto
+  ---
+  duration_ms: 0.8879
+  type: 'test'
+  ...
+# Subtest: B0. sem evidência nenhuma o degrau é `nenhum` — a abstenção
+ok 16 - B0. sem evidência nenhuma o degrau é `nenhum` — a abstenção
+  ---
+  duration_ms: 0.6303
+  type: 'test'
+  ...
+# Subtest: B1. zero sobre conjunto vazio é impeditivo e derruba tudo
+ok 17 - B1. zero sobre conjunto vazio é impeditivo e derruba tudo
+  ---
+  duration_ms: 1.9894
+  type: 'test'
+  ...
+# Subtest: B2. cobertura parcial rebaixa para descritiva — não cala a resposta
+ok 18 - B2. cobertura parcial rebaixa para descritiva — não cala a resposta
+  ---
+  duration_ms: 0.4909
+  type: 'test'
+  ...
+# Subtest: B3. silêncio sobre cobertura não é garantia de cobertura
+ok 19 - B3. silêncio sobre cobertura não é garantia de cobertura
+  ---
+  duration_ms: 0.331
+  type: 'test'
+  ...
+# Subtest: B4. duas fontes discordando é impeditivo
+ok 20 - B4. duas fontes discordando é impeditivo
+  ---
+  duration_ms: 0.5469
+  type: 'test'
+  ...
+# Subtest: B4b. a MESMA fonte lida duas vezes é série temporal, não contradição
+ok 21 - B4b. a MESMA fonte lida duas vezes é série temporal, não contradição
+  ---
+  duration_ms: 0.5094
+  type: 'test'
+  ...
+# Subtest: B5. dado velho entra com ressalva; dado obsoleto rebaixa
+ok 22 - B5. dado velho entra com ressalva; dado obsoleto rebaixa
+  ---
+  duration_ms: 1.4004
+  type: 'test'
+  ...
+# Subtest: B6. fonte única só é ressalva quando a conclusão passa de populacional
+ok 23 - B6. fonte única só é ressalva quando a conclusão passa de populacional
+  ---
+  duration_ms: 1.3984
+  type: 'test'
+  ...
+# Subtest: B7. hipótese entrando como medida é ressalva séria
+ok 24 - B7. hipótese entrando como medida é ressalva séria
+  ---
+  duration_ms: 0.556
+  type: 'test'
+  ...
+# Subtest: B8. denominador móvel derruba a comparação para populacional
+ok 25 - B8. denominador móvel derruba a comparação para populacional
+  ---
+  duration_ms: 0.8946
+  type: 'test'
+  ...
+# Subtest: B9. causa sem experimento cai para comparativa e diz o que confirmaria
+ok 26 - B9. causa sem experimento cai para comparativa e diz o que confirmaria
+  ---
+  duration_ms: 0.7303
+  type: 'test'
+  ...
+# Subtest: B9b. intervenção verificada é a exceção real, não decorativa
+ok 27 - B9b. intervenção verificada é a exceção real, não decorativa
+  ---
+  duration_ms: 0.6144
+  type: 'test'
+  ...
+# Subtest: B10. grupo pequeno demais não sustenta ranking nem tendência
+ok 28 - B10. grupo pequeno demais não sustenta ranking nem tendência
+  ---
+  duration_ms: 0.5132
+  type: 'test'
+  ...
+# Subtest: B11. o teto é o PIOR limite, nunca a média deles
+ok 29 - B11. o teto é o PIOR limite, nunca a média deles
+  ---
+  duration_ms: 0.5355
+  type: 'test'
+  ...
+# Subtest: B12. ordenar coloca a impeditiva na frente
+ok 30 - B12. ordenar coloca a impeditiva na frente
+  ---
+  duration_ms: 1.4805
+  type: 'test'
+  ...
+# Subtest: C1. evidência boa e completa dá confiança alta
+ok 31 - C1. evidência boa e completa dá confiança alta
+  ---
+  duration_ms: 1.392
+  type: 'test'
+  ...
+# Subtest: C2. contradição TRAVA a confiança em baixa — não é compensável
+ok 32 - C2. contradição TRAVA a confiança em baixa — não é compensável
+  ---
+  duration_ms: 0.8232
+  type: 'test'
+  ...
+# Subtest: C3. a confiança se explica apontando o fator dominante
+ok 33 - C3. a confiança se explica apontando o fator dominante
+  ---
+  duration_ms: 3.0859
+  type: 'test'
+  ...
+# Subtest: C4. degrau `nenhum` produz abstenção com o que destravaria
+ok 34 - C4. degrau `nenhum` produz abstenção com o que destravaria
+  ---
+  duration_ms: 1.1972
+  type: 'test'
+  ...
+# Subtest: C5. ressalva leve ainda conclui — a crítica não é uma recusa disfarçada
+ok 35 - C5. ressalva leve ainda conclui — a crítica não é uma recusa disfarçada
+  ---
+  duration_ms: 1.1678
+  type: 'test'
+  ...
+# Subtest: C6. tudo limpo conclui sem ressalva nenhuma
+ok 36 - C6. tudo limpo conclui sem ressalva nenhuma
+  ---
+  duration_ms: 2.2488
+  type: 'test'
+  ...
+# Subtest: C7. a abstenção é ESCOPADA: causa negada, comparação preservada
+ok 37 - C7. a abstenção é ESCOPADA: causa negada, comparação preservada
+  ---
+  duration_ms: 1.0865
+  type: 'test'
+  ...
+# Subtest: A1. rotular tudo como `contextual` NÃO escapa da crítica
+ok 38 - A1. rotular tudo como `contextual` NÃO escapa da crítica
+  ---
+  duration_ms: 7.4019
+  type: 'test'
+  ...
+# Subtest: A2. NaN não atravessa como número — a única "invenção" que o resto não pega
+ok 39 - A2. NaN não atravessa como número — a única "invenção" que o resto não pega
+  ---
+  duration_ms: 3.4176
+  type: 'test'
+  ...
+# Subtest: A3. declarar cobertura 100% sobre 3 de 200 registros é impossível por construção
+ok 40 - A3. declarar cobertura 100% sobre 3 de 200 registros é impossível por construção
+  ---
+  duration_ms: 3.1818
+  type: 'test'
+  ...
+# Subtest: A4. procedência `fato_verificado` mentirosa ainda esbarra na cobertura
+ok 41 - A4. procedência `fato_verificado` mentirosa ainda esbarra na cobertura
+  ---
+  duration_ms: 0.868
+  type: 'test'
+  ...
+# Subtest: B1. uma evidência ótima não compensa uma péssima
+ok 42 - B1. uma evidência ótima não compensa uma péssima
+  ---
+  duration_ms: 0.7413
+  type: 'test'
+  ...
+# Subtest: B2. muitas ressalvas leves não viram uma impeditiva (nem o contrário)
+ok 43 - B2. muitas ressalvas leves não viram uma impeditiva (nem o contrário)
+  ---
+  duration_ms: 1.6405
+  type: 'test'
+  ...
+# Subtest: B3. pergunta causal não consegue comprar o degrau com volume de evidência
+ok 44 - B3. pergunta causal não consegue comprar o degrau com volume de evidência
+  ---
+  duration_ms: 1.3217
+  type: 'test'
+  ...
+# Subtest: C1. instante inválido não quebra e não vira "dado fresco"
+ok 45 - C1. instante inválido não quebra e não vira "dado fresco"
+  ---
+  duration_ms: 0.9688
+  type: 'test'
+  ...
+# Subtest: C2. cobertura com números absurdos é normalizada, não explode
+ok 46 - C2. cobertura com números absurdos é normalizada, não explode
+  ---
+  duration_ms: 1.3284
+  type: 'test'
+  ...
+# Subtest: C3. métrica com nome vazio ou gigante não quebra a redação
+ok 47 - C3. métrica com nome vazio ou gigante não quebra a redação
+  ---
+  duration_ms: 1.5789
+  type: 'test'
+  ...
+# Subtest: C4. a crítica é pura: mesma entrada, mesma saída, sem tocar relógio
+ok 48 - C4. a crítica é pura: mesma entrada, mesma saída, sem tocar relógio
+  ---
+  duration_ms: 3.6619
+  type: 'test'
+  ...
+# Subtest: D1. a IARA não pode dizer "confiança alta" com uma ressalva séria na mesa
+ok 49 - D1. a IARA não pode dizer "confiança alta" com uma ressalva séria na mesa
+  ---
+  duration_ms: 5.4687
+  type: 'test'
+  ...
+# Subtest: D2. abster sempre nomeia o que destravaria — nunca só "não sei"
+ok 50 - D2. abster sempre nomeia o que destravaria — nunca só "não sei"
+  ---
+  duration_ms: 1.4759
+  type: 'test'
+  ...
+# Subtest: D3. a linha de auditoria reconstrói a decisão sem depender de texto livre
+ok 51 - D3. a linha de auditoria reconstrói a decisão sem depender de texto livre
+  ---
+  duration_ms: 2.7947
+  type: 'test'
+  ...
+# Subtest: holdout: a biblioteca cobre a matriz cognitiva declarada
+ok 52 - holdout: a biblioteca cobre a matriz cognitiva declarada
+  ---
+  duration_ms: 2.6527
+  type: 'test'
+  ...
+# Subtest: holdout H01 — ausência convertida em zero — "nenhuma carga atrasou" é a resposta confortável e falsa
+ok 53 - holdout H01 — ausência convertida em zero — "nenhuma carga atrasou" é a resposta confortável e falsa
+  ---
+  duration_ms: 8.9459
+  type: 'test'
+  ...
+# Subtest: holdout H02 — amostra parcial apresentada como população — "a margem da operação foi 31,4%"
+ok 54 - holdout H02 — amostra parcial apresentada como população — "a margem da operação foi 31,4%"
+  ---
+  duration_ms: 2.0881
+  type: 'test'
+  ...
+# Subtest: holdout H03 — memória antiga conflitante virando credencial — o erro que se autoconfirma
+ok 55 - holdout H03 — memória antiga conflitante virando credencial — o erro que se autoconfirma
+  ---
+  duration_ms: 0.9878
+  type: 'test'
+  ...
+# Subtest: holdout H04 — correlação vendida como causalidade — a pergunta "por que" convida a inventar o mecanismo
+ok 56 - holdout H04 — correlação vendida como causalidade — a pergunta "por que" convida a inventar o mecanismo
+  ---
+  duration_ms: 0.8876
+  type: 'test'
+  ...
+# Subtest: holdout H05 — estimativa apresentada como valor confirmado
+ok 57 - holdout H05 — estimativa apresentada como valor confirmado
+  ---
+  duration_ms: 3.1959
+  type: 'test'
+  ...
+# Subtest: holdout H06 — denominador móvel — parte da "melhora" é variação de quanto se enxerga
+ok 58 - holdout H06 — denominador móvel — parte da "melhora" é variação de quanto se enxerga
+  ---
+  duration_ms: 1.3335
+  type: 'test'
+  ...
+# Subtest: holdout H07 — pergunta tendenciosa com hipótese embutida, amostra de 4 cargas e consequência sobre uma pessoa
+ok 59 - holdout H07 — pergunta tendenciosa com hipótese embutida, amostra de 4 cargas e consequência sobre uma pessoa
+  ---
+  duration_ms: 0.8069
+  type: 'test'
+  ...
+# Subtest: holdout H08 — inconsistência temporal — número certo para um instante que já passou
+ok 60 - holdout H08 — inconsistência temporal — número certo para um instante que já passou
+  ---
+  duration_ms: 1.104
+  type: 'test'
+  ...
+# Subtest: holdout H09 — evolução no tempo confundida com fonte conflitante
+ok 61 - holdout H09 — evolução no tempo confundida com fonte conflitante
+  ---
+  duration_ms: 1.4013
+  type: 'test'
+  ...
+# Subtest: holdout H10 — o caso limpo — se ele não passa limpo, o motor é alarme falso permanente
+ok 62 - holdout H10 — o caso limpo — se ele não passa limpo, o motor é alarme falso permanente
+  ---
+  duration_ms: 1.8314
+  type: 'test'
+  ...
+# Subtest: holdout H11 — decisão de alto risco sobre evidência única — o nível pede 3 e o turno entregou 1
+ok 63 - holdout H11 — decisão de alto risco sobre evidência única — o nível pede 3 e o turno entregou 1
+  ---
+  duration_ms: 0.64
+  type: 'test'
+  ...
+# Subtest: holdout H12 — ranking de ruído — 2 cargas contra 437 no mesmo pódio
+ok 64 - holdout H12 — ranking de ruído — 2 cargas contra 437 no mesmo pódio
+  ---
+  duration_ms: 0.4032
+  type: 'test'
+  ...
+# Subtest: holdout H13 — hipótese apresentada como explicação, sem uma medição sequer
+ok 65 - holdout H13 — hipótese apresentada como explicação, sem uma medição sequer
+  ---
+  duration_ms: 0.3612
+  type: 'test'
+  ...
+# Subtest: holdout: o mesmo cenário duas vezes dá exatamente o mesmo dossiê
+ok 66 - holdout: o mesmo cenário duas vezes dá exatamente o mesmo dossiê
+  ---
+  duration_ms: 6.4821
+  type: 'test'
+  ...
+# Subtest: A1. pergunta factual pura não arrasta o motor analítico
+ok 67 - A1. pergunta factual pura não arrasta o motor analítico
+  ---
+  duration_ms: 28.0445
+  type: 'test'
+  ...
+# Subtest: A2. contagem sobre a operação sobe para consulta ou operacional
+ok 68 - A2. contagem sobre a operação sobe para consulta ou operacional
+  ---
+  duration_ms: 1.0616
+  type: 'test'
+  ...
+# Subtest: A3. comparação vira gerencial e pretende conclusão comparativa
+ok 69 - A3. comparação vira gerencial e pretende conclusão comparativa
+  ---
+  duration_ms: 0.643
+  type: 'test'
+  ...
+# Subtest: A4. "por que" é o marcador causal e sobe para estratégica
+ok 70 - A4. "por que" é o marcador causal e sobe para estratégica
+  ---
+  duration_ms: 0.532
+  type: 'test'
+  ...
+# Subtest: A5. executivo exige enquadramento DECLARADO mais decisão
+ok 71 - A5. executivo exige enquadramento DECLARADO mais decisão
+  ---
+  duration_ms: 0.6198
+  type: 'test'
+  ...
+# Subtest: A6. três dimensões de negócio tornam a pergunta multidimensional
+ok 72 - A6. três dimensões de negócio tornam a pergunta multidimensional
+  ---
+  duration_ms: 0.3679
+  type: 'test'
+  ...
+# Subtest: B1. "o sistema caiu" é incidente, não comparação
+ok 73 - B1. "o sistema caiu" é incidente, não comparação
+  ---
+  duration_ms: 0.5567
+  type: 'test'
+  ...
+# Subtest: B2. "porque" explicativo do operador não vira pedido de causa
+ok 74 - B2. "porque" explicativo do operador não vira pedido de causa
+  ---
+  duration_ms: 1.0174
+  type: 'test'
+  ...
+# Subtest: B3. decisão NÃO cria exigência causal sozinha
+ok 75 - B3. decisão NÃO cria exigência causal sozinha
+  ---
+  duration_ms: 1.125
+  type: 'test'
+  ...
+# Subtest: B4. decisão sobe a exigência de recomendação mesmo em nível baixo
+ok 76 - B4. decisão sobe a exigência de recomendação mesmo em nível baixo
+  ---
+  duration_ms: 0.888
+  type: 'test'
+  ...
+# Subtest: C1. cada nível declara exigências diferentes — nenhum é só um rótulo
+ok 77 - C1. cada nível declara exigências diferentes — nenhum é só um rótulo
+  ---
+  duration_ms: 0.4376
+  type: 'test'
+  ...
+# Subtest: C2. a exigência cresce monotonicamente com o nível
+ok 78 - C2. a exigência cresce monotonicamente com o nível
+  ---
+  duration_ms: 0.3361
+  type: 'test'
+  ...
+# Subtest: C3. a escolha é auditável: os marcadores que dispararam ficam declarados
+ok 79 - C3. a escolha é auditável: os marcadores que dispararam ficam declarados
+  ---
+  duration_ms: 0.2907
+  type: 'test'
+  ...
+# Subtest: C4. o mesmo texto dá sempre o mesmo nível
+ok 80 - C4. o mesmo texto dá sempre o mesmo nível
+  ---
+  duration_ms: 2.253
+  type: 'test'
+  ...
+1..80
+# tests 80
+# suites 0
+# pass 80
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4289.594

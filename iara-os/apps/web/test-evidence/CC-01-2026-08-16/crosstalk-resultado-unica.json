@@ -1,0 +1,148 @@
+{
+  "fase": "unica",
+  "url": "http://127.0.0.1:3077",
+  "raiz": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-hwv0OX\\casa",
+  "marca": "nkj63v",
+  "decorrido_ms": 80075,
+  "rodadas": [
+    {
+      "n": 1,
+      "marca": "nkj63vr1",
+      "envio_a": 1786991423370,
+      "envio_b": 1786991424078,
+      "desalinhamento_ms": 708,
+      "fala_de_a_concluida_em": 1786991429545,
+      "houve_corrida": false
+    },
+    {
+      "n": 2,
+      "marca": "nkj63vr2",
+      "envio_a": 1786991464968,
+      "envio_b": 1786991464980,
+      "desalinhamento_ms": 12,
+      "fala_de_a_concluida_em": 1786991469814,
+      "houve_corrida": true
+    }
+  ],
+  "corrida": {
+    "n": 2,
+    "marca": "nkj63vr2",
+    "envio_a": 1786991464968,
+    "envio_b": 1786991464980,
+    "desalinhamento_ms": 12,
+    "fala_de_a_concluida_em": 1786991469814,
+    "houve_corrida": true,
+    "alfa": "Alfa nkj63vr2",
+    "beta": "Beta nkj63vr2"
+  },
+  "pastas": {
+    "alfa": "Alfa nkj63vr2",
+    "beta": "Beta nkj63vr2"
+  },
+  "conversa": {
+    "A": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa nkj63vr1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Alfa nkj63vr1\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta nkj63vr1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta nkj63vr1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa nkj63vr2 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Alfa nkj63vr2\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta nkj63vr2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta nkj63vr2\" em Documentos."
+      }
+    ],
+    "B": [
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta nkj63vr1 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta nkj63vr1\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa nkj63vr1 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Alfa nkj63vr1\" na Área de Trabalho."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Beta nkj63vr2 nos Documentos"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Beta nkj63vr2\" em Documentos."
+      },
+      {
+        "papel": "operador",
+        "texto": "Crie uma pasta chamada Alfa nkj63vr2 na área de trabalho"
+      },
+      {
+        "papel": "iara",
+        "texto": "Pronto, criei a pasta \"Alfa nkj63vr2\" na Área de Trabalho."
+      }
+    ]
+  },
+  "disco": {
+    "alfa": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-hwv0OX\\casa\\Desktop\\Alfa nkj63vr2",
+    "beta": "C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-hwv0OX\\casa\\Documents\\Beta nkj63vr2"
+  },
+  "snapshots_recebidos": {
+    "A": 30,
+    "B": 29
+  },
+  "checks": [
+    {
+      "id": "CT-00",
+      "ok": true,
+      "detalhe": "corrida observada na rodada 2 (desalinhamento 12 ms)"
+    },
+    {
+      "id": "CT-01",
+      "ok": true,
+      "detalhe": "o espelho A recebeu resposta sobre o próprio pedido"
+    },
+    {
+      "id": "CT-02",
+      "ok": true,
+      "detalhe": "a pergunta do espelho A continua visível na tela do espelho A"
+    },
+    {
+      "id": "CT-03",
+      "ok": true,
+      "detalhe": "disco: Alfa nkj63vr2=C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-hwv0OX\\casa\\Desktop\\Alfa nkj63vr2 | Beta nkj63vr2=C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-hwv0OX\\casa\\Documents\\Beta nkj63vr2"
+    },
+    {
+      "id": "CT-07",
+      "ok": true,
+      "detalhe": "40 fala(s) concluída(s): 40 endereçada(s), 0 com endereço órfão, 0 sem campo \"responde_a\""
+    }
+  ],
+  "veredito": "PASS"
+}

@@ -1,0 +1,91 @@
+ M ../../../.claude/launch.json
+ M .gitignore
+ M components/PainelConversa.tsx
+ M hooks/useIaraSocket.ts
+ M servidor/barramento/Porta.ts
+ M servidor/nucleo/CicloAutonomo.ts
+ M servidor/nucleo/Fronteira.ts
+ M servidor/nucleo/ProvedorRaciocinio.ts
+ M servidor/nucleo/kernel/Kernel.ts
+ M servidor/nucleo/kernel/MotorRaciocinio.ts
+ M servidor/nucleo/kernel/OrcamentoDoTurno.ts
+ M servidor/nucleo/kernel/Vigia.ts
+ M test-evidence/validacao/diario.jsonl
+ M testes/descoberta-capacidades.test.ts
+ M testes/escalada-no-kernel.test.ts
+ M testes/fi-escalada-e2e.test.ts
+ M testes/fronteira-efeitos.test.ts
+ M testes/orcamento-turno.test.ts
+ M tsconfig.json
+?? docs/prd/test-plan-margem.md
+?? docs/prd/test-plan-proatividade.md
+?? lib/vigiaDoEco.ts
+?? servidor/nucleo/kernel/GuardaDeLaco.ts
+?? servidor/nucleo/kernel/Observacao.ts
+?? servidor/nucleo/proativo/
+?? test-evidence/ANALITICO-SENIOR-2026-08-19/
+?? test-evidence/AUD-MARGEM-2026-08-19-31598c8/
+?? test-evidence/AUTORIDADE-DE-DADOS/
+?? test-evidence/BOOT-CONVERSA-2026-08-18T18-48-49/
+?? test-evidence/BOOT-CONVERSA-2026-08-18T18-51-33/
+?? test-evidence/BOOT-CONVERSA-2026-08-18T18-59-02/
+?? test-evidence/CAMPANHA-2026-08-16-0300/
+?? test-evidence/CAMPANHA-2026-08-17-1455/
+?? test-evidence/CAMPANHA-2026-08-17-1508/
+?? test-evidence/CAMPANHA-2026-08-17-1607/
+?? test-evidence/CAMPANHA-2026-08-17-1617/
+?? test-evidence/CAMPANHA-2026-08-17-1622/
+?? test-evidence/CAMPANHA-2026-08-18-0653/
+?? test-evidence/CAMPANHA-2026-08-18-0903/
+?? test-evidence/CAMPANHA-2026-08-18-1104/
+?? test-evidence/CAMPANHA-2026-08-18-1126/
+?? test-evidence/CAMPANHA-2026-08-18-1127/
+?? test-evidence/CAMPANHA-2026-08-18-1150/
+?? test-evidence/CAMPANHA-2026-08-18-1219-groq-3086/
+?? test-evidence/CAMPANHA-2026-08-18-1219-openrouter-3087/
+?? test-evidence/CAMPANHA-2026-08-18-1234-anthropic-3088/
+?? test-evidence/CAMPANHA-2026-08-18-1408-groq-3090/
+?? test-evidence/CAMPANHA-2026-08-18-1409-anthropic-3092/
+?? test-evidence/CAMPANHA-2026-08-18-1409-openrouter-3091/
+?? test-evidence/CAMPANHA-2026-08-18-1453-groq-3095/
+?? test-evidence/CAMPANHA-2026-08-18-1454-padrao-3096/
+?? test-evidence/CAMPANHA-2026-08-18-1530-groq-3090/
+?? test-evidence/CAMPANHA-2026-08-18-1530-openrouter-3091/
+?? test-evidence/CAMPANHA-2026-08-18-1539-groq-3090/
+?? test-evidence/CAMPANHA-2026-08-18-1543-anthropic-3092/
+?? test-evidence/CAMPANHA-2026-08-18-1543-groq-3090/
+?? test-evidence/CAMPANHA-2026-08-18-1543-openrouter-3091/
+?? test-evidence/CAMPANHA-2026-08-18-1555-openrouter-3093/
+?? test-evidence/CAMPANHA-2026-08-18-1605-anthropic-3110/
+?? test-evidence/CAMPANHA-2026-08-18-1608-groq-3120/
+?? test-evidence/CAMPANHA-2026-08-18-1626-groq,gemini,openrouter-3092/
+?? test-evidence/CAMPANHA-2026-08-19-0804-groq-3140/
+?? test-evidence/CAPACIDADE-PLANO/
+?? test-evidence/CC-01-2026-08-16/crosstalk-console-unica.log
+?? test-evidence/CC-01-2026-08-16/crosstalk-resultado-unica.json
+?? test-evidence/CC-01-2026-08-16/crosstalk-snapshots-unica.json
+?? test-evidence/CC-01-2026-08-16/espelho-A-unica.png
+?? test-evidence/CC-01-2026-08-16/espelho-B-unica.png
+?? test-evidence/CC-01-2026-08-16/motor-unica.log
+?? test-evidence/F1-E2E-REAL/
+?? test-evidence/PRAZO-FALA-ANTES-LENTIDAO/
+?? test-evidence/PRAZO-FALA-ANTES/
+?? test-evidence/PRAZO-FALA-DEPOIS-FORCADO/
+?? test-evidence/PRAZO-FALA-DEPOIS-LENTIDAO/
+?? test-evidence/PRAZO-FALA-DEPOIS/
+?? test-evidence/PRAZO-FALA-DIAG/
+?? test-evidence/PROVA-CARDINALIDADE/
+?? test-evidence/PROVEDORES-LATENCIA/
+?? test-evidence/QA-INDEPENDENTE-2026-08-16/
+?? test-evidence/campanha-noturna-20260816-0300.log
+?? testes/boot/proatividade-fiacao.mts
+?? testes/catalogo-no-prefixo.test.ts
+?? testes/gate/oraculo-margem-vivo.mjs
+?? testes/guarda-de-laco.test.ts
+?? testes/laco-do-agente.test.ts
+?? testes/moldura-observacao.test.ts
+?? testes/navegador/autoridade-de-dados.mjs
+?? testes/proatividade-adversarial.test.ts
+?? testes/proatividade-longa-duracao.test.ts
+?? testes/proatividade.test.ts
+?? testes/vigia-do-eco.test.ts

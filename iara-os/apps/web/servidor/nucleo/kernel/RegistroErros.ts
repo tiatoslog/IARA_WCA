@@ -59,7 +59,32 @@ export type ClasseErro =
    * modelo tentou e a trava segurou — a série diz se o prompt está melhorando ou
    * se a trava é a única coisa de pé.
    */
-  | 'afirmacao_sem_efeito';
+  | 'afirmacao_sem_efeito'
+  /**
+   * A SÍNTESE NEGOU UM EFEITO QUE O VERIFICADOR CONFIRMOU — o espelho exato de
+   * `afirmacao_sem_efeito`, e classe própria pelo mesmo motivo que as outras
+   * duas: as três nascem de causas diferentes e a série de cada uma responde
+   * uma pergunta diferente sobre o modelo.
+   *
+   * Medida em 20/08/2026, campanha CO-04 com cérebro real: jornal `verificada`,
+   * oráculo de disco confirmando o diretório, e a fala dizendo "na prática a
+   * pasta não foi feita. Manda de novo". Uma linha aqui é uma vez em que a IARA
+   * teria convidado o operador a duplicar um efeito que já existia.
+   */
+  | 'negacao_de_efeito_verificado'
+  /**
+   * A SÍNTESE ANUNCIOU UMA AÇÃO DEPOIS DE O TURNO FECHAR — "vou consultar a
+   * base", "[Chamando consultar_infraestrutura]" — e a trava a descartou antes
+   * de o operador ler.
+   *
+   * Irmã de `afirmacao_sem_efeito` e classe própria pela mesma razão que aquela:
+   * a correção é outra. Lá o modelo narra um feito que não houve; aqui ele
+   * promete um que não virá, e o operador nem descobre — fica esperando um
+   * número que nunca chega. Medida 2 de 2 na rota cognitiva em 19/08/2026, com
+   * modelo real, depois que o laço passou a terminar com o modelo ainda na
+   * postura de quem pode agir.
+   */
+  | 'acao_pos_fechamento';
 
 export interface ErroCognitivo {
   readonly classe: ClasseErro;

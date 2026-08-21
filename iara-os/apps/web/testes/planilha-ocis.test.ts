@@ -348,6 +348,7 @@ test(
 
 function carga(parcial: Partial<CargaCompleta>): CargaCompleta {
   return {
+    ano: '2026',
     oci: '1',
     origem: 'A',
     uf_origem: 'SP',

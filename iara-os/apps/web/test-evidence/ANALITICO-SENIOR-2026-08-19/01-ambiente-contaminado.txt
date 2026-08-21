@@ -1,0 +1,15 @@
+AMBIENTE CONTAMINADO — sessão concorrente
+detectado em: 2026-08-19T16:18:45-03:00
+
+tsc --noEmit passou LIMPO no baseline (16:00). Agora acusa:
+  servidor/nucleo/ClientePlanilhaOcis.ts(350,59): TS2304 Cannot find name 'aba'
+
+O arquivo NAO foi tocado por esta sessao. mtime:
+-rw-r--r-- 1 daian 197612 56047 2026-08-19 16:16:45.668895200 -0300 servidor/nucleo/ClientePlanilhaOcis.ts
+
+Arquivos criados por ESTA sessao (todos posteriores ao baseline, nenhum em nucleo/ fora de kernel/):
+-rw-r--r-- 1 daian 197612 10187 2026-08-19 16:04:38.505165700 -0300 servidor/nucleo/kernel/Cobertura.ts
+-rw-r--r-- 1 daian 197612  8980 2026-08-19 16:17:11.272898600 -0300 servidor/nucleo/kernel/DossieAnalitico.ts
+-rw-r--r-- 1 daian 197612 20943 2026-08-19 16:07:16.236992000 -0300 servidor/nucleo/kernel/MotorCritica.ts
+-rw-r--r-- 1 daian 197612 10544 2026-08-19 16:14:21.594240100 -0300 servidor/nucleo/kernel/NivelDeAnalise.ts
+-rw-r--r-- 1 daian 197612 12853 2026-08-19 16:11:26.197777400 -0300 servidor/nucleo/kernel/Suficiencia.ts

@@ -14,8 +14,8 @@
  * cadeia segue o MESMO princípio de custo que `FabricaRaciocinio` já aplica
  * ao texto: Groq → Gemini → Anthropic. Groq e Gemini entram com modelo de
  * visão PRÓPRIO — nem o Groq nem o Gemini enxergam imagem com o modelo de
- * TEXTO configurado para o resto da IARA (`GROQ_MODELO` aponta para
- * `llama-3.3-70b-versatile`, que não tem visão). `GROQ_MODELO_VISAO` existe
+ * TEXTO configurado para o resto da IARA (`GROQ_MODELO` aponta para o
+ * `openai/gpt-oss-120b`, que não tem visão). `GROQ_MODELO_VISAO` existe
  * separado por isso; o Gemini reaproveita `GEMINI_MODELO` porque a família
  * Flash já é multimodal nativa — não há um segundo modelo de texto-só lá.
  *

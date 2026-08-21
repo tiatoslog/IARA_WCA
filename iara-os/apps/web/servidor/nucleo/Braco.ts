@@ -51,6 +51,8 @@ import {
 } from '../../lib/execucao';
 import { ponteDispositivos, type DispositivoConectado } from '../barramento/PonteDispositivos';
 import { executarOrdem } from './ExecutorDesktop';
+import { EscolhaDeMaquina, escolhaDeMaquina } from './EscolhaDeMaquina';
+import { identidadeBackend } from './IdentidadeBackend';
 import type { PacoteBraco } from '../../lib/execucao';
 
 /**
@@ -63,7 +65,12 @@ import type { PacoteBraco } from '../../lib/execucao';
  * métodos. Declarar isso é o que mantém a ponte substituível.
  */
 export interface PonteDeOrdens {
-  destinoDe(idUsuario: string): DispositivoConectado | null;
+  /**
+   * `alvo` é o `id_dispositivo` que o operador escolheu. Quando vem preenchido,
+   * a ponte devolve AQUELA máquina ou `null` — nunca outra. Ver
+   * `EscolhaDeMaquina`.
+   */
+  destinoDe(idUsuario: string, alvo?: string | null): DispositivoConectado | null;
   aoPacote(ouvinte: (d: DispositivoConectado, p: PacoteBraco) => void): () => void;
 }
 
@@ -109,6 +116,14 @@ const PRAZO_MS: Record<AcaoDesktop, number> = {
   abrir_aplicativo: 20_000,
   fechar_aplicativo: 20_000,
   criar_pasta: 10_000,
+  /* Escrita local de até 2 MB: o custo é do disco, não da rede. O teto de 15 s
+     cobre um HD lento sem deixar a operadora esperando por um `write` travado. */
+  criar_arquivo: 15_000,
+  renomear_arquivo: 10_000,
+  /* Mover pode cair no caminho copiar-e-apagar quando os locais estão em
+     volumes diferentes (`EXDEV`) — aí o custo é o do tamanho do arquivo. */
+  mover_arquivo: 20_000,
+  copiar_arquivo: 20_000,
   listar_arquivos: 10_000,
   capturar_tela: 45_000,
   informacoes_sistema: 10_000,
@@ -205,6 +220,9 @@ export class Braco {
     private readonly ponte: PonteDeOrdens = ponteDispositivos,
     private readonly executarNoMotor = executarOrdem,
     private readonly temMaos = motorTemMaos,
+    /* A escolha do operador. Injetada como o resto para o teste poder montar
+       um cenário de duas máquinas sem subir socket nenhum. */
+    private readonly escolha: EscolhaDeMaquina = escolhaDeMaquina,
   ) {
     this.ponte.aoPacote((dispositivo, pacote) => this.receber(dispositivo, pacote));
   }
@@ -234,7 +252,29 @@ export class Braco {
      * é lido por mais gente que o shard. A ação e o estado bastam para
      * responder onde parou.
      */
-    console.log(JSON.stringify({ canal: 'execucao', ...linha }));
+    /**
+     * A IDENTIDADE DO BACKEND VAI JUNTO DE CADA EXECUÇÃO — MD-08, pedido da
+     * auditoria de 20/08/2026.
+     *
+     * O `execution_id` responde "qual ação"; sem o sha ao lado, ele não
+     * responde "qual CÓDIGO a executou". Um incidente daqui a três semanas
+     * precisa das duas coisas na mesma linha, ou a investigação começa
+     * comparando comportamento com um deploy que ninguém sabe qual era.
+     *
+     * `git_sha_curto` e não o completo: é o que se lê de relance, e o jornal
+     * é lido por gente. O completo está no `/saude` para conferir.
+     */
+    console.log(
+      JSON.stringify({
+        canal: 'execucao',
+        ...linha,
+        backend: {
+          sha: identidadeBackend.git_sha_curto,
+          versao: identidadeBackend.versao,
+          ambiente: identidadeBackend.ambiente,
+        },
+      }),
+    );
   }
 
   /** As últimas execuções, para o diagnóstico e para "por que não funcionou?". */
@@ -405,6 +445,7 @@ export class Braco {
       parametros: pedido.parametros,
       id_usuario: pedido.id_usuario,
       sessao: pedido.sessao,
+      id_dispositivo_alvo: this.escolha.escolhida(pedido.id_usuario),
       prazo_ms: PRAZO_MS[pedido.acao] ?? 15_000,
       emitida_em: Date.now(),
     };
@@ -421,7 +462,50 @@ export class Braco {
     this.registrar(c, 'recebida', 'pedido aceito pelo gerente de execução');
     this.registrar(c, 'validando', 'conferindo destino');
 
-    const dispositivo = this.ponte.destinoDe(pedido.id_usuario);
+    /**
+     * O ALVO MANDA, e o que ele muda é o que NÃO acontece.
+     *
+     * Sem escolha, tudo segue como antes: a ponte devolve o último que conectou
+     * e o motor com mãos é o segundo na fila. Com escolha, existem duas saídas e
+     * só duas — a máquina escolhida, ou uma recusa que a nomeia.
+     */
+    const alvo = this.escolha.escolhida(pedido.id_usuario);
+    const dispositivo = this.ponte.destinoDe(pedido.id_usuario, alvo);
+
+    if (alvo && !dispositivo) {
+      /**
+       * ESCOLHIDA E FORA DO AR — o item 8 da lista da operadora, e o defeito
+       * mais perigoso do estado anterior.
+       *
+       * Antes desta guarda, a ordem caía para outro braço conectado (ou para o
+       * motor, quando o processo tinha mãos) e voltava "sucesso". Uma ação
+       * FÍSICA acontecia num computador que ninguém escolheu, e nada no relato
+       * dizia que a máquina tinha mudado.
+       *
+       * A recusa NOMEIA a máquina. "Não consegui" sem dizer qual é o que faz o
+       * operador tentar de novo às cegas — e tentar de novo, aqui, é a porta da
+       * duplicação.
+       */
+      const nome = this.escolha.nomeEscolhido(pedido.id_usuario) ?? alvo;
+      this.registrar(c, 'validando', `alvo ${alvo} escolhido e não conectado`);
+      return this.fechar(c, chave, {
+        execucao_id: ordem.execucao_id,
+        estado: 'dispositivo_ausente',
+        texto:
+          `Você escolheu trabalhar em "${nome}", e esse computador não está conectado a mim agora. ` +
+          'Abra a IARA nele, ou escolha outro no quadro de dispositivos — eu não vou executar em ' +
+          'máquina que você não pediu.',
+        prova: {
+          confirmado: false,
+          evidencia: `a máquina escolhida (${alvo}) não está no inventário conectado deste operador`,
+          motivo: 'nao_encontrado',
+        },
+        codigo_erro: 'DESKTOP_OFFLINE',
+        duracao_ms: Date.now() - c.inicio,
+        dispositivo: null,
+        onde: 'nenhum',
+      });
+    }
 
     /**
      * A ORDEM DE PREFERÊNCIA, e ela tem uma razão. Um braço conectado ganha do

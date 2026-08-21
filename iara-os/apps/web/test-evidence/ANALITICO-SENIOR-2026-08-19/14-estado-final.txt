@@ -1,0 +1,29 @@
+ESTADO APOS A 2a RODADA DE CORRECOES
+
+  npm test              2074 testes — 2071 pass, 0 FAIL, 3 skipped
+  baterias analiticas   98/98
+  benchmark             21/21
+  mutacao               11/11 mortas (rodadas 3 e 4)
+
+  tsc --noEmit          1 erro, de OUTRA sessao:
+    testes/lacuna-de-valor.test.ts(35,8) TS5097
+    import terminando em '../servidor/nucleo/ClientePlanilhaOcis.ts'
+    mtime 2026-08-20 06:52 · zero referencias a modulos desta sessao
+    (os erros de formatarPorcento sumiram — a outra sessao corrigiu)
+
+BASELINE (31598c8): 1894/1897 pass
+AGORA:              2071/2074 pass
+DELTA DESTA SESSAO: +177 testes, 0 falhas atribuiveis
+
+DEFEITOS ACHADOS E FECHADOS
+  8   pelas proprias baterias durante a implementacao
+  10  pela 1a passada da auditoria independente
+  5   pela 2a passada (2 P0 introduzidos pelos consertos da 1a)
+  ---
+  23  total, todos com caso de regressao e mutacao que os mata
+
+NAO VERIFICADO (UNKNOWN, nunca PASS)
+  RE-001  planilha LUFT real
+  BR-001  navegador real — ressalva visivel na bolha
+  BR-002  navegador real — abstencao na tela
+  MT-001  multi-turno com memoria entre turnos

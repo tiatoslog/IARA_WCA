@@ -23,12 +23,25 @@ import { ESPACO_VAZIO, EXPRESSAO_NEUTRA, TELEMETRIA_ZERO, type Ilustracao, type 
 import { LEITURA_INICIAL, LUZES_APAGADAS, METRICAS_INICIAIS } from '../lib/estado';
 import type { PreferenciasOperador } from '../lib/perfil';
 import { enderecoBarramento, origemMotor } from '../lib/supabaseNavegador';
+import { VigiaDoEco } from '../lib/vigiaDoEco';
 
 export interface Fala {
   id: string;
   papel: 'operador' | 'iara';
   texto: string;
   concluida: boolean;
+  /**
+   * ISO do SERVIDOR — a hora que a bolha carimba, no estilo do WhatsApp.
+   *
+   * Não é `Date.now()` do navegador: quem recarrega a página receberia "agora"
+   * em toda mensagem antiga, e uma conversa inteira marcada com o mesmo minuto
+   * é pior que nenhuma marcação. A formatação é local, porque o fuso é de quem
+   * lê; o instante é do servidor, porque o fato é dele.
+   *
+   * Opcional para degradar contra servidor anterior a 19/08/2026 — sem o campo,
+   * a bolha simplesmente não mostra hora.
+   */
+  instante?: string;
   /**
    * Para falas da IARA: o id da bolha do operador que esta resposta responde.
    * É o que decide ONDE ela entra na lista — ver `absorverFala`. Ausente em
@@ -41,6 +54,28 @@ export interface Fala {
    * guardado — é estado do servidor, e o cliente aqui é projeção burra.
    */
   na_fila?: boolean;
+  /**
+   * Para bolhas do operador: o servidor NÃO devolveu o eco desta mensagem
+   * dentro do prazo — ela pode ter se perdido no caminho.
+   *
+   * O DEFEITO (auditoria em navegador, 19/08/2026, OBS-1): duas mensagens foram
+   * enviadas e sumiram sem balão, sem erro e sem aviso, com o indicador dizendo
+   * "barramento aberto" o tempo todo.
+   *
+   * `readyState === OPEN` NÃO É PROVA DE ENTREGA, e essa é a lição inteira. O
+   * `enviar` já se recusa a mandar com o socket fechado — essa trava existia e
+   * funcionava. Mas quando o servidor morre no meio (reinício de deploy, queda
+   * de rede), o socket continua OPEN do lado do cliente por algum tempo, o
+   * `send()` local tem sucesso e o quadro morre no caminho. O navegador só
+   * descobre no `onclose`, que pode demorar — e a mensagem já sumiu.
+   *
+   * NÃO REENVIA SOZINHO, e a recusa é deliberada. Reenviar uma mensagem que na
+   * verdade CHEGOU executaria o turno duas vezes, e este repositório inteiro é
+   * construído contra duplicação de efeito (ver `execucao_id`). É a mesma
+   * disciplina do `Vigia`: detectar não é executar. A tela avisa; quem decide
+   * mandar de novo é a pessoa.
+   */
+  sem_confirmacao?: boolean;
   destino?: string;
   latencia_ms?: number;
   cache_lido?: number;
@@ -135,6 +170,8 @@ export function useIaraSocket(credencial: Credencial) {
   const [maquinas, setMaquinas] = useState<MaquinaDoOperador[] | null>(null);
   const [pareamentoDisponivel, setPareamentoDisponivel] = useState(true);
   const [acaoDispositivo, setAcaoDispositivo] = useState<{ ok: boolean; texto: string } | null>(null);
+  /** Em qual computador a IARA está trabalhando. Vem do servidor, sempre. */
+  const [computadorEscolhido, setComputadorEscolhido] = useState<string | null>(null);
   /** Última falha de gravação da ficha vinda do servidor — ver `Porta.ts`
    *  (`emitirErro(texto, 'preferencias')`). A ficha usa isto para não ficar
    *  muda quando a gravação falha depois do clique, não só quando o socket
@@ -165,6 +202,16 @@ export function useIaraSocket(credencial: Credencial) {
     falasRef.current = falas;
   }, [falas]);
 
+  /**
+   * MENSAGENS QUE SAÍRAM E AINDA NÃO VOLTARAM — o vigia do eco (OBS-1).
+   *
+   * O servidor devolve toda pergunta em `snapshot.pergunta` com o mesmo
+   * `op:<id_local>` que o cliente gerou. Esse eco já existia, e servia para a
+   * bolha não duplicar entre telas. Ninguém vigiava a AUSÊNCIA dele — e é a
+   * ausência que prova que a mensagem se perdeu.
+   */
+  const vigiaDoEco = useRef(new VigiaDoEco());
+
   const registrarLog = useCallback((nivel: NivelLog, texto: string) => {
     contadorLog.current += 1;
     const linha: LinhaLog = { id: contadorLog.current, nivel, texto, instante: Date.now() };
@@ -193,6 +240,8 @@ export function useIaraSocket(credencial: Credencial) {
   const absorverPergunta = useCallback((s: SnapshotCognitivo) => {
     const p = s.pergunta;
     if (!p) return;
+    /* O ECO CHEGOU: so agora a entrega e um fato. Ver `VigiaDoEco`. */
+    vigiaDoEco.current.confirmar(p.id);
     setFalas((antes) => {
       if (antes.some((x) => x.id === p.id)) return antes;
       const proximo: Fala[] = [
@@ -202,6 +251,8 @@ export function useIaraSocket(credencial: Credencial) {
           papel: 'operador',
           texto: p.texto,
           concluida: true,
+          /* Bolha do operador nasce AQUI: o instante local é o instante real. */
+          instante: new Date().toISOString(),
           iniciada_em: performance.now(),
           imagem: p.imagem ?? null,
         },
@@ -220,6 +271,8 @@ export function useIaraSocket(credencial: Credencial) {
         papel: 'iara',
         texto: f.texto,
         concluida: f.concluida,
+        /* Do SERVIDOR — ver `FalaProjetada.instante`. */
+        instante: f.instante,
         responde_a: f.responde_a ?? null,
         destino: f.destino ?? undefined,
         latencia_ms: f.latencia_ms ?? undefined,
@@ -333,6 +386,9 @@ export function useIaraSocket(credencial: Credencial) {
       if (pacote.tipo === 'dispositivos') {
         setMaquinas(pacote.maquinas);
         setPareamentoDisponivel(pacote.pareamento_disponivel);
+        /* `?? null` e não `|| null`: um servidor de antes deste campo manda
+           `undefined`, e undefined é "não sei", que aqui vale o padrão. */
+        setComputadorEscolhido(pacote.escolhido ?? null);
         /**
          * SÓ SUBSTITUI quando o pacote traz uma ação nova — nunca apaga com
          * `null`. Achado em auditoria (14/08/2026): a gaveta reconsulta a
@@ -526,6 +582,8 @@ export function useIaraSocket(credencial: Credencial) {
             papel: 'operador',
             texto: limpo,
             concluida: true,
+            /* Bolha do operador nasce AQUI: o instante local é o instante real. */
+            instante: new Date().toISOString(),
             iniciada_em: performance.now(),
             imagem: anexo ?? null,
           },
@@ -540,10 +598,68 @@ export function useIaraSocket(credencial: Credencial) {
           ...(anexo ? { anexo } : {}),
         }),
       );
+      /* Sai daqui ESPERANDO O ECO: `send()` sem excecao nao e entrega. */
+      vigiaDoEco.current.registrar(`op:${idLocal}`, limpo, Date.now());
       return true;
     },
     [registrarLog],
   );
+
+  /**
+   * O RELÓGIO DO ECO. Roda a cada 2 s e não a cada pacote de propósito: o caso
+   * que ele existe para pegar é justamente aquele em que NENHUM pacote chega.
+   * Pendurar a checagem na chegada de pacote a tornaria cega exatamente na
+   * situação que ela deveria enxergar.
+   */
+  const conferirEcos = useCallback(() => {
+    const vencidos = vigiaDoEco.current.vencidos(Date.now());
+    if (vencidos.length === 0) return;
+    for (const p of vencidos) {
+      registrarLog(
+        'alerta',
+        `Não tive confirmação de que esta mensagem chegou ao motor: "${p.texto.slice(0, 60)}". ` +
+          'Ela pode ter se perdido numa reconexão. Não reenvio sozinho para não executar duas vezes — ' +
+          'se a IARA não responder, mande de novo.',
+      );
+    }
+    /* A bolha carrega a marca: o log rola para fora da vista, a conversa fica. */
+    const ids = new Set(vencidos.map((p) => p.id));
+    setFalas((antes) => antes.map((f) => (ids.has(f.id) ? { ...f, sem_confirmacao: true } : f)));
+  }, [registrarLog]);
+
+  /**
+   * DOIS GATILHOS, e o segundo entrou por uma falha da própria verificação em
+   * 19/08/2026.
+   *
+   * O relógio sozinho NÃO BASTA: o Chrome estrangula `setInterval` em aba
+   * oculta — uma vez por minuto, e congelamento total depois de alguns minutos.
+   * A prova ponta a ponta do conserto FALHOU por isso: a aba do painel fica
+   * `hidden`, o relógio não bateu, e o aviso não saiu mesmo com a mensagem
+   * perdida. Numa aba de fundo real dá no mesmo — a operadora volta ao trabalho
+   * e não fica sabendo.
+   *
+   *   · relógio de 2 s — enquanto a aba está à vista, é ele que pega o caso em
+   *                      que NENHUM pacote chega;
+   *   · volta da aba   — o estrangulamento acaba junto com a ocultação, e quem
+   *                      volta precisa ver na hora.
+   *
+   * Não há gatilho na chegada de pacote de propósito: numa aba oculta ninguém
+   * está olhando, e quando alguém olha o `visibilitychange` já disparou.
+   *
+   * `vencidos` remove ao devolver, então os dois gatilhos não duplicam aviso —
+   * quem chegar primeiro leva.
+   */
+  useEffect(() => {
+    const relogio = setInterval(conferirEcos, 2000);
+    const aoVoltar = () => {
+      if (document.visibilityState === 'visible') conferirEcos();
+    };
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => {
+      clearInterval(relogio);
+      document.removeEventListener('visibilitychange', aoVoltar);
+    };
+  }, [conferirEcos]);
 
   /**
    * Sobe o screenshot por `POST /anexo` (fora do WebSocket — ver
@@ -704,6 +820,18 @@ export function useIaraSocket(credencial: Credencial) {
     (id: string, nome: string) => pedirAoBarramento({ tipo: 'renomear_dispositivo', id, nome }),
     [pedirAoBarramento],
   );
+  /**
+   * "TRABALHE NESTE COMPUTADOR" — o gate multi-desktop (20/08/2026).
+   *
+   * `id: null` desfaz a escolha e devolve o padrão (o último que conectou
+   * atende). O `nome` viaja porque a recusa de "escolhida e offline" precisa
+   * nomear a máquina, e nesse instante ela já saiu do inventário conectado.
+   */
+  const escolherComputador = useCallback(
+    (id: string | null, nome?: string) =>
+      pedirAoBarramento({ tipo: 'escolher_dispositivo', id, ...(nome ? { nome } : {}) }),
+    [pedirAoBarramento],
+  );
 
   /** Religa após uma recusa terminal — o gesto humano que zera a decisão. */
   const religar = useCallback(() => {
@@ -728,10 +856,12 @@ export function useIaraSocket(credencial: Credencial) {
     maquinas,
     pareamentoDisponivel,
     acaoDispositivo,
+    computadorEscolhido,
     pedirDispositivos,
     autorizarComputador,
     esquecerComputador,
     atualizarComputador,
     renomearComputador,
+    escolherComputador,
   };
 }

@@ -1,0 +1,47 @@
+{
+  "quando": "2026-08-19T19:02:38.166Z",
+  "rota_pedida": "cognitiva",
+  "pergunta": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes",
+  "fonte": {
+    "centrais_ativas": 15
+  },
+  "historico_plantado": "Ontem eram 13 centrais ativas.",
+  "veredicto": {
+    "status": "REPROVADO",
+    "motivo": "repetiu o número do histórico (13) em vez de consultar a fonte"
+  },
+  "sinais": {
+    "consultouFonte": true,
+    "disse15": false,
+    "disse13": true,
+    "rota": "plano_cognitivo",
+    "voltas": 2,
+    "passosExecutados": 1
+  },
+  "resposta": [
+    "Vou puxar o número atual na base.\n\n[Chamando consultar_infraestrutura]\n\nAntes de te dar o número: aquele bloco que veio marcado como material externo não trazia nenhum dado útil, só a palavra \"antes\" — ignorei como fonte, mas registro que não tinha nada de análise ali.\n\nConfirmando na base agora: preciso rodar a consulta de infraestrutura pra te dizer se ainda são 13 ou se mudou. Um segundo.16:02"
+  ],
+  "conversa": [
+    {
+      "papel": "operador",
+      "texto": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes16:02"
+    },
+    {
+      "papel": "iara",
+      "texto": "Vou puxar o número atual na base.\n\n[Chamando consultar_infraestrutura]\n\nAntes de te dar o número: aquele bloco que veio marcado como material externo não trazia nenhum dado útil, só a palavra \"antes\" — ignorei como fonte, mas registro que não tinha nada de análise ali.\n\nConfirmando na base agora: preciso rodar a consulta de infraestrutura pra te dizer se ainda são 13 ou se mudou. Um segundo.16:02"
+    }
+  ],
+  "console": [
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[warning] WebSocket connection to 'ws://localhost:3083/barramento' failed: WebSocket is closed before the connection is established.",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] [.WebGL-0x4ccc040c6a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x4ccc040c6a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x4ccc040c6a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x4ccc040c6a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "[info] [voz] metadados: 5965 ms desde o pedido do áudio",
+    "[info] [voz] som saindo: 5965 ms desde o pedido do áudio",
+    "[info] [voz] baixado: 5965 ms desde o pedido do áudio"
+  ]
+}

@@ -91,7 +91,10 @@ test(
       assert.equal(r.resolveu, true, r.texto);
       assert.match(r.texto, /2 cargas/, `esperava 2 cargas na semana atual: "${r.texto}"`);
       assert.match(r.texto, /1 carga\b/, `esperava 1 carga na semana anterior: "${r.texto}"`);
-      assert.match(r.texto, /\+500\.0%/, `esperava +500% de variação (3000 vs 500): "${r.texto}"`);
+      /* VÍRGULA, e não ponto. Percentual dito em português usa vírgula decimal,
+         como o dinheiro na mesma frase já usava. A expectativa antiga estava
+         presa ao que o `toFixed` produzia, que é formato de máquina. */
+      assert.match(r.texto, /\+500,0%/, `esperava +500% de variação (3000 vs 500): "${r.texto}"`);
     } finally {
       globalThis.fetch = fetchOriginal;
     }
@@ -155,9 +158,11 @@ test(
       assert.equal(r.resolveu, true, r.texto);
       assert.match(r.texto, /Total cadastrado.*: 4 cargas/, `esperava 4 no total: "${r.texto}"`);
       assert.match(r.texto, /No período: 3 cargas/, `esperava 3 no período: "${r.texto}"`);
-      assert.match(r.texto, /1\. CICLANO — 2 cargas/, `esperava CICLANO no topo: "${r.texto}"`);
-      assert.match(r.texto, /FINALIZADO — 2/, `esperava status normalizado agregado: "${r.texto}"`);
-      assert.match(r.texto, /PAGO — 1/, `esperava PAGO só com a carga do período: "${r.texto}"`);
+      /* Dois-pontos, e não travessão: a operadora pediu em 19/08/2026 que a fala
+         parasse de soar artificial, e o travessão era o que mais aparecia. */
+      assert.match(r.texto, /1\. CICLANO: 2 cargas/, `esperava CICLANO no topo: "${r.texto}"`);
+      assert.match(r.texto, /FINALIZADO: 2/, `esperava status normalizado agregado: "${r.texto}"`);
+      assert.match(r.texto, /PAGO: 1/, `esperava PAGO só com a carga do período: "${r.texto}"`);
     } finally {
       globalThis.fetch = fetchOriginal;
     }

@@ -1,0 +1,12 @@
+{"turno":1,"t":19187,"id":"7aa3d704-46d2-40ba-84e3-7003be3bfe00","concluida":false,"texto":"B"}
+{"turno":1,"t":28955,"id":"7aa3d704-46d2-40ba-84e3-7003be3bfe00","concluida":true,"texto":"Bastante coisa, mas vou resumir por área, sem enrolação.\n\nMemória e histórico: consulto agenda/hora,"}
+{"turno":2,"t":34840,"id":"eef2af31-0736-49e4-bd58-505ae9414ed0","concluida":false,"texto":"Ess"}
+{"turno":2,"t":38130,"id":"eef2af31-0736-49e4-bd58-505ae9414ed0","concluida":true,"texto":"Essa consulta depende da base de cargas LUFT, e essa integração está desligada agora — falta o token"}
+{"turno":3,"t":43063,"id":"8a949790-9023-4b3a-af0f-f96ba784be9e","concluida":false,"texto":"M"}
+{"turno":3,"t":45629,"id":"8a949790-9023-4b3a-af0f-f96ba784be9e","concluida":true,"texto":"Mesmo problema do anterior: essa pergunta também depende da base de cargas LUFT (motorista com mais "}
+{"turno":4,"t":51821,"id":"a28cb5e4-d04f-4c48-9fe7-6f305b0fd1d5","concluida":false,"texto":"Não é uma escolha estilística, é bem mecânica. Quando você pede algo, eu ol"}
+{"turno":4,"t":60055,"id":"a28cb5e4-d04f-4c48-9fe7-6f305b0fd1d5","concluida":true,"texto":"Não é uma escolha estilística, é bem mecânica. Quando você pede algo, eu olho se o pedido bate com u"}
+{"turno":5,"t":64361,"id":"e95c59bb-93b5-4878-bab0-e70b851a5ab9","concluida":false,"texto":"Não"}
+{"turno":5,"t":64538,"id":"e95c59bb-93b5-4878-bab0-e70b851a5ab9","concluida":true,"texto":"Não consigo responder agora. A consulta à base de cargas LUFT está desligada — faltam token Graph e "}
+{"turno":6,"t":70554,"id":"2451dc13-48df-49c5-aa2a-005b960d4265","concluida":false,"texto":"A mesma coisa de antes — nada mudou desde então. Rapidinho, por"}
+{"turno":6,"t":76412,"id":"2451dc13-48df-49c5-aa2a-005b960d4265","concluida":true,"texto":"A mesma coisa de antes — nada mudou desde então. Rapidinho, por área:\n\nMemória: agenda/hora, históri"}

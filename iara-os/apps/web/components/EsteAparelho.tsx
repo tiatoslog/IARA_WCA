@@ -29,8 +29,13 @@ export function EsteAparelho() {
   if (estado === 'instalada') {
     return (
       <p className="instalar-confirmacao">
-        <span aria-hidden className="maquina-sinal ligado" /> A IARA está
-        instalada neste aparelho.
+        {/* Marca de conclusão, não ponto de enlace: instalar o PWA neste
+            aparelho não diz nada sobre haver um braço atendendo agora, e o
+            ponto verde é reservado para isso em todo o resto do produto. */}
+        <span aria-hidden className="marca-feito">
+          ✓
+        </span>{' '}
+        A IARA está instalada neste aparelho.
       </p>
     );
   }

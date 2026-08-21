@@ -91,6 +91,7 @@ export class SessaoOperador {
   emitirDispositivos(
     maquinas: MaquinaDoOperador[],
     pareamentoDisponivel: boolean,
+    escolhido: string | null,
     ultimaAcao?: { ok: boolean; texto: string },
   ): void {
     if (this.fechada) return;
@@ -101,6 +102,7 @@ export class SessaoOperador {
       instante: Date.now(),
       maquinas,
       pareamento_disponivel: pareamentoDisponivel,
+      escolhido,
       ...(ultimaAcao ? { ultima_acao: ultimaAcao } : {}),
     });
     this.drenar();

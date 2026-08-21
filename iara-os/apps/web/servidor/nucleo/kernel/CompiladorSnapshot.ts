@@ -63,6 +63,16 @@ export class CompiladorSnapshot {
   private passoCorrente = -1;
   private falhou = new Set<number>();
   private textoEmCurso = '';
+  /**
+   * A fala em curso é só um recado de andamento?
+   *
+   * Mora aqui e não em `FalaProjetada` de propósito: é estado do COMPILADOR, e
+   * nenhuma projeção precisa saber que existiu um recado — para elas, ou a fala
+   * é a resposta ou é o texto honesto de quem não conseguiu concluir. Um campo
+   * novo no contrato que atravessa a fronteira obrigaria as duas projeções a
+   * decidir o que fazer com ele, sem nada a decidir.
+   */
+  private falaProvisoria = false;
   private fala: FalaProjetada | null = null;
   /**
    * A pergunta do turno corrente. Sobrevive ao fim do turno de propósito: um
@@ -216,10 +226,17 @@ export class CompiladorSnapshot {
 
       case 'RESPOSTA_TRECHO':
         this.textoEmCurso = e.texto;
+        /* O trecho REAL que vier depois limpa a marca — a resposta chegou por
+           cima do recado, e a partir dali há resposta de verdade a preservar. */
+        this.falaProvisoria = e.provisoria === true;
         this.fala = {
           id: e.id_mensagem,
           texto: e.texto,
           concluida: false,
+          /* Carimbo do SERVIDOR. O cliente formata para o fuso de quem lê, mas
+             não inventa a hora: quem recarregar a página receberia "agora" em
+             toda mensagem antiga. */
+          instante: new Date().toISOString(),
           /* Copiado do evento, nunca lido de `this.pergunta`: o campo existe
              justamente porque "a pergunta corrente do compilador" e "a pergunta
              que este turno está respondendo" podem ser duas coisas diferentes
@@ -261,10 +278,15 @@ export class CompiladorSnapshot {
           this.cadeia.resposta = { rota: e.rota, latencia_ms: e.ms };
         }
         this.textoEmCurso = '';
+        this.falaProvisoria = false;
         this.fala = {
           id: e.id_mensagem,
           texto: e.texto,
           concluida: true,
+          /* Preserva o carimbo de quando a fala COMEÇOU: reestampar aqui daria
+             à mensagem a hora em que ela terminou, e um turno de 40 s apareceria
+             fora de ordem ao lado do pedido que o originou. */
+          instante: this.fala?.instante ?? new Date().toISOString(),
           responde_a: e.responde_a,
           destino: e.rota,
           latencia_ms: e.ms,
@@ -281,7 +303,25 @@ export class CompiladorSnapshot {
         // A fala parcial permanece: apagar o que já foi dito faria o texto
         // sumir da tela e o operador achar que a IARA nunca respondeu.
         if (this.fala && !this.fala.concluida) {
-          this.fala = { ...this.fala, concluida: true };
+          /**
+           * MENOS UM CASO: recado de andamento não vira resposta.
+           *
+           * "Ainda estou nisto: 2 segundos até agora" é verdade enquanto o turno
+           * corre e vira mentira no instante em que ele morre — o turno não está
+           * mais em curso, e a frase apresentada como resposta final afirma que
+           * está. Medido em 18/08/2026, turno 5 da bancada de prazo de fala.
+           *
+           * O texto é SUBSTITUÍDO, não apagado, pela mesma razão do comentário
+           * acima: a bolha precisa continuar na tela dizendo alguma coisa.
+           */
+          this.fala = this.falaProvisoria
+            ? {
+                ...this.fala,
+                texto: 'Não consegui concluir este pedido.',
+                concluida: true,
+              }
+            : { ...this.fala, concluida: true };
+          this.falaProvisoria = false;
         }
         break;
     }

@@ -1,0 +1,60 @@
+
+   We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+   The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+   	- include was updated to add '.next-3090/types/**/*.ts'
+
+[iara] IARA OS em http://localhost:3090
+[iara] barramento em /barramento (mesma porta, mesma origem)
+[iara] persistência: arquivos locais (dados/)
+[iara] mãos: NESTE processo (win32) — e em qualquer braço que conectar em /dispositivo
+[iara] raciocínio: anthropic
+[iara] canal WhatsApp: desligado (falta WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN)
+[iara] voz: neural do Edge, voz "pt-BR-FranciscaNeural" (grátis; desligável com IARA_VOZ_NEURAL=0)
+[iara] transcrição: desligada (sem IARA_STT_CHAVE) — a fala continua sendo reconhecida pelo navegador
+[iara] Microsoft Graph: desligado (sem MS_GRAPH_TOKEN nem credencial de app)
+[iara] jornal de operações: SEM SELO — IARA_CHAVE_PROVA ausente: o jornal de operações é validado só por estrutura. Quem escrever no disco consegue forjar um registro de autorização.
+[iara] autenticação: DESLIGADA — modo local. NÃO EXPONHA ESTE PROCESSO À INTERNET.
+[iara] índice histórico carregado
+ ○ Compiling / ...
+ ⚠ ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/non-real-time-vad.js
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+ GET /?operador=daiane 200 in 13640ms
+{"canal":"auditoria","instante":"2026-08-20T09:41:05.706Z","sessao":"daiane","id_usuario":"daiane","traco":"c2dbca70-5ac5-4287-8b84-d2dcc56b5c15","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (infraestrutura) → plano determinístico.","permitido":true}
+{"canal":"auditoria","instante":"2026-08-20T09:41:05.776Z","sessao":"daiane","id_usuario":"daiane","traco":"c2dbca70-5ac5-4287-8b84-d2dcc56b5c15","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · tempo 112ms/900000ms","permitido":true}
+{"canal":"voz","id_mensagem":"6c3868ff-b533-4576-837b-1963e0d844bd","ok":true,"pensar_ms":45,"sintese_ms":1159,"caracteres":199}
+{"canal":"execucao","instante":"2026-08-20T09:41:21.129Z","execucao_id":"IARA-20260820-2595-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-20T09:41:21.129Z","execucao_id":"IARA-20260820-2595-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-20T09:41:21.129Z","execucao_id":"IARA-20260820-2595-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 100%, mem 82%, 15 processo(s)"}
+{"canal":"execucao","instante":"2026-08-20T09:41:33.061Z","execucao_id":"IARA-20260820-2595-000001","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 15 processos lidos","ms":11932}

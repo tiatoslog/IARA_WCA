@@ -1,0 +1,116 @@
+
+   We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+   The following suggested values were added to your tsconfig.json. These values can be changed to fit your project's needs:
+
+   	- include was updated to add '.next-3092/types/**/*.ts'
+
+[iara] IARA OS em http://localhost:3092
+[iara] barramento em /barramento (mesma porta, mesma origem)
+[iara] persistência: arquivos locais (dados/)
+[iara] mãos: NESTE processo (win32) — e em qualquer braço que conectar em /dispositivo
+[iara] canal WhatsApp: desligado (falta WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN)
+[iara] voz: neural do Edge, voz "pt-BR-FranciscaNeural" (grátis; desligável com IARA_VOZ_NEURAL=0)
+[iara] transcrição: desligada (sem IARA_STT_CHAVE) — a fala continua sendo reconhecida pelo navegador
+[iara] Microsoft Graph: desligado (sem MS_GRAPH_TOKEN nem credencial de app)
+[iara] jornal de operações: SEM SELO — IARA_CHAVE_PROVA ausente: o jornal de operações é validado só por estrutura. Quem escrever no disco consegue forjar um registro de autorização.
+[iara] autenticação: DESLIGADA — modo local. NÃO EXPONHA ESTE PROCESSO À INTERNET.
+[iara] índice histórico carregado
+ ○ Compiling / ...
+ ⚠ ../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/non-real-time-vad.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+Critical dependency: require function is used in a way in which dependencies cannot be statically extracted
+
+Import trace for requested module:
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/real-time-vad.js
+../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/@ricky0123/vad-web/dist/index.js
+./hooks/useDeteccaoVocal.ts
+./components/PainelConversa.tsx
+./app/page.tsx
+ GET / 200 in 7531ms
+ GET / 200 in 115ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET / 200 in 72ms
+{"canal":"auditoria","instante":"2026-08-16T12:03:50.399Z","sessao":"daiane","id_usuario":"daiane","traco":"7dddd309-3cac-4e65-b976-202e51bdb18f","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"d518188b-2787-4398-8e68-460c0c2a4371","hash_intencao":"2896e6ee38f55d3db9491b194eb2ca89d8e004e60e02c88f423bd1fc87a694e9","id_usuario":"daiane","sessao":"daiane","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+{"canal":"execucao","instante":"2026-08-16T12:03:50.421Z","execucao_id":"IARA-20260816-cd1d-000001","id_usuario":"daiane","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:03:50.421Z","execucao_id":"IARA-20260816-cd1d-000001","id_usuario":"daiane","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:03:50.421Z","execucao_id":"IARA-20260816-cd1d-000001","id_usuario":"daiane","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"criar_pasta","permitido":true,"detalhe":"C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Desktop\\qb1c4r1"}
+{"canal":"execucao","instante":"2026-08-16T12:03:50.428Z","execucao_id":"IARA-20260816-cd1d-000001","id_usuario":"daiane","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Desktop\\qb1c4r1","ms":7}
+{"canal":"voz","id_mensagem":"d9692a52-8d9b-41e7-a8b7-b79f52f14ee3","ok":true,"pensar_ms":39,"sintese_ms":1381,"caracteres":52}
+{"canal":"auditoria","instante":"2026-08-16T12:03:55.773Z","sessao":"daiane","id_usuario":"daiane","traco":"9e3b341e-958c-46cc-a6bd-9b788e66b1c2","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"9506bf2a-d224-4a4b-844c-f24ea0c7a3bd","hash_intencao":"98f15960b032ec5b855fdd9b749e90a1d63eea0ad6431cca24a2b703a916fcd6","id_usuario":"daiane","sessao":"daiane","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+{"canal":"execucao","instante":"2026-08-16T12:03:55.781Z","execucao_id":"IARA-20260816-cd1d-000002","id_usuario":"daiane","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:03:55.781Z","execucao_id":"IARA-20260816-cd1d-000002","id_usuario":"daiane","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:03:55.781Z","execucao_id":"IARA-20260816-cd1d-000002","id_usuario":"daiane","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"criar_pasta","permitido":true,"detalhe":"C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Dois qb1c4r1"}
+{"canal":"execucao","instante":"2026-08-16T12:03:55.783Z","execucao_id":"IARA-20260816-cd1d-000002","id_usuario":"daiane","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Dois qb1c4r1","ms":2}
+{"canal":"voz","id_mensagem":"53fa7688-b703-429e-ab14-f6b462316ea5","ok":true,"pensar_ms":15,"sintese_ms":1281,"caracteres":51}
+{"canal":"execucao","instante":"2026-08-16T12:04:11.235Z","execucao_id":"IARA-20260816-cd1d-000003","id_usuario":"daiane","acao":"medir_desempenho","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:04:11.235Z","execucao_id":"IARA-20260816-cd1d-000003","id_usuario":"daiane","acao":"medir_desempenho","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:04:11.235Z","execucao_id":"IARA-20260816-cd1d-000003","id_usuario":"daiane","acao":"medir_desempenho","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"medir_desempenho","permitido":true,"detalhe":"cpu 97.4%, mem 88.1%, 13 processo(s)"}
+{"canal":"execucao","instante":"2026-08-16T12:04:18.625Z","execucao_id":"IARA-20260816-cd1d-000003","id_usuario":"daiane","acao":"medir_desempenho","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"amostrado em computador: janela de CPU sobre 8 núcleos, 13 processos lidos","ms":7390}
+{"canal":"auditoria","instante":"2026-08-16T12:04:31.119Z","sessao":"daiane","id_usuario":"daiane","traco":"6102e8ba-da33-4f45-aebc-de8e09d7fc15","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (clima) → plano determinístico.","permitido":true}
+{"canal":"auditoria","instante":"2026-08-16T12:04:34.579Z","sessao":"daiane","id_usuario":"daiane","traco":"17a05fe1-b12d-49e4-badf-6ec88f02f964","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"5b55ccf0-2759-4b20-97cb-e0d9f6e74bd1","hash_intencao":"c65c5845fae69ad7ade3b1bfbab6f0af79fe12c0a2e4c67257da62b4c7e94404","id_usuario":"daiane","sessao":"daiane","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+{"canal":"execucao","instante":"2026-08-16T12:04:34.586Z","execucao_id":"IARA-20260816-cd1d-000004","id_usuario":"daiane","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:04:34.586Z","execucao_id":"IARA-20260816-cd1d-000004","id_usuario":"daiane","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:04:34.586Z","execucao_id":"IARA-20260816-cd1d-000004","id_usuario":"daiane","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"criar_pasta","permitido":true,"detalhe":"C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Beta qb1c5r1"}
+{"canal":"execucao","instante":"2026-08-16T12:04:34.588Z","execucao_id":"IARA-20260816-cd1d-000004","id_usuario":"daiane","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Beta qb1c5r1","ms":2}
+{"canal":"voz","id_mensagem":"05ef6387-90a0-43a7-9a56-f450d44e746f","ok":true,"pensar_ms":3444,"sintese_ms":1318,"caracteres":214}
+{"canal":"voz","id_mensagem":"a420bd5a-0ccc-411c-9d62-98274478b266","ok":true,"pensar_ms":20,"sintese_ms":2015,"caracteres":51}
+{"canal":"auditoria","instante":"2026-08-16T12:05:16.287Z","sessao":"daiane","id_usuario":"daiane","traco":"206ee27d-ba06-4214-8875-8cb42d03abdd","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (clima) → plano determinístico.","permitido":true}
+{"canal":"voz","id_mensagem":"c7cd7aaf-c713-403c-970e-7acffbf3269a","ok":true,"pensar_ms":3860,"sintese_ms":1,"caracteres":214}
+{"canal":"auditoria","instante":"2026-08-16T12:05:20.191Z","sessao":"daiane","id_usuario":"daiane","traco":"73cef5fa-25e5-45d7-810b-28a0817383a1","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"7fc96d9e-1bcc-4f7e-a4e4-c89adc479989","hash_intencao":"8cba282230b35d4677e25b89ce5adbcdb3d9a39b5297c30fc9ddcb914c985bf4","id_usuario":"daiane","sessao":"daiane","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+{"canal":"execucao","instante":"2026-08-16T12:05:20.241Z","execucao_id":"IARA-20260816-cd1d-000005","id_usuario":"daiane","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:05:20.241Z","execucao_id":"IARA-20260816-cd1d-000005","id_usuario":"daiane","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:05:20.241Z","execucao_id":"IARA-20260816-cd1d-000005","id_usuario":"daiane","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"criar_pasta","permitido":true,"detalhe":"C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Beta qb1c5r2"}
+{"canal":"execucao","instante":"2026-08-16T12:05:20.246Z","execucao_id":"IARA-20260816-cd1d-000005","id_usuario":"daiane","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Beta qb1c5r2","ms":5}
+{"canal":"voz","id_mensagem":"58e31229-6a46-4fb7-b437-f49e03cd9e40","ok":true,"pensar_ms":62,"sintese_ms":1976,"caracteres":51}
+{"canal":"auditoria","instante":"2026-08-16T12:05:57.558Z","sessao":"daiane","id_usuario":"daiane","traco":"07a20321-545b-4381-bb7a-106e957c3690","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (clima) → plano determinístico.","permitido":true}
+{"canal":"voz","id_mensagem":"856d3033-9000-430d-8362-ff07f2445033","ok":true,"pensar_ms":1654,"sintese_ms":0,"caracteres":214}
+{"canal":"auditoria","instante":"2026-08-16T12:05:59.220Z","sessao":"daiane","id_usuario":"daiane","traco":"74c0cee6-6f91-47e1-a2b0-6669052d33a3","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"0e9bbf89-301e-437c-8cb9-aa4a1a1cbc09","hash_intencao":"86f93d25f3f720c10353844e293c2db2647013cd73793f670e47666d9fa9a444","id_usuario":"daiane","sessao":"daiane","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+{"canal":"execucao","instante":"2026-08-16T12:05:59.227Z","execucao_id":"IARA-20260816-cd1d-000006","id_usuario":"daiane","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:05:59.227Z","execucao_id":"IARA-20260816-cd1d-000006","id_usuario":"daiane","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:05:59.227Z","execucao_id":"IARA-20260816-cd1d-000006","id_usuario":"daiane","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"criar_pasta","permitido":true,"detalhe":"C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Beta qb1c5r3"}
+{"canal":"execucao","instante":"2026-08-16T12:05:59.229Z","execucao_id":"IARA-20260816-cd1d-000006","id_usuario":"daiane","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Beta qb1c5r3","ms":2}
+{"canal":"voz","id_mensagem":"6fe2f881-c749-43b3-886e-c834ccd6a5d7","ok":true,"pensar_ms":15,"sintese_ms":1301,"caracteres":51}
+{"canal":"auditoria","instante":"2026-08-16T12:06:41.266Z","sessao":"daiane","id_usuario":"daiane","traco":"0b160802-5d97-4fdc-bf7a-b208128dd2c1","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (clima) → plano determinístico.","permitido":true}
+{"canal":"voz","id_mensagem":"ca936ec6-28aa-4683-a99e-d826ed332f18","ok":true,"pensar_ms":1784,"sintese_ms":1,"caracteres":214}
+{"canal":"auditoria","instante":"2026-08-16T12:06:43.081Z","sessao":"daiane","id_usuario":"daiane","traco":"0fc740df-a9cb-4df5-b719-1e0405260aa5","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+{"canal":"auditoria","acao":"prova_emitida","id_acao":"20de7370-ec68-4a91-9aee-d049d123b93a","hash_intencao":"b02a5f4c2a3cbcb6c35dbe595e2dc7470473ac6a63edbb3d2ed5e32b7447aff4","id_usuario":"daiane","sessao":"daiane","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+{"canal":"execucao","instante":"2026-08-16T12:06:43.102Z","execucao_id":"IARA-20260816-cd1d-000007","id_usuario":"daiane","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:06:43.102Z","execucao_id":"IARA-20260816-cd1d-000007","id_usuario":"daiane","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":0}
+{"canal":"execucao","instante":"2026-08-16T12:06:43.102Z","execucao_id":"IARA-20260816-cd1d-000007","id_usuario":"daiane","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":0}
+{"canal":"agente_local","usuario":"daiane","acao":"criar_pasta","permitido":true,"detalhe":"C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Beta qb1c5r4"}
+{"canal":"execucao","instante":"2026-08-16T12:06:43.104Z","execucao_id":"IARA-20260816-cd1d-000007","id_usuario":"daiane","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\Users\\daian\\AppData\\Local\\Temp\\iara-cc01-yC5MQz\\casa\\Documents\\Beta qb1c5r4","ms":2}
+{"canal":"voz","id_mensagem":"cd9a1bb6-061b-4cf3-83ec-5a514aa6c4cd","ok":true,"pensar_ms":30,"sintese_ms":1460,"caracteres":51}

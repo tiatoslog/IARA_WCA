@@ -12,6 +12,7 @@
 import type { LeituraOperador } from '../../../lib/estado';
 import type { Percepcao, TipoEntrada, Urgencia } from './Evento';
 import { corrigirTypos, normalizar } from '../texto';
+import { ehElipseFactual, ehPerguntaDeContratoFactual } from './ContratoFactual';
 import { TeoriaDaMente, type SinalTemporal } from '../TeoriaDaMente';
 import {
   INFINITIVO_OPERACIONAL,
@@ -68,6 +69,35 @@ interface Ancora {
   readonly re: RegExp;
   readonly nome: string;
   readonly acionavel: boolean;
+  /**
+   * A ÂNCORA QUE NÃO CABE NUM REGEX — e por que ela não vira um regex daqui.
+   *
+   * `contrato_factual` reconhece a família inteira de perguntas de contagem
+   * sobre a operação LUFT, incluindo as EXCEÇÕES (mês, percentual, MIN/MAX)
+   * que o motor ainda não sabe responder e que precisam continuar indo para a
+   * LLM. Isso é uma decisão em camadas, não um casamento de palavras.
+   *
+   * Escrever aqui uma cópia aproximada dessa decisão seria repetir exatamente
+   * a falha que este repositório já pagou duas vezes: a mesma regra em
+   * `Percepcao` e no roteador, divergindo em silêncio.
+   *
+   * O PREDICADO É A DECISÃO INTEIRA — e a primeira versão errou justamente
+   * aqui. Ela mantinha `re` como "pré-filtro barato" (`quantos|quantas|total|
+   * faturamento|…`) e o predicado como refinamento. O portão bicondicional de
+   * `contrato-factual.test.ts` derrubou isso na hora: **"qual motorista fez
+   * mais cargas?"** tem contrato e não tem nenhuma daquelas palavras. A âncora
+   * não disparava, e a pergunta voltava para a LLM — a divergência silenciosa
+   * de sempre, reintroduzida pelo atalho de performance.
+   *
+   * Então quem tem `predicado` usa `/^/` como `re`: casa sempre, custo zero, e
+   * não existe segunda regra para divergir da primeira. O interpretador é
+   * regex pura com saída curta na primeira porta — a economia que o pré-filtro
+   * comprava não pagava o risco que ele criava.
+   *
+   * Quem tem `predicado` ignora `negavel`/`interrogavel`: perguntar quantos
+   * motoristas existem não é um efeito que a negação inverta.
+   */
+  readonly predicado?: (frase: string) => boolean;
   /** Casou `re`, mas casa isto também? Então não é esta âncora. */
   readonly exceto?: RegExp;
   /**
@@ -91,6 +121,44 @@ interface Ancora {
 }
 
 const ANCORAS: ReadonlyArray<Ancora> = [
+  /**
+   * A CONTAGEM DA OPERAÇÃO VEM PRIMEIRO — e a posição é a correção.
+   *
+   * MEDIDO EM 19/08/2026, antes desta âncora existir: as dez perguntas de
+   * contagem mais comuns da operação LUFT — "quantos motoristas temos?"
+   * inclusive, a frase do incidente — casavam âncora NENHUMA. Todas caíam em
+   * `plano_cognitivo`, quer dizer, com ferramenta e parâmetros escolhidos por
+   * um modelo estocástico a cada execução. E "me diga o número de motoristas"
+   * caía em `raciocinio_direto`, um ramo DIFERENTE do pipeline para a mesma
+   * pergunta.
+   *
+   * Antes de `infraestrutura` de propósito: aquela âncora contém "quantos
+   * veiculos", e a ordem é o que garante que perguntas de frota continuem
+   * indo para a frota. O contrato, por sua vez, se recusa a ler "veículo"
+   * quando a frase não fala da planilha — as duas metades da mesma trava.
+   */
+  {
+    /* `re` casa sempre: quem decide é o predicado, e uma segunda regra aqui só
+       teria como divergir da primeira. Ver `Ancora.predicado`. */
+    re: /^/,
+    /**
+     * A ELIPSE ENTRA NA ÂNCORA, e a resolução dela fica no `Planejador`.
+     *
+     * "E amanhã?" não forma contrato sozinha — é a pergunta anterior com um
+     * campo trocado. Mas SER uma continuação factual é propriedade da FRASE
+     * ("começa com 'e', é curta, carrega um slot"), e isso a percepção sabe
+     * julgar. Quem era a pergunta anterior depende de QUEM está falando, e a
+     * `Percepcao` é cega a identidade de propósito: quem tem o
+     * `ContextoPlanejamento` é o `Planejador`, e é lá que a herança acontece.
+     *
+     * Sem esta linha, a rota nem chegaria à receita — a frase cairia no
+     * raciocínio livre, que foi de onde saiu "você autoriza?" para uma leitura
+     * de risco baixo e custo zero (REL-0005).
+     */
+    predicado: (f) => ehPerguntaDeContratoFactual(f) || ehElipseFactual(f),
+    nome: 'contrato_factual',
+    acionavel: true,
+  },
   {
     re: /\b(chuva|chover|chovendo|tempo|clima|temperatura|previsao)\b/,
     nome: 'clima',
@@ -341,6 +409,30 @@ const ANCORAS: ReadonlyArray<Ancora> = [
     nome: 'energia',
     acionavel: true,
     negavel: true,
+    /**
+     * RESPOSTA DE AUTORIZAÇÃO NÃO É PEDIDO NOVO — a segunda metade do defeito
+     * de 19/08/2026.
+     *
+     *   IARA: "confirme que devo desligar"
+     *   op:   "Eu te autorizo a desligar o computador"
+     *   IARA: "Não executei isso. Registrar pendência e pedir confirmação."
+     *
+     * A frase cita "desligar", então casava `energia` — que vem antes de
+     * `confirmacao` na lista. E `acionar_energia` NUNCA executa: ele registra
+     * pendência e pergunta. Resultado, um laço: a operadora autoriza, a IARA
+     * pergunta de novo, e o desligamento nunca acontece por mais que ela
+     * consinta.
+     *
+     * Com esta exceção, a frase que carrega verbo de AUTORIZAÇÃO cai em
+     * `confirmacao`, que é quem sabe RESOLVER a pendência aberta. O pedido
+     * novo ("desligue o computador") não tem esses verbos e continua onde
+     * estava.
+     *
+     * Se não houver pendência aberta, `resolver_confirmacao` diz isso — e
+     * dizer "não há nada pendente" é melhor que abrir uma pendência que a
+     * pessoa achou que já tinha aberto.
+     */
+    exceto: /\b(autorizo|autorizado|autorizada|confirmo|confirmado|prossiga|libero|liberado|permito|permitido)\b/,
   },
   /**
    * AUTORIZAR UM PLANO PROPOSTO — vem ANTES de `confirmacao`, e a ordem resolve
@@ -376,7 +468,27 @@ const ANCORAS: ReadonlyArray<Ancora> = [
       /\b(como|de que jeito|de que forma|o que acontece|o que muda|quanto tempo|por que|porque|em que consiste)\b[^?]{0,60}\b(plano|execut)/,
   },
   {
-    re: /\b(confirmo|confirmado|confirmar|prossiga|cancela|cancelar|cancelado|abortar)\b/,
+    /**
+     * "AUTORIZO" ENTROU EM 19/08/2026, e a falta dele deixava a IARA num laço.
+     *
+     * A conversa real, colada pela operadora:
+     *
+     *   IARA: "A política exige confirmação explícita (…). Se quiser prosseguir,
+     *          confirme que devo desligar."
+     *   op:   "Eu te autorizo"
+     *   IARA: "Não tenho nenhum plano aberto para executar."
+     *
+     * A IARA PEDIU confirmação e não reconheceu a resposta mais natural que
+     * existe para o pedido dela. Sem âncora, "eu te autorizo" caía em
+     * `raciocinio_direto` e a LLM chutava — chutou `executar_plano`.
+     *
+     * É a mesma família do defeito de `busca`, que exigia o substantivo
+     * "busca" enquanto a operadora escrevia "BUSQUE": a âncora não cobria a
+     * palavra que a pessoa usa para fazer exatamente o que a IARA acabou de
+     * pedir. Autorizar é o verbo de quem responde a "a política exige
+     * autorização" — e era o único que faltava.
+     */
+    re: /\b(confirmo|confirmado|confirmar|prossiga|autorizo|autorizado|autorizada|libero|liberado|permito|permitido|cancela|cancelar|cancelado|abortar)\b/,
     nome: 'confirmacao',
     acionavel: true,
     /**
@@ -472,6 +584,10 @@ export class MotorPercepcao {
      */
     const encontradas = ANCORAS.filter((a) => {
       if (a.exceto?.test(tPropria)) return false;
+      /* O predicado é a decisão inteira — `re` casa sempre, ver `Ancora`.
+         Roda sobre a voz PRÓPRIA: "o e-mail diz: quantos motoristas temos"
+         cita a pergunta, não a faz. */
+      if (a.predicado) return a.predicado(tPropria);
       // "como faço para confirmar?" pergunta sobre a resolução; não resolve.
       // Este teste é da mensagem inteira: não existe "confirmar em parte".
       if (a.interrogavel && ehPerguntaSobreResolver(tPropria)) return false;
@@ -535,6 +651,7 @@ export class MotorPercepcao {
   }
 
   private supor(tipo: TipoEntrada, ancoras: readonly string[]): string {
+    if (ancoras.includes('contrato_factual')) return 'contagem determinística sobre a operação';
     if (ancoras.includes('incidente')) return 'retrospectiva de incidente';
     if (ancoras.includes('infraestrutura')) return 'consulta operacional';
     if (ancoras.includes('clima')) return 'condição externa';

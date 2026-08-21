@@ -200,6 +200,8 @@ export class RegistroOperacoes {
   private readonly operacoes = new Map<string, Operacao>();
   /** chave_idempotencia → id_operacao. */
   private readonly porChave = new Map<string, string>();
+  /** Operadores cujo jornal já foi lido do disco neste processo. Ver `garantirCarregado`. */
+  private readonly carregados = new Map<string, Promise<readonly Operacao[]>>();
 
   constructor(private readonly raiz: string = RAIZ_PADRAO) {}
 
@@ -561,6 +563,38 @@ export class RegistroOperacoes {
    *    valor verdadeiro, e é o valor que obriga a perguntar ao mundo antes de
    *    qualquer nova tentativa.
    */
+  /**
+   * GARANTE QUE O JORNAL DESTE OPERADOR ESTÁ NO ÍNDICE — uma vez por processo.
+   *
+   * `reidratar` existia, era testada, e era citada por dois comentários do
+   * kernel como se rodasse em produção. Uma varredura por chamadores em
+   * 20/08/2026 encontrou ZERO fora de `testes/`: o singleton nascia vazio e
+   * ninguém lia o disco de volta. As duas barreiras contra o efeito duplicado
+   * — `porChave` e a impressão do efeito — vivem em MEMÓRIA, então um restart
+   * as cegava, e o pedido repetido depois da queda executava DE NOVO.
+   *
+   * Por que aqui e não no boot do processo: o jornal é POR OPERADOR e o
+   * processo não sabe quem vai conectar. Carregar tudo no boot leria shards de
+   * gente que não vai aparecer; carregar sob demanda lê exatamente o de quem
+   * chegou, uma vez, e mantém a fronteira do shard intacta.
+   *
+   * A promessa fica no mapa ANTES do `await` — duas chamadas concorrentes para
+   * o mesmo operador compartilham a mesma leitura em vez de correrem uma contra
+   * a outra. Falha de leitura não é memorizada: um disco que voltou merece uma
+   * segunda tentativa, e `reidratar` já devolve `[]` para arquivo ausente.
+   */
+  garantirCarregado(idUsuario: string): Promise<readonly Operacao[]> {
+    const chave = exigirIdCanonico(idUsuario, 'RegistroOperacoes.garantirCarregado');
+    const emCurso = this.carregados.get(chave);
+    if (emCurso) return emCurso;
+    const leitura = this.reidratar(chave).catch((e) => {
+      this.carregados.delete(chave);
+      throw e;
+    });
+    this.carregados.set(chave, leitura);
+    return leitura;
+  }
+
   async reidratar(idUsuario: string): Promise<readonly Operacao[]> {
     let bruto: string;
     try {

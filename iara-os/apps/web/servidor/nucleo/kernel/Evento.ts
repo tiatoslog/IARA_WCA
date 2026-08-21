@@ -170,6 +170,23 @@ export type EventoKernel =
       id_mensagem: string;
       texto: string;
       responde_a: string | null;
+      /**
+       * ISTO NÃO É RESPOSTA — é recado de andamento ("ainda estou nisto").
+       *
+       * O campo existe por um defeito criado pelo próprio conserto do prazo de
+       * fala, em 18/08/2026. O aviso era publicado como trecho comum, e o
+       * `CompiladorSnapshot` promove toda fala parcial pendente a `concluida`
+       * quando o turno é cancelado ou falha — regra certa para resposta parcial
+       * de verdade (apagar o que já foi dito faria o texto sumir da tela), e
+       * errada para um recado de espera. Medido: o turno 5 morreu, o turno 6
+       * chegou, e "Ainda estou nisto: 2 segundos até agora." virou a RESPOSTA
+       * do turno 5.
+       *
+       * Trocar silêncio por nota de status apresentada como resposta não é
+       * conserto — é a mentira operacional pequena que esta base inteira existe
+       * para não cometer.
+       */
+      provisoria?: boolean;
     })
   | (EventoBase & {
       tipo: 'TAREFA_CONCLUIDA';

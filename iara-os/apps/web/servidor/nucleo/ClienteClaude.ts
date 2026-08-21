@@ -32,6 +32,16 @@ export type { PedidoRaciocinio, RespostaRaciocinio } from './ProvedorRaciocinio'
 export class ClienteClaude implements ProvedorRaciocinio {
   readonly apelido = 'anthropic' as const;
   readonly origem = 'nuvem' as const;
+  /**
+   * A ÚNICA CAMADA PREMIUM DECLARADA HOJE, e é medição, não preferência: em
+   * 18/08/2026, com prompt de 10.226 tokens e três voltas por provedor, ela foi
+   * a única que respondeu (3/3, primeiro pedaço em 1,4–1,9 s) enquanto Groq,
+   * Gemini e OpenRouter devolviam 413, 503 e 429.
+   *
+   * É também a única que cobra — e é por isso que a escalada gasta orçamento e
+   * acontece no máximo uma vez por turno.
+   */
+  readonly camada = 'premium' as const;
   private cliente: Anthropic | null = null;
   readonly modelo: string;
   private readonly esforco: string;
@@ -151,7 +161,7 @@ export class ClienteClaude implements ProvedorRaciocinio {
           { signal: pedido.sinal },
         );
         for await (const evento of stream) {
-          if (pedido.sinal.aborted) break;
+          if (pedido.sinal?.aborted) break;
           if (evento.type === 'content_block_delta' && evento.delta.type === 'text_delta') {
             texto += evento.delta.text;
             algumTextoChegou = true;
@@ -162,7 +172,7 @@ export class ClienteClaude implements ProvedorRaciocinio {
         return { texto, final };
       } catch (erro) {
         const podeTentarDeNovo =
-          !pedido.sinal.aborted &&
+          !pedido.sinal?.aborted &&
           !algumTextoChegou &&
           this.ehErroTransitorio(erro) &&
           tentativa < MAX_TENTATIVAS;

@@ -21,6 +21,13 @@ import { planosPropostos } from './PlanosPropostos';
 import { passosExecutaveis } from './Investigacao';
 import { corrigirTypos } from '../texto';
 import { classificarIntencao, extrairCodigoPop } from './IntencaoProcedimento';
+import {
+  ehElipseFactual,
+  herdarContrato,
+  interpretarContratoFactual,
+  type ContratoFactual,
+} from './ContratoFactual';
+import { contratoAnterior } from './ContratoAnterior';
 
 function passo(
   indice: number,
@@ -63,7 +70,124 @@ export interface ContextoPlanejamento {
   readonly sessao: string;
 }
 
+/**
+ * O plano de um contrato factual. Uma função porque a herança por elipse produz
+ * exatamente o mesmo plano — e duas cópias divergiriam no dia em que a descrição
+ * do passo mudasse só num lado.
+ *
+ * A DESCRIÇÃO DO PASSO CARREGA O CONTRATO, e não é enfeite: é o trace semântico.
+ * Quem audita o jornal lê `COUNT_DISTINCT(motorista) periodo=implicito
+ * nulo=excluir` e sabe qual pergunta o sistema entendeu, sem reconstruí-la do
+ * texto da resposta — que é justamente o que não se pode fazer quando a resposta
+ * está errada.
+ */
+function planoDoContrato(c: ContratoFactual, sufixo: string): Plano {
+  const alvo = c.dimensao === 'nenhum' ? c.entidade : c.dimensao;
+  return {
+    objetivo: `Contar ${alvo} na operação LUFT (${c.operacao})${sufixo}`,
+    origem: 'deterministico',
+    passos: [
+      passo(
+        0,
+        `${c.operacao}(${alvo}) periodo=${c.periodo.tipo}${
+          c.periodo.expressao ? `:${c.periodo.expressao}` : ''
+        } nulo=${c.politica_nulo} fonte=${c.fonte}${sufixo ? ' herdado' : ''}`,
+        c.habilidade,
+        c.parametros,
+      ),
+    ],
+  };
+}
+
 const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) => Plano> = {
+  /**
+   * A CONTAGEM DA OPERAÇÃO — o plano nasce do CONTRATO, não de um modelo.
+   *
+   * Esta é a receita que fecha `SAME_QUESTION_VARIANCE`. Antes dela, "quantos
+   * motoristas temos?" ia para `plano_cognitivo`: habilidade e parâmetros
+   * escolhidos por uma LLM, de novo, a cada execução. Agora os três campos que
+   * decidem o número — `agrupar_por`, `metrica`, `periodo` — vêm de
+   * `interpretarContratoFactual`, que é código puro e devolve o mesmo contrato
+   * para a mesma frase, sempre.
+   *
+   * A DESCRIÇÃO DO PASSO CARREGA O CONTRATO, e isso não é enfeite: é o trace
+   * semântico. Quem audita o jornal de operações lê `COUNT_DISTINCT(motorista)
+   * periodo=implicito nulo=excluir` e sabe qual pergunta o sistema entendeu —
+   * sem precisar reconstruir a intenção a partir do texto da resposta, que é
+   * exatamente o que não se pode fazer quando a resposta está errada.
+   *
+   * O RAMO `sem_dado` É A PARTE QUE SE RECUSA. Pergunta boa sobre coluna que
+   * não existe vira `declarar_lacuna_de_dado` — determinístico, com o motivo
+   * lido do esquema. Sem ele, a frase chegaria à LLM, que associaria destino a
+   * "cliente" e devolveria uma agregação real da coluna errada: número com
+   * procedência, e ninguém confere número com procedência.
+   *
+   * O `fora` NÃO DEVERIA ACONTECER — a âncora `contrato_factual` só existe
+   * quando o contrato existe (ver `Ancora.predicado`). Ele fica aqui como a
+   * degradação honesta do dia em que alguém mexer numa das duas pontas: cair no
+   * raciocínio livre é pior que o determinismo, e é muito melhor que executar
+   * um plano vazio.
+   */
+  contrato_factual: (p, ctx) => {
+    const leitura = interpretarContratoFactual(p.bruto);
+
+    /**
+     * A ELIPSE RESOLVE AQUI, e não na `Percepcao` — REL-0005.
+     *
+     * "E amanhã?" não quer dizer nada sozinha: ela é a pergunta anterior com um
+     * campo trocado. Quem sabe QUAL era a anterior é quem tem a identidade da
+     * conversa, e isso é o `ContextoPlanejamento` — a `Percepcao` decide âncora
+     * sem saber quem está falando, e este repositório a mantém cega a isso de
+     * propósito.
+     *
+     * A herança é SUBSTITUIÇÃO DE SLOT, nunca reinterpretação: `herdarContrato`
+     * troca período ou dimensão e preserva o resto. Mandar a frase de volta para
+     * a LLM com o histórico seria pedir que ela adivinhasse operação, métrica e
+     * política de nulo outra vez — e é assim que período e entidade se perdem
+     * entre turnos.
+     *
+     * Sem contexto ou sem pergunta anterior, cai no raciocínio livre lá embaixo:
+     * uma elipse sem antecedente é genuinamente ambígua, e adivinhar seria pior.
+     */
+    if (leitura.tipo === 'fora' && ctx && ehElipseFactual(p.bruto)) {
+      const anterior = contratoAnterior.ler(ctx.id_usuario, ctx.sessao);
+      const herdado = anterior ? herdarContrato(p.bruto, anterior) : null;
+      if (herdado) {
+        contratoAnterior.registrar(ctx.id_usuario, ctx.sessao, herdado);
+        return planoDoContrato(herdado, ' (continuação)');
+      }
+    }
+
+    if (leitura.tipo === 'contrato') {
+      const c = leitura.contrato;
+      /* A pergunta desta vez é a "anterior" da próxima. Guarda o CONTRATO, nunca
+         a resposta: memória de conversa não é fonte de valor. */
+      if (ctx) contratoAnterior.registrar(ctx.id_usuario, ctx.sessao, c);
+      return planoDoContrato(c, '');
+    }
+
+    if (leitura.tipo === 'sem_dado') {
+      return {
+        objetivo: `Declarar que a planilha da operação não tem a dimensão "${leitura.dimensao}"`,
+        origem: 'deterministico',
+        passos: [
+          passo(
+            0,
+            `DATA_UNAVAILABLE(${leitura.dimensao}) fonte=cargas_luft`,
+            'declarar_lacuna_de_dado',
+            { dimensao: leitura.dimensao },
+          ),
+        ],
+      };
+    }
+
+    return {
+      objetivo: p.objetivo_provavel === 'indeterminado' ? 'Atender o pedido do operador' : p.objetivo_provavel,
+      origem: 'emergente',
+      passos: [passo(0, 'Raciocinar sobre o pedido', 'raciocinio', {})],
+    };
+  },
+
   clima: (p) => {
     const horizonte = extrairHorizonteClima(p.bruto);
     const cidade = extrairCidadeClima(p.bruto);
@@ -422,7 +546,15 @@ const RECEITAS: Record<string, (p: Percepcao, ctx: ContextoPlanejamento | null) 
  * famílias na frase, e nesse empate desistir é a leitura correta.
  */
 const NEGACAO = /\b(cancela|cancelar|cancelado|aborta|abortar|desiste|desistir|nao|deixa)\b/;
-const AFIRMACAO = /\b(confirmo|confirmado|confirma|confirmar|prossiga|prossegue|prosseguir|pode ir|pode sim|manda|sim)\b/;
+/**
+ * O VOCABULÁRIO DE QUEM DIZ SIM.
+ *
+ * `autorizo` e companhia entraram em 19/08/2026 junto com a âncora: reconhecer
+ * a frase e depois não entender a polaridade dela seria trocar um silêncio por
+ * um cancelamento — pior que o defeito original.
+ */
+const AFIRMACAO =
+  /\b(confirmo|confirmado|confirma|confirmar|prossiga|prossegue|prosseguir|autorizo|autorizado|autorizada|autoriza|autorizar|libero|liberado|permito|permitido|pode ir|pode sim|manda|sim)\b/;
 
 export function ehAfirmacao(bruto: string): boolean {
   const t = normalizarLocal(bruto);

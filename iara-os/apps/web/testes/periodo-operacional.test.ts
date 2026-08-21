@@ -91,5 +91,16 @@ test('frase sem nenhum período reconhecível devolve null', () => {
 
 test('rótulo sempre repete o que foi entendido, para ser corrigível', () => {
   const p = interpretarPeriodo('essa semana', SEXTA);
-  assert.match(p!.rotulo, /10\/08 a 14\/08/);
+  /**
+   * POR EXTENSO desde 19/08/2026, a pedido da operadora: *"me incomoda o jeito
+   * que ela fala data, '18 do oito' poderia ser 18 de agosto"*. `18/08` é
+   * notação de planilha, e este rótulo também é FALADO pela voz neural — a
+   * barra no meio de uma data é onde a naturalidade morre primeiro.
+   *
+   * A função do rótulo não mudou: ele continua repetindo o intervalo entendido,
+   * para uma leitura errada poder ser corrigida. Só a forma mudou. E o mês não
+   * se repete quando é o mesmo nas duas pontas — "10 a 14 de agosto" é como
+   * alguém diz; "10 de agosto a 14 de agosto" é como um formulário preenche.
+   */
+  assert.match(p!.rotulo, /10 a 14 de agosto/);
 });

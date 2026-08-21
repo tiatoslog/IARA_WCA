@@ -189,7 +189,28 @@ export function auditarConfabulacao(
   const ultimo = turnos.at(-1);
   if (!ultimo?.resposta) return [];
 
-  const pedidos = turnos.map((t) => t.pedido).join(' ').toLowerCase();
+  /**
+   * ACENTO DOBRADO DOS DOIS LADOS — e a falta disto acusou a IARA de inventar o
+   * texto que o próprio operador escreveu.
+   *
+   * Medido em 20/08/2026, missão LC-01:
+   *
+   *     pedido:    ... com o texto "reuniao as 10h"
+   *     resposta:  ... salvar como "notas-1029v1.txt" com "reunião às 10h"
+   *     incidente: "cita nomes que ninguém pediu" — inventados: reunião às 10h
+   *
+   * A IARA ecoou o pedido ESCREVENDO CERTO, e `pedidos.includes(nome)` não
+   * reconheceu o eco porque o operador tinha digitado sem acento. Um auditor
+   * que pune a grafia correta é ruído com aparência de achado — e ruído é como
+   * um auditor de verdade aprende a ser ignorado.
+   */
+  const dobrar = (s: string): string =>
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '');
+
+  const pedidos = dobrar(turnos.map((t) => t.pedido).join(' '));
   const noDisco = new Set<string>();
   for (const raiz of [
     ctx.motor.sandbox.area_de_trabalho,
@@ -197,7 +218,7 @@ export function auditarConfabulacao(
     ctx.motor.sandbox.downloads,
   ]) {
     try {
-      for (const n of readdirSync(raiz)) noDisco.add(n.toLowerCase());
+      for (const n of readdirSync(raiz)) noDisco.add(dobrar(n));
     } catch {
       /* raiz ilegível: nada entra no conjunto, e a conferência abaixo fica
          mais permissiva — nunca mais acusadora. */
@@ -206,7 +227,7 @@ export function auditarConfabulacao(
 
   const inventados = new Set<string>();
   for (const [, citado] of ultimo.resposta.matchAll(/"([^"\n]{2,60})"/g)) {
-    const nome = citado.trim().toLowerCase();
+    const nome = dobrar(citado.trim());
     /* Frase entre aspas não é nome próprio: só entram tokens curtos, sem
        espaço demais, que se parecem com nome de pasta ou arquivo. */
     if (nome.split(/\s+/).length > 3) continue;

@@ -1,0 +1,69 @@
+{
+  "rotulo": "ANTES-LENTIDAO",
+  "cerebro": "groq,gemini,openrouter,anthropic",
+  "prazo_fala_imposto_ms": null,
+  "instante": "2026-08-19T11:56:47.815Z",
+  "turnos": 6,
+  "avisados": 0,
+  "mudos": 0,
+  "nunca_perceptivel": 0,
+  "perceptivel_p50_ms": 6015,
+  "perceptivel_p95_ms": 19006,
+  "pior_espera_ms": 19006,
+  "medidas": [
+    {
+      "n": 1,
+      "pedido": "O que você consegue fazer?",
+      "ate_perceptivel_ms": 19006,
+      "ate_concluir_ms": 28775,
+      "mudo": false,
+      "avisou": false,
+      "texto": "Bastante coisa, mas vou resumir por área, sem enrolação. Memória e histórico: consulto agenda/hora, procuro incidentes p"
+    },
+    {
+      "n": 2,
+      "pedido": "Quantas cargas existem na base 2026?",
+      "ate_perceptivel_ms": 5883,
+      "ate_concluir_ms": 9173,
+      "mudo": false,
+      "avisou": false,
+      "texto": "Essa consulta depende da base de cargas LUFT, e essa integração está desligada agora — falta o token do Graph e a URL da"
+    },
+    {
+      "n": 3,
+      "pedido": "Qual motorista possui mais cargas?",
+      "ate_perceptivel_ms": 4933,
+      "ate_concluir_ms": 7499,
+      "mudo": false,
+      "avisou": false,
+      "texto": "Mesmo problema do anterior: essa pergunta também depende da base de cargas LUFT (motorista com mais cargas é justamente "
+    },
+    {
+      "n": 4,
+      "pedido": "Me explique como você decide usar uma ferramenta.",
+      "ate_perceptivel_ms": 6192,
+      "ate_concluir_ms": 14426,
+      "mudo": false,
+      "avisou": false,
+      "texto": "Não é uma escolha estilística, é bem mecânica. Quando você pede algo, eu olho se o pedido bate com uma capacidade real d"
+    },
+    {
+      "n": 5,
+      "pedido": "Quantas cargas existem na base 2026?",
+      "ate_perceptivel_ms": 4306,
+      "ate_concluir_ms": 4484,
+      "mudo": false,
+      "avisou": false,
+      "texto": "Não consigo responder agora. A consulta à base de cargas LUFT está desligada — faltam token Graph e URL da planilha OCI."
+    },
+    {
+      "n": 6,
+      "pedido": "O que você consegue fazer?",
+      "ate_perceptivel_ms": 6015,
+      "ate_concluir_ms": 11873,
+      "mudo": false,
+      "avisou": false,
+      "texto": "A mesma coisa de antes — nada mudou desde então. Rapidinho, por área: Memória: agenda/hora, histórico de incidentes pare"
+    }
+  ]
+}

@@ -42,18 +42,36 @@ import {
 } from './OrcamentoDoTurno';
 import { PorteiroAutorizacao } from './PorteiroAutorizacao';
 import { motivoDaRecusa, nivelAtual, podeSem } from './Autonomia';
-import type { Plano } from './Evento';
+import type { Plano, Percepcao } from './Evento';
 import { PermissaoNegada, ParametroInvalido, type Habilidade, type Risco } from './Habilidade';
 import { confirmaAcontecimento, VERBO_DO_ESTADO, type EstadoExecucao } from './Verdade';
 import { lerAfirmacaoDeFeito } from './AfirmacaoDeFeito';
+import { lerNegacaoDeFeito } from './NegacaoDeFeito';
+import { lerPromessaDeAcao } from './PromessaDeAcao';
 import { RegistroOperacoes, registroOperacoes } from './RegistroOperacoes';
 import { PortalEfeitos } from './PortalEfeitos';
+import { GuardaDeLaco, LIMIARES_PADRAO } from './GuardaDeLaco';
+import {
+  instrucaoDoDegrau,
+  linhaDeAuditoria,
+  montarDossie,
+  rodapeDoDossie,
+  type DossieAnalitico,
+} from './DossieAnalitico';
+import type { Evidencia } from './Investigacao';
+import { emoldurarObservacoes, type Observacao } from './Observacao';
 import { INTEGRACOES } from './integracoes';
 // `provaDe`, não `evidencia`: o bloco de exceção deste arquivo já tem uma
 // variável local com esse nome, e sombra silenciosa entre uma string e a função
 // que carimba a fonte da prova é o tipo de colisão que compila e mente.
 import type { Operacao, SemanticaEfeito } from './Operacao';
 import { contextoDeConflitos, detectarConflitos, extrairFatosHorario } from './MemoriaFatos';
+import { armarAvisoDeEspera } from './PrazoDeFala';
+import { custoDaChamada } from '../PrecoDoRaciocinio';
+import { apararHistorico, tetoDeContexto } from './OrcamentoDeContexto';
+import { decidirEscalada, textoDegradado } from './EscaladaDoTurno';
+import { RAIZ_DO_APP, VerificadorDeterministico, fontesDesligadas } from './VerificacaoRuntime';
+import type { PortaVerificacaoRuntime } from '../../../lib/verificacao/contrato';
 import type { DestinoCognitivo, EstagioCognitivo, OrigemRaciocinio } from '../../../lib/estado';
 import { normalizarPreferencias } from '../../../lib/perfil';
 import type { Ilustracao } from '../../../lib/snapshot';
@@ -90,6 +108,16 @@ interface PassoExecutado {
    * `texto`: os dois entram na resposta juntos ou não entram — ver `ilustracaoDe`.
    */
   readonly ilustracao?: Ilustracao | null;
+  /**
+   * OS NÚMEROS TIPADOS que a habilidade calculou — ver `ResultadoHabilidade.
+   * evidencias`. `evidencia` (singular, acima) é a linha técnica para o console;
+   * isto é o dado, com procedência e cobertura, que a camada analítica contesta.
+   *
+   * OPCIONAL: quase nenhum passo produz. Abrir aplicativo e criar pasta não
+   * apuram número nenhum, e um `[]` obrigatório em oito lugares de `push` seria
+   * ruído que a próxima pessoa copiaria sem pensar.
+   */
+  readonly evidencias?: readonly Evidencia[];
 }
 
 /**
@@ -197,6 +225,20 @@ export interface AnexoMensagem {
  * substitui o primeiro), quatro é o teto que a topologia já impõe — o valor
  * aqui é a rede de segurança para o dia em que ela mudar sem ninguém avisar.
  */
+/**
+ * "QUANTOS X" SOBRE A OPERAÇÃO — as perguntas cujo número só pode vir de contar.
+ *
+ * Usada pela trava de autoridade: pergunta desta forma respondida num turno em
+ * que nada alcançou o mundo é um número sem procedência, e foi assim que a IARA
+ * repetiu "75 motoristas" do próprio histórico em 19/08/2026.
+ *
+ * A lista é das entidades que TÊM operação determinística. `centrais` fica de
+ * fora porque já tem oráculo que sabe o valor certo — e saber o valor vale mais
+ * que saber a procedência.
+ */
+const PERGUNTA_DE_CARDINALIDADE_OPERACIONAL =
+  /\b(quantos?|quantas?|n[úu]mero de|total de|quantidade de)\b[^?]{0,40}\b(motoristas?|cargas?|rotas?|destinos?|origens?|clientes?)\b/i;
+
 const TETO_DA_FILA = 4;
 
 /**
@@ -228,6 +270,14 @@ export interface DependenciasKernel {
    * que a costura é aceitável aqui e não seria em cima de uma trava.
    */
   raciocinio?: MotorRaciocinio;
+  /**
+   * QUEM CONFERE O VALOR DA RESPOSTA — e não é quem a produziu.
+   *
+   * Injetável para o teste poder pôr um verificador que contesta sempre, e
+   * `null` explícito desliga a verificação. Ausente vale o determinístico
+   * padrão, que reconhece poucas perguntas e diz `inconclusivo` no resto.
+   */
+  verificacao?: PortaVerificacaoRuntime | null;
   /**
    * Habilidades ACRESCENTADAS ao catálogo real. Nunca substituem nada.
    *
@@ -366,10 +416,22 @@ export class Kernel {
    * Duas instâncias seriam duas réguas que um dia divergem.
    */
   private readonly descoberta: DescobertaCapacidades;
+  /** Quem confere o valor da resposta. `null` desliga a verificação em runtime. */
+  private readonly verificacao: PortaVerificacaoRuntime | null;
 
   constructor(private readonly dep: DependenciasKernel) {
     this.papel = dep.papel ?? 'operador';
     this.raciocinio = dep.raciocinio ?? new MotorRaciocinio();
+    /* `undefined` vale o padrão; `null` desliga. A diferença importa: um teste
+       que passa `null` está declarando que não quer verificação, e isso é outra
+       coisa de "esqueci de configurar". */
+    this.verificacao =
+      dep.verificacao === undefined
+        ? new VerificadorDeterministico({
+            raiz: RAIZ_DO_APP,
+            fontesAusentes: () => fontesDesligadas(),
+          })
+        : dep.verificacao;
     /**
      * O jornal COMPARTILHADO do processo, não um por kernel. Um kernel por
      * sessão significa dois kernels para o mesmo operador (navegador e
@@ -675,6 +737,24 @@ export class Kernel {
      * vazamento aparecer só depois de duas telas conversando.
      */
     const orcamento = new OrcamentoDoTurno(this.dep.tetosOrcamento ?? tetosDoAmbiente());
+
+    /**
+     * A PACIÊNCIA DE UMA PESSOA, que é coisa diferente do orçamento acima.
+     *
+     * O orçamento pergunta "este turno já custou demais?" e responde em 15 min.
+     * Este pergunta "esta pessoa já esperou demais?" e responde em ~20 s. Ter um
+     * número só para as duas foi o defeito medido em 18/08/2026: turnos de 46 s,
+     * 62 s e 90 s sem NADA na tela, dentro do orçamento, sem erro nenhum — e do
+     * lado de cá indistinguível de um sistema morto.
+     *
+     * Ele não aborta, não gasta e não decide. Só avisa. Ver `PrazoDeFala.ts`
+     * para por que abortar seria trocar silêncio por `FALSO_NEGATIVO`.
+     */
+    const avisoDeEspera = armarAvisoDeEspera({
+      barramento: b,
+      idDaPergunta,
+      tentativasDeProvedor: () => orcamento.gasto('tentativa_provedor'),
+    });
 
     /* `idDaPergunta` nasceu lá em cima, antes da fila. Ele tem três
        consumidores: a bolha do operador (`MENSAGEM_RECEBIDA`), o endereço de
@@ -1015,8 +1095,17 @@ export class Kernel {
         lacunasCapacidade.registrar(p.bruto, this.dep.idUsuario);
       }
 
-      // --- 4. Execução ------------------------------------------------------
-      const execucao = await this.executarPlano(plano, p.bruto, controle, orcamento);
+      // --- 4. Laço: decidir → executar → observar → decidir ------------------
+      /**
+       * Aqui morava uma chamada só a `executarPlano`. Era o turno inteiro: a
+       * lista de passos que a LLM emitiu às cegas, executada até o fim, sem
+       * chance de o resultado do primeiro passo mudar o segundo.
+       *
+       * `executarLaco` não substitui aquela execução — ela roda lá dentro,
+       * intacta. O que ele acrescenta é a VOLTA. Ver o cabeçalho do método.
+       */
+      const laco = await this.executarLaco(decisao.rota, plano, p, controle, orcamento);
+      const execucao = laco.execucao;
       if (controle.signal.aborted) {
         /**
          * CANCELAR A RESPOSTA NÃO CANCELA O MUNDO.
@@ -1047,30 +1136,156 @@ export class Kernel {
         return;
       }
 
+      // --- 4b. Camada analítica --------------------------------------------
+      /**
+       * A CRÍTICA MORA ENTRE A EXECUÇÃO E A COMPOSIÇÃO — o mesmo lugar onde o
+       * laço entrou, e pela mesma razão: nenhuma trava sai do lugar.
+       * `executarLaco` já rodou inteiro, `comporResposta` continua idêntica, e
+       * o que entra aqui é uma leitura do que o turno APUROU.
+       *
+       * O PORTÃO É "HOUVE EVIDÊNCIA TIPADA?", e ele é estreito de propósito.
+       * `criticar([])` devolve degrau `nenhum` — que é a resposta certa para
+       * "não apurei nada" e a resposta catastrófica para um turno de conversa,
+       * de saudação ou de abrir aplicativo, que são a maioria. Engajar a camada
+       * sem evidência faria a IARA se abster de dizer bom dia.
+       *
+       * O CUSTO DECLARADO: habilidade que ainda não emite `evidencias` não é
+       * criticada. A camada é real onde há dado tipado e ausente onde não há —
+       * e prefiro essa fronteira visível a uma heurística que adivinhe número
+       * dentro de prosa, que seria inventar procedência.
+       */
+      /**
+       * O PORTÃO EXIGE EVIDÊNCIA **DIRETA** — a correção do falso positivo que a
+       * auditoria independente achou.
+       *
+       * `criticar` recusa, com razão, um conjunto só de `contextual`: contexto
+       * não sustenta conclusão. Mas o portão daqui contava QUALQUER evidência, e
+       * a combinação produzia o pior desfecho possível — uma habilidade que
+       * emitisse só contexto num turno de COMANDO ("apaga a pasta de cargas")
+       * fazia o kernel abster-se: o efeito acontecia e o operador recebia
+       * *"não tenho evidência suficiente para concluir"*.
+       *
+       * Turno sem evidência direta não é turno analítico. A camada não engaja, e
+       * a resposta sai como sempre saiu.
+       */
+      const evidenciasDoTurno = execucao.passos
+        .flatMap((x) => x.evidencias ?? [])
+        .filter((e) => e.relevancia === 'direta');
+      const dossie =
+        evidenciasDoTurno.length > 0
+          ? montarDossie({
+              analise_id: b.tracoAtual,
+              pergunta: p.bruto,
+              evidencias: evidenciasDoTurno,
+              ferramentas: execucao.passos.map((x) => x.habilidade),
+              agora: new Date().toISOString(),
+            })
+          : null;
+
+      if (dossie) {
+        this.auditoria.registrar({
+          instante: dossie.instante,
+          sessao: this.dep.sessao,
+          id_usuario: this.dep.idUsuario,
+          traco: b.tracoAtual,
+          acao: `analise:${dossie.nivel.nivel}:${dossie.suficiencia.veredicto}`,
+          detalhe: linhaDeAuditoria(dossie),
+          permitido: dossie.suficiencia.veredicto !== 'abster',
+        });
+      }
+
+      /**
+       * A ABSTENÇÃO NÃO PASSA PELA LLM — e é isto que a separa de um pedido.
+       *
+       * Mandar "não conclua" no prompt e torcer é a defesa que este repositório
+       * já mediu valendo 56%. Aqui o turno termina antes: a evidência não
+       * sustenta afirmação nenhuma, o texto é o determinístico de
+       * `Suficiencia`, e não existe caminho por onde uma frase confiante possa
+       * ser gerada em cima de um conjunto que o código já reprovou.
+       *
+       * `saidas` ainda vai junto: o que as habilidades relataram é fato do
+       * turno, e engoli-lo seria trocar uma mentira por um sumiço. O que a
+       * abstenção nega é a CONCLUSÃO, não a existência do que se leu.
+       */
+      if (dossie && dossie.suficiencia.veredicto === 'abster') {
+        const idAbstencao = randomUUID();
+        const saidas = saidasDe(execucao);
+        const texto = [saidas.join('\n\n'), dossie.suficiencia.texto].filter(Boolean).join('\n\n');
+        b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: idAbstencao,
+          texto,
+          responde_a: idDaPergunta,
+        });
+        b.publicar({
+          tipo: 'TAREFA_CONCLUIDA',
+          id_mensagem: idAbstencao,
+          texto,
+          rota: decisao.rota,
+          ms: Date.now() - inicio,
+          responde_a: idDaPergunta,
+        });
+        await this.registrarSemQuebrar('iara', texto, this.destinoDe(decisao.rota));
+        return;
+      }
+
       // --- 5. Resposta ------------------------------------------------------
       const idMensagem = randomUUID();
       const texto_final = await this.comporResposta(
-        plano,
+        /* O plano FINAL, não o primeiro: é ele que declara se ainda falta
+           raciocínio. Num laço, o primeiro plano já foi superado pelo que a
+           evidência mostrou. */
+        laco.planoFinal,
         execucao,
         p,
         idMensagem,
         idDaPergunta,
         controle,
         orcamento,
+        dossie,
+        laco.observacoes,
       );
       if (controle.signal.aborted) return;
+
+      /**
+       * O RODAPÉ É CONCATENADO, NÃO PEDIDO — a diferença entre trava e instrução.
+       *
+       * O teto da conclusão VAI ao prompt da síntese, via `instrucaoDoDegrau` em
+       * `overridePersona` — é o que impede a resposta de nascer se contradizendo.
+       * Mas o prompt não é onde a ressalva se GARANTE: a LLM a omitiria
+       * exatamente nos turnos em que o texto ficasse mais elegante sem ela, que
+       * são os turnos em que ela importa. Por isso ela entra também aqui, depois
+       * da redação, por código, e nenhuma escolha de redação a alcança.
+       *
+       * Publicado como trecho próprio para a tela receber o mesmo texto que o
+       * histórico guarda — anexar só ao `TAREFA_CONCLUIDA` faria a bolha exibir
+       * a conclusão sem a ressalva e o registro guardar as duas.
+       */
+      const rodape = dossie ? rodapeDoDossie(dossie) : '';
+      if (rodape) {
+        b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: idMensagem,
+          texto: `\n\n${rodape}`,
+          responde_a: idDaPergunta,
+        });
+      }
+      const texto_com_ressalva = rodape ? `${texto_final}\n\n${rodape}` : texto_final;
 
       b.publicar({
         tipo: 'TAREFA_CONCLUIDA',
         id_mensagem: idMensagem,
-        texto: texto_final,
+        texto: texto_com_ressalva,
         rota: decisao.rota,
         ms: Date.now() - inicio,
         responde_a: idDaPergunta,
         ilustracao: ilustracaoDe(execucao),
       });
 
-      await this.registrarSemQuebrar('iara', texto_final, this.destinoDe(decisao.rota));
+      /* O histórico guarda o que a tela mostrou, ressalva inclusa. Guardar a
+         conclusão sem a contestação faria o turno seguinte reler uma afirmação
+         mais forte do que a que foi feita — que é como um erro se autoconfirma. */
+      await this.registrarSemQuebrar('iara', texto_com_ressalva, this.destinoDe(decisao.rota));
       // O mesmo ganho que a `Porta` usa para semear o lastro histórico. Duas
       // constantes iguais em arquivos diferentes é como elas deixam de ser iguais.
       await this.dep.estado.aplicarIntencao({
@@ -1099,6 +1314,12 @@ export class Kernel {
         responde_a: idDaPergunta,
       });
     } finally {
+      /* PRIMEIRO no `finally`, e por um motivo estreito: tudo abaixo daqui faz
+         E/S (jornal, transição de estado, drenar fila). Um turno que respondeu
+         em dois segundos e depois demorasse a fechar dispararia o aviso DEPOIS
+         de já ter falado — a IARA avisando que está pensando sobre uma resposta
+         que a pessoa já leu. */
+      avisoDeEspera.cancelar();
       if (this.emAndamento === controle) {
         this.emAndamento = null;
         this.origemEmAndamento = null;
@@ -1198,6 +1419,323 @@ export class Kernel {
       detalhe: `${onde} — gasto ${v.gasto}, teto ${v.teto}`,
       permitido: false,
     });
+  }
+
+  /**
+   * O LAÇO — decidir, executar, observar, decidir de novo.
+   *
+   * A MUDANÇA ESTRUTURAL DE 19/08/2026, e o que ela NÃO muda é a metade que
+   * importa: nenhuma trava sai do lugar. `executarPlano` continua idêntico,
+   * linha por linha — porteiro, esquema, autonomia, orçamento, `PortalEfeitos`,
+   * jornal e verificador rodam exatamente como rodavam. `comporResposta`
+   * também. O laço mora ENTRE os dois.
+   *
+   * O que muda é QUANDO a decisão é tomada. Antes: a LLM decompunha o pedido
+   * inteiro numa lista fixa, às cegas, e o kernel executava a lista até o fim —
+   * `plano.passos` era imutável depois de emitido, e um passo que devolvesse
+   * vazio ou erro não tinha como mudar o passo seguinte. Agora cada volta
+   * decide com o que a volta anterior observou.
+   *
+   * SÓ A ROTA COGNITIVA DÁ VOLTA. `plano_local` é receita determinística — ela
+   * já conhece todos os passos, e replanejar em cima dela seria pedir à LLM que
+   * revisasse uma decisão que não foi dela. `sigilo` é recusa. A retomada de
+   * pendência é o turno anterior terminando. Nos três, uma volta e pronto: o
+   * comportamento é byte a byte o de antes.
+   *
+   * COMO O LAÇO TERMINA — quatro saídas, nenhuma delas confiando no modelo:
+   *
+   *  1. o plano da volta não pede habilidade nenhuma. É assim que o modelo
+   *     declara "já tenho o que preciso" — a condição de parada já era a forma
+   *     do plano, e por isso não existe verbo "parar" que ele possa esquecer
+   *     de emitir;
+   *  2. a `GuardaDeLaco` encerra (voltas esgotadas, habilidade falhando em
+   *     série);
+   *  3. o `OrcamentoDoTurno` recusa `volta` ou `chamada_modelo`;
+   *  4. preempção do operador.
+   *
+   * Em todas as quatro a resposta é composta com o que JÁ foi observado. O laço
+   * nunca devolve silêncio — é a mesma regra do orçamento estourado.
+   */
+  private async executarLaco(
+    rota: string,
+    planoInicial: Plano,
+    p: Percepcao,
+    controle: AbortController,
+    orcamento: OrcamentoDoTurno,
+  ): Promise<{
+    execucao: ExecucaoPlano;
+    planoFinal: Plano;
+    voltas: number;
+    /** O que o laço observou, para a RESPOSTA — não só para a decisão. */
+    observacoes: readonly Observacao[];
+  }> {
+    const b = this.dep.barramento;
+
+    /**
+     * O JORNAL DO OPERADOR ENTRA NO ÍNDICE ANTES DA PRIMEIRA RESERVA.
+     *
+     * Aqui, e não no boot do processo, porque é aqui que o operador é conhecido
+     * e é a partir daqui que um efeito pode ser reservado. `garantirCarregado`
+     * lê o disco UMA vez por operador por processo; nas voltas seguintes é um
+     * `Map.get`.
+     *
+     * A GARANTIA MESMO mora em `PortalEfeitos.abrir`, que é o choke point de
+     * todo efeito — inclusive dos canais que não têm kernel. Esta chamada aqui
+     * não é a trava: é o AQUECIMENTO e, sobretudo, a DECLARAÇÃO. Ler o jornal
+     * antes do laço é o que permite avisar o operador, em voz alta, que a
+     * barreira contra efeito repetido está sem memória; dentro do portal esse
+     * aviso chegaria tarde e sem tela para onde ir.
+     *
+     * O que isso restaura: depois de um deploy, de um crash ou de um reload do
+     * dev, uma operação que ficou em `executando` volta como `desconhecida` e a
+     * barreira do retry a enxerga. Sem isso, `reservar` não encontrava nada e o
+     * mesmo efeito não idempotente executava DE NOVO — ver
+     * `testes/reidratacao-em-producao.test.ts`.
+     *
+     * Não derruba o turno se falhar: um jornal ilegível é motivo para avisar,
+     * não para deixar o operador sem resposta. A degradação é declarada no
+     * barramento em vez de acontecer calada.
+     */
+    try {
+      await this.registro.garantirCarregado(this.dep.idUsuario);
+    } catch (e) {
+      b.publicar({
+        tipo: 'FALHA',
+        modulo: 'jornal',
+        mensagem:
+          'Não consegui reler o jornal de operações deste operador: ' +
+          `${(e as Error).message}. Sigo o turno, mas a barreira contra efeito repetido ` +
+          'está sem a memória do que aconteceu antes de eu subir.',
+      });
+    }
+
+    const tetos = this.dep.tetosOrcamento ?? tetosDoAmbiente();
+    const guarda = new GuardaDeLaco({ ...LIMIARES_PADRAO, voltas: tetos.voltas });
+    const observacoes: Observacao[] = [];
+    const passosDoTurno: PassoExecutado[] = [];
+
+    /* Receita determinística e recusa não dão volta — ver o cabeçalho. */
+    const daVolta = rota === 'plano_cognitivo';
+    let plano = planoInicial;
+    let voltas = 0;
+
+    /**
+     * A observação da própria guarda entra no fluxo como qualquer outra, com
+     * procedência `fato` — o veredicto é medida do sistema sobre si mesmo, não
+     * relato de ferramenta. É isto que faz "barrar" virar informação para a
+     * próxima decisão em vez de sumiço silencioso.
+     */
+    const observarGuarda = (motivo: string, origem: string): void => {
+      observacoes.push({
+        volta: voltas,
+        origem,
+        procedencia: 'fato',
+        texto: motivo,
+        externo: false,
+        instante: new Date().toISOString(),
+      });
+    };
+
+    while (true) {
+      if (controle.signal.aborted) break;
+
+      const abertura = guarda.abrirVolta();
+      if (abertura.acao === 'encerrar') {
+        observarGuarda(abertura.motivo, 'guarda_do_laco');
+        b.publicar({ tipo: 'FALHA', modulo: 'guarda_do_laco', mensagem: abertura.motivo });
+        break;
+      }
+      const podeVolta = orcamento.consumir('volta');
+      if (!podeVolta.permitido) {
+        this.avisarOrcamento(podeVolta, 'volta do laço');
+        break;
+      }
+      voltas += 1;
+
+      /* Da segunda volta em diante o plano é REPLANEJADO com a evidência. */
+      if (voltas > 1) {
+        const permissao = orcamento.consumir('chamada_modelo');
+        if (!permissao.permitido) {
+          this.avisarOrcamento(permissao, 'replanejamento');
+          break;
+        }
+        const renderizado = emoldurarObservacoes(observacoes);
+        const novo = await this.raciocinio.planejar(
+          p,
+          this.habilidades.catalogo(),
+          controle.signal,
+          { aoTentarProvedor: () => orcamento.consumir('tentativa_provedor').permitido },
+          renderizado.texto,
+        );
+        /* Sem plano novo o laço para — e para com o que já tem, que é o
+           contrário de derrubar o turno. Mesma degradação do provedor fora. */
+        if (!novo) break;
+        plano = novo;
+        this.trabalho.iniciarTarefa(p, plano);
+        b.publicar({ tipo: 'PLANO_CRIADO', plano });
+      }
+
+      const propostos = plano.passos.filter((x) => x.habilidade && x.habilidade !== 'raciocinio');
+      /* Plano sem habilidade = "já posso responder". A saída natural. */
+      if (propostos.length === 0) break;
+
+      /**
+       * UMA AÇÃO POR REPLANEJO, E O CORTE É AQUI — NÃO SÓ NO PARSER.
+       *
+       * `MotorRaciocinio.interpretarPlano` já corta o replanejo em um passo,
+       * mas aquele corte vive no PARSER e vale só para plano que passou por
+       * ele. O laço recebia a lista pronta e executava o que viesse: bastou um
+       * plano de dois passos chegar por outro caminho para os dois rodarem, e
+       * o segundo teria sido decidido sem ver o resultado do primeiro — o
+       * defeito que o laço existe para eliminar, voltando pela porta dos
+       * fundos. Achado pela bateria de não-antecipação, 19/08/2026. Depender do
+       * planejador para se autolimitar é a mesma classe de erro que confiar na
+       * LLM: quem garante a propriedade é quem a executa.
+       *
+       * A VOLTA 1 NÃO É CAPADA, e a assimetria é o argumento inteiro.
+       * Replanejar é reagir a evidência: propor duas ações ali é decidir a
+       * segunda sem ver a primeira, que é antecipação. A volta 1 é outra coisa
+       * — ela decompõe o que o OPERADOR pediu, e "analise o levantamento e
+       * depois gere o resumo" são duas ações que a pessoa declarou, não que o
+       * modelo antecipou. Capar ali descartaria o pedido dela e apagaria a
+       * honestidade da falha parcial (`falhasDe`), que existe justamente para
+       * um plano de vários passos.
+       *
+       * A limitação que fica declarada: a decomposição da volta 1 continua
+       * sendo feita sem evidência. O teto de `MAX_PASSOS`, o orçamento de
+       * `passo` e o replanejo das voltas seguintes é o que a contém.
+       */
+      const executaveis = voltas > 1 ? propostos.slice(0, 1) : propostos;
+      if (propostos.length > executaveis.length) {
+        observarGuarda(
+          `Você propôs ${propostos.length} ações nesta volta e só a primeira roda. ` +
+            'Você verá o resultado dela antes de decidir a próxima — proponha uma de cada vez.',
+          'laco',
+        );
+      }
+
+      /**
+       * A GUARDA ANTES DA EXECUÇÃO, e fora de `executarPlano` de propósito.
+       *
+       * Pôr as duas chamadas dentro daquele método significaria editar 550
+       * linhas de trava que hoje estão verdes — e a guarda não precisa disso:
+       * ela decide sobre (habilidade, parâmetros), que é exatamente o que o
+       * plano carrega. Aqui o passo barrado é retirado ANTES de custar `passo`
+       * no orçamento, e o motivo vira observação.
+       */
+      const aprovados: typeof executaveis = [];
+      let encerrarPelaGuarda = false;
+      for (const passo of executaveis) {
+        const manifesto = this.habilidades.manifesto(passo.habilidade!);
+        const v = guarda.antesDaChamada({
+          habilidade: passo.habilidade!,
+          parametros: (passo.parametros ?? {}) as Record<string, unknown>,
+          idempotencia: manifesto?.idempotencia,
+        });
+        if (v.acao === 'encerrar') {
+          observarGuarda(v.motivo, 'guarda_do_laco');
+          b.publicar({ tipo: 'FALHA', modulo: 'guarda_do_laco', mensagem: v.motivo });
+          encerrarPelaGuarda = true;
+          break;
+        }
+        if (v.acao === 'barrar') {
+          observarGuarda(v.motivo, 'guarda_do_laco');
+          this.auditoria.registrar({
+            instante: new Date().toISOString(),
+            sessao: this.dep.sessao,
+            id_usuario: this.dep.idUsuario,
+            traco: b.tracoAtual,
+            acao: `guarda_do_laco:${v.codigo}`,
+            detalhe: `${passo.habilidade} — ${v.motivo}`,
+            permitido: false,
+          });
+          continue;
+        }
+        if (v.acao === 'avisar') observarGuarda(v.motivo, 'guarda_do_laco');
+        aprovados.push(passo);
+      }
+
+      if (aprovados.length > 0) {
+        const exec = await this.executarPlano(
+          { ...plano, passos: aprovados },
+          p.bruto,
+          controle,
+          orcamento,
+        );
+        passosDoTurno.push(...exec.passos);
+
+        /**
+         * O RETORNO ALIMENTA A GUARDA E VIRA OBSERVAÇÃO.
+         *
+         * `executarPlano` empurra um `PassoExecutado` por passo enviado, na
+         * ordem — mas essa correspondência é contrato implícito, e contrato
+         * implícito quebra calado. Se os tamanhos divergirem, a realimentação
+         * desta volta é pulada: a guarda perde uma amostra (degrada), em vez de
+         * casar resultado com o passo errado (mente).
+         */
+        const casa = exec.passos.length === aprovados.length;
+        exec.passos.forEach((resultado, i) => {
+          const manifesto = this.habilidades.manifesto(resultado.habilidade);
+          if (casa) {
+            guarda.depoisDaChamada(
+              {
+                habilidade: aprovados[i].habilidade!,
+                parametros: (aprovados[i].parametros ?? {}) as Record<string, unknown>,
+                idempotencia: manifesto?.idempotencia,
+              },
+              {
+                /**
+                 * "NÃO ALCANÇOU O MUNDO" É FALHA PARA O LAÇO — e a primeira
+                 * versão só marcava `estado === 'falhou'`.
+                 *
+                 * O passo barrado pelo porteiro volta como
+                 * `aguardando_confirmacao`; o não-provado volta como
+                 * `desconhecido`. Nenhum dos dois é `falhou`, e por isso a
+                 * guarda ficava CEGA justamente na repetição mais cara: medido
+                 * em 19/08/2026, dois passos negados pela autorização viravam
+                 * oito execuções, porque nada distinguia "foi barrado de novo"
+                 * de "nunca tentou".
+                 *
+                 * `verificado` e `executado` são progresso. O resto é motivo
+                 * para não repetir a chamada idêntica.
+                 */
+                falhou:
+                  resultado.estado !== 'verificado' && resultado.estado !== 'executado',
+              },
+            );
+          }
+          observacoes.push({
+            volta: voltas,
+            origem: resultado.habilidade,
+            /* `verificado` é o único estado conferido contra o mundo. Todo o
+               resto é relato de executor — ver `Verdade.ts`. O laço não promove
+               procedência sozinho. */
+            procedencia:
+              resultado.estado === 'verificado' ? 'fato_verificado' : 'resultado_ferramenta',
+            texto: resultado.texto || resultado.evidencia || `(${resultado.estado})`,
+            /* Declarado pelo manifesto, nunca inferido do texto: habilidade que
+               fala com a internet traz material que ninguém desta casa escreveu. */
+            externo: manifesto?.permissoes.includes('rede') ?? false,
+            instante: new Date().toISOString(),
+          });
+        });
+      }
+
+      /**
+       * VOLTA QUE NÃO EXECUTOU NADA ENCERRA O LAÇO.
+       *
+       * Chegar aqui com zero aprovados significa que a guarda barrou tudo o que
+       * esta volta propôs — ou seja, o replanejamento devolveu chamadas que já
+       * se sabe que falham. Os motivos já viraram observação e chegam à
+       * resposta. Continuar gastaria volta e chamada de modelo para reencenar a
+       * mesma recusa, que é o desperdício que a guarda existe para cortar.
+       */
+      if (aprovados.length === 0) break;
+      if (encerrarPelaGuarda) break;
+      if (!daVolta) break;
+    }
+
+    return { execucao: { passos: passosDoTurno }, planoFinal: plano, voltas, observacoes };
   }
 
   private async executarPlano(
@@ -1647,6 +2185,19 @@ export class Kernel {
           ilustracao:
             naoConfirmado?.motivo === 'divergente' ? null : (v.resultado.ilustracao ?? null),
           evidencia: naoConfirmado?.evidencia ?? v.resultado.detalhe,
+          /**
+           * ESTE É O ÚNICO PONTO EM QUE EVIDÊNCIA TIPADA ENTRA NO TURNO, e é
+           * deliberado que seja o ramo do passo que EXECUTOU. Passo barrado,
+           * passo que falhou e passo que estourou não têm número para declarar
+           * — e deixá-los empurrar evidência abriria a porta para uma habilidade
+           * que falhou contribuir com um dado para a conclusão.
+           *
+           * PROCEDÊNCIA NÃO É PROMOVIDA AQUI. O que a habilidade declarou vale
+           * como a habilidade declarou; o kernel não carimba `fato_verificado`
+           * por ter visto o passo passar, pela mesma regra que já vale para a
+           * `Observacao` do laço logo acima. `resolveu: true` nunca foi prova.
+           */
+          evidencias: v.resultado.evidencias ?? [],
         });
         if (naoConfirmado?.motivo !== 'divergente') this.trabalho.concluirPasso(texto);
 
@@ -1975,6 +2526,37 @@ export class Kernel {
     respondeA: string,
     controle: AbortController,
     orcamento: OrcamentoDoTurno,
+    /**
+     * O DEGRAU QUE A EVIDÊNCIA SUSTENTA — `null` em turno não analítico.
+     *
+     * A auditoria independente (19/08/2026) achou o comentário do rodapé
+     * afirmando que "as ressalvas também vão ao prompt da síntese" quando o
+     * dossiê nunca era passado para cá. O efeito não era só um comentário
+     * mentiroso: a LLM redigia às cegas e o código grampeava a contestação
+     * embaixo, produzindo resposta que se contradiz dentro dela mesma — *"pode
+     * levar esse número para a diretoria"* seguido de *"isto não cobre o
+     * recorte inteiro"*.
+     *
+     * Agora a autoridade vai em `overridePersona` e o rodapé continua
+     * concatenado por código. As duas coisas, não uma: o prompt melhora a
+     * redação, a concatenação é o que garante. Ver [[iara-sintese-fora-do-laco]]
+     * — instrução do kernel dentro de `contexto` é recusada pela própria
+     * moldura de material não confiável.
+     */
+    dossie: DossieAnalitico | null,
+    /**
+     * O QUE O LAÇO OBSERVOU. Vazio quando não houve laço com passos.
+     *
+     * Este parâmetro fecha o buraco medido no navegador em 19/08/2026: as
+     * observações alimentavam a DECISÃO e não a RESPOSTA. A síntese montava o
+     * contexto do jeito antigo — `contextoAcumulado` mais a lista de falhas —,
+     * perdia procedência, volta e moldura, e o modelo lia o registro de uma
+     * tentativa falha como se fosse o material da consulta. Em duas de duas
+     * rodadas ele anunciou a ferramenta EM PROSA ("[Chamando
+     * consultar_infraestrutura]") e numa delas caiu no número velho do
+     * histórico — que é exatamente o incidente que o laço existe para fechar.
+     */
+    observacoes: readonly Observacao[] = [],
   ): Promise<string> {
     const b = this.dep.barramento;
     const saidas = saidasDe(execucao);
@@ -2091,9 +2673,35 @@ export class Kernel {
 
     // Histórico enriquece o prompt; a ausência dele degrada a resposta, não
     // impede. Persistência fora não pode calar o raciocínio.
-    const historico = await this.dep.memoria
+    const historicoBruto = await this.dep.memoria
       .historico(this.dep.idUsuario, 20)
       .catch(() => [] as Awaited<ReturnType<typeof this.dep.memoria.historico>>);
+
+    /**
+     * O ORÇAMENTO DE CONTEXTO — o histórico era limitado por CONTAGEM, nunca por
+     * tamanho. Vinte mensagens de cinquenta caracteres não são nada; vinte de
+     * quatro mil são ~20 mil tokens, mais que a janela inteira da camada
+     * gratuita. Bastava alguém colar um trecho de planilha para todo turno
+     * seguinte daquela conversa nascer grande demais.
+     *
+     * O CORTE É DITO. Uma IARA que esquece parte da conversa sem avisar é uma
+     * IARA que às vezes muda de assunto sozinha.
+     */
+    const aparado = apararHistorico(historicoBruto, tetoDeContexto());
+    const historico = aparado.mantidos;
+    if (aparado.descartados > 0) {
+      this.auditoria.registrar({
+        instante: new Date().toISOString(),
+        sessao: this.dep.sessao,
+        id_usuario: this.dep.idUsuario,
+        traco: b.tracoAtual,
+        acao: 'contexto_aparado',
+        detalhe:
+          `${aparado.descartados} registro(s) antigos ficaram fora do pedido ` +
+          `(teto ${tetoDeContexto()} tokens; ficaram ${aparado.tokens})`,
+        permitido: true,
+      });
+    }
     const camadaGlobal = await this.dep.memoria.carregarGlobal().catch(() => '');
 
     /**
@@ -2136,6 +2744,43 @@ export class Kernel {
        * expôs, fazendo mais pedidos chegarem a este método já com um passo
        * executado de verdade.
        */
+      /**
+       * O LAÇO ESTÁ FECHADO — e esta linha viajou pelo canal ERRADO na primeira
+       * tentativa, o que rendeu a lição mais cara desta sessão.
+       *
+       * O sintoma, medido no navegador em 19/08/2026: com o laço já rodando, o
+       * modelo escrevia a chamada de ferramenta EM PROSA no lugar da resposta —
+       * "[Chamando consultar_infraestrutura]" — e numa rodada caiu no número
+       * velho do histórico. A correção óbvia era declarar que o turno acabou.
+       *
+       * Declarei em `contexto`. E o modelo respondeu:
+       *
+       *   "ele ainda vem com instruções embutidas dizendo pra eu não usar
+       *    ferramenta e tratar aquilo como definitivo. Não vou seguir isso."
+       *
+       * A moldura funcionou — contra o próprio dono. `contexto` é, por
+       * definição, MATERIAL NÃO CONFIÁVEL: `MotorRaciocinio.responder` o envolve
+       * com marca sorteada e manda o modelo desobedecer qualquer instrução lá
+       * dentro e RELATAR que ela existe. Foi exatamente o que aconteceu.
+       *
+       * Instrução do kernel viaja onde o kernel tem autoridade — o bloco de
+       * sistema, que é `overridePersona`. Material viaja em `contexto`. Misturar
+       * os dois é o mesmo erro que a moldura existe para impedir, cometido do
+       * lado de dentro.
+       *
+       * Complementar à trava logo abaixo: aquela cobre o turno que não acionou
+       * nada; esta cobre o turno que acionou e ACABOU.
+       */
+      execucao.passos.length > 0
+        ? 'ESTA É A ÚLTIMA ETAPA DO TURNO: as ferramentas já rodaram e NENHUMA vai rodar ' +
+          'de novo. O que está no material observado é tudo o que existe — responda com ' +
+          'isso. Nunca escreva uma chamada de ferramenta, nunca diga "vou consultar", "vou ' +
+          'verificar" ou "confirmando na base": você não tem como cumprir, e o operador só ' +
+          'descobriria mandando outra mensagem. Se faltou dado para responder, diga ' +
+          'exatamente o que faltou. E nunca repita um número vindo do histórico da conversa ' +
+          'como se fosse apuração de agora — se o material observado não traz o número, ' +
+          'diga que não traz.'
+        : '',
       execucao.passos.length === 0
         ? 'ESTE TURNO NÃO ACIONOU NENHUMA FERRAMENTA E NENHUMA VAI RODAR DEPOIS: ' +
           'você está respondendo só com o que já sabe agora. Nunca diga "vou verificar", ' +
@@ -2145,6 +2790,18 @@ export class Kernel {
           'exige uma ação real (rodar diagnóstico, abrir algo, medir alguma coisa), diga isso e ' +
           'peça o pedido de forma mais direta, para que ele seja executado de verdade desta vez.'
         : '',
+      /**
+       * O TETO DA CONCLUSÃO, DITO AO REDATOR.
+       *
+       * Vai em `overridePersona` e não em `contexto` porque é AUTORIDADE do
+       * kernel, não material a analisar: dentro da moldura de material não
+       * confiável a instrução é explicitamente para ser ignorada, e foi assim
+       * que a síntese ficou fora do laço em 19/08.
+       *
+       * Isto NÃO substitui o rodapé concatenado. É a metade que melhora a
+       * redação; a metade que garante continua sendo código, depois da fala.
+       */
+      dossie ? instrucaoDoDegrau(dossie) : '',
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -2196,13 +2853,108 @@ export class Kernel {
      * pessoa mandou FAZER algo, nada foi feito, e não há o que afirmar.
      */
     const comandoSemPasso = execucao.passos.length === 0 && percepcao.tipo === 'comando';
-    const travaArmada = (execucao.passos.length > 0 && !alcancouOMundo) || comandoSemPasso;
+    /**
+     * A PERGUNTA TEM ORÁCULO? Decidido ANTES da chamada porque é isto que retém
+     * a fala: verificar depois de streamar deixaria o número errado aparecer na
+     * tela e ser trocado meio segundo depois, que é a tela mentindo e se
+     * corrigindo. `reconhece` é estreito de propósito — cada `true` a mais tira
+     * a digitação ao vivo de um turno que não precisava.
+     */
+    const verificavel = this.verificacao?.reconhece(percepcao.bruto) ?? false;
+    /**
+     * PERGUNTA DE CARDINALIDADE QUE NÃO EXECUTOU NADA — a trava de autoridade.
+     *
+     * O INCIDENTE (produção, 19/08/2026): "quantos motoristas temos?" → *"75
+     * motoristas diferentes — **mesma contagem que te dei agora há pouco**"*.
+     * São 73. Não houve soma de listagem truncada (esse foi o defeito da
+     * véspera, já fechado) e não houve chamada de ferramenta: a IARA repetiu a
+     * própria resposta errada do histórico. O "já respondi isso" virou
+     * credencial, e o erro passou a se auto-confirmar.
+     *
+     * POR QUE AQUI E NÃO NO `reconhece` DO VERIFICADOR. Reconhecer toda
+     * pergunta de "quantos X" armaria a trava em TODO turno de contagem,
+     * inclusive nos que funcionam — e a imensa maioria funciona. O E23 de
+     * `escalada-verificada.test.ts` recusa isso com razão: punir o caminho bom
+     * para pegar o ruim custa a digitação ao vivo de todo mundo.
+     *
+     * Aqui a conta é outra: neste ponto o turno JÁ executou (ou não), e a trava
+     * arma só quando nada alcançou o mundo. O turno legítimo — o que consultou a
+     * planilha — não paga nada.
+     *
+     * A REGRA É GERAL, e é o que a impede de virar `if pergunta.includes
+     * ("motoristas")`: ela não conhece motorista, não conhece carga e não sabe
+     * que a resposta é 73. Ela cobra PROCEDÊNCIA — um número que só poderia vir
+     * de execução, num turno em que execução não houve.
+     *
+     * Memória segue resolvendo CONTEXTO e referência ("e em 2026?"). Nunca
+     * VALOR: a hierarquia é execução no turno > fonte > memória > resposta
+     * anterior da IARA > inferência da LLM, e as duas últimas não fornecem
+     * número operacional quando existe operação que o produz.
+     */
+    const cardinalidadeSemExecucao =
+      PERGUNTA_DE_CARDINALIDADE_OPERACIONAL.test(percepcao.bruto) && !alcancouOMundo;
+
+    /**
+     * O TURNO QUE DEU VOLTA TAMBÉM RETÉM A FALA.
+     *
+     * A retenção custa a digitação ao vivo, e o comentário de `alcancouOMundo`
+     * explica por que esse custo era aceitável só onde não havia nada de bom a
+     * mostrar rápido. O laço abriu uma população nova: turno em que os passos
+     * ALCANÇARAM o mundo e a fala ainda assim mente — não afirmando um feito,
+     * mas prometendo uma ação que não vem (ver `PromessaDeAcao`). Medido 2 de 2
+     * em `test-evidence/AUTORIDADE-DE-DADOS/cognitiva-3` e `-4`.
+     *
+     * A promessa aparece no COMEÇO da resposta ("Vou consultar a base…"), então
+     * detectar durante o fluxo chegaria tarde: o operador já teria lido. Reter
+     * é a única forma de a violação não alcançar a tela.
+     *
+     * O escopo é a evidência, não o susto: só turno com mais de uma volta —
+     * exatamente a população onde o defeito foi medido. Turno determinístico de
+     * uma volta, que é a maioria e responde em ~2 s, continua digitando ao vivo.
+     */
+
+    /**
+     * DOIS GATILHOS, E MISTURÁ-LOS FOI O DEFEITO DA PRIMEIRA VERSÃO.
+     *
+     * `travaArmada` é o gatilho da trava de FEITO: ela decide se
+     * `AfirmacaoDeFeito` examina a fala e, quando examina, o descarte compõe
+     * "Nada foi alterado na máquina". Alargá-la para cobrir o laço fez esse
+     * descarte disparar num cenário em que o efeito ACONTECEU no disco — a
+     * bateria de falsa conclusão acusou na hora
+     * (`baixo-incoerente-efeito_sem_resposta-cognitivo`).
+     *
+     * `retemAFala` é outra pergunta: a transmissão ao vivo pode começar? Reter
+     * é barato e reversível; descartar é caro e afirma coisa sobre o mundo. Um
+     * flag para as duas perguntas fazia a resposta de uma valer para a outra.
+     */
+    const travaArmada =
+      (execucao.passos.length > 0 && !alcancouOMundo) ||
+      comandoSemPasso ||
+      verificavel ||
+      cardinalidadeSemExecucao;
+
+    /**
+     * RETÉM SEMPRE QUE FERRAMENTA RODOU.
+     *
+     * A primeira versão retinha só quando o laço dera mais de uma volta — e
+     * `voltas > 1` é falso exatamente no caso bom, em que a segunda decisão já
+     * declara o fim sem executar nada. A violação então piscava na tela antes
+     * de ser trocada, que é o que esta trava existe para impedir.
+     *
+     * O escopo certo é a população em que a promessa nasce: turno cuja fala faz
+     * afirmação sobre o mundo porque ferramenta rodou. O custo — perder a
+     * digitação ao vivo — cai onde a espera já é dominada pelo tempo da
+     * própria ferramenta, não pela digitação.
+     */
+    const retemAFala = travaArmada || execucao.passos.length > 0;
 
     const inicio = Date.now();
     let acumulado = '';
     let abriu = false;
 
-    const r = await this.raciocinio.responder({
+    /* Guardado numa variável porque a ESCALADA refaz este mesmo pedido no pool
+       premium quando o verificador contesta o valor. Ver `EscaladaDoTurno.ts`. */
+    const pedidoDeSintese = {
       enunciado: percepcao.bruto,
       historico: historico.slice(0, -1),
       overridePersona,
@@ -2221,6 +2973,13 @@ export class Kernel {
        * e preenche a lacuna com prosa plausível.
        */
       contexto: [
+        /**
+         * AS OBSERVAÇÕES DO LAÇO, com procedência e volta, na mesma forma em
+         * que o decisor as recebeu. `corpo` e não `texto`: a regra da moldura
+         * viria duplicada, porque `MotorRaciocinio.responder` envolve todo o
+         * contexto com uma marca própria. Ver `ObservacoesRenderizadas.corpo`.
+         */
+        observacoes.length > 0 ? emoldurarObservacoes(observacoes).corpo : '',
         /**
          * O que o operador CITOU entra aqui, junto com o resto do material de
          * terceiro — e não na posição de pedido. A percepção já o separou; se
@@ -2256,19 +3015,21 @@ export class Kernel {
          modelo contaria 1 no orçamento e custaria quatro idas à rede — que é
          exatamente o multiplicador que um teto de chamadas não vê. */
       aoTentarProvedor: () => orcamento.consumir('tentativa_provedor').permitido,
-      aoReceberTexto: (pedaco) => {
+      aoReceberTexto: (pedaco: string) => {
         if (controle.signal.aborted) return;
         acumulado += pedaco;
         /* Trava armada: acumula e não publica. A sala continua em "pensando"
            porque é o que está acontecendo — ela ainda não falou. */
-        if (travaArmada) return;
+        if (retemAFala) return;
         if (!abriu) {
           abriu = true;
           void this.dep.estado.transicionar('falando', 'raciocinio');
         }
         b.publicar({ tipo: 'RESPOSTA_TRECHO', id_mensagem: idMensagem, texto: acumulado, responde_a: respondeA });
       },
-    });
+    };
+
+    const r = await this.raciocinio.responder(pedidoDeSintese);
 
     b.publicar({
       tipo: 'RACIOCINIO_CONCLUIDO',
@@ -2284,10 +3045,211 @@ export class Kernel {
        cabeçalho de `OrcamentoDoTurno`. */
     orcamento.registrar('tokens', r.tokens_entrada + r.tokens_saida);
 
+    /**
+     * O CUSTO DA CHAMADA, quando ele é conhecido.
+     *
+     * `null` significa que ninguém declarou o preço deste cérebro, e `null` NÃO
+     * vira zero: um provedor de preço desconhecido registrado como grátis faria
+     * o teto de dinheiro aprovar exatamente o turno mais caro da casa. O
+     * desconhecimento vai para a auditoria em voz alta.
+     */
+    const custo = custoDaChamada(this.raciocinio.apelido, r.tokens_entrada, r.tokens_saida);
+    if (custo === null) {
+      this.auditoria.registrar({
+        instante: new Date().toISOString(),
+        sessao: this.dep.sessao,
+        id_usuario: this.dep.idUsuario,
+        traco: b.tracoAtual,
+        acao: 'custo_desconhecido',
+        detalhe: `sem preço declarado para "${this.raciocinio.apelido}" — o turno não sabe quanto custou`,
+        permitido: true,
+      });
+    } else {
+      orcamento.registrar('custo', custo);
+    }
+
     const textoDaLLM = r.texto || acumulado;
 
-    if (travaArmada) {
-      const leitura = lerAfirmacaoDeFeito(textoDaLLM);
+    /**
+     * A TRAVA DE AÇÃO PÓS-FECHAMENTO — irmã da de cima, e o mesmo desenho.
+     *
+     * Roda DEPOIS da geração e ANTES de qualquer coisa chegar à tela: o
+     * modelo pode tentar violar a regra; isso não significa que a violação
+     * alcance o operador. É o salto que separa "o modelo foi instruído e
+     * obedeceu" de "o sistema garante".
+     *
+     * NÃO SE EDITA O TEXTO. Recortar o trecho da promessa deixaria a frase
+     * semanticamente quebrada — "Agora vou consultar para confirmar" viraria
+     * "Agora para confirmar". Rejeita-se a saída inteira e pede-se outra.
+     *
+     * UMA REGENERAÇÃO, e só uma. Regenerar até passar seria criar um segundo
+     * laço, sem teto, dentro do fechamento do primeiro. Se a segunda também
+     * violar, FAIL-CLOSED: o Kernel compõe a resposta a partir do que foi
+     * observado, que é o caminho medido em 0% de falsa conclusão.
+     */
+    const idsDoCatalogo = this.habilidades.catalogo().map((m) => m.id);
+    let falaFinal = textoDaLLM;
+    let promessa = lerPromessaDeAcao(falaFinal, idsDoCatalogo);
+
+    if (promessa.promete) {
+      this.auditoria.registrar({
+        instante: new Date().toISOString(),
+        sessao: this.dep.sessao,
+        id_usuario: this.dep.idUsuario,
+        traco: b.tracoAtual,
+        acao: `acao_pos_fechamento:${promessa.especie}`,
+        detalhe: `âncora "${promessa.ancora}" — saída rejeitada, regenerando`,
+        permitido: false,
+      });
+
+      const podeRegenerar = orcamento.consumir('chamada_modelo');
+      if (podeRegenerar.permitido) {
+        let regerado = '';
+        const r2 = await this.raciocinio.responder({
+          ...pedidoDeSintese,
+          overridePersona:
+            `${pedidoDeSintese.overridePersona}\n\n` +
+            'A RESPOSTA ANTERIOR FOI REJEITADA por anunciar uma ação que não vai acontecer ' +
+            `(trecho: "${promessa.ancora}"). As ferramentas deste turno já rodaram e nenhuma ` +
+            'vai rodar de novo. Escreva a resposta usando SOMENTE o que já está observado. ' +
+            'Não escreva chamada de ferramenta, não diga que vai consultar, verificar ou ' +
+            'confirmar. Se faltou dado, diga exatamente o que faltou.',
+          aoReceberTexto: (pedaco: string) => {
+            regerado += pedaco;
+          },
+        });
+        const candidata = r2.texto || regerado;
+        orcamento.registrar('tokens', r2.tokens_entrada + r2.tokens_saida);
+        const segunda = lerPromessaDeAcao(candidata, idsDoCatalogo);
+        if (!segunda.promete && candidata.trim()) {
+          falaFinal = candidata;
+          promessa = segunda;
+        } else {
+          promessa = segunda.promete ? segunda : promessa;
+        }
+      } else {
+        this.avisarOrcamento(podeRegenerar, 'regeneração pós-fechamento');
+      }
+    }
+
+    if (promessa.promete) {
+      /* FAIL-CLOSED. Duas tentativas violaram (ou não houve orçamento para a
+         segunda): o Kernel responde com o que foi observado, e DIZ que a fala
+         da LLM foi descartada — trava que corrige em silêncio ensina que a
+         IARA às vezes muda de assunto sozinha. */
+      this.trabalho.registrarErro();
+      b.publicar({
+        tipo: 'FALHA',
+        modulo: 'verdade',
+        mensagem:
+          `A síntese anunciava uma ação que não vai acontecer ("${promessa.ancora}") ` +
+          'depois de o turno ter fechado. Descartada.',
+      });
+      this.auditoria.registrar({
+        instante: new Date().toISOString(),
+        sessao: this.dep.sessao,
+        id_usuario: this.dep.idUsuario,
+        traco: b.tracoAtual,
+        acao: `sintese_descartada:acao_pos_fechamento`,
+        detalhe: `âncora "${promessa.ancora}" (espécie ${promessa.especie})`,
+        permitido: false,
+      });
+      this.erros.registrar({
+        classe: 'acao_pos_fechamento',
+        entrada: percepcao.bruto,
+        observado: `a síntese anunciou "${promessa.ancora}" com o turno já fechado`,
+        esperado: 'a fala responde com o observado, sem prometer ação nova',
+        instante: new Date().toISOString(),
+      });
+
+      const texto = [
+        saidas.length > 0 ? saidas.join('\n\n') : '',
+        saidas.length === 0
+          ? 'Não consegui apurar o que você pediu neste turno, e não vou prometer ' +
+            'uma consulta que não vai acontecer. Peça de novo e eu executo.'
+          : '',
+        falhas.length > 0 ? `O que NÃO foi executado: ${falhas.join('; ')}.` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+
+      await this.dep.estado.transicionar('falando', 'raciocinio');
+      b.publicar({
+        tipo: 'RESPOSTA_TRECHO',
+        id_mensagem: idMensagem,
+        texto,
+        responde_a: respondeA,
+      });
+      return texto;
+    }
+
+
+    /**
+     * A VERIFICAÇÃO EM RUNTIME, e o lugar dela é este: a resposta existe e
+     * NINGUÉM a leu ainda. Conferir depois de streamar não serviria de nada — o
+     * operador já teria lido o número errado.
+     *
+     * PRECEDÊNCIA: vem antes da trava de afirmação-sem-efeito logo abaixo porque
+     * as duas tratam turnos de forma diferente — aquela é sobre COMANDO que não
+     * aconteceu, esta sobre PERGUNTA respondida com valor errado. Na prática não
+     * se cruzam; quando cruzarem, contestar o valor é o achado mais específico.
+     *
+     * `reconhece` foi perguntado lá em cima e é o que armou a trava: sem isso,
+     * chegar aqui com o texto já na tela tornaria a escalada decorativa.
+     */
+    /**
+     * `cardinalidadeSemExecucao` ENTRA NA PORTA, e a falta disso foi medida em
+     * produção em 19/08/2026.
+     *
+     * A trava de cardinalidade retinha a fala — corretamente, e no lugar certo,
+     * porque só o Kernel sabe se algum passo alcançou o mundo. Mas o bloco de
+     * verificação continuava atrás de `verificavel`, que é `reconhece()`, e
+     * `reconhece` deliberadamente NÃO cobre cardinalidade (ver o comentário do
+     * E23 em `VerificacaoRuntime`). Resultado medido com a planilha ligada e a
+     * pergunta real do operador: rota cognitiva, fala retida, e NENHUM veredito
+     * — o turno era segurado e ninguém o conferia.
+     *
+     * Reter sem verificar é o pior dos dois mundos: paga o custo da retenção e
+     * não entrega a proteção.
+     */
+    if (verificavel || cardinalidadeSemExecucao) {
+      const verificado = await this.verificarEEscalar({
+        texto: textoDaLLM,
+        pergunta: percepcao.bruto,
+        inicio,
+        pedido: pedidoDeSintese,
+        orcamento,
+        b,
+        idMensagem,
+        respondeA,
+        /**
+         * O QUE DE FATO RODOU NESTE TURNO — sem isto `conferirExecucaoNoTurno`
+         * recebe `undefined` e se cala, que é o comportamento certo dele e
+         * inútil aqui: o oráculo da procedência existe para distinguir "73,
+         * porque acabei de contar" de "75, porque foi o que eu disse antes", e
+         * essa distinção é exatamente esta lista.
+         *
+         * Só passos que ALCANÇARAM o mundo contam. Um passo que falhou não deu
+         * procedência a número nenhum.
+         */
+        operacoes: execucao.passos
+          .filter((p) => p.estado === 'executado' || p.estado === 'verificado')
+          .map((p) => String(p.habilidade)),
+      });
+      if (verificado !== null) return verificado;
+    }
+
+    if (retemAFala) {
+      /**
+       * O `if` de fora existe para SOLTAR a fala que ficou retida. A checagem
+       * de feito, dentro dele, continua gated por `travaArmada` — que é a
+       * pergunta dela, e não a de retenção. Confundir as duas fez o descarte
+       * "Nada foi alterado na máquina" disparar num turno cujo efeito estava no
+       * disco. Ver o comentário dos dois gatilhos, acima.
+       */
+      const leitura = travaArmada
+        ? lerAfirmacaoDeFeito(falaFinal)
+        : { afirma: false as const, ancora: null };
       if (leitura.afirma) {
         /**
          * A síntese afirmou efeito e nenhum passo chegou ao mundo. Ela é
@@ -2344,16 +3306,152 @@ export class Kernel {
         return texto;
       }
 
+      /**
+       * A METADE SIMÉTRICA — NEGAR O QUE ACONTECEU também é mentir.
+       *
+       * Medido em 20/08/2026, campanha com cérebro real, missão CO-04: o laço
+       * falhou no primeiro parâmetro, replanejou, criou a pasta, e o
+       * verificador confirmou o diretório no disco. O jornal ficou `verificada`
+       * com selo válido. A síntese disse *"Não criou (...) na prática a pasta
+       * não foi feita. Manda de novo que eu registro certo."*
+       *
+       * "Manda de novo" é o que faz disto mais que constrangimento: uma negação
+       * falsa CONVIDA a repetição, e repetir efeito não idempotente é duplicá-lo.
+       *
+       * ================= O GATILHO TEM DOIS DENTES =================
+       *
+       * 1. o passo está `verificado` — o mundo foi CONFERIDO, não só relatado;
+       * 2. o passo é um EFEITO, não uma leitura.
+       *
+       * O SEGUNDO DENTE FOI PAGO COM UM FALSO POSITIVO MEU, e ele fica escrito
+       * aqui porque a próxima pessoa vai querer simplificar esta condição.
+       * Campanha de 20/08, missão FA-04, com a primeira versão desta trava:
+       *
+       *     operador: "Lê o arquivo contrato-que-nao-existe-2099.pdf"
+       *     passo:    extrair_texto_documento — LEITURA, "arquivo ausente",
+       *               estado `verificado` (o verificador confirmou a ausência)
+       *     síntese:  "o arquivo não existe" — honesta e correta
+       *     trava:    descartou e escreveu "feito e conferido — arquivo ausente"
+       *
+       * A campanha marcou `FALSO_POSITIVO`: a trava contra mentira produziu uma.
+       * `verificado` responde "o mundo foi conferido?", não "aconteceu efeito?".
+       * Numa leitura, negar não é mentir sobre ato nenhum — não existe ato.
+       */
+      const efeitosVerificados = execucao.passos.filter((x) => {
+        if (x.estado !== 'verificado') return false;
+        const m = this.habilidades.manifesto(x.habilidade);
+        return m !== null && m.idempotencia !== 'leitura';
+      });
+      const negacao =
+        efeitosVerificados.length > 0
+          ? lerNegacaoDeFeito(falaFinal)
+          : { nega: false as const, ancora: null };
+      if (negacao.nega) {
+        this.trabalho.registrarErro();
+        b.publicar({
+          tipo: 'FALHA',
+          modulo: 'verdade',
+          mensagem:
+            `A síntese negava o efeito ("${negacao.ancora}") e ${efeitosVerificados.length} ` +
+            'efeito(s) deste turno foram CONFERIDOS no mundo. Descartada.',
+        });
+        this.auditoria.registrar({
+          instante: new Date().toISOString(),
+          sessao: this.dep.sessao,
+          id_usuario: this.dep.idUsuario,
+          traco: b.tracoAtual,
+          acao: 'sintese_descartada:negacao_de_efeito_verificado',
+          detalhe: `âncora "${negacao.ancora}"`,
+          permitido: false,
+        });
+        this.erros.registrar({
+          classe: 'negacao_de_efeito_verificado',
+          entrada: percepcao.bruto,
+          observado: `a síntese negou "${negacao.ancora}" com ${efeitosVerificados.length} efeito(s) verificado(s) no mundo`,
+          esperado: 'a fala não nega o que o verificador confirmou',
+          instante: new Date().toISOString(),
+        });
+
+        /**
+         * O TEXTO É COMPOSTO PELO KERNEL, não pedido de novo à LLM: a evidência
+         * do verificador já é uma linha pronta, e regenerar daria ao mesmo
+         * modelo, com o mesmo material, a chance de repetir a mesma leitura.
+         *
+         * A FRASE CITA A EVIDÊNCIA, NÃO A DESCRIÇÃO DO PLANO — a segunda metade
+         * do defeito de FA-04. A primeira versão escrevia
+         * `${x.descricao}: feito e conferido`, e `descricao` é o que o
+         * planejador PRETENDIA ("Tentar extrair texto do arquivo X"), não o que
+         * aconteceu. Promover intenção a fato dentro da trava que existe para
+         * separar as duas coisas é o erro mais fácil de cometer aqui.
+         *
+         * As falhas do turno entram junto: a primeira tentativa pode ter dado
+         * erro mesmo, e engoli-la trocaria uma mentira por outra.
+         */
+        const texto = [
+          efeitosVerificados
+            .map((x) => `${x.habilidade}: o verificador confirmou — ${x.evidencia || 'efeito presente no mundo'}.`)
+            .join('\n'),
+          falhas.length > 0
+            ? `No caminho até aqui houve tropeço: ${falhas.join('; ')}. ` +
+              'Foi corrigido na volta seguinte.'
+            : '',
+          'Eu tinha redigido um fechamento dizendo que não tinha feito. O verificador ' +
+            'confere que fiz, então descartei o fechamento. Não peça de novo: ' +
+            'repetir duplicaria o efeito.',
+        ]
+          .filter(Boolean)
+          .join('\n\n');
+
+        await this.dep.estado.transicionar('falando', 'raciocinio');
+        b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: idMensagem,
+          texto,
+          responde_a: respondeA,
+        });
+        return texto;
+      }
+
+      /**
+       * O REGISTRO DO EFEITO É CONCATENADO — a rede que não depende de detector.
+       *
+       * A verificação independente mediu o teto do detector de negação: treze
+       * de quatorze paráfrases atravessam ("não foi possível criar", "acabei
+       * não criando", "a criação não ocorreu", "sem sucesso"). Alargar a lista
+       * de expressões é correr atrás do português, e cada palavra nova a mais
+       * aumenta a chance de censurar fala honesta — que é o erro caro.
+       *
+       * Então a proteção real não é o detector: é esta linha. Quando o turno
+       * VERIFICOU um efeito e a fala não reconhece nenhum, o Kernel acrescenta o
+       * registro por baixo, por código. O operador que leu "não deu certo" lê em
+       * seguida qual habilidade o verificador confirmou — e não repete o pedido.
+       *
+       * Concatenar em vez de descartar tem custo zero de falso positivo: nenhuma
+       * fala honesta é engolida, no máximo ganha uma linha de procedência que
+       * ela não tinha. É a mesma decisão do rodapé do dossiê analítico, pelo
+       * mesmo motivo — a LLM omitiria a ressalva exatamente nos turnos em que o
+       * texto fica mais elegante sem ela.
+       */
+      const naoReconhece =
+        efeitosVerificados.length > 0 && !lerAfirmacaoDeFeito(falaFinal).afirma;
+      const registroDoEfeito = naoReconhece
+        ? '\n\n— Registro deste turno: ' +
+          efeitosVerificados
+            .map((x) => `${x.habilidade} (o verificador confirmou: ${x.evidencia || 'efeito presente'})`)
+            .join('; ') +
+          '. Não peça de novo sem conferir: repetir duplicaria o efeito.'
+        : '';
+
       /* Não afirmou nada: a fala é honesta e vai inteira, de uma vez — foi só a
          transmissão ao vivo que ficou retida. */
       await this.dep.estado.transicionar('falando', 'raciocinio');
       b.publicar({
         tipo: 'RESPOSTA_TRECHO',
         id_mensagem: idMensagem,
-        texto: textoDaLLM,
+        texto: falaFinal + registroDoEfeito,
         responde_a: respondeA,
       });
-      return textoDaLLM;
+      return falaFinal + registroDoEfeito;
     }
 
     await this.dep.estado.aplicarIntencao({ campo: 'energia_cognitiva', delta: -0.06 });
@@ -2362,7 +3460,157 @@ export class Kernel {
       delta: Math.min(0.25, r.tokens_entrada / 40000),
     });
 
-    return r.texto || acumulado;
+    /* `falaFinal`, não `r.texto`: no caminho sem retenção a regeneração da
+       trava de ação pós-fechamento também tem de ser a que sai. Retornar o
+       texto cru aqui deixava a violação passar justamente quando o turno tinha
+       corrido bem — foi o que a bateria do sistema acusou. */
+    return falaFinal;
+  }
+
+  /**
+   * VERIFICA A RESPOSTA E, SE FOR O CASO, ESCALA UMA VEZ.
+   *
+   * Devolve o texto a entregar, ou `null` quando não há veredito que mude o
+   * caminho — aí o fluxo normal da síntese segue como sempre seguiu.
+   *
+   * O LAÇO TEM NO MÁXIMO DUAS VOLTAS, e isso é estrutural, não convenção:
+   * `ja_escalou` vira `true` na primeira e `decidirEscalada` degrada em toda
+   * situação contestada com ele ligado. Uma escalada por TURNO — não por
+   * provedor, não por verificação.
+   */
+  private async verificarEEscalar(a: {
+    texto: string;
+    pergunta: string;
+    inicio: number;
+    pedido: Parameters<MotorRaciocinio['responder']>[0];
+    orcamento: OrcamentoDoTurno;
+    b: BarramentoEventos;
+    idMensagem: string;
+    respondeA: string | null;
+    /** Habilidades que alcançaram o mundo neste turno. Ver o chamador. */
+    operacoes: readonly string[];
+  }): Promise<string | null> {
+    const porta = this.verificacao;
+    if (!porta) return null;
+
+    let texto = a.texto;
+    let jaEscalou = false;
+
+    for (let volta = 0; volta < 2; volta += 1) {
+      const resultado = porta.verificar(texto, {
+        pergunta: a.pergunta,
+        inicio_ms: a.inicio,
+        fim_ms: Date.now(),
+        operacoes_do_turno: a.operacoes,
+      });
+
+      /* O ORÇAMENTO É O DONO DO LAÇO — perguntado sem debitar, para que avaliar
+         a escalada não gaste a chamada que talvez não aconteça. */
+      const cabe = a.orcamento.podeGastar([
+        { recurso: 'chamada_modelo' },
+        { recurso: 'tentativa_provedor' },
+      ]);
+
+      const decisao = decidirEscalada({
+        resultado,
+        ja_escalou: jaEscalou,
+        orcamento_permite: cabe,
+        premium_saudavel: this.raciocinio.premiumSaudavel,
+      });
+
+      this.auditoria.registrar({
+        instante: new Date().toISOString(),
+        sessao: this.dep.sessao,
+        id_usuario: this.dep.idUsuario,
+        traco: a.b.tracoAtual,
+        acao: `verificacao:${resultado.status}:${decisao.acao}`,
+        detalhe: decisao.porque,
+        permitido: decisao.acao !== 'degradar',
+      });
+
+      if (decisao.acao === 'entregar') {
+        /* Nada a corrigir. `null` na primeira volta devolve o turno ao fluxo
+           normal; depois de uma escalada, o texto premium é o que sai. */
+        if (!jaEscalou) return null;
+        await this.dep.estado.transicionar('falando', 'raciocinio');
+        a.b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: a.idMensagem,
+          texto,
+          responde_a: a.respondeA,
+        });
+        return texto;
+      }
+
+      if (decisao.acao === 'degradar') {
+        /**
+         * O DESCARTE É DITO. Uma verificação que corrige em silêncio ensina que
+         * a IARA às vezes muda de assunto sozinha — e no dia em que ELA errar,
+         * ninguém terá como saber que foi ela. Mesma regra da trava da fala.
+         */
+        this.trabalho.registrarErro();
+        a.b.publicar({
+          tipo: 'FALHA',
+          modulo: 'verdade',
+          mensagem: `Valor contestado por fonte independente: ${decisao.porque}`,
+        });
+        const honesto = textoDegradado(resultado);
+        await this.dep.estado.transicionar('falando', 'raciocinio');
+        a.b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: a.idMensagem,
+          texto: honesto,
+          responde_a: a.respondeA,
+        });
+        return honesto;
+      }
+
+      /* ---- ESCALAR. Debita ANTES de gastar a rede. -------------------- */
+      const debito = a.orcamento.consumirVarios([
+        { recurso: 'chamada_modelo' },
+        { recurso: 'tentativa_provedor' },
+      ]);
+      if (!debito.permitido) {
+        /* A janela entre perguntar e debitar. Não deveria acontecer num turno
+           de uma linha de execução só, e mesmo assim degrada em vez de seguir:
+           gastar rede sem orçamento é o defeito que o teto existe para impedir. */
+        const honesto = textoDegradado(resultado);
+        a.b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: a.idMensagem,
+          texto: honesto,
+          responde_a: a.respondeA,
+        });
+        return honesto;
+      }
+
+      jaEscalou = true;
+      try {
+        const premium = await this.raciocinio.responderNoPremium(a.pedido, decisao.porque);
+        texto = premium.texto;
+      } catch (erro) {
+        /* O premium não respondeu. Isso é falha de PROVEDOR, não valor
+           contestado — e a resposta honesta continua sendo a degradação, nunca o
+           número que a fonte desmentiu. */
+        a.b.publicar({
+          tipo: 'FALHA',
+          modulo: 'escalada',
+          mensagem: `a escalada ao premium falhou: ${(erro as Error).message}`,
+        });
+        const honesto = textoDegradado(resultado);
+        a.b.publicar({
+          tipo: 'RESPOSTA_TRECHO',
+          id_mensagem: a.idMensagem,
+          texto: honesto,
+          responde_a: a.respondeA,
+        });
+        return honesto;
+      }
+    }
+
+    /* Inalcançável: a segunda volta sempre termina em `entregar` ou `degradar`,
+       porque `ja_escalou` está ligado. Fica como rede, não como caminho. */
+    return texto;
   }
 
   /**

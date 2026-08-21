@@ -64,7 +64,8 @@ test('A2. recurso RECUSADO não debita — senão a mensagem trocaria de recurso
 });
 
 test('A3. consumirVarios é tudo ou nada', () => {
-  const o = new OrcamentoDoTurno(tetos({ passos: 5, efeitos_externos: 0 }));
+  const o = new OrcamentoDoTurno(tetos({ voltas: TETOS_PADRAO.voltas,
+  passos: 5, efeitos_externos: 0 }));
   const v = o.consumirVarios([{ recurso: 'passo' }, { recurso: 'efeito_externo' }]);
   assert.equal(v.permitido, false);
   /* O passo não pode ter sido debitado por causa do efeito recusado: seriam dois
@@ -97,7 +98,8 @@ test('A5. token é contabilizado depois e age na chamada seguinte', () => {
 });
 
 test('A6. o estouro guardado é o PRIMEIRO — o turno herda um motivo, não o último', () => {
-  const o = new OrcamentoDoTurno(tetos({ passos: 0, chamadas_modelo: 0 }));
+  const o = new OrcamentoDoTurno(tetos({ voltas: TETOS_PADRAO.voltas,
+  passos: 0, chamadas_modelo: 0 }));
   o.consumir('passo');
   o.consumir('chamada_modelo');
   assert.equal(o.estouro?.permitido, false);
@@ -109,7 +111,13 @@ test('A7. o resumo nomeia o que foi gasto e sempre reporta tempo', () => {
   o.consumir('passo');
   o.registrar('tokens', 42);
   const r = o.resumo();
-  assert.match(r, /passos executados 1\/6/);
+  /* Relação, não retrato: o TETO muda quando o laço muda, e congelá-lo aqui
+     faria a bateria ficar vermelha em toda calibragem sem medir nada. O que o
+     resumo tem de garantir é que ele diz gasto E teto, do recurso certo. */
+  assert.ok(
+    r.includes(`passos executados 1/${TETOS_PADRAO.passos}`),
+    `o resumo tem que dizer gasto e teto do passo; veio: ${r}`,
+  );
   assert.match(r, /tokens 42\/120000/);
   assert.match(r, /tempo 0ms/);
   /* Recurso não gasto fica fora: um resumo com seis zeros é um resumo que

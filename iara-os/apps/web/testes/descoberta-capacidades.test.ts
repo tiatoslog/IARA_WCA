@@ -106,13 +106,24 @@ test('exemplos não abrem falso positivo para conversa social', () => {
 // O prompt do planejador carrega os exemplos
 // ---------------------------------------------------------------------------
 
+/**
+ * A versão anterior deste teste lia só `p.mensagem` — e por isso ficou vermelha
+ * numa mudança que não alterou nada do que a LLM vê: o catálogo saiu de
+ * `mensagem` e foi para `capacidades`, que é o campo que os três clientes põem
+ * no prefixo cacheado (19/08/2026, ~5.400 tokens que pagavam escrita cheia em
+ * todo turno).
+ *
+ * Um teste que trava a POSIÇÃO de um bloco no pedido testa a forma do código,
+ * não o comportamento. O contrato real tem duas metades, e agora as duas estão
+ * escritas: o que a LLM enxerga, e onde isso viaja.
+ */
 test('planejar() mostra os exemplos das habilidades à LLM', async () => {
   const { MotorRaciocinio } = await import('../servidor/nucleo/kernel/MotorRaciocinio');
-  let mensagemVista = '';
+  let pedidoVisto: { mensagem?: string; capacidades?: string } = {};
   const claudeFalso = {
     disponivel: true,
-    async raciocinar(p: { mensagem: string }) {
-      mensagemVista = p.mensagem;
+    async raciocinar(p: { mensagem: string; capacidades?: string }) {
+      pedidoVisto = p;
       return {
         texto: '{"objetivo":"t","passos":[{"descricao":"responder","habilidade":null,"parametros":{}}]}',
         tokens_entrada: 0,
@@ -130,9 +141,63 @@ test('planejar() mostra os exemplos das habilidades à LLM', async () => {
     new AbortController().signal,
   );
   assert.ok(plano, 'o plano do dublê tem que ser aceito');
+
+  const tudoQueALlmVe = `${pedidoVisto.capacidades ?? ''}\n${pedidoVisto.mensagem ?? ''}`;
   assert.match(
-    mensagemVista,
+    tudoQueALlmVe,
     /exemplos: "Qual motorista tem mais cargas\?"/,
     'a lista de habilidades do prompt tem que trazer os exemplos do manifesto',
+  );
+});
+
+test('o catálogo do planejador viaja no prefixo cacheado, não na mensagem', async () => {
+  /**
+   * A METADE CARA DO CONTRATO. `mensagem` é, por construção, a última coisa do
+   * pedido: fica depois do breakpoint de cache que `ClienteClaude`,
+   * `ClienteCompativelOpenAI` e `ClienteOllama` montam. Catálogo ali é o bloco
+   * mais repetido do sistema pagando escrita cheia em todo turno — e, quando o
+   * laço existir, em toda volta.
+   *
+   * Invariante, não retrato: não trava o texto do catálogo nem o tamanho dele.
+   * Trava a única coisa que importa — de que lado do breakpoint ele viaja.
+   */
+  const { MotorRaciocinio } = await import('../servidor/nucleo/kernel/MotorRaciocinio');
+  let pedidoVisto: { mensagem?: string; capacidades?: string } = {};
+  const claudeFalso = {
+    disponivel: true,
+    async raciocinar(p: { mensagem: string; capacidades?: string }) {
+      pedidoVisto = p;
+      return {
+        texto: '{"objetivo":"t","passos":[{"descricao":"responder","habilidade":null,"parametros":{}}]}',
+        tokens_entrada: 0,
+        tokens_saida: 0,
+        cache_lido: 0,
+      };
+    },
+  };
+  const motor = new MotorRaciocinio(
+    claudeFalso as unknown as ConstructorParameters<typeof MotorRaciocinio>[0],
+  );
+  await motor.planejar(
+    percepcao.perceber('Motoristas disponíveis agora?'),
+    CATALOGO.map((h) => h.manifesto),
+    new AbortController().signal,
+  );
+
+  const catalogo = pedidoVisto.capacidades ?? '';
+  const mensagem = pedidoVisto.mensagem ?? '';
+
+  assert.match(catalogo, /HABILIDADES DISPONÍVEIS/, 'o catálogo tem que estar em `capacidades`');
+  assert.ok(
+    catalogo.includes('consultar_estatisticas_cargas_luft'),
+    'o catálogo em `capacidades` tem que listar as habilidades de verdade',
+  );
+  assert.ok(
+    !mensagem.includes('consultar_estatisticas_cargas_luft'),
+    'nenhum id de habilidade pode voltar para `mensagem` — é lá que o cache não alcança',
+  );
+  assert.ok(
+    catalogo.length > mensagem.length,
+    `o bloco caro tem que ser o cacheado (catálogo ${catalogo.length}, mensagem ${mensagem.length})`,
   );
 });

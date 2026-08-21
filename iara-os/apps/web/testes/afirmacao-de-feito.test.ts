@@ -113,6 +113,18 @@ test('E. a condição da trava: comando sem passo arma, conversa sem passo não'
   assert.equal(arma(0, 'saudacao', false), false, 'bom dia fica fora');
   assert.equal(arma(1, 'comando', false), true, 'passo que não alcançou o mundo');
   assert.equal(arma(1, 'comando', true), false, 'passo que alcançou o mundo não arma');
+  /**
+   * A RETENÇÃO É OUTRA PERGUNTA, e desde 19/08/2026 tem flag própria
+   * (`retemAFala`). Turno que usou ferramenta retém a fala — não porque a
+   * trava de FEITO arme, mas porque a de AÇÃO PÓS-FECHAMENTO precisa validar
+   * antes de qualquer coisa alcançar a tela (ver `PromessaDeAcao.ts`).
+   * Misturar as duas fez o descarte "Nada foi alterado na máquina" disparar
+   * num turno cujo efeito estava no disco.
+   */
+  const retem = (passos: number, tipo: string, alcancou: boolean) =>
+    arma(passos, tipo, alcancou) || passos > 0;
+  assert.equal(retem(1, 'texto', true), true, 'turno com ferramenta retém para validar');
+  assert.equal(retem(0, 'texto', false), false, 'conversa pura continua digitando ao vivo');
 });
 
 test('F. a condição no Kernel é a que este arquivo descreve', () => {
@@ -127,5 +139,25 @@ test('F. a condição no Kernel é a que este arquivo descreve', () => {
     /const comandoSemPasso = execucao\.passos\.length === 0 && percepcao\.tipo === 'comando';/,
     'a condição do turno sem passo mudou no Kernel — atualize o caso E junto',
   );
-  assert.match(fonte, /const travaArmada =[\s\S]{0,120}comandoSemPasso;/);
+  /**
+   * A trava ganhou um TERCEIRO motivo em 19/08/2026: `verificavel`, que retém a
+   * fala quando existe oráculo determinístico para a pergunta. Sem reter, a
+   * verificação em runtime seria decorativa — o operador leria o número errado e
+   * o veria ser trocado meio segundo depois. Ver `VerificacaoRuntime.ts`.
+   */
+  /**
+   * E um QUARTO motivo em 19/08/2026: `cardinalidadeSemExecucao`. A IARA
+   * respondeu "75 motoristas — mesma contagem que te dei agora há pouco",
+   * repetindo o próprio histórico sem chamar ferramenta nenhuma. Número
+   * operacional afirmado num turno que não executou nada não tem procedência.
+   *
+   * A trava mora AQUI e não no `reconhece` do verificador de propósito: lá ela
+   * reteria a fala de todo turno de contagem, inclusive dos que funcionam — o
+   * que o `E23` de `escalada-verificada.test.ts` recusa com razão. Aqui só arma
+   * quando nada alcançou o mundo.
+   */
+  assert.match(
+    fonte,
+    /const travaArmada =[\s\S]{0,300}comandoSemPasso \|\|[\s\S]{0,80}cardinalidadeSemExecucao;/,
+  );
 });

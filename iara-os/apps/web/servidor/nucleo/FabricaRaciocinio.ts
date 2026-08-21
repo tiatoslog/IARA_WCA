@@ -47,15 +47,46 @@ function escolhaDeclarada(ambiente: Ambiente): Escolha {
  * por acidente.
  *
  * Em `auto`, monta a CADEIA com tudo que estiver declarado, nesta ordem:
- * Groq → Gemini → OpenRouter (as três gratuitas) → Anthropic (a melhor
+ * OpenRouter → Groq → Gemini (as três gratuitas) → Anthropic (a melhor
  * qualidade, e a única que cobra) → Ollama (o local). Se o primeiro falhar por
  * cota, chave ou serviço fora, o próximo assume no MESMO turno — ver
  * `CadeiaDeRaciocinio` e o incidente de 15/08/2026 que a originou.
  *
- * OPENROUTER É TERCEIRO ENTRE OS GRATUITOS, e não primeiro: o padrão dele é um
- * Nemotron 3 Ultra, forte em planejamento mas servido em fila gratuita. Ordenar gratuito por
- * capacidade, e não por ordem de chegada, é o que faz a cadeia degradar suave
- * em vez de degradar por acidente de configuração.
+ * OPENROUTER PASSOU À FRENTE DA GROQ EM 18/08/2026, e a inversão foi MEDIDA
+ * antes de ser decidida. Ele era terceiro entre os gratuitos por um argumento de
+ * tamanho — "Nemotron de 55B ativos contra os 70B da Groq" — e as duas metades
+ * desse argumento caíram no mesmo dia:
+ *
+ *   · A GROQ NÃO SERVE MAIS 70B. Ela descomissionou o `llama-3.3-70b-versatile`
+ *     e o substituto declarado é `openai/gpt-oss-120b`: 120B totais, mas MoE com
+ *     ~5,1B ATIVOS — uma ordem de grandeza ABAIXO dos 55B ativos do Nemotron.
+ *     Pelo próprio critério que ordenava a lista, a posição estava invertida.
+ *
+ *   · O TETO GRATUITO DA GROQ NÃO CABE NA IARA. Medido pelos cabeçalhos
+ *     `x-ratelimit` da API: 8.000 tokens por minuto, teto da ORGANIZAÇÃO e
+ *     compartilhado pelos três modelos de chat. O prompt de sistema da IARA
+ *     custa ~5.000 de entrada, então é ~uma chamada a cada 40 s, e um turno
+ *     cognitivo faz duas. Cinco chamadas seguidas: 1 ok, 4 `429`. O OpenRouter
+ *     aceitou três de 5.600 tokens em oito segundos sem 429.
+ *
+ * CAMPANHA CO, 13 MISSÕES, RODADAS EM SÉRIE (o paralelo colidia portas):
+ *
+ *     openrouter   GO             260 s    0 de 13 falhas técnicas
+ *     anthropic    INCONCLUSIVO   169 s    0 de 13
+ *     groq         GO              24 s    8 DE 13
+ *
+ * A Groq passou no portão falhando em 62% dos turnos, porque "o provedor
+ * estourou a cota" e "a IARA recusou corretamente" chegam ao contrato como o
+ * mesmo `RECUSA_HONESTA`. Isso é lacuna DO PORTÃO, anotada onde ela mora — e é
+ * também a razão de não bastar ler o veredito para ordenar a cadeia.
+ *
+ * O QUE SE PAGA PELA TROCA: latência. O Nemotron gratuito levou 260 s contra os
+ * 24 s da Groq na mesma bateria, e parte disso é fila da camada gratuita. A
+ * escolha é entre um primeiro elo lento que RESPONDE e um rápido que 429 em dois
+ * de cada três turnos — e a IARA prefere demorar a não pensar.
+ *
+ * GROQ CONTINUA NA CADEIA, em segundo: 24 s quando a cota permite é bom demais
+ * para descartar, e como elo de reserva ela nunca é o gargalo.
  *
  * A ANTHROPIC DESCEU PARA TERCEIRA EM 18/08/2026, por decisão de custo: ela é a
  * única paga, e passa a ser último recurso antes do local. O que se compra com
@@ -83,14 +114,14 @@ export function criarProvedorRaciocinio(ambiente: Ambiente = process.env): Prove
   if (escolha === 'openrouter') return new ClienteCompativelOpenAI(OPENROUTER);
 
   const elos: ProvedorRaciocinio[] = [];
+  if (configUtilizavel(OPENROUTER.variavelChave, ambiente)) {
+    elos.push(new ClienteCompativelOpenAI(OPENROUTER));
+  }
   if (configUtilizavel(GROQ.variavelChave, ambiente)) {
     elos.push(new ClienteCompativelOpenAI(GROQ));
   }
   if (configUtilizavel(GEMINI.variavelChave, ambiente)) {
     elos.push(new ClienteCompativelOpenAI(GEMINI));
-  }
-  if (configUtilizavel(OPENROUTER.variavelChave, ambiente)) {
-    elos.push(new ClienteCompativelOpenAI(OPENROUTER));
   }
   if (configUtilizavel('ANTHROPIC_API_KEY', ambiente)) elos.push(new ClienteClaude());
   if (configUtilizavel('OLLAMA_URL', ambiente)) elos.push(new ClienteOllama());
@@ -114,18 +145,56 @@ export function criarProvedorRaciocinio(ambiente: Ambiente = process.env): Prove
  * indistinguível de um saudável até alguém pedir alguma coisa. Sem cérebro,
  * idem.
  */
+/**
+ * A variável que torna cada escolha UTILIZÁVEL — a mesma que a cadeia consulta
+ * logo abaixo. Existe para que "declarar um provedor" e "ter esse provedor" não
+ * sejam a mesma afirmação.
+ */
+const VARIAVEL_DA_ESCOLHA: Record<Exclude<Escolha, 'auto'>, string> = {
+  anthropic: 'ANTHROPIC_API_KEY',
+  ollama: 'OLLAMA_URL',
+  groq: GROQ.variavelChave,
+  gemini: GEMINI.variavelChave,
+  openrouter: OPENROUTER.variavelChave,
+};
+
 export function provedoresDeclarados(ambiente: Ambiente = process.env): string[] {
   const escolha = escolhaDeclarada(ambiente);
-  if (escolha !== 'auto') return [escolha];
+  /**
+   * FORÇAR UM PROVEDOR NÃO O TORNA UTILIZÁVEL, e esta conferência custou uma
+   * campanha inteira em 18/08/2026.
+   *
+   * Antes, a escolha declarada era ECOADA sem checagem: com `IARA_PROVEDOR=groq`
+   * e nenhuma `GROQ_API_KEY` no ambiente, o banner de subida e o `/saude`
+   * anunciavam `groq` enquanto o Kernel respondia, no mesmo processo, "a camada
+   * de raciocínio está desligada". A campanha CO subiu com esse carimbo, mediu
+   * doze segundos de recusa honesta, e o relatório teria chamado isso de
+   * resultado da Groq.
+   *
+   * É O INCIDENTE DE 15/08 OUTRA VEZ — um diagnóstico verde sobre um processo
+   * sem cérebro — reaberto no único caminho que ninguém checava: o do provedor
+   * forçado. O comentário acima já dizia que divergir da cadeia faria "o
+   * diagnóstico apontar um cérebro e a IARA usar outro"; o `if` que devolvia a
+   * escolha crua era essa divergência, escrita duas linhas antes do aviso.
+   *
+   * A FÁBRICA CONTINUA INSTANCIANDO o provedor forçado mesmo sem chave, e isso é
+   * de propósito: lá, o cliente indisponível é quem diz em voz alta que está
+   * indisponível, com a mensagem certa. O que não pode é o RELATO afirmar que
+   * existe cérebro. Devolver lista vazia aqui faz o banner imprimir "NENHUM
+   * provedor declarado", que é a verdade.
+   */
+  if (escolha !== 'auto') {
+    return configUtilizavel(VARIAVEL_DA_ESCOLHA[escolha], ambiente) ? [escolha] : [];
+  }
 
   /* A MESMA ORDEM DA CADEIA, e não uma lista qualquer: quem lê `/saude` está
      lendo quem responde primeiro. Divergir daqui faria o diagnóstico apontar um
      cérebro e a IARA usar outro — e essa é a divergência que ninguém percebe até
      estar depurando a resposta errada. */
   const nomes: string[] = [];
+  if (configUtilizavel(OPENROUTER.variavelChave, ambiente)) nomes.push(OPENROUTER.apelido);
   if (configUtilizavel(GROQ.variavelChave, ambiente)) nomes.push(GROQ.apelido);
   if (configUtilizavel(GEMINI.variavelChave, ambiente)) nomes.push(GEMINI.apelido);
-  if (configUtilizavel(OPENROUTER.variavelChave, ambiente)) nomes.push(OPENROUTER.apelido);
   if (configUtilizavel('ANTHROPIC_API_KEY', ambiente)) nomes.push('anthropic');
   if (configUtilizavel('OLLAMA_URL', ambiente)) nomes.push('ollama');
   return nomes;

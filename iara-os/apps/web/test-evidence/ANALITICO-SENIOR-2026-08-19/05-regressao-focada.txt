@@ -1,0 +1,1721 @@
+TAP version 13
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.598Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"0bc4e1dd-6467-4f34-81aa-b02cd6be6876","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.622Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"0bc4e1dd-6467-4f34-81aa-b02cd6be6876","acao":"analise:gerencial:concluir_com_ressalva","detalhe":"{\\"analise_id\\":\\"0bc4e1dd-6467-4f34-81aa-b02cd6be6876\\",\\"nivel\\":\\"gerencial\\",\\"marcadores\\":[\\"comparativo\\"],\\"dimensoes\\":[\\"financeiro\\"],\\"tipo_pretendido\\":\\"comparativa\\",\\"degrau_sustentado\\":\\"descritiva\\",\\"veredicto\\":\\"concluir_com_ressalva\\",\\"confianca\\":\\"media\\",\\"pontuacao\\":0.795,\\"fontes\\":[\\"planilha_lab\\"],\\"ferramentas\\":[\\"lab.medir\\"],\\"evidencias\\":[{\\"metrica\\":\\"margem_bruta_pct\\",\\"fonte\\":\\"planilha_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":88.06594488188976,\\"consideradas\\":3579,\\"elegiveis\\":4064}],\\"ressalvas\\":[{\\"codigo\\":\\"cobertura_parcial\\",\\"gravidade\\":\\"seria\\"},{\\"codigo\\":\\"procedencia_fraca\\",\\"gravidade\\":\\"seria\\"}],\\"o_que_falta\\":[\\"completar o que ficou de fora do recorte\\",\\"apurar o dado numa fonte, em vez de deduzir\\"]}","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.667Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"0bc4e1dd-6467-4f34-81aa-b02cd6be6876","acao":"custo_desconhecido","detalhe":"sem preço declarado para \\"undefined\\" — o turno não sabe quanto custou","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.668Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"0bc4e1dd-6467-4f34-81aa-b02cd6be6876","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 3/12 · tempo 154ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.690Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"1a1b826e-8580-4bcc-a1d9-4c2d6cce0b68","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.720Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"1a1b826e-8580-4bcc-a1d9-4c2d6cce0b68","acao":"custo_desconhecido","detalhe":"sem preço declarado para \\"undefined\\" — o turno não sabe quanto custou","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.722Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"1a1b826e-8580-4bcc-a1d9-4c2d6cce0b68","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 3/12 · tempo 43ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.730Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"3f1f64ce-a7b6-40c7-b3d5-5fc63265df56","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.733Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"3f1f64ce-a7b6-40c7-b3d5-5fc63265df56","acao":"analise:gerencial:abster","detalhe":"{\\"analise_id\\":\\"3f1f64ce-a7b6-40c7-b3d5-5fc63265df56\\",\\"nivel\\":\\"gerencial\\",\\"marcadores\\":[\\"comparativo\\"],\\"dimensoes\\":[\\"financeiro\\"],\\"tipo_pretendido\\":\\"comparativa\\",\\"degrau_sustentado\\":\\"nenhum\\",\\"veredicto\\":\\"abster\\",\\"confianca\\":\\"baixa\\",\\"pontuacao\\":0.623,\\"fontes\\":[\\"planilha_lab\\"],\\"ferramentas\\":[\\"lab.medir\\"],\\"evidencias\\":[{\\"metrica\\":\\"cargas_atrasadas\\",\\"fonte\\":\\"planilha_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":0,\\"consideradas\\":0,\\"elegiveis\\":30}],\\"ressalvas\\":[{\\"codigo\\":\\"ausencia_como_zero\\",\\"gravidade\\":\\"impeditiva\\"},{\\"codigo\\":\\"cobertura_parcial\\",\\"gravidade\\":\\"seria\\"},{\\"codigo\\":\\"procedencia_fraca\\",\\"gravidade\\":\\"seria\\"}],\\"o_que_falta\\":[\\"confirmar se realmente não houve registro no período ou se a fonte não foi lida inteira\\",\\"completar o que ficou de fora do recorte\\",\\"apurar o dado numa fonte, em vez de deduzir\\"]}","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.736Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"3f1f64ce-a7b6-40c7-b3d5-5fc63265df56","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 2/12 · tempo 7ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.749Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"eb71bf2d-22d1-4ec4-83e5-bd0c387b2741","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.754Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"eb71bf2d-22d1-4ec4-83e5-bd0c387b2741","acao":"analise:gerencial:abster","detalhe":"{\\"analise_id\\":\\"eb71bf2d-22d1-4ec4-83e5-bd0c387b2741\\",\\"nivel\\":\\"gerencial\\",\\"marcadores\\":[\\"comparativo\\"],\\"dimensoes\\":[\\"financeiro\\"],\\"tipo_pretendido\\":\\"comparativa\\",\\"degrau_sustentado\\":\\"nenhum\\",\\"veredicto\\":\\"abster\\",\\"confianca\\":\\"baixa\\",\\"pontuacao\\":0.591,\\"fontes\\":[\\"planilha_lab\\",\\"memoria_do_turno\\"],\\"ferramentas\\":[\\"lab.medir\\"],\\"evidencias\\":[{\\"metrica\\":\\"motoristas\\",\\"fonte\\":\\"planilha_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":null,\\"consideradas\\":null,\\"elegiveis\\":null},{\\"metrica\\":\\"motoristas\\",\\"fonte\\":\\"memoria_do_turno\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":null,\\"consideradas\\":null,\\"elegiveis\\":null}],\\"ressalvas\\":[{\\"codigo\\":\\"contradicao_entre_fontes\\",\\"gravidade\\":\\"impeditiva\\"},{\\"codigo\\":\\"cobertura_nao_declarada\\",\\"gravidade\\":\\"leve\\"}],\\"o_que_falta\\":[\\"resolver qual das fontes está certa antes de eu dar um número\\"]}","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.756Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"eb71bf2d-22d1-4ec4-83e5-bd0c387b2741","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 2/12 · tempo 7ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.856Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"2b0742aa-0030-41b1-9570-6124bdbf113d","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.50) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.861Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"2b0742aa-0030-41b1-9570-6124bdbf113d","acao":"analise:gerencial:concluir","detalhe":"{\\"analise_id\\":\\"2b0742aa-0030-41b1-9570-6124bdbf113d\\",\\"nivel\\":\\"gerencial\\",\\"marcadores\\":[\\"comparativo\\"],\\"dimensoes\\":[\\"financeiro\\"],\\"tipo_pretendido\\":\\"comparativa\\",\\"degrau_sustentado\\":\\"comparativa\\",\\"veredicto\\":\\"concluir\\",\\"confianca\\":\\"alta\\",\\"pontuacao\\":0.982,\\"fontes\\":[\\"planilha_lab\\",\\"tabela_lab\\",\\"cadastro_lab\\"],\\"ferramentas\\":[\\"lab.medir\\"],\\"evidencias\\":[{\\"metrica\\":\\"cargas\\",\\"fonte\\":\\"planilha_lab\\",\\"procedencia\\":\\"fato_verificado\\",\\"cobertura_pct\\":100,\\"consideradas\\":412,\\"elegiveis\\":412},{\\"metrica\\":\\"receita\\",\\"fonte\\":\\"tabela_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":100,\\"consideradas\\":412,\\"elegiveis\\":412},{\\"metrica\\":\\"motoristas\\",\\"fonte\\":\\"cadastro_lab\\",\\"procedencia\\":\\"fato\\",\\"cobertura_pct\\":100,\\"consideradas\\":412,\\"elegiveis\\":412}],\\"ressalvas\\":[],\\"o_que_falta\\":[]}","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.865Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"2b0742aa-0030-41b1-9570-6124bdbf113d","acao":"custo_desconhecido","detalhe":"sem preço declarado para \\"undefined\\" — o turno não sabe quanto custou","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:19.866Z","sessao":"s-analitica","id_usuario":"u-analitica","traco":"2b0742aa-0030-41b1-9570-6124bdbf113d","acao":"orcamento_turno","detalhe":"voltas do laço 2/8 · passos executados 1/12 · chamadas ao modelo 3/12 · tempo 15ms/900000ms","permitido":true}
+# Subtest: 1.1 cobertura parcial vira ressalva NA RESPOSTA, mesmo com síntese afirmativa
+ok 1 - 1.1 cobertura parcial vira ressalva NA RESPOSTA, mesmo com síntese afirmativa
+  ---
+  duration_ms: 214.35
+  type: 'test'
+  ...
+# Subtest: 1.2 sem evidência tipada, o turno sai IDÊNTICO ao de antes da camada
+ok 2 - 1.2 sem evidência tipada, o turno sai IDÊNTICO ao de antes da camada
+  ---
+  duration_ms: 49.3866
+  type: 'test'
+  ...
+# Subtest: 2.1 ausência apresentada como zero encerra o turno ANTES da síntese
+ok 3 - 2.1 ausência apresentada como zero encerra o turno ANTES da síntese
+  ---
+  duration_ms: 14.8206
+  type: 'test'
+  ...
+# Subtest: 2.2 fontes discordando também encerra antes da síntese
+ok 4 - 2.2 fontes discordando também encerra antes da síntese
+  ---
+  duration_ms: 22.7236
+  type: 'test'
+  ...
+# Subtest: 3.1 evidência limpa e completa não ganha rodapé nenhum
+ok 5 - 3.1 evidência limpa e completa não ganha rodapé nenhum
+  ---
+  duration_ms: 111.339
+  type: 'test'
+  ...
+# Subtest: A1. cobertura calcula o derivado e não aceita percentual de fora
+ok 6 - A1. cobertura calcula o derivado e não aceita percentual de fora
+  ---
+  duration_ms: 3.0114
+  type: 'test'
+  ...
+# Subtest: A2. 0 de 0 é null, nunca 0% — a lição de MargemOperacional
+ok 7 - A2. 0 de 0 é null, nunca 0% — a lição de MargemOperacional
+  ---
+  duration_ms: 0.462
+  type: 'test'
+  ...
+# Subtest: A3. considerar mais que o elegível fica no teto em vez de estourar
+ok 8 - A3. considerar mais que o elegível fica no teto em vez de estourar
+  ---
+  duration_ms: 0.2385
+  type: 'test'
+  ...
+# Subtest: A4. só cobertura completa sustenta afirmação sobre a população
+ok 9 - A4. só cobertura completa sustenta afirmação sobre a população
+  ---
+  duration_ms: 0.3895
+  type: 'test'
+  ...
+# Subtest: A5. ausência não é zero
+ok 10 - A5. ausência não é zero
+  ---
+  duration_ms: 0.4147
+  type: 'test'
+  ...
+# Subtest: A6. comparável exige mesmas dimensões de recorte E mesma classe
+ok 11 - A6. comparável exige mesmas dimensões de recorte E mesma classe
+  ---
+  duration_ms: 1.7354
+  type: 'test'
+  ...
+# Subtest: A7. o recorte é conjunto, não lista ordenada
+ok 12 - A7. o recorte é conjunto, não lista ordenada
+  ---
+  duration_ms: 0.5697
+  type: 'test'
+  ...
+# Subtest: A8. cobertura completa não vira ruído na resposta
+ok 13 - A8. cobertura completa não vira ruído na resposta
+  ---
+  duration_ms: 0.7822
+  type: 'test'
+  ...
+# Subtest: A9. o adaptador do join da margem traduz sem que o kernel conheça carga
+ok 14 - A9. o adaptador do join da margem traduz sem que o kernel conheça carga
+  ---
+  duration_ms: 1.1999
+  type: 'test'
+  ...
+# Subtest: A10. os limiares são convenção declarada, não número solto
+ok 15 - A10. os limiares são convenção declarada, não número solto
+  ---
+  duration_ms: 1.6327
+  type: 'test'
+  ...
+# Subtest: B0. sem evidência nenhuma o degrau é `nenhum` — a abstenção
+ok 16 - B0. sem evidência nenhuma o degrau é `nenhum` — a abstenção
+  ---
+  duration_ms: 2.7505
+  type: 'test'
+  ...
+# Subtest: B1. zero sobre conjunto vazio é impeditivo e derruba tudo
+ok 17 - B1. zero sobre conjunto vazio é impeditivo e derruba tudo
+  ---
+  duration_ms: 2.3824
+  type: 'test'
+  ...
+# Subtest: B2. cobertura parcial rebaixa para descritiva — não cala a resposta
+ok 18 - B2. cobertura parcial rebaixa para descritiva — não cala a resposta
+  ---
+  duration_ms: 0.4695
+  type: 'test'
+  ...
+# Subtest: B3. silêncio sobre cobertura não é garantia de cobertura
+ok 19 - B3. silêncio sobre cobertura não é garantia de cobertura
+  ---
+  duration_ms: 0.7027
+  type: 'test'
+  ...
+# Subtest: B4. duas fontes discordando é impeditivo
+ok 20 - B4. duas fontes discordando é impeditivo
+  ---
+  duration_ms: 0.7457
+  type: 'test'
+  ...
+# Subtest: B4b. a MESMA fonte lida duas vezes é série temporal, não contradição
+ok 21 - B4b. a MESMA fonte lida duas vezes é série temporal, não contradição
+  ---
+  duration_ms: 0.5064
+  type: 'test'
+  ...
+# Subtest: B5. dado velho entra com ressalva; dado obsoleto rebaixa
+ok 22 - B5. dado velho entra com ressalva; dado obsoleto rebaixa
+  ---
+  duration_ms: 0.975
+  type: 'test'
+  ...
+# Subtest: B6. fonte única só é ressalva quando a conclusão passa de populacional
+ok 23 - B6. fonte única só é ressalva quando a conclusão passa de populacional
+  ---
+  duration_ms: 3.1007
+  type: 'test'
+  ...
+# Subtest: B7. hipótese entrando como medida é ressalva séria
+ok 24 - B7. hipótese entrando como medida é ressalva séria
+  ---
+  duration_ms: 0.6866
+  type: 'test'
+  ...
+# Subtest: B8. denominador móvel derruba a comparação para populacional
+ok 25 - B8. denominador móvel derruba a comparação para populacional
+  ---
+  duration_ms: 0.6806
+  type: 'test'
+  ...
+# Subtest: B9. causa sem experimento cai para comparativa e diz o que confirmaria
+ok 26 - B9. causa sem experimento cai para comparativa e diz o que confirmaria
+  ---
+  duration_ms: 0.6576
+  type: 'test'
+  ...
+# Subtest: B9b. intervenção verificada é a exceção real, não decorativa
+ok 27 - B9b. intervenção verificada é a exceção real, não decorativa
+  ---
+  duration_ms: 2.8118
+  type: 'test'
+  ...
+# Subtest: B10. grupo pequeno demais não sustenta ranking nem tendência
+ok 28 - B10. grupo pequeno demais não sustenta ranking nem tendência
+  ---
+  duration_ms: 0.9541
+  type: 'test'
+  ...
+# Subtest: B11. o teto é o PIOR limite, nunca a média deles
+ok 29 - B11. o teto é o PIOR limite, nunca a média deles
+  ---
+  duration_ms: 0.3754
+  type: 'test'
+  ...
+# Subtest: B12. ordenar coloca a impeditiva na frente
+ok 30 - B12. ordenar coloca a impeditiva na frente
+  ---
+  duration_ms: 0.4829
+  type: 'test'
+  ...
+# Subtest: C1. evidência boa e completa dá confiança alta
+ok 31 - C1. evidência boa e completa dá confiança alta
+  ---
+  duration_ms: 1.3204
+  type: 'test'
+  ...
+# Subtest: C2. contradição TRAVA a confiança em baixa — não é compensável
+ok 32 - C2. contradição TRAVA a confiança em baixa — não é compensável
+  ---
+  duration_ms: 0.6407
+  type: 'test'
+  ...
+# Subtest: C3. a confiança se explica apontando o fator dominante
+ok 33 - C3. a confiança se explica apontando o fator dominante
+  ---
+  duration_ms: 0.9833
+  type: 'test'
+  ...
+# Subtest: C4. degrau `nenhum` produz abstenção com o que destravaria
+ok 34 - C4. degrau `nenhum` produz abstenção com o que destravaria
+  ---
+  duration_ms: 24.1969
+  type: 'test'
+  ...
+# Subtest: C5. ressalva leve ainda conclui — a crítica não é uma recusa disfarçada
+ok 35 - C5. ressalva leve ainda conclui — a crítica não é uma recusa disfarçada
+  ---
+  duration_ms: 0.6178
+  type: 'test'
+  ...
+# Subtest: C6. tudo limpo conclui sem ressalva nenhuma
+ok 36 - C6. tudo limpo conclui sem ressalva nenhuma
+  ---
+  duration_ms: 6.2463
+  type: 'test'
+  ...
+# Subtest: C7. a abstenção é ESCOPADA: causa negada, comparação preservada
+ok 37 - C7. a abstenção é ESCOPADA: causa negada, comparação preservada
+  ---
+  duration_ms: 0.6928
+  type: 'test'
+  ...
+# Subtest: A1. o cliente do provedor WhatsApp só é importado pela integração
+ok 38 - A1. o cliente do provedor WhatsApp só é importado pela integração
+  ---
+  duration_ms: 68.8689
+  type: 'test'
+  ...
+# Subtest: A2. nenhum `fetch` a provedor externo fora da camada de integração
+ok 39 - A2. nenhum `fetch` a provedor externo fora da camada de integração
+  ---
+  duration_ms: 72.0425
+  type: 'test'
+  ...
+# Subtest: A3. `PortaWhatsapp` não importa mais o cliente do provedor
+ok 40 - A3. `PortaWhatsapp` não importa mais o cliente do provedor
+  ---
+  duration_ms: 1.4789
+  type: 'test'
+  ...
+# Subtest: A4. shell e filesystem mutável continuam confinados ao AgenteLocal
+ok 41 - A4. shell e filesystem mutável continuam confinados ao AgenteLocal
+  ---
+  duration_ms: 67.9054
+  type: 'test'
+  ...
+# Subtest: A5. toda integração declara risco, semântica e timeout
+ok 42 - A5. toda integração declara risco, semântica e timeout
+  ---
+  duration_ms: 0.8459
+  type: 'test'
+  ...
+# Subtest: A6. a integração WhatsApp não tem autoridade para declarar verdade
+ok 43 - A6. a integração WhatsApp não tem autoridade para declarar verdade
+  ---
+  duration_ms: 0.4362
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"96b7027d-5ea3-4e95-bd9c-a6384e7aee07","hash_intencao":"3a0de37932e8b19746f20b22414f862fd4c5a13960261ff982409854500159f6","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 1. autorização válida → provedor aceita → verificador confirma → VERIFICADA
+ok 44 - 1. autorização válida → provedor aceita → verificador confirma → VERIFICADA
+  ---
+  duration_ms: 116.5254
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"bf257d8b-a11b-4efb-b461-253b8a5ee4fa","hash_intencao":"95a0deee3cd5e09eb02e66df7e744cc31c262e97644e9a913b5a83e5203efa6b","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 2. ACEITE NÃO É ENTREGA: sem verificador, descansa em aceita_pelo_provedor
+ok 45 - 2. ACEITE NÃO É ENTREGA: sem verificador, descansa em aceita_pelo_provedor
+  ---
+  duration_ms: 415.4958
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"84eab36f-5429-4fe3-a77c-c16f080b0fc9","hash_intencao":"78787959928ca0a84a686c7e769dfc0525dcd32ee7b00c960c1766a9bd49867a","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 3. RETRY: mesma origem de pedido não entrega duas vezes
+ok 46 - 3. RETRY: mesma origem de pedido não entrega duas vezes
+  ---
+  duration_ms: 131.8201
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"797afb78-4fac-4cf6-9389-8e60e7c8fc9b","hash_intencao":"dcffa753b4c92fe61cc8d60b714079b174e4963991a6b05df2e224d966bdb5e5","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 4. DUPLICAÇÃO DE EVENTO: dois ids diferentes, mesmo conteúdo, em segundos
+ok 47 - 4. DUPLICAÇÃO DE EVENTO: dois ids diferentes, mesmo conteúdo, em segundos
+  ---
+  duration_ms: 18.7332
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"17bd4ec9-f80b-4706-8735-f8bff296a60e","hash_intencao":"87bc8d8fd33b4237e83ff4244794414ad35772d36a67812921bd28c350b491cf","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 5. TIMEOUT → UNKNOWN, e a repetição fica bloqueada
+ok 48 - 5. TIMEOUT → UNKNOWN, e a repetição fica bloqueada
+  ---
+  duration_ms: 294.9043
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"5b57915b-3f41-4d4e-8ca0-eb114ca531cd","hash_intencao":"0fa25a39a6b20d2c0239dd7d9ba9ea71122313f3d7404da5f4ca656f783b9cb4","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 6. RESPOSTA PERDIDA: provedor recebeu, IARA não soube → UNKNOWN, sem repetir
+ok 49 - 6. RESPOSTA PERDIDA: provedor recebeu, IARA não soube → UNKNOWN, sem repetir
+  ---
+  duration_ms: 392.6886
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"296ec050-87e8-400b-b143-e2dab3d4b57d","hash_intencao":"58c801d28e97e2bf7040521b9a8416006dd75999df553a113d53f758bbf7affd","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 7. EXPLODE APÓS ENTREGAR: o efeito existe e o estado é honesto
+ok 50 - 7. EXPLODE APÓS ENTREGAR: o efeito existe e o estado é honesto
+  ---
+  duration_ms: 21.9129
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"4b1cd4a7-68a8-4b2d-b899-59149709ec51","hash_intencao":"83c9db646ee8f57dd5ec5d0b413784c16e2c5f8dd5a2c545d3bac72f53f57def","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"e6d0aeec-6912-4b11-8d94-cb903ca243c4","hash_intencao":"f616139b52e409c374d9545443d422c08340fcc65f4b908e31d999949bd78425","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 8. PROVEDOR REJEITA → FALHOU, e pode tentar de novo
+ok 51 - 8. PROVEDOR REJEITA → FALHOU, e pode tentar de novo
+  ---
+  duration_ms: 35.5288
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"8c250bd0-a366-492b-9230-0387cb9bbb65","hash_intencao":"cdcef1359de4389aac4b2d1c9920bcd38608d7bd1cfe7e279cb90f9ba708b21e","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 9. VERIFICADOR CONTRADIZ O PROVEDOR: aceito + não encontrado = FALHOU
+ok 52 - 9. VERIFICADOR CONTRADIZ O PROVEDOR: aceito + não encontrado = FALHOU
+  ---
+  duration_ms: 23.4971
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"b9512a4a-dadb-4aa2-8ab9-cd4772b2ac2a","hash_intencao":"4ad878f22e8980855121cc38f460baecf16c8b61292b10519e3d0fef4fd81fe2","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 10. sem meio de verificar NÃO rebaixa o aceite para desconhecida
+ok 53 - 10. sem meio de verificar NÃO rebaixa o aceite para desconhecida
+  ---
+  duration_ms: 769.4158
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"685752cc-fc90-41a8-921a-ce167643edda","hash_intencao":"2792226e45e05e8f9d7478a61a40ba00e22c2462017af25ef35354445671d4d3","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 10b. o aceite não verificado BLOQUEIA a repetição — e pela regra de ouro
+ok 54 - 10b. o aceite não verificado BLOQUEIA a repetição — e pela regra de ouro
+  ---
+  duration_ms: 63.0801
+  type: 'test'
+  ...
+# Subtest: 11. SEM AUTORIZAÇÃO DE OPERADOR: risco alto não passa nem pelo portal
+ok 55 - 11. SEM AUTORIZAÇÃO DE OPERADOR: risco alto não passa nem pelo portal
+  ---
+  duration_ms: 22.3772
+  type: 'test'
+  ...
+# Subtest: 12. integração indisponível não alcança o provedor
+ok 56 - 12. integração indisponível não alcança o provedor
+  ---
+  duration_ms: 2.6982
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"87df931e-0f66-49ea-8cf8-0c0b6a1cab43","hash_intencao":"7a8950c64c6d15cdc3fc8952e8f8bf9fe5831279f20e5e6be48bf53c5ccf87db","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"65c3a50a-c53d-4082-9aa5-4bf90283c115","hash_intencao":"651ff4ac52ae0cd39bfbd4ccf9f4745da16b47b34e5573d6e04e1306c634f8a8","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 12b. P0: duas mensagens DIFERENTES com a mesma resposta são as duas enviadas
+ok 57 - 12b. P0: duas mensagens DIFERENTES com a mesma resposta são as duas enviadas
+  ---
+  duration_ms: 43.0958
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"9c1fc327-5d26-4eff-b798-891536faa184","hash_intencao":"7b15daeeccc01b6ad6aa3a8156f4403546bf7b96adcda8de23cc596e5438fdb2","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 12c. e a REENTREGA do mesmo evento continua deduplicada
+ok 58 - 12c. e a REENTREGA do mesmo evento continua deduplicada
+  ---
+  duration_ms: 58.5512
+  type: 'test'
+  ...
+# Subtest: 12d. ARQUITETURA: só quem tem id de provedor declara origem confiável
+ok 59 - 12d. ARQUITETURA: só quem tem id de provedor declara origem confiável
+  ---
+  duration_ms: 104.763
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"c8e9f469-553d-45f6-b57a-55e9ea86e7a7","hash_intencao":"764b93ea165817310ee6e23f931ab92e4290cb183bc8555f50f8323c1903c3c7","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 13. CONCORRÊNCIA: duas entregas simultâneas do mesmo evento → uma só
+ok 60 - 13. CONCORRÊNCIA: duas entregas simultâneas do mesmo evento → uma só
+  ---
+  duration_ms: 1163.2137
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"fdff1bd4-85d1-4578-9c87-41cf5b894741","hash_intencao":"7c609c922ce267cff9b119dff25ee508cf01680f0293b99355d972a1cd420220","id_usuario":"ana","sessao":"whatsapp:ana","papel":"operador","escopo":[],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# Subtest: 14. RESTART: a reentrega da Meta depois do reinício não duplica
+ok 61 - 14. RESTART: a reentrega da Meta depois do reinício não duplica
+  ---
+  duration_ms: 18.0098
+  type: 'test'
+  ...
+# Subtest: 15. CRASH REAL (SIGKILL): o jornal sobrevive e volta como DESCONHECIDA
+ok 62 - 15. CRASH REAL (SIGKILL): o jornal sobrevive e volta como DESCONHECIDA
+  ---
+  duration_ms: 3592.6025
+  type: 'test'
+  ...
+# Subtest: 15b. depois do SIGKILL, um processo NOVO reconstrói a verdade do disco
+ok 63 - 15b. depois do SIGKILL, um processo NOVO reconstrói a verdade do disco
+  ---
+  duration_ms: 2894.6973
+  type: 'test'
+  ...
+# Subtest: 16. a integração WhatsApp real está no catálogo e se declara indisponível sem credencial
+ok 64 - 16. a integração WhatsApp real está no catálogo e se declara indisponível sem credencial
+  ---
+  duration_ms: 0.6753
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.742Z","sessao":"s-mem","id_usuario":"u-mem","traco":"3a8ceff6-d698-4952-b189-72da4c0e8051","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.749Z","sessao":"s-mem","id_usuario":"u-mem","traco":"3a8ceff6-d698-4952-b189-72da4c0e8051","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 1/12 · tempo 30ms/900000ms","permitido":true}
+# {"canal":"agente_local","usuario":"u-mem","acao":"energia:cancelar","permitido":true,"detalhe":"abort enviado (s-mem)"}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.831Z","sessao":"s-mem2","id_usuario":"u-mem2","traco":"e6284cd1-b231-48d6-9e50-ef0ccae657f0","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (energia) → plano determinístico.","permitido":true}
+# Subtest: G0. o analisador de grafo encontra arestas reais e diretas
+ok 65 - G0. o analisador de grafo encontra arestas reais e diretas
+  ---
+  duration_ms: 3.5708
+  type: 'test'
+  ...
+# Subtest: G1. nenhum módulo de ESTADO INTERNO alcança um EFEITO EXTERNO
+ok 66 - G1. nenhum módulo de ESTADO INTERNO alcança um EFEITO EXTERNO
+  ---
+  duration_ms: 0.8707
+  type: 'test'
+  ...
+# Subtest: G2. nenhum módulo de ESTADO INTERNO alcança o PORTAL
+ok 67 - G2. nenhum módulo de ESTADO INTERNO alcança o PORTAL
+  ---
+  duration_ms: 0.4173
+  type: 'test'
+  ...
+# Subtest: G3. o EFEITO EXTERNO só é alcançado a partir do portal ou do catálogo
+ok 68 - G3. o EFEITO EXTERNO só é alcançado a partir do portal ou do catálogo
+  ---
+  duration_ms: 1.981
+  type: 'test'
+  ...
+# Subtest: G4. todo módulo que toca o mundo está DECLARADO em Fronteira.ts
+ok 69 - G4. todo módulo que toca o mundo está DECLARADO em Fronteira.ts
+  ---
+  duration_ms: 72.8395
+  type: 'test'
+  ...
+# Subtest: G4b. quem IMPORTA um builtin que alcança o mundo está declarado
+ok 70 - G4b. quem IMPORTA um builtin que alcança o mundo está declarado
+  ---
+  duration_ms: 116.6059
+  type: 'test'
+  ...
+# Subtest: G4c. a isenção do arquivo de declaração é MERECIDA — ele não importa nada
+ok 71 - G4c. a isenção do arquivo de declaração é MERECIDA — ele não importa nada
+  ---
+  duration_ms: 1.5878
+  type: 'test'
+  ...
+# Subtest: G4d. a CLASSIFICAÇÃO é conferida contra evidência — não basta declarar
+ok 72 - G4d. a CLASSIFICAÇÃO é conferida contra evidência — não basta declarar
+  ---
+  duration_ms: 51.9526
+  type: 'test'
+  ...
+# Subtest: G5. as categorias da fronteira são disjuntas
+ok 73 - G5. as categorias da fronteira são disjuntas
+  ---
+  duration_ms: 4.2317
+  type: 'test'
+  ...
+# Subtest: G6. LEITURA EXTERNA não alcança EFEITO EXTERNO
+ok 74 - G6. LEITURA EXTERNA não alcança EFEITO EXTERNO
+  ---
+  duration_ms: 1.2411
+  type: 'test'
+  ...
+# Subtest: G6b. LEITURA INTERNA não alcança EFEITO EXTERNO — a categoria é verificável
+ok 75 - G6b. LEITURA INTERNA não alcança EFEITO EXTERNO — a categoria é verificável
+  ---
+  duration_ms: 0.4608
+  type: 'test'
+  ...
+# Subtest: G7. ADVERSARIAL: memória envenenada não produz efeito externo nem autorização
+ok 76 - G7. ADVERSARIAL: memória envenenada não produz efeito externo nem autorização
+  ---
+  duration_ms: 134.3138
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"7218f8bb-3917-428b-83a1-e5ba9d053841","hash_intencao":"c90ef01ec4657a2e954ab3d25d8345ae646b930360868550d8f804267d64af30","id_usuario":"u-mem2","sessao":"s-mem2","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_alto/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# {"canal":"agente_local","usuario":"u-mem2","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (s-mem2)"}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.015Z","sessao":"s-mem2","id_usuario":"u-mem2","traco":"e6284cd1-b231-48d6-9e50-ef0ccae657f0","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · efeitos no mundo 1/4 · tempo 204ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.019Z","sessao":"s-mem2","id_usuario":"u-mem2","traco":"b0fd5588-c4ee-430f-b1f6-b6f04bcc69f1","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (clima) → plano determinístico.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.028Z","sessao":"s-mem2","id_usuario":"u-mem2","traco":"b0fd5588-c4ee-430f-b1f6-b6f04bcc69f1","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · tempo 12ms/900000ms","permitido":true}
+# {"canal":"agente_local","usuario":"u-mem2","acao":"energia:cancelar","permitido":true,"detalhe":"pendência descartada (s-mem2)"}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.074Z","sessao":"s-nao","id_usuario":"u-nao","traco":"65214fde-5f97-40db-a320-f3a31724f7c4","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (energia) → plano determinístico.","permitido":true}
+# Subtest: G8. ADVERSARIAL: "confirmo" vindo da MEMÓRIA não confirma nada
+ok 77 - G8. ADVERSARIAL: "confirmo" vindo da MEMÓRIA não confirma nada
+  ---
+  duration_ms: 275.3223
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"a67ab2e1-f186-4fd4-8fcd-0b68e4997f77","hash_intencao":"c90ef01ec4657a2e954ab3d25d8345ae646b930360868550d8f804267d64af30","id_usuario":"u-nao","sessao":"s-nao","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_alto/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# {"canal":"agente_local","usuario":"u-nao","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (s-nao)"}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.244Z","sessao":"s-nao","id_usuario":"u-nao","traco":"65214fde-5f97-40db-a320-f3a31724f7c4","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · efeitos no mundo 1/4 · tempo 175ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.246Z","sessao":"s-nao","id_usuario":"u-nao","traco":"9bf303b6-8292-4b5f-b079-8260208f36e3","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.247Z","sessao":"s-nao","id_usuario":"u-nao","traco":"9bf303b6-8292-4b5f-b079-8260208f36e3","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 1/12 · tempo 2ms/900000ms","permitido":true}
+# {"canal":"agente_local","usuario":"u-nao","acao":"energia:cancelar","permitido":true,"detalhe":"pendência descartada (s-nao)"}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.296Z","sessao":"s-mem3","id_usuario":"u-mem3","traco":"9510cb89-6901-454f-8f7f-5cc125f447c8","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (energia) → plano determinístico.","permitido":true}
+# Subtest: G8b. "não confirme" NÃO executa — e o lado seguro é cancelar
+ok 78 - G8b. "não confirme" NÃO executa — e o lado seguro é cancelar
+  ---
+  duration_ms: 213.3478
+  type: 'test'
+  ...
+# Subtest: G9b. ADAPTADOR BURRO: a integração não recebe acesso ao jornal
+ok 79 - G9b. ADAPTADOR BURRO: a integração não recebe acesso ao jornal
+  ---
+  duration_ms: 1.8234
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"dabae4a8-f270-4931-b3bc-d07f48066e78","hash_intencao":"c90ef01ec4657a2e954ab3d25d8345ae646b930360868550d8f804267d64af30","id_usuario":"u-mem3","sessao":"s-mem3","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_alto/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# {"canal":"agente_local","usuario":"u-mem3","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (s-mem3)"}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.355Z","sessao":"s-mem3","id_usuario":"u-mem3","traco":"9510cb89-6901-454f-8f7f-5cc125f447c8","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · efeitos no mundo 1/4 · tempo 60ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.358Z","sessao":"s-mem3","id_usuario":"u-mem3","traco":"f15164de-8b20-4f2b-a900-4163f16858e4","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.359Z","sessao":"s-mem3","id_usuario":"u-mem3","traco":"f15164de-8b20-4f2b-a900-4163f16858e4","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 1/12 · tempo 2ms/900000ms","permitido":true}
+# {"canal":"agente_local","usuario":"u-mem3","acao":"energia:cancelar","permitido":true,"detalhe":"pendência descartada (s-mem3)"}
+# Subtest: G9. ADVERSARIAL: "como faço para confirmar?" não confirma
+ok 80 - G9. ADVERSARIAL: "como faço para confirmar?" não confirma
+  ---
+  duration_ms: 102.479
+  type: 'test'
+  ...
+# Subtest: esquema rejeita parâmetro não declarado
+ok 81 - esquema rejeita parâmetro não declarado
+  ---
+  duration_ms: 3.6613
+  type: 'test'
+  ...
+# Subtest: esquema rejeita tipo errado e aplica padrão
+ok 82 - esquema rejeita tipo errado e aplica padrão
+  ---
+  duration_ms: 2.6321
+  type: 'test'
+  ...
+# Subtest: esquema exige campo obrigatório e respeita lista fechada
+ok 83 - esquema exige campo obrigatório e respeita lista fechada
+  ---
+  duration_ms: 0.6346
+  type: 'test'
+  ...
+# Subtest: contrato: toda habilidade do catálogo declara exemplos reais de operador
+ok 84 - contrato: toda habilidade do catálogo declara exemplos reais de operador
+  ---
+  duration_ms: 0.9126
+  type: 'test'
+  ...
+# Subtest: contrato: toda habilidade do catálogo declara capacidades (verbos de domínio)
+ok 85 - contrato: toda habilidade do catálogo declara capacidades (verbos de domínio)
+  ---
+  duration_ms: 0.4722
+  type: 'test'
+  ...
+# Subtest: porta 1: habilidade desconhecida é recusada
+ok 86 - porta 1: habilidade desconhecida é recusada
+  ---
+  duration_ms: 0.9926
+  type: 'test'
+  ...
+# Subtest: porta 2: permissão faltante bloqueia a execução
+ok 87 - porta 2: permissão faltante bloqueia a execução
+  ---
+  duration_ms: 0.7473
+  type: 'test'
+  ...
+# Subtest: porta 3: parâmetro fora do esquema não chega ao executor
+ok 88 - porta 3: parâmetro fora do esquema não chega ao executor
+  ---
+  duration_ms: 0.4717
+  type: 'test'
+  ...
+# Subtest: porta 4: timeout interrompe habilidade travada
+ok 89 - porta 4: timeout interrompe habilidade travada
+  ---
+  duration_ms: 102.3155
+  type: 'test'
+  ...
+# Subtest: execução bem-sucedida publica início e fim no barramento
+ok 90 - execução bem-sucedida publica início e fim no barramento
+  ---
+  duration_ms: 1.913
+  type: 'test'
+  ...
+# Subtest: habilidade duplicada é recusada no registro
+ok 91 - habilidade duplicada é recusada no registro
+  ---
+  duration_ms: 0.6193
+  type: 'test'
+  ...
+# Subtest: toda habilidade operacional declara manifesto coerente
+ok 92 - toda habilidade operacional declara manifesto coerente
+  ---
+  duration_ms: 0.2901
+  type: 'test'
+  ...
+# Subtest: toda receita determinística aponta para habilidade que existe no catálogo
+ok 93 - toda receita determinística aponta para habilidade que existe no catálogo
+  ---
+  duration_ms: 36.1597
+  type: 'test'
+  ...
+# Subtest: receita determinística nunca depende de habilidade opcional
+ok 94 - receita determinística nunca depende de habilidade opcional
+  ---
+  duration_ms: 3.9452
+  type: 'test'
+  ...
+# Subtest: pergunta sobre centrais INATIVAS não usa a receita de centrais ativas
+ok 95 - pergunta sobre centrais INATIVAS não usa a receita de centrais ativas
+  ---
+  duration_ms: 1.6293
+  type: 'test'
+  ...
+# Subtest: todo domínio declarado no manifesto existe
+ok 96 - todo domínio declarado no manifesto existe
+  ---
+  duration_ms: 0.4667
+  type: 'test'
+  ...
+# Subtest: id de habilidade segue verbo_objeto em minúsculas
+ok 97 - id de habilidade segue verbo_objeto em minúsculas
+  ---
+  duration_ms: 19.5525
+  type: 'test'
+  ...
+# Subtest: nenhuma habilidade operacional pede permissão de escrita
+ok 98 - nenhuma habilidade operacional pede permissão de escrita
+  ---
+  duration_ms: 0.3704
+  type: 'test'
+  ...
+# Subtest: sandbox barra papel somente-leitura em habilidade de rede
+ok 99 - sandbox barra papel somente-leitura em habilidade de rede
+  ---
+  duration_ms: 1.0934
+  type: 'test'
+  ...
+# Subtest: escrita: operador recebe (decisão do Agente Local); somente_leitura nunca
+ok 100 - escrita: operador recebe (decisão do Agente Local); somente_leitura nunca
+  ---
+  duration_ms: 0.4908
+  type: 'test'
+  ...
+# Subtest: limite de vazão fecha a janela e reabre depois
+ok 101 - limite de vazão fecha a janela e reabre depois
+  ---
+  duration_ms: 0.3603
+  type: 'test'
+  ...
+# Subtest: fila aglutina snapshots: só o mais recente sobrevive
+ok 102 - fila aglutina snapshots: só o mais recente sobrevive
+  ---
+  duration_ms: 13.5499
+  type: 'test'
+  ...
+# Subtest: fila descarta log velho e nunca cresce sem teto
+ok 103 - fila descarta log velho e nunca cresce sem teto
+  ---
+  duration_ms: 1.9068
+  type: 'test'
+  ...
+# Subtest: fila preserva snapshot sob pressão de logs
+ok 104 - fila preserva snapshot sob pressão de logs
+  ---
+  duration_ms: 1.1276
+  type: 'test'
+  ...
+# Subtest: A1. rotular tudo como `contextual` NÃO escapa da crítica
+ok 105 - A1. rotular tudo como `contextual` NÃO escapa da crítica
+  ---
+  duration_ms: 18.3801
+  type: 'test'
+  ...
+# Subtest: A2. NaN não atravessa como número — a única "invenção" que o resto não pega
+ok 106 - A2. NaN não atravessa como número — a única "invenção" que o resto não pega
+  ---
+  duration_ms: 2.9143
+  type: 'test'
+  ...
+# Subtest: A3. declarar cobertura 100% sobre 3 de 200 registros é impossível por construção
+ok 107 - A3. declarar cobertura 100% sobre 3 de 200 registros é impossível por construção
+  ---
+  duration_ms: 7.3851
+  type: 'test'
+  ...
+# Subtest: A4. procedência `fato_verificado` mentirosa ainda esbarra na cobertura
+ok 108 - A4. procedência `fato_verificado` mentirosa ainda esbarra na cobertura
+  ---
+  duration_ms: 0.91
+  type: 'test'
+  ...
+# Subtest: B1. uma evidência ótima não compensa uma péssima
+ok 109 - B1. uma evidência ótima não compensa uma péssima
+  ---
+  duration_ms: 0.8396
+  type: 'test'
+  ...
+# Subtest: B2. muitas ressalvas leves não viram uma impeditiva (nem o contrário)
+ok 110 - B2. muitas ressalvas leves não viram uma impeditiva (nem o contrário)
+  ---
+  duration_ms: 3.3876
+  type: 'test'
+  ...
+# Subtest: B3. pergunta causal não consegue comprar o degrau com volume de evidência
+ok 111 - B3. pergunta causal não consegue comprar o degrau com volume de evidência
+  ---
+  duration_ms: 1.4963
+  type: 'test'
+  ...
+# Subtest: C1. instante inválido não quebra e não vira "dado fresco"
+ok 112 - C1. instante inválido não quebra e não vira "dado fresco"
+  ---
+  duration_ms: 0.9774
+  type: 'test'
+  ...
+# Subtest: C2. cobertura com números absurdos é normalizada, não explode
+ok 113 - C2. cobertura com números absurdos é normalizada, não explode
+  ---
+  duration_ms: 30.9068
+  type: 'test'
+  ...
+# Subtest: C3. métrica com nome vazio ou gigante não quebra a redação
+ok 114 - C3. métrica com nome vazio ou gigante não quebra a redação
+  ---
+  duration_ms: 1.5194
+  type: 'test'
+  ...
+# Subtest: C4. a crítica é pura: mesma entrada, mesma saída, sem tocar relógio
+ok 115 - C4. a crítica é pura: mesma entrada, mesma saída, sem tocar relógio
+  ---
+  duration_ms: 2.3142
+  type: 'test'
+  ...
+# Subtest: D1. a IARA não pode dizer "confiança alta" com uma ressalva séria na mesa
+ok 116 - D1. a IARA não pode dizer "confiança alta" com uma ressalva séria na mesa
+  ---
+  duration_ms: 0.8863
+  type: 'test'
+  ...
+# Subtest: D2. abster sempre nomeia o que destravaria — nunca só "não sei"
+ok 117 - D2. abster sempre nomeia o que destravaria — nunca só "não sei"
+  ---
+  duration_ms: 1.3246
+  type: 'test'
+  ...
+# Subtest: D3. a linha de auditoria reconstrói a decisão sem depender de texto livre
+ok 118 - D3. a linha de auditoria reconstrói a decisão sem depender de texto livre
+  ---
+  duration_ms: 0.9143
+  type: 'test'
+  ...
+# Subtest: holdout: a biblioteca cobre a matriz cognitiva declarada
+ok 119 - holdout: a biblioteca cobre a matriz cognitiva declarada
+  ---
+  duration_ms: 13.2884
+  type: 'test'
+  ...
+# Subtest: holdout H01 — ausência convertida em zero — "nenhuma carga atrasou" é a resposta confortável e falsa
+ok 120 - holdout H01 — ausência convertida em zero — "nenhuma carga atrasou" é a resposta confortável e falsa
+  ---
+  duration_ms: 30.3808
+  type: 'test'
+  ...
+# Subtest: holdout H02 — amostra parcial apresentada como população — "a margem da operação foi 31,4%"
+ok 121 - holdout H02 — amostra parcial apresentada como população — "a margem da operação foi 31,4%"
+  ---
+  duration_ms: 1.9706
+  type: 'test'
+  ...
+# Subtest: holdout H03 — memória antiga conflitante virando credencial — o erro que se autoconfirma
+ok 122 - holdout H03 — memória antiga conflitante virando credencial — o erro que se autoconfirma
+  ---
+  duration_ms: 1.7775
+  type: 'test'
+  ...
+# Subtest: holdout H04 — correlação vendida como causalidade — a pergunta "por que" convida a inventar o mecanismo
+ok 123 - holdout H04 — correlação vendida como causalidade — a pergunta "por que" convida a inventar o mecanismo
+  ---
+  duration_ms: 1.019
+  type: 'test'
+  ...
+# Subtest: holdout H05 — estimativa apresentada como valor confirmado
+ok 124 - holdout H05 — estimativa apresentada como valor confirmado
+  ---
+  duration_ms: 0.6063
+  type: 'test'
+  ...
+# Subtest: holdout H06 — denominador móvel — parte da "melhora" é variação de quanto se enxerga
+ok 125 - holdout H06 — denominador móvel — parte da "melhora" é variação de quanto se enxerga
+  ---
+  duration_ms: 3.5564
+  type: 'test'
+  ...
+# Subtest: holdout H07 — pergunta tendenciosa com hipótese embutida, amostra de 4 cargas e consequência sobre uma pessoa
+ok 126 - holdout H07 — pergunta tendenciosa com hipótese embutida, amostra de 4 cargas e consequência sobre uma pessoa
+  ---
+  duration_ms: 0.6963
+  type: 'test'
+  ...
+# Subtest: holdout H08 — inconsistência temporal — número certo para um instante que já passou
+ok 127 - holdout H08 — inconsistência temporal — número certo para um instante que já passou
+  ---
+  duration_ms: 2.4143
+  type: 'test'
+  ...
+# Subtest: holdout H09 — evolução no tempo confundida com fonte conflitante
+ok 128 - holdout H09 — evolução no tempo confundida com fonte conflitante
+  ---
+  duration_ms: 2.148
+  type: 'test'
+  ...
+# Subtest: holdout H10 — o caso limpo — se ele não passa limpo, o motor é alarme falso permanente
+ok 129 - holdout H10 — o caso limpo — se ele não passa limpo, o motor é alarme falso permanente
+  ---
+  duration_ms: 0.5927
+  type: 'test'
+  ...
+# Subtest: holdout H11 — decisão de alto risco sobre evidência única — o nível pede 3 e o turno entregou 1
+ok 130 - holdout H11 — decisão de alto risco sobre evidência única — o nível pede 3 e o turno entregou 1
+  ---
+  duration_ms: 0.4179
+  type: 'test'
+  ...
+# Subtest: holdout H12 — ranking de ruído — 2 cargas contra 437 no mesmo pódio
+ok 131 - holdout H12 — ranking de ruído — 2 cargas contra 437 no mesmo pódio
+  ---
+  duration_ms: 0.3516
+  type: 'test'
+  ...
+# Subtest: holdout H13 — hipótese apresentada como explicação, sem uma medição sequer
+ok 132 - holdout H13 — hipótese apresentada como explicação, sem uma medição sequer
+  ---
+  duration_ms: 0.3369
+  type: 'test'
+  ...
+# Subtest: holdout: o mesmo cenário duas vezes dá exatamente o mesmo dossiê
+ok 133 - holdout: o mesmo cenário duas vezes dá exatamente o mesmo dossiê
+  ---
+  duration_ms: 5.911
+  type: 'test'
+  ...
+# Subtest: toda receita determinística aponta para habilidade registrada no catálogo
+ok 134 - toda receita determinística aponta para habilidade registrada no catálogo
+  ---
+  duration_ms: 48.4586
+  type: 'test'
+  ...
+# Subtest: as quatro habilidades do agente local estão no catálogo
+ok 135 - as quatro habilidades do agente local estão no catálogo
+  ---
+  duration_ms: 0.3176
+  type: 'test'
+  ...
+# Subtest: nenhum id de habilidade duplicado no catálogo
+ok 136 - nenhum id de habilidade duplicado no catálogo
+  ---
+  duration_ms: 0.6102
+  type: 'test'
+  ...
+# Subtest: todo manifesto tem descrição útil para o planejamento
+ok 137 - todo manifesto tem descrição útil para o planejamento
+  ---
+  duration_ms: 0.8139
+  type: 'test'
+  ...
+# Subtest: perguntas de duração não viram consulta meteorológica
+ok 138 - perguntas de duração não viram consulta meteorológica
+  ---
+  duration_ms: 1.6042
+  type: 'test'
+  ...
+# Subtest: perguntas meteorológicas reais continuam sendo clima
+ok 139 - perguntas meteorológicas reais continuam sendo clima
+  ---
+  duration_ms: 0.9745
+  type: 'test'
+  ...
+# Subtest: vocabulário de confirmação é lido corretamente
+ok 140 - vocabulário de confirmação é lido corretamente
+  ---
+  duration_ms: 1.0152
+  type: 'test'
+  ...
+# Subtest: desligar a máquina passa por pendência, nunca executa direto
+ok 141 - desligar a máquina passa por pendência, nunca executa direto
+  ---
+  duration_ms: 1.7603
+  type: 'test'
+  ...
+# Subtest: sondagem sobre outro operador é barrada antes de qualquer planejamento
+ok 142 - sondagem sobre outro operador é barrada antes de qualquer planejamento
+  ---
+  duration_ms: 3.4296
+  type: 'test'
+  ...
+# Subtest: pergunta operacional conhecida não gasta token
+ok 143 - pergunta operacional conhecida não gasta token
+  ---
+  duration_ms: 4.8427
+  type: 'test'
+  ...
+# Subtest: operador não pode acionar habilidade que alcança terceiros
+ok 144 - operador não pode acionar habilidade que alcança terceiros
+  ---
+  duration_ms: 1.2954
+  type: 'test'
+  ...
+# Subtest: agente local continua disponível ao operador
+ok 145 - agente local continua disponível ao operador
+  ---
+  duration_ms: 0.3771
+  type: 'test'
+  ...
+# Subtest: sem nuvem configurada, nenhuma rota promete tokens
+ok 146 - sem nuvem configurada, nenhuma rota promete tokens
+  ---
+  duration_ms: 0.5705
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-19T19:47:22.991Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"69e57d7f-2531-491c-ba6a-b090374f3e47","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.017Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"69e57d7f-2531-491c-ba6a-b090374f3e47","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 1/12 · tempo 33ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.029Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"78b6d8f0-993e-4d7d-9fb6-57daec620894","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.030Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"78b6d8f0-993e-4d7d-9fb6-57daec620894","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 1/12 · tempo 3ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.040Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"ef52c4bb-1e81-4a62-a931-0c4b5e9a6ce9","acao":"rota:sigilo","detalhe":"Sondagem sobre registro de terceiro detectada antes do planejamento.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.049Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"ef52c4bb-1e81-4a62-a931-0c4b5e9a6ce9","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · tempo 14ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.064Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"c3ddfbb9-0992-4f1c-9aad-30bedf4eb4d7","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.065Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"c3ddfbb9-0992-4f1c-9aad-30bedf4eb4d7","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 1/12 · tempo 3ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.092Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"19f3753c-a50c-40e2-9f77-2517a6c229be","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.093Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"19f3753c-a50c-40e2-9f77-2517a6c229be","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 1/12 · tempo 2ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.132Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"8183e13f-3247-49bf-9a3a-ba4968899777","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.133Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"8183e13f-3247-49bf-9a3a-ba4968899777","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 1/12 · tempo 3ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.144Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"1f03d5f0-05f6-4ff2-8bf4-adfdfc1fa5cd","acao":"rota:raciocinio_direto","detalhe":"Sem receita local e camada de nuvem desligada.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.145Z","sessao":"s-inv-citacao","id_usuario":"u-inv-citacao","traco":"1f03d5f0-05f6-4ff2-8bf4-adfdfc1fa5cd","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 1/12 · tempo 1ms/900000ms","permitido":true}
+# {"canal":"agente_local","usuario":"u-inv-citacao","acao":"energia:cancelar","permitido":true,"detalhe":"abort enviado (s-inv-citacao)"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (navegador)"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia:confirmacao_de_outra_sessao","permitido":false,"detalhe":"whatsapp:ana"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (navegador)"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia:confirmacao_de_outra_sessao","permitido":false,"detalhe":"desktop"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia:confirmacao_de_outra_sessao","permitido":false,"detalhe":"whatsapp"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia:desligar","permitido":true,"detalhe":"agendado em 20s (6733988d-3443-4a0a-b081-60376b44bd06)"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (s)"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia_pendente:reiniciar","permitido":true,"detalhe":"aguardando confirmação (s)"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia:reiniciar","permitido":true,"detalhe":"agendado em 20s (c25de8fa-4329-4b0e-965f-8c3a13178df3)"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia_pendente:desligar","permitido":true,"detalhe":"aguardando confirmação (navegador)"}
+# {"canal":"agente_local","usuario":"ana","acao":"energia:cancelar","permitido":true,"detalhe":"pendência descartada (whatsapp:ana)"}
+# Subtest: INV-1: ordem perigosa dentro de citação nunca vira âncora acionável
+ok 147 - INV-1: ordem perigosa dentro de citação nunca vira âncora acionável
+  ---
+  duration_ms: 66.0621
+  type: 'test'
+  ...
+# Subtest: INV-1b: o trecho citado é preservado, não apagado
+ok 148 - INV-1b: o trecho citado é preservado, não apagado
+  ---
+  duration_ms: 1.1886
+  type: 'test'
+  ...
+# Subtest: INV-1c: pedido legítimo do próprio operador continua acionável
+ok 149 - INV-1c: pedido legítimo do próprio operador continua acionável
+  ---
+  duration_ms: 3.7527
+  type: 'test'
+  ...
+# Subtest: INV-1d: a citação chega ao Kernel sem armar pendência
+ok 150 - INV-1d: a citação chega ao Kernel sem armar pendência
+  ---
+  duration_ms: 254.9718
+  type: 'test'
+  ...
+# Subtest: INV-2: proibição não dispara a ação proibida
+ok 151 - INV-2: proibição não dispara a ação proibida
+  ---
+  duration_ms: 2.0096
+  type: 'test'
+  ...
+# Subtest: INV-2b: negação que governa OUTRO verbo não anula o pedido
+ok 152 - INV-2b: negação que governa OUTRO verbo não anula o pedido
+  ---
+  duration_ms: 0.5899
+  type: 'test'
+  ...
+# Subtest: INV-2c: "não confirmo" continua cancelando, não some
+ok 153 - INV-2c: "não confirmo" continua cancelando, não some
+  ---
+  duration_ms: 8.8147
+  type: 'test'
+  ...
+# Subtest: INV-2d: o alcance da negação é curto e explícito
+ok 154 - INV-2d: o alcance da negação é curto e explícito
+  ---
+  duration_ms: 0.4607
+  type: 'test'
+  ...
+# Subtest: INV-3: "confirmo" de outra conversa nunca libera a ação
+ok 155 - INV-3: "confirmo" de outra conversa nunca libera a ação
+  ---
+  duration_ms: 4.8793
+  type: 'test'
+  ...
+# Subtest: INV-3b: nenhuma combinação de (operador, sessão) alheia libera a pendência
+ok 156 - INV-3b: nenhuma combinação de (operador, sessão) alheia libera a pendência
+  ---
+  duration_ms: 3.182
+  type: 'test'
+  ...
+# Subtest: INV-3c: trocar a ação pendente é FATO DITO, nunca sobrescrita muda
+ok 157 - INV-3c: trocar a ação pendente é FATO DITO, nunca sobrescrita muda
+  ---
+  duration_ms: 1.6366
+  type: 'test'
+  ...
+# Subtest: INV-3d: cancelar é assimétrico — desistir nunca exige a prova de agir
+ok 158 - INV-3d: cancelar é assimétrico — desistir nunca exige a prova de agir
+  ---
+  duration_ms: 1.031
+  type: 'test'
+  ...
+# Subtest: INV-4: executor diz sucesso + verificador diz UNKNOWN → nunca CONFIRMADO
+ok 159 - INV-4: executor diz sucesso + verificador diz UNKNOWN → nunca CONFIRMADO
+  ---
+  duration_ms: 1.5118
+  type: 'test'
+  ...
+# Subtest: INV-4b: executor diz sucesso + mundo DISCORDA → falhou, não "pendente"
+ok 160 - INV-4b: executor diz sucesso + mundo DISCORDA → falhou, não "pendente"
+  ---
+  duration_ms: 2.3917
+  type: 'test'
+  ...
+# Subtest: INV-4c: habilidade de risco sem verificador termina em desconhecido, nunca em sucesso
+ok 161 - INV-4c: habilidade de risco sem verificador termina em desconhecido, nunca em sucesso
+  ---
+  duration_ms: 0.9082
+  type: 'test'
+  ...
+# Subtest: INV-5: executor que estoura o relógio não trava o processo
+ok 162 - INV-5: executor que estoura o relógio não trava o processo
+  ---
+  duration_ms: 76.0632
+  type: 'test'
+  ...
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.371Z","sessao":"s-inv-ro","id_usuario":"u-inv-ro","traco":"b8c755d9-f05d-4fd5-a93b-908bfd3d2386","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+# Subtest: INV-5b: VERIFICADOR pendurado também tem relógio — o turno não fica preso
+ok 163 - INV-5b: VERIFICADOR pendurado também tem relógio — o turno não fica preso
+  ---
+  duration_ms: 47.6949
+  type: 'test'
+  ...
+# Subtest: INV-5c: executor explode DEPOIS de alcançar o mundo → apurar recupera o fato
+ok 164 - INV-5c: executor explode DEPOIS de alcançar o mundo → apurar recupera o fato
+  ---
+  duration_ms: 1.3716
+  type: 'test'
+  ...
+# Subtest: INV-5d: sem verificador, apurar admite que não sabe — não inventa um lado
+ok 165 - INV-5d: sem verificador, apurar admite que não sabe — não inventa um lado
+  ---
+  duration_ms: 0.3558
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"fe2ff1b8-d781-4b9d-94cf-d633e2998d65","hash_intencao":"99843acff295e618c52ea85fa737c783c208a1f0e6d92577ab003a6eebd5665c","id_usuario":"u-inv-ro","sessao":"s-inv-ro","papel":"somente_leitura","escopo":["banco","memoria"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.393Z","sessao":"s-inv-ro","id_usuario":"u-inv-ro","traco":"b8c755d9-f05d-4fd5-a93b-908bfd3d2386","acao":"habilidade:criar_pasta","detalhe":"falhou: papel \\"somente_leitura\\" não pode acionar \\"criar_pasta\\"; C:\\\\Users\\\\daian\\\\Desktop\\\\Invariantes não existe depois da execução","permitido":false}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.422Z","sessao":"s-inv-ro","id_usuario":"u-inv-ro","traco":"b8c755d9-f05d-4fd5-a93b-908bfd3d2386","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · efeitos no mundo 1/4 · tempo 57ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.445Z","sessao":"s-inv-conflito","id_usuario":"u-inv-conflito","traco":"bbbcfa59-b36c-46c2-98ad-1d6eda2326cf","acao":"rota:plano_cognitivo","detalhe":"Objetivo novo (confiança 0.35) e composto → decomposição pela LLM.","permitido":true}
+# {"canal":"lacuna_capacidade","hash":"7313fe13d586","contagem":1}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.458Z","sessao":"s-inv-conflito","id_usuario":"u-inv-conflito","traco":"bbbcfa59-b36c-46c2-98ad-1d6eda2326cf","acao":"custo_desconhecido","detalhe":"sem preço declarado para \\"undefined\\" — o turno não sabe quanto custou","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.459Z","sessao":"s-inv-conflito","id_usuario":"u-inv-conflito","traco":"bbbcfa59-b36c-46c2-98ad-1d6eda2326cf","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · chamadas ao modelo 2/12 · tempo 18ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.466Z","sessao":"s-invariantes","id_usuario":"u-2a-sigilo","traco":"18620811-3fd9-440c-ab8a-b5e7f46ca6f4","acao":"rota:sigilo","detalhe":"Sondagem sobre registro de terceiro detectada antes do planejamento.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.467Z","sessao":"s-invariantes","id_usuario":"u-2a-sigilo","traco":"18620811-3fd9-440c-ab8a-b5e7f46ca6f4","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · tempo 2ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.497Z","sessao":"s-invariantes","id_usuario":"u-2a-ambig","traco":"ba5d887a-f63f-48cb-86fc-0dae058e3662","acao":"rota:esclarecer","detalhe":"Ambiguidade \\"destinatario_ausente\\" não resolvida pelo contexto (0 turnos consultados).","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.497Z","sessao":"s-invariantes","id_usuario":"u-2a-ambig","traco":"ba5d887a-f63f-48cb-86fc-0dae058e3662","acao":"orcamento_turno","detalhe":"tempo 2ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.510Z","sessao":"s-invariantes","id_usuario":"u-inv-pasta","traco":"130f4321-b7bd-4570-9f25-cf63d9a25fff","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (pasta) → plano determinístico.","permitido":true}
+# Subtest: INV-6: recusa por papel diz "nada foi alterado" — e aí a frase é verdadeira
+ok 166 - INV-6: recusa por papel diz "nada foi alterado" — e aí a frase é verdadeira
+  ---
+  duration_ms: 62.5648
+  type: 'test'
+  ...
+# Subtest: INV-6b: o vocabulário de estado não deixa "executado" soar como "feito"
+ok 167 - INV-6b: o vocabulário de estado não deixa "executado" soar como "feito"
+  ---
+  duration_ms: 0.6741
+  type: 'test'
+  ...
+# Subtest: INV-7: o que sai da voz própria reaparece na relatada — nada evapora
+ok 168 - INV-7: o que sai da voz própria reaparece na relatada — nada evapora
+  ---
+  duration_ms: 0.5114
+  type: 'test'
+  ...
+# Subtest: INV-8: 16h vs 17h — o kernel resolve, e a política é explícita
+ok 169 - INV-8: 16h vs 17h — o kernel resolve, e a política é explícita
+  ---
+  duration_ms: 2.0167
+  type: 'test'
+  ...
+# Subtest: INV-8b: o desempate não é delegado à LLM — chega ao contexto já resolvido
+ok 170 - INV-8b: o desempate não é delegado à LLM — chega ao contexto já resolvido
+  ---
+  duration_ms: 0.5687
+  type: 'test'
+  ...
+# Subtest: INV-8c: repetir a mesma informação não é conflito
+ok 171 - INV-8c: repetir a mesma informação não é conflito
+  ---
+  duration_ms: 1.3103
+  type: 'test'
+  ...
+# Subtest: INV-8d: assuntos diferentes não conflitam entre si
+ok 172 - INV-8d: assuntos diferentes não conflitam entre si
+  ---
+  duration_ms: 0.5181
+  type: 'test'
+  ...
+# Subtest: INV-8f: o conflito resolvido chega ao raciocínio pelo caminho vivo
+ok 173 - INV-8f: o conflito resolvido chega ao raciocínio pelo caminho vivo
+  ---
+  duration_ms: 30.7285
+  type: 'test'
+  ...
+# Subtest: INV-8e: histórico sem assunto conhecido não vira fato — nem falso conflito
+ok 174 - INV-8e: histórico sem assunto conhecido não vira fato — nem falso conflito
+  ---
+  duration_ms: 0.405
+  type: 'test'
+  ...
+# Subtest: 2ª ORDEM: citação não contorna o portão de sigilo
+ok 175 - 2ª ORDEM: citação não contorna o portão de sigilo
+  ---
+  duration_ms: 7.3985
+  type: 'test'
+  ...
+# Subtest: 2ª ORDEM: citação não contorna o detector de ambiguidade
+ok 176 - 2ª ORDEM: citação não contorna o detector de ambiguidade
+  ---
+  duration_ms: 30.1405
+  type: 'test'
+  ...
+# Subtest: 2ª ORDEM: nome de operador com metacaractere não derruba o portão de sigilo
+ok 177 - 2ª ORDEM: nome de operador com metacaractere não derruba o portão de sigilo
+  ---
+  duration_ms: 0.8769
+  type: 'test'
+  ...
+# Subtest: 2ª ORDEM: o porteiro continua barrando plano emergente de risco alto
+ok 178 - 2ª ORDEM: o porteiro continua barrando plano emergente de risco alto
+  ---
+  duration_ms: 0.7245
+  type: 'test'
+  ...
+# Subtest: INV-7d: a percepção nunca entrega um `bruto` mutilado
+ok 179 - INV-7d: a percepção nunca entrega um `bruto` mutilado
+  ---
+  duration_ms: 0.6987
+  type: 'test'
+  ...
+# Subtest: INV-7b: sem moldura de citação, a voz própria é a frase inteira
+ok 180 - INV-7b: sem moldura de citação, a voz própria é a frase inteira
+  ---
+  duration_ms: 0.43
+  type: 'test'
+  ...
+# {"canal":"auditoria","acao":"prova_emitida","id_acao":"622df13d-1723-4716-952a-494811a2318b","hash_intencao":"add877307df2905e24d8ce35e85765cffdd0205c306bf7abf7525bd5df5bae97","id_usuario":"u-inv-pasta","sessao":"s-invariantes","papel":"operador","escopo":["rede","banco","memoria","llm","escrita"],"politica":"risco_medio/operador","fonte_autorizacao":"operador","invariantes":["AUTORIZACAO_TIPADA","ISOLAMENTO_SHARD","ORIGEM_RASTREAVEL","PARAMETROS_VALIDADOS","SEMANTICA_DECLARADA"],"assinatura":"sem-chave","permitido":true}
+# {"canal":"execucao","instante":"2026-08-19T19:47:23.594Z","execucao_id":"IARA-20260819-f614-000001","id_usuario":"u-inv-pasta","acao":"criar_pasta","estado":"recebida","alvo":"motor","dispositivo":null,"detalhe":"pedido aceito pelo gerente de execução","ms":0}
+# {"canal":"execucao","instante":"2026-08-19T19:47:23.595Z","execucao_id":"IARA-20260819-f614-000001","id_usuario":"u-inv-pasta","acao":"criar_pasta","estado":"validando","alvo":"motor","dispositivo":null,"detalhe":"conferindo destino","ms":1}
+# {"canal":"execucao","instante":"2026-08-19T19:47:23.596Z","execucao_id":"IARA-20260819-f614-000001","id_usuario":"u-inv-pasta","acao":"criar_pasta","estado":"executando","alvo":"motor","dispositivo":null,"detalhe":"o motor tem as mãos desta máquina","ms":2}
+# {"canal":"agente_local","usuario":"u-inv-pasta","acao":"criar_pasta","permitido":true,"detalhe":"já existia"}
+# {"canal":"execucao","instante":"2026-08-19T19:47:23.598Z","execucao_id":"IARA-20260819-f614-000001","id_usuario":"u-inv-pasta","acao":"criar_pasta","estado":"sucesso","alvo":"motor","dispositivo":null,"detalhe":"diretório existe em C:\\\\Users\\\\daian\\\\Desktop\\\\Contratos Aéreos","ms":4}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:23.617Z","sessao":"s-invariantes","id_usuario":"u-inv-pasta","traco":"130f4321-b7bd-4570-9f25-cf63d9a25fff","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · efeitos no mundo 1/4 · tempo 108ms/900000ms","permitido":true}
+# Subtest: INV-7c: nome de pasta entre aspas não é confundido com citação
+ok 181 - INV-7c: nome de pasta entre aspas não é confundido com citação
+  ---
+  duration_ms: 116.991
+  type: 'test'
+  ...
+# Subtest: hipótese sem medição nenhuma é baixa, mesmo com muita sustentação
+ok 182 - hipótese sem medição nenhuma é baixa, mesmo com muita sustentação
+  ---
+  duration_ms: 28.3016
+  type: 'test'
+  ...
+# Subtest: alta exige DUAS medições de métricas distintas; uma só dá média
+ok 183 - alta exige DUAS medições de métricas distintas; uma só dá média
+  ---
+  duration_ms: 0.6728
+  type: 'test'
+  ...
+# Subtest: cada evidência contrária rebaixa um nível; duas vão direto para baixa
+ok 184 - cada evidência contrária rebaixa um nível; duas vão direto para baixa
+  ---
+  duration_ms: 0.4303
+  type: 'test'
+  ...
+# Subtest: o enunciado sempre carrega a marca de hipótese — nunca sai como fato
+ok 185 - o enunciado sempre carrega a marca de hipótese — nunca sai como fato
+  ---
+  duration_ms: 1.7349
+  type: 'test'
+  ...
+# Subtest: máquina dentro da faixa não produz anomalia nem hipótese nenhuma
+ok 186 - máquina dentro da faixa não produz anomalia nem hipótese nenhuma
+  ---
+  duration_ms: 1.4127
+  type: 'test'
+  ...
+# Subtest: CPU saturada com processo dominante vira hipótese de confiança alta
+ok 187 - CPU saturada com processo dominante vira hipótese de confiança alta
+  ---
+  duration_ms: 0.5318
+  type: 'test'
+  ...
+# Subtest: CPU saturada SEM dono não acusa o maior da lista
+ok 188 - CPU saturada SEM dono não acusa o maior da lista
+  ---
+  duration_ms: 0.7014
+  type: 'test'
+  ...
+# Subtest: memória alta sem processo grande é rebaixada pela própria medição de processos
+ok 189 - memória alta sem processo grande é rebaixada pela própria medição de processos
+  ---
+  duration_ms: 5.9445
+  type: 'test'
+  ...
+# Subtest: sem sonda de processos a hipótese admite que não sabe apontar quem
+ok 190 - sem sonda de processos a hipótese admite que não sabe apontar quem
+  ---
+  duration_ms: 2.3207
+  type: 'test'
+  ...
+# Subtest: as faixas são exercidas nos dois lados da fronteira
+ok 191 - as faixas são exercidas nos dois lados da fronteira
+  ---
+  duration_ms: 1.0907
+  type: 'test'
+  ...
+# Subtest: disco é medido ao contrário — pouco livre é a anomalia
+ok 192 - disco é medido ao contrário — pouco livre é a anomalia
+  ---
+  duration_ms: 0.3632
+  type: 'test'
+  ...
+# Subtest: disco não medido não vira evidência nem anomalia
+ok 193 - disco não medido não vira evidência nem anomalia
+  ---
+  duration_ms: 0.4386
+  type: 'test'
+  ...
+# Subtest: hipóteses saem ordenadas da mais confiável para a menos
+ok 194 - hipóteses saem ordenadas da mais confiável para a menos
+  ---
+  duration_ms: 0.35
+  type: 'test'
+  ...
+# Subtest: a recomendação prefere o benefício quase igual com risco menor — e diz isso
+ok 195 - a recomendação prefere o benefício quase igual com risco menor — e diz isso
+  ---
+  duration_ms: 0.6185
+  type: 'test'
+  ...
+# Subtest: quando o descartado entrega mais, a justificativa explica a troca
+ok 196 - quando o descartado entrega mais, a justificativa explica a troca
+  ---
+  duration_ms: 0.4586
+  type: 'test'
+  ...
+# Subtest: recomendar sem alternativa nenhuma é erro de quem chamou, não resultado
+ok 197 - recomendar sem alternativa nenhuma é erro de quem chamou, não resultado
+  ---
+  duration_ms: 0.8382
+  type: 'test'
+  ...
+# Subtest: o risco de um plano é o do passo mais arriscado, nunca a média
+ok 198 - o risco de um plano é o do passo mais arriscado, nunca a média
+  ---
+  duration_ms: 0.2874
+  type: 'test'
+  ...
+# Subtest: "não fazer nada" é sempre uma das alternativas oferecidas
+ok 199 - "não fazer nada" é sempre uma das alternativas oferecidas
+  ---
+  duration_ms: 1.2606
+  type: 'test'
+  ...
+# Subtest: processo fora da allowlist vira instrução ao operador, não plano que a IARA não sabe executar
+ok 200 - processo fora da allowlist vira instrução ao operador, não plano que a IARA não sabe executar
+  ---
+  duration_ms: 0.5751
+  type: 'test'
+  ...
+# Subtest: processo da allowlist vira plano executável com rollback declarado
+ok 201 - processo da allowlist vira plano executável com rollback declarado
+  ---
+  duration_ms: 0.5127
+  type: 'test'
+  ...
+# Subtest: o Explorador nunca é oferecido para fechamento — derrubá-lo apaga a área de trabalho
+ok 202 - o Explorador nunca é oferecido para fechamento — derrubá-lo apaga a área de trabalho
+  ---
+  duration_ms: 0.2613
+  type: 'test'
+  ...
+# Subtest: reiniciar só é proposto quando há razão medida
+ok 203 - reiniciar só é proposto quando há razão medida
+  ---
+  duration_ms: 0.5464
+  type: 'test'
+  ...
+# Subtest: nenhum plano proposto executa sozinho: todo passo aponta habilidade do catálogo ou nada
+ok 204 - nenhum plano proposto executa sozinho: todo passo aponta habilidade do catálogo ou nada
+  ---
+  duration_ms: 0.6005
+  type: 'test'
+  ...
+# Subtest: sem a allowlist injetada, a análise nunca promete fechar nada
+ok 205 - sem a allowlist injetada, a análise nunca promete fechar nada
+  ---
+  duration_ms: 0.3443
+  type: 'test'
+  ...
+# Subtest: o veredito distingue resolvido, parcial, ineficaz e regredido
+ok 206 - o veredito distingue resolvido, parcial, ineficaz e regredido
+  ---
+  duration_ms: 0.2989
+  type: 'test'
+  ...
+# Subtest: sem medição depois, o veredito é "não verificável" — nunca sucesso por omissão
+ok 207 - sem medição depois, o veredito é "não verificável" — nunca sucesso por omissão
+  ---
+  duration_ms: 0.162
+  type: 'test'
+  ...
+# Subtest: a direção desejada sai do comparador — para disco, subir é melhorar
+ok 208 - a direção desejada sai do comparador — para disco, subir é melhorar
+  ---
+  duration_ms: 0.1868
+  type: 'test'
+  ...
+# Subtest: o confronto compara a métrica que o plano prometeu, com antes e depois
+ok 209 - o confronto compara a métrica que o plano prometeu, com antes e depois
+  ---
+  duration_ms: 0.8438
+  type: 'test'
+  ...
+# Subtest: sem investigação anterior não há confronto — e isso não é falha
+ok 210 - sem investigação anterior não há confronto — e isso não é falha
+  ---
+  duration_ms: 0.2834
+  type: 'test'
+  ...
+# Subtest: métrica esperada que não pôde ser medida agora vira não verificável
+ok 211 - métrica esperada que não pôde ser medida agora vira não verificável
+  ---
+  duration_ms: 0.3147
+  type: 'test'
+  ...
+# Subtest: o relatório separa o que foi medido do que é hipótese, e termina perguntando
+ok 212 - o relatório separa o que foi medido do que é hipótese, e termina perguntando
+  ---
+  duration_ms: 1.6313
+  type: 'test'
+  ...
+# Subtest: plano que depende do operador não termina pedindo autorização
+ok 213 - plano que depende do operador não termina pedindo autorização
+  ---
+  duration_ms: 0.8231
+  type: 'test'
+  ...
+# Subtest: lacuna de medição sai na resposta em vez de sumir
+ok 214 - lacuna de medição sai na resposta em vez de sumir
+  ---
+  duration_ms: 1.0172
+  type: 'test'
+  ...
+# Subtest: máquina sem anomalia não inventa causa e devolve a pergunta ao operador
+ok 215 - máquina sem anomalia não inventa causa e devolve a pergunta ao operador
+  ---
+  duration_ms: 0.364
+  type: 'test'
+  ...
+# Subtest: quando nada está fora da faixa não existe recomendação
+ok 216 - quando nada está fora da faixa não existe recomendação
+  ---
+  duration_ms: 0.3719
+  type: 'test'
+  ...
+# Subtest: CPU de processo é fatia da máquina inteira, não de um núcleo
+ok 217 - CPU de processo é fatia da máquina inteira, não de um núcleo
+  ---
+  duration_ms: 0.611
+  type: 'test'
+  ...
+# Subtest: delta negativo (pid reciclado) não vira consumo atribuído a ninguém
+ok 218 - delta negativo (pid reciclado) não vira consumo atribuído a ninguém
+  ---
+  duration_ms: 0.2713
+  type: 'test'
+  ...
+# Subtest: um processo só chega como objeto, não como lista — e é aceito assim
+ok 219 - um processo só chega como objeto, não como lista — e é aceito assim
+  ---
+  duration_ms: 0.23
+  type: 'test'
+  ...
+# Subtest: saída vazia ou ilegível é "não sei sondar", não lista vazia
+ok 220 - saída vazia ou ilegível é "não sei sondar", não lista vazia
+  ---
+  duration_ms: 0.3481
+  type: 'test'
+  ...
+# Subtest: a lista guarda os maiores de memória, não só os de CPU
+ok 221 - a lista guarda os maiores de memória, não só os de CPU
+  ---
+  duration_ms: 0.8426
+  type: 'test'
+  ...
+# Subtest: medição vinda do braço é validada, não confiada — campo essencial ausente é null
+ok 222 - medição vinda do braço é validada, não confiada — campo essencial ausente é null
+  ---
+  duration_ms: 2.2927
+  type: 'test'
+  ...
+# Subtest: processo sem nome é descartado em vez de entrar como string vazia
+ok 223 - processo sem nome é descartado em vez de entrar como string vazia
+  ---
+  duration_ms: 0.5665
+  type: 'test'
+  ...
+# Subtest: "meu computador está muito lento" vira plano de investigação, custo zero
+ok 224 - "meu computador está muito lento" vira plano de investigação, custo zero
+  ---
+  duration_ms: 54.2507
+  type: 'test'
+  ...
+# Subtest: lentidão vence diagnóstico e leitura de sistema quando as três casam
+ok 225 - lentidão vence diagnóstico e leitura de sistema quando as três casam
+  ---
+  duration_ms: 7.2067
+  type: 'test'
+  ...
+# Subtest: "lento" sem a máquina por perto NÃO dispara investigação
+ok 226 - "lento" sem a máquina por perto NÃO dispara investigação
+  ---
+  duration_ms: 5.8925
+  type: 'test'
+  ...
+# Subtest: "quanto de memória" continua sendo leitura instantânea, não investigação
+ok 227 - "quanto de memória" continua sendo leitura instantânea, não investigação
+  ---
+  duration_ms: 0.6972
+  type: 'test'
+  ...
+# Subtest: "meça de novo" fecha o laço e volta para a investigação
+ok 228 - "meça de novo" fecha o laço e volta para a investigação
+  ---
+  duration_ms: 0.5105
+  type: 'test'
+  ...
+# Subtest: a habilidade de investigação não age no mundo: risco baixo e leitura
+ok 229 - a habilidade de investigação não age no mundo: risco baixo e leitura
+  ---
+  duration_ms: 0.3062
+  type: 'test'
+  ...
+# [kernel] ouvinte falhou: ouvinte quebrado
+# {"canal":"auditoria","instante":"2026-08-19T19:47:24.977Z","sessao":"s1","id_usuario":"u1","traco":"5911096a-7859-4cca-b69a-c385e8b1083c","acao":"rota:plano_local","detalhe":"Âncoras reconhecidas (relogio) → plano determinístico.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:25.043Z","sessao":"s1","id_usuario":"u1","traco":"5911096a-7859-4cca-b69a-c385e8b1083c","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · tempo 68ms/900000ms","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:25.051Z","sessao":"s2","id_usuario":"u2","traco":"c93b8611-b28b-4e7c-8fbe-79332f96f3c8","acao":"rota:sigilo","detalhe":"Sondagem sobre registro de terceiro detectada antes do planejamento.","permitido":true}
+# {"canal":"auditoria","instante":"2026-08-19T19:47:25.053Z","sessao":"s2","id_usuario":"u2","traco":"c93b8611-b28b-4e7c-8fbe-79332f96f3c8","acao":"orcamento_turno","detalhe":"voltas do laço 1/8 · passos executados 1/12 · tempo 4ms/900000ms","permitido":true}
+# Subtest: barramento entrega só a quem assinou o tipo
+ok 230 - barramento entrega só a quem assinou o tipo
+  ---
+  duration_ms: 5.3314
+  type: 'test'
+  ...
+# Subtest: barramento carimba seq de sessão e traço em todo evento
+ok 231 - barramento carimba seq de sessão e traço em todo evento
+  ---
+  duration_ms: 0.7385
+  type: 'test'
+  ...
+# Subtest: assinante que lança não derruba o publicador
+ok 232 - assinante que lança não derruba o publicador
+  ---
+  duration_ms: 1.557
+  type: 'test'
+  ...
+# Subtest: novoTraco isola a trilha entre turnos
+ok 233 - novoTraco isola a trilha entre turnos
+  ---
+  duration_ms: 0.6305
+  type: 'test'
+  ...
+# Subtest: percepção reconhece âncora mesmo com acento
+ok 234 - percepção reconhece âncora mesmo com acento
+  ---
+  duration_ms: 18.0512
+  type: 'test'
+  ...
+# Subtest: percepção marca confiança baixa em terreno novo
+ok 235 - percepção marca confiança baixa em terreno novo
+  ---
+  duration_ms: 7.772
+  type: 'test'
+  ...
+# Subtest: percepção eleva urgência com léxico de crise
+ok 236 - percepção eleva urgência com léxico de crise
+  ---
+  duration_ms: 1.0573
+  type: 'test'
+  ...
+# Subtest: percepção classifica documento
+ok 237 - percepção classifica documento
+  ---
+  duration_ms: 0.8606
+  type: 'test'
+  ...
+# Subtest: planejador produz plano determinístico para âncora conhecida
+ok 238 - planejador produz plano determinístico para âncora conhecida
+  ---
+  duration_ms: 1.6792
+  type: 'test'
+  ...
+# Subtest: planejador extrai UF por sigla
+ok 239 - planejador extrai UF por sigla
+  ---
+  duration_ms: 6.1245
+  type: 'test'
+  ...
+# Subtest: planejador cai para raciocínio quando não há receita
+ok 240 - planejador cai para raciocínio quando não há receita
+  ---
+  duration_ms: 1.0193
+  type: 'test'
+  ...
+# Subtest: executiva barra sondagem de shard alheio antes de planejar
+ok 241 - executiva barra sondagem de shard alheio antes de planejar
+  ---
+  duration_ms: 5.7263
+  type: 'test'
+  ...
+# Subtest: executiva não confunde consulta legítima com sondagem
+ok 242 - executiva não confunde consulta legítima com sondagem
+  ---
+  duration_ms: 6.3433
+  type: 'test'
+  ...
+# Subtest: executiva prefere plano local e não gasta token
+ok 243 - executiva prefere plano local e não gasta token
+  ---
+  duration_ms: 1.8508
+  type: 'test'
+  ...
+# Subtest: executiva pede decomposição só para objetivo novo e composto
+ok 244 - executiva pede decomposição só para objetivo novo e composto
+  ---
+  duration_ms: 1.8446
+  type: 'test'
+  ...
+# Subtest: executiva evita duas chamadas quando o pedido é de escopo único
+ok 245 - executiva evita duas chamadas quando o pedido é de escopo único
+  ---
+  duration_ms: 1.3664
+  type: 'test'
+  ...
+# Subtest: executiva não cogita plano cognitivo sem nuvem
+ok 246 - executiva não cogita plano cognitivo sem nuvem
+  ---
+  duration_ms: 2.5239
+  type: 'test'
+  ...
+# Subtest: memória de trabalho acumula saídas e zera ao encerrar
+ok 247 - memória de trabalho acumula saídas e zera ao encerrar
+  ---
+  duration_ms: 2.0622
+  type: 'test'
+  ...
+# Subtest: turno responde mesmo com a persistência fora
+ok 248 - turno responde mesmo com a persistência fora
+  ---
+  duration_ms: 86.7331
+  type: 'test'
+  ...
+# Subtest: falha no meio do turno vira fala, não só linha de console
+ok 249 - falha no meio do turno vira fala, não só linha de console
+  ---
+  duration_ms: 11.235
+  type: 'test'
+  ...
+# Subtest: trava assíncrona serializa leitura-modificação-escrita
+ok 250 - trava assíncrona serializa leitura-modificação-escrita
+  ---
+  duration_ms: 880.6785
+  type: 'test'
+  ...
+# Subtest: trava libera mesmo quando o corpo lança
+ok 251 - trava libera mesmo quando o corpo lança
+  ---
+  duration_ms: 3.7514
+  type: 'test'
+  ...
+# Subtest: estado atômico descarta intenção inválida sem mutar nada
+ok 252 - estado atômico descarta intenção inválida sem mutar nada
+  ---
+  duration_ms: 0.3911
+  type: 'test'
+  ...
+# Subtest: estado atômico limita delta e mantém a métrica em 0..1
+ok 253 - estado atômico limita delta e mantém a métrica em 0..1
+  ---
+  duration_ms: 1.1046
+  type: 'test'
+  ...
+# Subtest: A1. pergunta factual pura não arrasta o motor analítico
+ok 254 - A1. pergunta factual pura não arrasta o motor analítico
+  ---
+  duration_ms: 14.795
+  type: 'test'
+  ...
+# Subtest: A2. contagem sobre a operação sobe para consulta ou operacional
+ok 255 - A2. contagem sobre a operação sobe para consulta ou operacional
+  ---
+  duration_ms: 0.6202
+  type: 'test'
+  ...
+# Subtest: A3. comparação vira gerencial e pretende conclusão comparativa
+ok 256 - A3. comparação vira gerencial e pretende conclusão comparativa
+  ---
+  duration_ms: 0.4193
+  type: 'test'
+  ...
+# Subtest: A4. "por que" é o marcador causal e sobe para estratégica
+ok 257 - A4. "por que" é o marcador causal e sobe para estratégica
+  ---
+  duration_ms: 0.4601
+  type: 'test'
+  ...
+# Subtest: A5. executivo exige enquadramento DECLARADO mais decisão
+ok 258 - A5. executivo exige enquadramento DECLARADO mais decisão
+  ---
+  duration_ms: 3.1383
+  type: 'test'
+  ...
+# Subtest: A6. três dimensões de negócio tornam a pergunta multidimensional
+ok 259 - A6. três dimensões de negócio tornam a pergunta multidimensional
+  ---
+  duration_ms: 0.4078
+  type: 'test'
+  ...
+# Subtest: B1. "o sistema caiu" é incidente, não comparação
+ok 260 - B1. "o sistema caiu" é incidente, não comparação
+  ---
+  duration_ms: 0.3978
+  type: 'test'
+  ...
+# Subtest: B2. "porque" explicativo do operador não vira pedido de causa
+ok 261 - B2. "porque" explicativo do operador não vira pedido de causa
+  ---
+  duration_ms: 1.7102
+  type: 'test'
+  ...
+# Subtest: B3. decisão NÃO cria exigência causal sozinha
+ok 262 - B3. decisão NÃO cria exigência causal sozinha
+  ---
+  duration_ms: 1.1173
+  type: 'test'
+  ...
+# Subtest: B4. decisão sobe a exigência de recomendação mesmo em nível baixo
+ok 263 - B4. decisão sobe a exigência de recomendação mesmo em nível baixo
+  ---
+  duration_ms: 1.122
+  type: 'test'
+  ...
+# Subtest: C1. cada nível declara exigências diferentes — nenhum é só um rótulo
+ok 264 - C1. cada nível declara exigências diferentes — nenhum é só um rótulo
+  ---
+  duration_ms: 0.3274
+  type: 'test'
+  ...
+# Subtest: C2. a exigência cresce monotonicamente com o nível
+ok 265 - C2. a exigência cresce monotonicamente com o nível
+  ---
+  duration_ms: 0.6979
+  type: 'test'
+  ...
+# Subtest: C3. a escolha é auditável: os marcadores que dispararam ficam declarados
+ok 266 - C3. a escolha é auditável: os marcadores que dispararam ficam declarados
+  ---
+  duration_ms: 0.2984
+  type: 'test'
+  ...
+# Subtest: C4. o mesmo texto dá sempre o mesmo nível
+ok 267 - C4. o mesmo texto dá sempre o mesmo nível
+  ---
+  duration_ms: 1.7876
+  type: 'test'
+  ...
+1..267
+# tests 267
+# suites 0
+# pass 267
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15594.6986

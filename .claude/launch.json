@@ -4,7 +4,12 @@
     {
       "name": "iara",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "iara-os/apps/web"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "iara-os/apps/web"
+      ],
       "port": 3000
     }
   ]

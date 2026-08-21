@@ -1,0 +1,2189 @@
+{
+  "gerado_em": null,
+  "habilidades": [
+    {
+      "id": "consultar_clima",
+      "nome": "Radar meteorológico",
+      "grupo": "operacionais",
+      "descricao": "Tempo no perímetro operacional, ou numa cidade que o operador nomeie. `horizonte: agora` devolve a MEDIÇÃO corrente (temperatura, umidade, precipitação da última hora); `hoje` e `amanha` devolvem a PREVISÃO do dia (probabilidade de chuva, acumulado, máxima e mínima). Escolha pelo tempo verbal da pergunta: \"está chovendo\" é agora, \"vai chover\" é previsão. `cidade` é OPCIONAL: preencha com o nome que o operador disse (\"clima em Valinhos\" → cidade: \"Valinhos\"). Sem cidade, a resposta usa a localização do aparelho (se concedida) ou o padrão do escritório.",
+      "dominio": "pesquisa",
+      "capacidade": "percepcao",
+      "exemplos": [
+        "Vai chover hoje?",
+        "Como está o tempo em Valinhos?",
+        "Está chovendo aí?",
+        "Qual a previsão para amanhã?"
+      ],
+      "parametros": [
+        {
+          "nome": "horizonte",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "agora",
+            "hoje",
+            "amanha"
+          ],
+          "sinonimos": 0
+        },
+        {
+          "nome": "cidade",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede"
+      ],
+      "custo": "zero",
+      "timeout_ms": 6000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "internet"
+      ],
+      "recuperacao": [
+        "valor padrão"
+      ],
+      "baterias": [
+        "testes/cerebro-integridade.test.ts",
+        "testes/clima-geocodificacao.test.ts",
+        "testes/estabilizacao.test.ts",
+        "testes/propriedades-criticas.test.ts",
+        "testes/zero-trust-adversarial.test.ts"
+      ],
+      "somente_leitura_pode": true,
+      "parametros_abertos": []
+    },
+    {
+      "id": "consultar_infraestrutura",
+      "nome": "Base de centrais",
+      "grupo": "operacionais",
+      "descricao": "Centrais ativas e frota vinculada, por UF. Use para \"quantas centrais\", \"quantos veículos\", \"status da operação\". Funciona com ou sem banco configurado.",
+      "dominio": "operacoes",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Quantas centrais temos ativas?",
+        "Quantos veículos tem a frota no MT?",
+        "Como está a operação por estado?"
+      ],
+      "parametros": [
+        {
+          "nome": "uf",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "GERAL",
+            "MT",
+            "MS",
+            "GO",
+            "SP",
+            "PR",
+            "RO"
+          ],
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 5000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "base da operação"
+      ],
+      "recuperacao": [
+        "valor padrão"
+      ],
+      "baterias": [
+        "testes/escalada-no-kernel.test.ts",
+        "testes/habilidades.test.ts",
+        "testes/kernel.test.ts",
+        "testes/navegador/autoridade-de-dados.mjs",
+        "testes/promessa-de-acao.test.ts",
+        "testes/trava-acao-pos-fechamento.test.ts"
+      ],
+      "somente_leitura_pode": true,
+      "parametros_abertos": []
+    },
+    {
+      "id": "consultar_agenda",
+      "nome": "Relógio e calendário",
+      "grupo": "operacionais",
+      "descricao": "Data e hora correntes do servidor. Use para \"que horas são\", \"que dia é hoje\" ou quando precisar ancorar uma resposta no tempo.",
+      "dominio": "memoria",
+      "capacidade": "memoria",
+      "exemplos": [
+        "Que horas são?",
+        "Que dia é hoje?"
+      ],
+      "parametros": [],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 1000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [],
+      "recuperacao": [],
+      "baterias": [
+        "testes/cadeia-cognitiva.test.ts",
+        "testes/cerebro-integridade.test.ts",
+        "testes/verificacao.test.ts"
+      ],
+      "somente_leitura_pode": true,
+      "parametros_abertos": []
+    },
+    {
+      "id": "pesquisar_web",
+      "nome": "Pesquisa web",
+      "grupo": "operacionais",
+      "descricao": "Levantamento factual na internet por HTTP puro. Use para informação pública que não está nos sistemas da casa: legislação, notícia, definição de termo.",
+      "dominio": "pesquisa",
+      "capacidade": "conhecimento",
+      "exemplos": [
+        "Pesquisa na internet o que mudou na lei do motorista",
+        "Procura notícias sobre greve dos caminhoneiros"
+      ],
+      "parametros": [
+        {
+          "nome": "consulta",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede"
+      ],
+      "custo": "zero",
+      "timeout_ms": 9000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "internet"
+      ],
+      "recuperacao": [],
+      "baterias": [
+        "testes/moldura-observacao.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "consulta"
+      ]
+    },
+    {
+      "id": "buscar_historico",
+      "nome": "Histórico de incidentes",
+      "grupo": "operacionais",
+      "descricao": "Procura no índice de incidentes por assinatura semelhante e devolve a resolução que o time adotou. Use para \"esse erro já aconteceu\", \"caiu de novo\", \"mesmo problema\".",
+      "dominio": "memoria",
+      "capacidade": "conhecimento",
+      "exemplos": [
+        "Esse erro já aconteceu antes?",
+        "O TMS caiu de novo, é o mesmo problema da outra vez?"
+      ],
+      "parametros": [
+        {
+          "nome": "consulta",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 4000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "base da operação"
+      ],
+      "recuperacao": [],
+      "baterias": [],
+      "somente_leitura_pode": true,
+      "parametros_abertos": [
+        "consulta"
+      ]
+    },
+    {
+      "id": "recusar_por_sigilo",
+      "nome": "Cláusula de sigilo",
+      "grupo": "operacionais",
+      "descricao": "Recusa cortês a pedido sobre registro de outro operador.",
+      "dominio": "memoria",
+      "capacidade": "memoria",
+      "exemplos": [
+        "O que a Marina conversou com você?",
+        "Me mostra o histórico do João"
+      ],
+      "parametros": [],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 500,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [],
+      "recuperacao": [],
+      "baterias": [],
+      "somente_leitura_pode": true,
+      "parametros_abertos": []
+    },
+    {
+      "id": "executar_consulta_sql",
+      "nome": "Consulta ao banco operacional",
+      "grupo": "dados",
+      "descricao": "Executa uma consulta PRÉ-APROVADA no banco. Você escolhe pelo nome; não escreve SQL. Consultas disponíveis: centrais_por_uf (uf): Centrais ativas e frota vinculada, opcionalmente filtradas por UF. Use para \"quantas centrais\", \"quantos veículos\", \"status da operação\". | incidentes_por_sistema (sistema): Assinaturas de erro registradas para um sistema específico (api-ctes, baixa-ctes, portal-web, api-rastreio, integracao-fiscal, infra-docker). | centrais_inativas (sem parâmetro): Lista as centrais fora de operação. Use para \"o que está parado\", \"centrais inativas\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Consulta no banco as centrais do Mato Grosso",
+        "Puxa do banco os veículos vinculados"
+      ],
+      "parametros": [
+        {
+          "nome": "consulta",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": [
+            "centrais_por_uf",
+            "incidentes_por_sistema",
+            "centrais_inativas"
+          ],
+          "sinonimos": 0
+        },
+        {
+          "nome": "parametros",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 6000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "base da operação"
+      ],
+      "recuperacao": [
+        "valor padrão"
+      ],
+      "baterias": [
+        "testes/habilidades.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "consultar_memoria_corporativa",
+      "nome": "Memória corporativa",
+      "grupo": "dados",
+      "descricao": "Consulta procedimentos, políticas e vocabulário interno da Atos Log. Use quando a pergunta depende de como A CASA faz algo, não de conhecimento geral.",
+      "dominio": "memoria",
+      "capacidade": "conhecimento",
+      "exemplos": [
+        "Como a gente faz a baixa de CT-e aqui?",
+        "Qual o procedimento interno para reembolso?"
+      ],
+      "parametros": [
+        {
+          "nome": "consulta",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 4000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "base da operação"
+      ],
+      "recuperacao": [],
+      "baterias": [
+        "testes/guarda-de-laco.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "consulta"
+      ]
+    },
+    {
+      "id": "extrair_texto_documento",
+      "nome": "Extração de texto de documento",
+      "grupo": "dados",
+      "descricao": "Lê a camada de texto de um PDF gerado digitalmente (CT-e, DACTE, nota fiscal, contrato). NÃO faz OCR de documento escaneado. O caminho é relativo a dados/documentos/.",
+      "dominio": "automacao",
+      "capacidade": "percepcao",
+      "exemplos": [
+        "Lê o PDF da nota fiscal e me diz o valor",
+        "Extrai o texto do DACTE que subi"
+      ],
+      "parametros": [
+        {
+          "nome": "arquivo",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 12000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "base da operação"
+      ],
+      "recuperacao": [],
+      "baterias": [
+        "testes/moldura-observacao.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "arquivo"
+      ]
+    },
+    {
+      "id": "ler_emails",
+      "nome": "Caixa de entrada",
+      "grupo": "integrações",
+      "descricao": "Lê e-mails recentes da caixa corporativa do operador, filtrando por remetente ou assunto.",
+      "dominio": "comunicacao",
+      "capacidade": "conhecimento",
+      "exemplos": [
+        "Leia meus emails recentes",
+        "Chegou algum email da LUFT hoje?",
+        "Tem email novo sobre a fatura?"
+      ],
+      "parametros": [
+        {
+          "nome": "filtro",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "limite",
+          "tipo": "numero",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede",
+        "memoria"
+      ],
+      "custo": "zero",
+      "timeout_ms": 10000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "shard do operador"
+      ],
+      "recuperacao": [
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "enviar_whatsapp",
+      "nome": "Envio de WhatsApp",
+      "grupo": "integrações",
+      "descricao": "Envia mensagem de WhatsApp para um contato da operação. NUNCA executa direto: registra uma pendência e pede confirmação explícita do operador.",
+      "dominio": "comunicacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Manda um whatsapp para o João avisando do atraso",
+        "Avisa a Marina no zap que a coleta foi remarcada"
+      ],
+      "parametros": [
+        {
+          "nome": "destinatario",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "mensagem",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "alto",
+      "idempotencia": "escrita_idempotente",
+      "permissoes": [
+        "rede",
+        "externo"
+      ],
+      "custo": "zero",
+      "timeout_ms": 10000,
+      "confirmacao_previa": true,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": false,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "terceiro (em nome do operador)"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/calendario-arm-confirmar.test.ts",
+        "testes/cerebro-escrita-integridade.test.ts",
+        "testes/cerebro-integridade.test.ts",
+        "testes/encerramento-absoluto.test.ts",
+        "testes/fronteira-efeitos.test.ts",
+        "testes/fronteira-interna.test.ts",
+        "testes/integridade-cognitiva.test.ts",
+        "testes/proatividade-adversarial.test.ts",
+        "testes/promessa-de-acao.test.ts",
+        "testes/propriedades-criticas.test.ts",
+        "testes/validacao/exfiltracao.ts",
+        "testes/validacao/quedaFilho.ts",
+        "testes/zero-trust-adversarial.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "destinatario",
+        "mensagem"
+      ]
+    },
+    {
+      "id": "buscar_documento_sharepoint",
+      "nome": "Busca no SharePoint",
+      "grupo": "integrações",
+      "descricao": "Localiza documentos no SharePoint corporativo por título ou conteúdo e devolve o link e um resumo.",
+      "dominio": "operacoes",
+      "capacidade": "conhecimento",
+      "exemplos": [
+        "Acha no SharePoint a planilha de fechamento",
+        "Procura o documento do contrato da LUFT"
+      ],
+      "parametros": [
+        {
+          "nome": "consulta",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede",
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 12000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "base da operação"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/agente-local.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "consulta"
+      ]
+    },
+    {
+      "id": "ver_agenda_calendario",
+      "nome": "Ver agenda",
+      "grupo": "calendário",
+      "descricao": "Lista os próximos compromissos do calendário real (Google Calendar) do operador, num período de dias à frente. Use para \"o que eu tenho hoje/essa semana\", \"quais são meus próximos compromissos\", \"tenho reunião amanhã\".",
+      "dominio": "comunicacao",
+      "capacidade": "conhecimento",
+      "exemplos": [
+        "O que eu tenho essa semana?",
+        "Quais são meus próximos compromissos?",
+        "Tenho alguma reunião amanhã?"
+      ],
+      "parametros": [
+        {
+          "nome": "dias_a_frente",
+          "tipo": "numero",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede",
+        "memoria"
+      ],
+      "custo": "zero",
+      "timeout_ms": 10000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "shard do operador"
+      ],
+      "recuperacao": [
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "criar_evento_calendario",
+      "nome": "Criar evento no calendário",
+      "grupo": "calendário",
+      "descricao": "Cria um evento real no Google Calendar do operador. NUNCA executa direto: registra uma pendência e pede confirmação explícita do operador, mesmo desenho de enviar_whatsapp. O parâmetro \"quando\" recebe a EXPRESSÃO DE TEMPO exatamente como foi dita (\"amanhã às 14h\", \"sexta que vem às 10h\") — não converta para data, quem interpreta é o motor. v1 não convida ninguém: o evento fica só no calendário do operador. Use para \"marca uma reunião\", \"agenda um compromisso\", \"bota isso no calendário\".",
+      "dominio": "comunicacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Marca uma reunião com o financeiro amanhã às 14h",
+        "Agenda uma consulta sexta às 10h, uma hora de duração",
+        "Bota no calendário: dentista quinta-feira às 9h"
+      ],
+      "parametros": [
+        {
+          "nome": "assunto",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "quando",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "duracao_minutos",
+          "tipo": "numero",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "local",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "alto",
+      "idempotencia": "escrita_nao_idempotente",
+      "permissoes": [
+        "rede",
+        "externo"
+      ],
+      "custo": "zero",
+      "timeout_ms": 10000,
+      "confirmacao_previa": true,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": false,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "terceiro (em nome do operador)"
+      ],
+      "recuperacao": [
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/calendario-arm-confirmar.test.ts",
+        "testes/fronteira-efeitos.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "assunto",
+        "quando"
+      ]
+    },
+    {
+      "id": "criar_pasta",
+      "nome": "Criar pasta",
+      "grupo": "braço (máquina do operador)",
+      "descricao": "Cria uma pasta em um local autorizado da máquina (Área de Trabalho, Documentos ou Downloads). Não aceita caminho livre — só um desses três locais nomeados. Use para \"crie uma pasta chamada X\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Crie uma pasta chamada Relatórios",
+        "Cria uma pasta Notas Fiscais nos Downloads"
+      ],
+      "parametros": [
+        {
+          "nome": "nome",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "local",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "area_de_trabalho",
+            "documentos",
+            "downloads"
+          ],
+          "sinonimos": 0
+        }
+      ],
+      "risco": "medio",
+      "idempotencia": "escrita_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 5000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/afirmacao-de-feito.test.ts",
+        "testes/campanha/missoes/agente.ts",
+        "testes/campanha/missoes/auditores.ts",
+        "testes/campanha/missoes/lacunas.ts",
+        "testes/campanha/MotorSandbox.ts",
+        "testes/campanha-contrato.test.ts",
+        "testes/cerebro-escrita-integridade.test.ts",
+        "testes/cerebro-integridade-final.test.ts",
+        "testes/cerebro-integridade.test.ts",
+        "testes/guarda-de-laco.test.ts",
+        "testes/habilidades.test.ts",
+        "testes/integridade-cognitiva.test.ts",
+        "testes/invariantes-cognitivos.test.ts",
+        "testes/mentira-operacional.test.ts",
+        "testes/moldura-observacao.test.ts",
+        "testes/ponte-execucao-adversarial.test.ts",
+        "testes/ponte-execucao.test.ts",
+        "testes/promessa-de-acao.test.ts",
+        "testes/propriedades-criticas.test.ts",
+        "testes/verificacao.test.ts",
+        "testes/zero-trust-adversarial.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "nome"
+      ]
+    },
+    {
+      "id": "abrir_aplicativo",
+      "nome": "Abrir aplicativo",
+      "grupo": "braço (máquina do operador)",
+      "descricao": "Abre um aplicativo de uma lista fechada e revisada (Bloco de Notas, Calculadora, Paint, Explorador de Arquivos, Chrome, Edge). Não executa comando arbitrário. Para Chrome/Edge, aceita opcionalmente um \"site\" (endereço http:// ou https:// completo) para abrir já naquela página — outros aplicativos da lista não têm o que fazer com um endereço.",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Abre o bloco de notas",
+        "Abre o Chrome no site da LUFT"
+      ],
+      "parametros": [
+        {
+          "nome": "aplicativo",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "site",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "medio",
+      "idempotencia": "escrita_nao_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 25000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/cerebro-escrita-integridade.test.ts",
+        "testes/habilidades.test.ts",
+        "testes/integridade-cognitiva.test.ts",
+        "testes/ponte-execucao-adversarial.test.ts",
+        "testes/ponte-execucao.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "aplicativo"
+      ]
+    },
+    {
+      "id": "fechar_aplicativo",
+      "nome": "Fechar aplicativo",
+      "grupo": "braço (máquina do operador)",
+      "descricao": "Fecha um aplicativo da lista autorizada no computador do operador, pedindo educadamente ao Windows (nunca forçando). Se houver trabalho não salvo, o programa recusa e a IARA diz isso. Use para \"feche o bloco de notas\", \"pode fechar o Chrome\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Fecha o bloco de notas",
+        "Pode fechar o Chrome"
+      ],
+      "parametros": [
+        {
+          "nome": "aplicativo",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "medio",
+      "idempotencia": "escrita_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 25000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/investigacao.test.ts",
+        "testes/planos-autorizados.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "aplicativo"
+      ]
+    },
+    {
+      "id": "listar_arquivos",
+      "nome": "Listar arquivos",
+      "grupo": "braço (máquina do operador)",
+      "descricao": "Lista pastas e arquivos de um local autorizado do computador do operador (Área de Trabalho, Documentos ou Downloads). Não aceita caminho livre. Use para \"o que tem na minha área de trabalho\", \"liste os arquivos de Downloads\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "O que tem na minha área de trabalho?",
+        "Lista os arquivos de Downloads"
+      ],
+      "parametros": [
+        {
+          "nome": "local",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "area_de_trabalho",
+            "documentos",
+            "downloads"
+          ],
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 15000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [],
+      "recuperacao": [
+        "valor padrão"
+      ],
+      "baterias": [
+        "testes/agente-local.test.ts",
+        "testes/campanha/missoes/seguranca.ts",
+        "testes/ponte-execucao-adversarial.test.ts",
+        "testes/ponte-execucao.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "informacoes_sistema",
+      "nome": "Informações do computador",
+      "grupo": "braço (máquina do operador)",
+      "descricao": "Consulta o estado do computador do operador: memória em uso, processador, tempo ligado e interfaces de rede. Use para \"quanto de memória meu computador está usando\", \"meu computador está conectado\", \"como está o PC\". SÍNCRONA: o resultado sai nesta mesma resposta, em poucos segundos — nunca diga que vai avisar depois, porque não há um \"depois\" aqui.",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Quanto de memória meu computador está usando?",
+        "Como está o PC agora?"
+      ],
+      "parametros": [],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 15000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [],
+      "recuperacao": [],
+      "baterias": [
+        "testes/investigacao.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "capturar_tela",
+      "nome": "Captura de tela",
+      "grupo": "braço (máquina do operador)",
+      "descricao": "Fotografa a tela do computador onde o motor roda e salva um PNG numa pasta autorizada (Área de Trabalho, Documentos ou Downloads). Devolve o caminho e o tamanho do arquivo — NUNCA o conteúdo da imagem, que não é lido nem transmitido. Use para \"tira um print\", \"captura a tela\", \"salva uma foto do que está aberto\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Tira um print da tela",
+        "Captura a tela e salva nos Documentos"
+      ],
+      "parametros": [
+        {
+          "nome": "local",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "area_de_trabalho",
+            "documentos",
+            "downloads"
+          ],
+          "sinonimos": 0
+        }
+      ],
+      "risco": "medio",
+      "idempotencia": "escrita_nao_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 20000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "acionar_energia",
+      "nome": "Energia da máquina",
+      "grupo": "braço (máquina do operador)",
+      "descricao": "Prepara desligar, reiniciar ou suspender a máquina. NUNCA executa direto: registra uma pendência e pede confirmação explícita do operador.",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Desliga o computador",
+        "Reinicia a máquina para mim"
+      ],
+      "parametros": [
+        {
+          "nome": "acao",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "desligar",
+            "reiniciar",
+            "suspender"
+          ],
+          "sinonimos": 0
+        }
+      ],
+      "risco": "alto",
+      "idempotencia": "escrita_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 3000,
+      "confirmacao_previa": true,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": false,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/autonomia-vigia-aprendizado.test.ts",
+        "testes/campanha-contrato.test.ts",
+        "testes/cerebro-escrita-integridade.test.ts",
+        "testes/cerebro-integridade.test.ts",
+        "testes/decisao.test.ts",
+        "testes/fronteira-interna.test.ts",
+        "testes/integridade-cognitiva.test.ts",
+        "testes/planos-autorizados.test.ts",
+        "testes/propriedades-criticas.test.ts",
+        "testes/zero-trust-adversarial.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "atualizar_repositorio",
+      "nome": "Atualizar repositório",
+      "grupo": "braço (máquina do operador)",
+      "descricao": "Puxa as novidades de um repositório autorizado com git pull --ff-only. O alvo é o APELIDO de um repositório declarado, nunca um caminho. Recusa se houver trabalho não salvo e nunca resolve conflito. Use para \"atualize o repositório X\" ou \"puxa as novidades do X\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Atualiza o repositório da IARA",
+        "Puxa as novidades do repositório"
+      ],
+      "parametros": [
+        {
+          "nome": "repositorio",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "medio",
+      "idempotencia": "escrita_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 80000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "repositorio"
+      ]
+    },
+    {
+      "id": "resolver_confirmacao",
+      "nome": "Resolver confirmação pendente",
+      "grupo": "braço (máquina do operador)",
+      "descricao": "Fecha o ciclo de uma ação que ficou aguardando confirmação: executa se o operador confirmou, aborta se cancelou. Sem pendência válida, diz isso em vez de executar qualquer coisa.",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "confirmo",
+        "não, cancela"
+      ],
+      "parametros": [
+        {
+          "nome": "resposta",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": [
+            "confirmo",
+            "cancelar"
+          ],
+          "sinonimos": 0
+        }
+      ],
+      "risco": "alto",
+      "idempotencia": "escrita_nao_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 3000,
+      "confirmacao_previa": true,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": false,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/calendario-arm-confirmar.test.ts",
+        "testes/cerebro-escrita-integridade.test.ts",
+        "testes/cerebro-integridade.test.ts",
+        "testes/fronteira-efeitos.test.ts",
+        "testes/fronteira-interna.test.ts",
+        "testes/integridade-cognitiva.test.ts",
+        "testes/planos-autorizados.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "abrir_sessao_agente_codigo",
+      "nome": "Abrir sessão de agente de código",
+      "grupo": "agente de código",
+      "descricao": "Abre uma nova sessão do Claude Code num repositório AUTORIZADO e envia uma instrução de trabalho. O repositório é escolhido por apelido de uma lista fechada — nunca por caminho. Use para \"abra uma sessão do Claude Code no repositório X e peça para ele fazer Y\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Abra uma nova sessão do Claude Code no repositório IARA e peça para auditar a camada de voz",
+        "Manda o Claude Code corrigir os testes quebrados no iara",
+        "Abre o Claude Code no repositório iara e pede para revisar os botões"
+      ],
+      "parametros": [
+        {
+          "nome": "repositorio",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "instrucao",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "alto",
+      "idempotencia": "escrita_nao_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 20000,
+      "confirmacao_previa": true,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": false,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "repositorio",
+        "instrucao"
+      ]
+    },
+    {
+      "id": "enviar_para_agente_codigo",
+      "nome": "Mandar instrução para uma sessão de agente",
+      "grupo": "agente de código",
+      "descricao": "Envia uma nova instrução para uma sessão do Claude Code JÁ ABERTA, continuando o trabalho dela. Exige o id da sessão. Use para \"manda o Claude Code continuar\", \"diz para ele também corrigir Z\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Manda o Claude Code continuar a tarefa",
+        "Diz para a sessão do Claude Code também rodar os testes"
+      ],
+      "parametros": [
+        {
+          "nome": "sessao",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "instrucao",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "alto",
+      "idempotencia": "escrita_nao_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 20000,
+      "confirmacao_previa": true,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": false,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "sessao",
+        "instrucao"
+      ]
+    },
+    {
+      "id": "acompanhar_agente_codigo",
+      "nome": "Acompanhar sessões de agente de código",
+      "grupo": "agente de código",
+      "descricao": "Diz o estado das sessões do Claude Code abertas nesta conversa: qual repositório, se ainda está trabalhando, se terminou, se falhou. Use para \"o que o Claude Code está fazendo?\", \"a sessão terminou?\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "O que o Claude Code está fazendo?",
+        "A sessão do Claude Code já terminou?",
+        "Como está o agente de código?"
+      ],
+      "parametros": [
+        {
+          "nome": "sessao",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 5000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [],
+      "recuperacao": [],
+      "baterias": [],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "encerrar_agente_codigo",
+      "nome": "Encerrar sessão de agente de código",
+      "grupo": "agente de código",
+      "descricao": "Encerra uma sessão do Claude Code que está em andamento. Use para \"para o Claude Code\", \"encerra essa sessão\", \"cancela o agente\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Encerra a sessão do Claude Code",
+        "Para o agente de código"
+      ],
+      "parametros": [
+        {
+          "nome": "sessao",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "medio",
+      "idempotencia": "escrita_idempotente",
+      "permissoes": [
+        "escrita"
+      ],
+      "custo": "zero",
+      "timeout_ms": 5000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "máquina do motor"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "sessao"
+      ]
+    },
+    {
+      "id": "agendar_lembrete",
+      "nome": "Agendar lembrete",
+      "grupo": "agenda",
+      "descricao": "Marca um lembrete para o operador e o anuncia quando a hora chegar. O parâmetro \"quando\" recebe a EXPRESSÃO DE TEMPO exatamente como ela foi dita (\"amanhã às 9\", \"em 20 minutos\", \"hoje às 15h30\") — não converta para data, quem interpreta é o motor. Use para \"me lembre de X\", \"não me deixe esquecer de Y\".",
+      "dominio": "memoria",
+      "capacidade": "memoria",
+      "exemplos": [
+        "Me lembre de ligar para o cliente em 20 minutos",
+        "Não me deixe esquecer da reunião amanhã às 9"
+      ],
+      "parametros": [
+        {
+          "nome": "assunto",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "quando",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "medio",
+      "idempotencia": "escrita_nao_idempotente",
+      "permissoes": [
+        "memoria"
+      ],
+      "custo": "zero",
+      "timeout_ms": 6000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "shard do operador"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/agenda.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "assunto",
+        "quando"
+      ]
+    },
+    {
+      "id": "listar_lembretes",
+      "nome": "Lembretes marcados",
+      "grupo": "agenda",
+      "descricao": "Lista os lembretes que o operador ainda tem pendentes comigo, do mais próximo ao mais distante. Use para \"quais lembretes eu tenho\", \"o que eu marquei\", \"minha agenda\".",
+      "dominio": "memoria",
+      "capacidade": "memoria",
+      "exemplos": [
+        "Quais lembretes eu tenho?",
+        "O que eu marquei com você?"
+      ],
+      "parametros": [],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "memoria"
+      ],
+      "custo": "zero",
+      "timeout_ms": 5000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "shard do operador"
+      ],
+      "recuperacao": [],
+      "baterias": [
+        "testes/agenda.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "cancelar_lembrete",
+      "nome": "Cancelar lembrete",
+      "grupo": "agenda",
+      "descricao": "Remove um lembrete pendente. O parâmetro \"termo\" é um trecho do assunto (\"a reunião\", \"ligar para o cliente\"); vazio só funciona quando existe um único lembrete marcado. Use para \"cancela o lembrete de X\", \"esquece aquele lembrete\".",
+      "dominio": "memoria",
+      "capacidade": "memoria",
+      "exemplos": [
+        "Cancela o lembrete da reunião",
+        "Esquece aquele lembrete de ontem"
+      ],
+      "parametros": [
+        {
+          "nome": "termo",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "medio",
+      "idempotencia": "escrita_idempotente",
+      "permissoes": [
+        "memoria"
+      ],
+      "custo": "zero",
+      "timeout_ms": 6000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": true,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "shard do operador"
+      ],
+      "recuperacao": [
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/agenda.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "diagnosticar_sistema",
+      "nome": "Diagnóstico do sistema",
+      "grupo": "diagnóstico",
+      "descricao": "Relata o estado real de cada parte da IARA: motor, banco, computador do operador, executor, catálogo de ferramentas e serviços externos — mais as últimas execuções e onde cada uma parou. Use para \"faça um diagnóstico\", \"você está funcionando?\", \"por que não abriu?\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Faça um diagnóstico do sistema",
+        "Você está funcionando direito?",
+        "Por que não abriu o aplicativo?"
+      ],
+      "parametros": [],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 8000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [],
+      "recuperacao": [],
+      "baterias": [
+        "testes/autonomia-vigia-aprendizado.test.ts",
+        "testes/persistencia-degradada.test.ts",
+        "testes/regressoes.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "investigar_lentidao",
+      "nome": "Investigar lentidão do computador",
+      "grupo": "investigação",
+      "descricao": "Investiga por que o computador do operador está lento: mede processador, memória, disco e os processos que mais consomem, separa o que está fora da faixa normal, levanta hipóteses com o grau de confiança que as evidências sustentam e propõe planos comparados por benefício, risco e esforço. NÃO executa nenhum plano — devolve a proposta e pede autorização. Quando já houve uma investigação antes, compara e diz se a ação anterior resolveu. Use para \"por que meu computador está lento\", \"investigue a lentidão\", \"veja se resolveu\", \"meça de novo\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Por que meu computador está lento?",
+        "Investiga essa lentidão aqui",
+        "Mede de novo e vê se resolveu"
+      ],
+      "parametros": [],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 40000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [],
+      "recuperacao": [],
+      "baterias": [
+        "testes/investigacao.test.ts",
+        "testes/planos-autorizados.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "assumir_plano",
+      "nome": "Assumir o plano autorizado",
+      "grupo": "investigação",
+      "descricao": "Registra que o operador autorizou um dos planos que a IARA propôs na investigação e anuncia o que vai acontecer. Não executa o plano: os passos de efeito vêm em seguida, cada um pelas portas de sempre. Sem proposta viva, diz isso em vez de assumir qualquer coisa.",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Pode executar o plano A",
+        "Autorizo o plano recomendado"
+      ],
+      "parametros": [
+        {
+          "nome": "plano",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "escrita_idempotente",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 3000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [],
+      "recuperacao": [
+        "valor padrão"
+      ],
+      "baterias": [
+        "testes/calendario-arm-confirmar.test.ts",
+        "testes/planos-autorizados.test.ts",
+        "testes/validacao/falsaConclusao.ts",
+        "testes/validacao-falsa-conclusao.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "auditar_sistema",
+      "nome": "Auditoria do que a IARA observa",
+      "grupo": "auditoria",
+      "descricao": "Audita as quatro áreas que a IARA consegue observar de si mesma: capacidades desligadas por falta de credencial, erros cognitivos que se repetiram, planos que foram tentados e nunca resolveram, e a integridade da prova do jornal. Declara explicitamente o que NÃO auditou. Também relata o que pediram e ela ainda não sabe fazer (lacunas de capacidade). Use para \"faça uma auditoria\", \"o que está errado por aqui\", \"o que precisa de atenção\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Faça uma auditoria do sistema",
+        "O que está errado por aqui?",
+        "O que te pediram que você não soube fazer?"
+      ],
+      "parametros": [],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 8000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [],
+      "recuperacao": [],
+      "baterias": [
+        "testes/autonomia-vigia-aprendizado.test.ts",
+        "testes/lacunas-capacidade.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "consultar_cargas_luft",
+      "nome": "Cargas da operação LUFT",
+      "grupo": "planilha LUFT",
+      "descricao": "Conta e lista as cargas (OCIs) com coleta marcada num período, lendo a planilha oficial da operação LUFT. O parâmetro \"periodo\" recebe a EXPRESSÃO como foi dita (\"hoje\", \"amanhã\", \"essa semana\", \"17/08\") — não calcule a data, quem interpreta é o motor. Use para \"quantas cargas vamos coletar hoje/amanhã\", \"o que temos essa semana\", \"cargas do dia 17/08\".",
+      "dominio": "operacoes",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Quantas cargas foram coletadas hoje?",
+        "Quantas coletas temos amanhã na LUFT?",
+        "O que temos de carga essa semana?",
+        "Me mostra as cargas do dia 17/08"
+      ],
+      "parametros": [
+        {
+          "nome": "periodo",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede",
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 75000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "base da operação"
+      ],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/cadeia-cognitiva.test.ts",
+        "testes/guarda-de-laco.test.ts",
+        "testes/holdout/cenarios.ts",
+        "testes/moldura-observacao.test.ts",
+        "testes/promessa-de-acao.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "periodo"
+      ]
+    },
+    {
+      "id": "consultar_estatisticas_cargas_luft",
+      "nome": "Estatísticas da operação LUFT",
+      "grupo": "planilha LUFT",
+      "descricao": "Conta, soma valor ou agrupa as cargas da operação LUFT — motorista com mais cargas, faturamento por rota, cargas por status, valor total ou médio. \"periodo\" é opcional (vazio = todas as cargas cadastradas) e recebe a EXPRESSÃO como foi dita (\"essa semana\", \"17/08\"), nunca uma data já calculada. \"agrupar_por\" é um de: motorista, rota, origem, destino, status (texto exato da célula), status_normalizado (agrupa FINALIZADO/finalizado/FINALIZADA juntos), nenhum. NESTA OPERAÇÃO a origem é o POSTO que despacha e o destino é a CENTRAL que recebe: \"por posto\" = origem, \"por central\" = destino. Há um cliente só (LUFT), então não existe agrupamento por cliente. \"metrica\" é um de: contagem, valor_total, valor_medio, distintos, sem_movimento. Use sem_movimento com um \"periodo\" para \"quais centrais/postos/motoristas NÃO tiveram carga nos últimos 30 dias\" — ela lista quem a planilha do ano conhece e não apareceu na janela, e EXIGE período (sem janela não existe \"parou\"). Use para \"qual motorista fez mais cargas\", \"faturamento por rota\", \"quantas cargas por status\", \"valor total das cargas desta semana\". Para \"QUANTOS motoristas/rotas/destinos DIFERENTES existem\", use metrica=distintos com o agrupar_por da dimensão — ela devolve a contagem única já descontando as cargas sem o campo preenchido. NUNCA some os grupos de uma listagem para chegar a esse número: a listagem é truncada e o rodapé \"e mais N\" não é somável.",
+      "dominio": "operacoes",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Qual motorista tem mais cargas?",
+        "Quantos motoristas diferentes temos?",
+        "Quantas cargas por posto?",
+        "Qual central recebeu mais cargas?",
+        "Quais centrais não tiveram cargas nos últimos 30 dias?",
+        "Quais postos ficaram sem carga essa semana?",
+        "Quantas rotas distintas existem?",
+        "Motoristas disponíveis agora?",
+        "Qual rota teve maior faturamento?",
+        "Qual o total faturado essa semana?",
+        "Quantas cargas estão finalizadas?"
+      ],
+      "parametros": [
+        {
+          "nome": "periodo",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "agrupar_por",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "motorista",
+            "rota",
+            "origem",
+            "destino",
+            "status",
+            "status_normalizado",
+            "nenhum"
+          ],
+          "sinonimos": 23
+        },
+        {
+          "nome": "metrica",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "contagem",
+            "valor_total",
+            "valor_medio",
+            "distintos",
+            "sem_movimento",
+            "margem"
+          ],
+          "sinonimos": 27
+        },
+        {
+          "nome": "ano",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "",
+            "2026",
+            "2025",
+            "2024"
+          ],
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede",
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 75000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "base da operação"
+      ],
+      "recuperacao": [
+        "sinônimos declarados no esquema",
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/autoridade-de-dados.test.ts",
+        "testes/catalogo-no-prefixo.test.ts",
+        "testes/contrato-factual.test.ts",
+        "testes/decisao.test.ts",
+        "testes/descoberta-capacidades.test.ts",
+        "testes/elipse-conversacional.test.ts",
+        "testes/fi-escalada-e2e.test.ts",
+        "testes/holdout/cenarios.ts",
+        "testes/lacunas-capacidade.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "comparar_semanas_luft",
+      "nome": "Comparação entre semanas — operação LUFT",
+      "grupo": "planilha LUFT",
+      "descricao": "Compara contagem e valor total de cargas entre duas semanas da operação LUFT. Os parâmetros \"periodo_atual\" e \"periodo_anterior\" recebem a EXPRESSÃO como foi dita (\"essa semana\", \"semana passada\", \"17/08\") — não calcule a data. Use para \"como essa semana está em relação à passada\", \"comparar com a semana anterior\", \"crescemos ou caímos essa semana\".",
+      "dominio": "operacoes",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Como essa semana está em relação à passada?",
+        "Comparar essa semana com a semana anterior",
+        "Crescemos ou caímos em relação à semana passada?",
+        "Faturamento dessa semana comparado com a semana anterior"
+      ],
+      "parametros": [
+        {
+          "nome": "periodo_atual",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "periodo_anterior",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede",
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 75000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "base da operação"
+      ],
+      "recuperacao": [
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/cargasLuft-habilidades.test.ts",
+        "testes/holdout/cenarios.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "relatorio_executivo_luft",
+      "nome": "Relatório executivo — operação LUFT",
+      "grupo": "planilha LUFT",
+      "descricao": "Consolida num único relatório: total de cargas cadastradas, contagem e faturamento do período pedido, os motoristas com mais cargas no período e a distribuição por status. \"periodo\" recebe a EXPRESSÃO como foi dita (\"essa semana\", \"hoje\") e é opcional (vazio = essa semana). Use para \"me dá um relatório da operação\", \"resumo executivo da semana\", \"como está a operação hoje\".",
+      "dominio": "operacoes",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Me dá um relatório da operação essa semana",
+        "Resumo executivo da LUFT",
+        "Como está a operação hoje?",
+        "Relatório da semana passada"
+      ],
+      "parametros": [
+        {
+          "nome": "periodo",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede",
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 75000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "base da operação"
+      ],
+      "recuperacao": [
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/cargasLuft-habilidades.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "declarar_lacuna_de_dado",
+      "nome": "Dimensão ausente na planilha da operação",
+      "grupo": "planilha LUFT",
+      "descricao": "Declara, com o motivo, que a planilha da operação LUFT não tem a coluna que a pergunta pede. Use quando o operador pedir agregação por CLIENTE ou por VEÍCULO/PLACA: esses campos não existem na fonte, e qualquer número apresentado como se existissem viria da coluna errada. \"dimensao\" é um de: cliente, veiculo.",
+      "dominio": "operacoes",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Quantas cargas por cliente?",
+        "Qual cliente teve mais cargas?",
+        "Quantas cargas por veículo?",
+        "Faturamento por placa"
+      ],
+      "parametros": [
+        {
+          "nome": "dimensao",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": [
+            "cliente",
+            "veiculo"
+          ],
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [],
+      "custo": "zero",
+      "timeout_ms": 500,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [],
+      "recuperacao": [
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/ano-fora-de-alcance.test.ts",
+        "testes/contrato-factual.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "comparar_anos_luft",
+      "nome": "Comparação entre anos — operação LUFT",
+      "grupo": "planilha LUFT",
+      "descricao": "Compara DOIS ANOS da operação LUFT: volume de cargas, faturamento, motoristas distintos ou margem. \"ano_atual\" e \"ano_anterior\" são um de: 2026, 2025, 2024. \"metrica\" é um de: contagem, valor_total, distintos, margem. \"agrupar_por\" é opcional e, quando informado (motorista, rota, origem/posto, destino/central), DECOMPÕE a diferença mostrando quem explica o movimento. Use para \"compare 2025 com 2026\", \"qual ano teve mais cargas\", \"a margem melhorou\", \"qual central caiu mais\", \"quanto crescemos\".",
+      "dominio": "operacoes",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Compare 2025 com 2026",
+        "A margem melhorou de 2025 para 2026?",
+        "Qual ano teve mais cargas?",
+        "Qual central mais caiu de 2025 para 2026?",
+        "Quanto o faturamento cresceu em relação ao ano passado?"
+      ],
+      "parametros": [
+        {
+          "nome": "ano_atual",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "2026",
+            "2025",
+            "2024"
+          ],
+          "sinonimos": 0
+        },
+        {
+          "nome": "ano_anterior",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": [
+            "2026",
+            "2025",
+            "2024"
+          ],
+          "sinonimos": 0
+        },
+        {
+          "nome": "metrica",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "contagem",
+            "valor_total",
+            "distintos",
+            "margem"
+          ],
+          "sinonimos": 8
+        },
+        {
+          "nome": "agrupar_por",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "motorista",
+            "rota",
+            "origem",
+            "destino",
+            "status",
+            "status_normalizado",
+            "nenhum"
+          ],
+          "sinonimos": 23
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "rede",
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 75000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": true,
+      "alcanca": [
+        "internet",
+        "base da operação"
+      ],
+      "recuperacao": [
+        "sinônimos declarados no esquema",
+        "valor padrão",
+        "verificador confere depois"
+      ],
+      "baterias": [
+        "testes/holdout/cenarios.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": []
+    },
+    {
+      "id": "descrever_planilha",
+      "nome": "Descrever planilha",
+      "grupo": "planilha genérica",
+      "descricao": "Lê uma planilha (.xlsx ou .xls) de dados/documentos/ e devolve as abas disponíveis, as colunas do cabeçalho com o tipo predominante de cada uma e quantas linhas de dado tem — sem calcular nada sobre o conteúdo. \"arquivo\" é o nome do arquivo como está em dados/documentos/; \"aba\" é opcional (vazio = primeira aba com dado). Use para \"o que tem essa planilha\", \"quais colunas tem o arquivo X.xlsx\", \"quantas linhas tem essa planilha\".",
+      "dominio": "automacao",
+      "capacidade": "percepcao",
+      "exemplos": [
+        "O que tem na planilha vendas.xlsx?",
+        "Quais colunas tem o arquivo relatorio.xlsx?",
+        "Quantas linhas tem essa planilha?",
+        "Lê a planilha estoque.xlsx e me diz o que ela contém"
+      ],
+      "parametros": [
+        {
+          "nome": "arquivo",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "aba",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 12000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "base da operação"
+      ],
+      "recuperacao": [
+        "valor padrão"
+      ],
+      "baterias": [
+        "testes/habilidades-planilha-generica.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "arquivo"
+      ]
+    },
+    {
+      "id": "consultar_planilha_generica",
+      "nome": "Consulta a planilha genérica",
+      "grupo": "planilha genérica",
+      "descricao": "Conta, soma, tira média, mínimo ou máximo de uma planilha genérica de dados/documentos/, agrupando por qualquer coluna do cabeçalho REAL do arquivo — não uma lista fixa. \"agrupar_por\" e \"coluna_metrica\" recebem o NOME DA COLUNA como foi dito (\"por região\", \"a coluna valor\") — a habilidade casa isso com o cabeçalho de verdade; se não achar, ela diz quais colunas existem em vez de adivinhar. \"metrica\" é um de: contagem, soma, media, minimo, maximo (exige \"coluna_metrica\" quando não é contagem). \"filtro_coluna\"/\"filtro_valor\" filtram por igualdade antes de agregar, ambos opcionais. Use para \"quanto vendemos por região\", \"qual cliente comprou mais\", \"soma da coluna valor por status\".",
+      "dominio": "automacao",
+      "capacidade": "automacao",
+      "exemplos": [
+        "Quanto vendemos por região na planilha vendas.xlsx?",
+        "Qual cliente tem mais pedidos no arquivo pedidos.xlsx?",
+        "Soma a coluna valor agrupado por status",
+        "Quantas linhas tem por categoria?"
+      ],
+      "parametros": [
+        {
+          "nome": "arquivo",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "aba",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "agrupar_por",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "metrica",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": [
+            "contagem",
+            "soma",
+            "media",
+            "minimo",
+            "maximo"
+          ],
+          "sinonimos": 0
+        },
+        {
+          "nome": "coluna_metrica",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "filtro_coluna",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "filtro_valor",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 15000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "base da operação"
+      ],
+      "recuperacao": [
+        "valor padrão"
+      ],
+      "baterias": [
+        "testes/habilidades-planilha-generica.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "arquivo"
+      ]
+    },
+    {
+      "id": "diagnosticar_qualidade_planilha",
+      "nome": "Diagnóstico de qualidade de planilha",
+      "grupo": "planilha genérica",
+      "descricao": "Analisa a qualidade dos dados de uma planilha de dados/documentos/: valores numéricos fora do padrão estatístico (outlier pela cerca de Tukey), colunas com taxa de vazio anormal, colunas dominadas por um único valor e linhas duplicadas — todas por convenção estatística padrão, nunca por regra de negócio do domínio representado na planilha. Levanta hipóteses sobre ONDE o dado é suspeito, com o grau de confiança que as evidências sustentam; nunca afirma a causa de negócio (atraso, erro de operação etc.). Use para \"tem algo estranho nesses dados\", \"analisa a qualidade da planilha X\", \"essa planilha tem erro?\".",
+      "dominio": "cognicao",
+      "capacidade": "raciocinio",
+      "exemplos": [
+        "Essa planilha tem algum problema?",
+        "Analisa a qualidade dos dados de vendas.xlsx",
+        "Tem algo estranho nesses dados?",
+        "Encontra anomalias na planilha estoque.xlsx"
+      ],
+      "parametros": [
+        {
+          "nome": "arquivo",
+          "tipo": "texto",
+          "obrigatorio": true,
+          "dentre": null,
+          "sinonimos": 0
+        },
+        {
+          "nome": "aba",
+          "tipo": "texto",
+          "obrigatorio": false,
+          "dentre": null,
+          "sinonimos": 0
+        }
+      ],
+      "risco": "baixo",
+      "idempotencia": "leitura",
+      "permissoes": [
+        "banco"
+      ],
+      "custo": "zero",
+      "timeout_ms": 20000,
+      "confirmacao_previa": false,
+      "verificacao_obrigatoria": false,
+      "planejavel_pela_llm": true,
+      "verificador_proprio": false,
+      "alcanca": [
+        "base da operação"
+      ],
+      "recuperacao": [
+        "valor padrão"
+      ],
+      "baterias": [
+        "testes/habilidades-planilha-generica.test.ts"
+      ],
+      "somente_leitura_pode": false,
+      "parametros_abertos": [
+        "arquivo"
+      ]
+    }
+  ]
+}

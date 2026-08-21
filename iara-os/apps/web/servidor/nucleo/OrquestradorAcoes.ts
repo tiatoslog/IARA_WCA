@@ -417,7 +417,7 @@ export class OrquestradorAcoes {
     // a frase precisa dizer que a cidade é o padrão da empresa, não a de quem
     // perguntou — senão soa como localização confirmada.
     const aviso = ehPadraoDoEscritorio
-      ? ` (padrão do escritório — ainda não sei onde você está)`
+      ? ` (padrão do escritório, porque ainda não sei onde você está)`
       : '';
     return (
       `Agora em ${cidade}${aviso}: ${atual.temperature_2m} °C, ${condicao}, ` +
@@ -459,7 +459,7 @@ export class OrquestradorAcoes {
 
     const condicao = CODIGOS_TEMPO[d?.weather_code?.[i] ?? -1];
     // Ver `ehPadraoDoEscritorio` em `consultarClima`.
-    const aviso = ehPadraoDoEscritorio ? ' (padrão do escritório — ainda não sei onde você está)' : '';
+    const aviso = ehPadraoDoEscritorio ? ' (padrão do escritório, porque ainda não sei onde você está)' : '';
     const partes = [
       `${veredito} em ${cidade}${aviso}: ${Math.round(p)}% de probabilidade`,
       typeof acumulado === 'number' ? `${acumulado} mm previstos` : '',

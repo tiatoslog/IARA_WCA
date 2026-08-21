@@ -1,0 +1,36 @@
+PERFORMANCE — §26, medida na campanha E4 com cérebro real (claude-sonnet-5)
+Fonte: CAMPANHA-2026-08-20-1029-anthropic-3091/veredito.json, campo `ms` por missão.
+O relógio é do turno inteiro: mensagem entra pelo WebSocket -> percepção ->
+decisão -> laço (planejar/executar/observar) -> síntese -> fala completa.
+
+TODAS as 44 missões medidas
+  p50     1.586 ms
+  p90    11.500 ms
+  p95    16.888 ms
+  p99    64.202 ms
+  max    64.202 ms   (CO-08, missão de memória)
+
+Só os 22 turnos que chegaram a chamar o cérebro (> 1,5 s)
+  p50     9.195 ms
+  p95    18.935 ms
+  max    64.202 ms
+
+LEITURA. A distribuição é BIMODAL e isso é desenho, não defeito: a rota
+determinística resolve em dezenas de milissegundos (AG-01 39 ms, SE-01 34 ms,
+VL-01 83 ms) e a rota cognitiva paga a latência do provedor. O p50 global de
+1,6 s é a fronteira entre as duas populações, não um tempo típico — quem lê o
+p50 sozinho conclui coisa errada sobre as duas.
+
+GARGALO. É o provedor, e a medição do próprio motor confirma: em CO-04 o log
+diz "Raciocínio: 921 tokens de entrada (10734 do cache), 110 de saída, 4503ms"
+— 4,5 s para 110 tokens de saída. O prefixo estável já está no cache (10.734
+tokens lidos contra 921 escritos), então não há folga de contexto a ganhar; o
+que sobra é escolha de modelo por tarefa.
+
+CAUDA. O p99 de 64 s é UM turno, e ele é de memória. Um turno que leva mais de
+um minuto sem dizer nada é indistinguível de travamento do ponto de vista de
+quem espera — mas a projeção publica estágio e plano durante a espera, então o
+operador vê movimento. Não vira achado; vira número declarado.
+
+NÃO MEDIDO nesta corrida: latência sob concorrência (a campanha é sequencial,
+uma missão por vez) e latência com a planilha real da Graph ligada.

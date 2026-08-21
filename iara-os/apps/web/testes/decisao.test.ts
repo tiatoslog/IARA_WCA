@@ -241,7 +241,25 @@ test('pergunta com um único candidato pede confirmação, não escolha', () => 
 // aqui (o teste verifica a ROTA, nunca qual skill a LLM escolheria).
 // ---------------------------------------------------------------------------
 
-test('pergunta curta de fato sobre dado operacional → plano_cognitivo, não raciocínio mudo', () => {
+/**
+ * A EXIGÊNCIA SUBIU DE NÍVEL EM 19/08/2026, e o motivo é o contrato semântico.
+ *
+ * O invariante que este teste protege sempre foi "não responda de boca sem
+ * tentar nenhuma habilidade". Até aqui, a única forma de cumpri-lo era
+ * `plano_cognitivo` — oferecer o catálogo à LLM e torcer para ela escolher.
+ *
+ * Agora a família de contagem da operação tem `plano_local`: ferramenta e
+ * parâmetros vindos de `interpretarContratoFactual`, iguais em toda execução.
+ * Isso é ESTRITAMENTE MAIS FORTE que o que o teste pedia — a LLM não é
+ * consultada porque não há o que escolher.
+ *
+ * Então o portão passa a aceitar as duas rotas e a recusar a única que o
+ * defeito de 14/08 produzia: `raciocinio_direto`, a rota que nunca vê o
+ * catálogo. Aceitar `plano_local` aqui NÃO afrouxa nada — quem garante que a
+ * rota determinística leva à ferramenta certa é `contrato-factual.test.ts`, que
+ * confere operação, dimensão, métrica e período um a um.
+ */
+test('pergunta curta de fato sobre dado operacional nunca cai em raciocínio mudo', () => {
   const casos = [
     'Quantas cargas foram coletadas hoje na operação LUFT?',
     'Qual motorista tem mais cargas?',
@@ -251,10 +269,9 @@ test('pergunta curta de fato sobre dado operacional → plano_cognitivo, não ra
   ];
   for (const frase of casos) {
     const d = decidir(frase);
-    assert.equal(
-      d.rota,
-      'plano_cognitivo',
-      `"${frase}" tem que oferecer o catálogo à LLM, não responder direto sem tentar nenhuma habilidade`,
+    assert.ok(
+      d.rota === 'plano_cognitivo' || d.rota === 'plano_local',
+      `"${frase}" caiu em "${d.rota}" — tem que chegar a uma habilidade, seja pelo contrato determinístico (plano_local) ou pelo catálogo oferecido à LLM (plano_cognitivo)`,
     );
   }
 });

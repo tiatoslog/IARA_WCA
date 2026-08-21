@@ -15,7 +15,11 @@
  * diferentes era duas chances de divergirem.
  */
 
-import { lerManifestoBraco, type MaquinaDoOperador } from '../lib/execucao';
+import {
+  frasearVersaoInstalada,
+  lerManifestoBraco,
+  type MaquinaDoOperador,
+} from '../lib/execucao';
 
 export function Automacao({
   maquinas,
@@ -110,14 +114,32 @@ export function Automacao({
           </>
         ) : lista.length > 0 ? (
           <>
+            {/*
+              A MARCA É DE CONCLUSÃO, NÃO DE ENLACE — corrigido em 20/08/2026,
+              depois de a operadora ver as duas frases juntas na mesma folha:
+
+                  Status      ○ Nenhum computador conectado agora
+                  O programa  ● Instalada em Homeoffice — na versão atual
+
+              A máquina estava desligada desde 16 de agosto e o ponto verde
+              estava escrito à mão, sem estado nenhum atrás. "Instalada" é fato
+              do passado; "conectada" é fato de agora. O produto inteiro usa o
+              ponto verde para o segundo, então usá-lo para o primeiro fazia a
+              folha se contradizer três linhas depois do próprio Status.
+            */}
             <p className="instalar-confirmacao">
-              <span aria-hidden className="maquina-sinal ligado" />
+              <span aria-hidden className="marca-feito">
+                ✓
+              </span>{' '}
               Instalada
               {lista.length === 1
                 ? ` em ${lista[0].nome}`
                 : ` em ${lista.length} computadores`}
-              {lista.some((m) => m.desatualizada) && ' — uma versão antiga espera o computador ligar'}
-              {lista.every((m) => !m.desatualizada) && ' — na versão atual'}
+              {/* A frase mora em `frasearVersaoInstalada`, pura e testada. Aqui
+                  havia `every(m => !m.desatualizada) && ' — na versão atual'`,
+                  que afirmava estar em dia uma máquina cuja versão ninguém
+                  tinha lido — ver o cabeçalho daquela função. */}
+              {frasearVersaoInstalada(lista)}
             </p>
             <a className="automacao-baixar-de-novo" href={manifesto.url} download>
               Baixar de novo, para outro computador

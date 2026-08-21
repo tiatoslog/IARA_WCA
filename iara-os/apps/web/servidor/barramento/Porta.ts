@@ -18,6 +18,7 @@ import { TeoriaDaMente } from '../nucleo/TeoriaDaMente';
 import { SessaoOperador } from './SessaoOperador';
 import { PonteProjecao } from './PonteProjecao';
 import { inventarioDeMaquinas, ponteDispositivos } from './PonteDispositivos';
+import { escolhaDeMaquina } from '../nucleo/EscolhaDeMaquina';
 import { pareamento } from '../nucleo/Pareamento';
 import { BarramentoEventos } from '../nucleo/kernel/BarramentoEventos';
 import { CompiladorSnapshot } from '../nucleo/kernel/CompiladorSnapshot';
@@ -85,7 +86,8 @@ ponteDispositivos.aoMudarInventario((idUsuario) => {
   if (!r || r.sessoes.size === 0) return;
   void inventarioDeMaquinas(idUsuario)
     .then((maquinas) => {
-      for (const sessao of r.sessoes) sessao.emitirDispositivos(maquinas, pareamento.disponivel());
+      for (const sessao of r.sessoes)
+        sessao.emitirDispositivos(maquinas, pareamento.disponivel(), escolhaDeMaquina.escolhida(idUsuario));
     })
     .catch(() => undefined);
 });
@@ -406,8 +408,18 @@ export function conectarOperador(socket: WebSocket): void {
            * insight logo abaixo: a tabela de dispositivos indisponível não pode
            * impedir alguém de entrar no escritório.
            */
-          void inventarioDeMaquinas(operador.id_usuario)
-            .then((maquinas) => sessao.emitirDispositivos(maquinas, pareamento.disponivel()))
+          /* Capturado antes do `then` porque `operador` é mutável no escopo do
+             socket e o TypeScript, com razão, não garante que ele continue não
+             nulo depois do await. */
+          const idDono = operador.id_usuario;
+          void inventarioDeMaquinas(idDono)
+            .then((maquinas) =>
+              sessao.emitirDispositivos(
+                maquinas,
+                pareamento.disponivel(),
+                escolhaDeMaquina.escolhida(idDono),
+              ),
+            )
             .catch(() => undefined);
 
           /**
@@ -488,7 +500,8 @@ export function conectarOperador(socket: WebSocket): void {
       pacote.tipo === 'parear' ||
       pacote.tipo === 'esquecer_dispositivo' ||
       pacote.tipo === 'atualizar_dispositivo' ||
-      pacote.tipo === 'renomear_dispositivo'
+      pacote.tipo === 'renomear_dispositivo' ||
+      pacote.tipo === 'escolher_dispositivo'
     ) {
       const dono = operador;
       const sessao = minhaSessao;
@@ -537,6 +550,32 @@ export function conectarOperador(socket: WebSocket): void {
             acao = trocou
               ? { ok: true, texto: `Pronto — agora ele se chama "${pedido.nome}".` }
               : { ok: false, texto: 'Não consegui renomear esse computador agora.' };
+          } else if (pedido.tipo === 'escolher_dispositivo') {
+            /**
+             * "TRABALHE NESTE COMPUTADOR" — a escolha do gate multi-desktop.
+             *
+             * O dono vem da SESSÃO resolvida, nunca do pacote: aceitar um
+             * `id_usuario` do cliente deixaria alguém apontar o braço de outra
+             * pessoa. É a mesma regra do pareamento, e pelo mesmo motivo.
+             *
+             * A escolha NÃO é validada contra o inventário aqui. Quem sabe se a
+             * máquina está ligada é a ponte, no instante da execução — e a
+             * recusa que ela produz nomeia a máquina. Conferir aqui criaria uma
+             * segunda verdade sobre quem está conectado, e a operadora que
+             * escolhe o computador do escritório antes de chegar nele estaria
+             * sendo impedida de declarar uma intenção perfeitamente legítima.
+             */
+            if (pedido.id === null) {
+              escolhaDeMaquina.esquecer(dono.id_usuario);
+              acao = {
+                ok: true,
+                texto: 'Voltei ao normal: quem estiver conectado por último atende.',
+              };
+            } else {
+              escolhaDeMaquina.escolher(dono.id_usuario, pedido.id, pedido.nome);
+              const nome = pedido.nome || pedido.id;
+              acao = { ok: true, texto: `Certo — vou trabalhar em "${nome}".` };
+            }
           } else if (pedido.tipo === 'esquecer_dispositivo') {
             const removida = await pareamento.revogar(dono.id_usuario, pedido.id);
             /**
@@ -549,6 +588,10 @@ export function conectarOperador(socket: WebSocket): void {
             const derrubados = removida
               ? ponteDispositivos.derrubarPorCredencial(dono.id_usuario, pedido.id)
               : 0;
+            /* Uma escolha apontando para máquina revogada viraria recusa em
+               toda ação seguinte, e a operadora não teria como desfazer: a
+               máquina nem aparece mais na lista para ser reescolhida. */
+            if (removida) escolhaDeMaquina.esquecerDispositivo(dono.id_usuario, pedido.id);
             acao = removida
               ? {
                   ok: true,
@@ -565,7 +608,12 @@ export function conectarOperador(socket: WebSocket): void {
            falhou. Quem acabou de tentar algo precisa ver o estado real, não o
            que estava na tela antes. */
         const maquinas = await inventarioDeMaquinas(dono.id_usuario).catch(() => []);
-        sessao.emitirDispositivos(maquinas, pareamento.disponivel(), acao);
+        sessao.emitirDispositivos(
+          maquinas,
+          pareamento.disponivel(),
+          escolhaDeMaquina.escolhida(dono.id_usuario),
+          acao,
+        );
       })();
       return;
     }

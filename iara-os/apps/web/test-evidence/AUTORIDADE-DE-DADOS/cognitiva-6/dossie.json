@@ -1,0 +1,45 @@
+{
+  "quando": "2026-08-19T19:11:52.393Z",
+  "rota_pedida": "cognitiva",
+  "pergunta": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes",
+  "fonte": {
+    "centrais_ativas": 15
+  },
+  "historico_plantado": "Ontem eram 13 centrais ativas.",
+  "veredicto": {
+    "status": "APROVADO",
+    "motivo": "consultou a fonte e respondeu 15"
+  },
+  "sinais": {
+    "consultouFonte": true,
+    "disse15": true,
+    "disse13": true,
+    "rota": "plano_cognitivo",
+    "voltas": 2,
+    "passosExecutados": 1
+  },
+  "resposta": [
+    "Agora dá 15 centrais ativas, com 255 veículos vinculados, e mais 2 fora de operação — não bate com o que te falei antes (13). Mas é bom pesar isso com cuidado: o resultado vem marcado como dataset semente de demonstração, não do banco real, que ainda não está conectado. Então a diferença pode ser só isso — a fonte anterior era outra base, não uma mudança real na operação.\n\nEu não fecharia esse panorama até confirmar qual base está de fato ligada. Quer que eu sinalize isso como pendência, ou você já sabe que a conexão real ainda não está pronta?16:11"
+  ],
+  "conversa": [
+    {
+      "papel": "operador",
+      "texto": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes16:11"
+    },
+    {
+      "papel": "iara",
+      "texto": "Agora dá 15 centrais ativas, com 255 veículos vinculados, e mais 2 fora de operação — não bate com o que te falei antes (13). Mas é bom pesar isso com cuidado: o resultado vem marcado como dataset semente de demonstração, não do banco real, que ainda não está conectado. Então a diferença pode ser só isso — a fonte anterior era outra base, não uma mudança real na operação.\n\nEu não fecharia esse panorama até confirmar qual base está de fato ligada. Quer que eu sinalize isso como pendência, ou você já sabe que a conexão real ainda não está pronta?16:11"
+    }
+  ],
+  "console": [
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[warning] WebSocket connection to 'ws://localhost:3085/barramento' failed: WebSocket is closed before the connection is established.",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] [.WebGL-0x5eb4001b6e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x5eb4001b6e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x5eb4001b6e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x5eb4001b6e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "[info] [voz] metadados: 8030 ms desde o pedido do áudio"
+  ]
+}

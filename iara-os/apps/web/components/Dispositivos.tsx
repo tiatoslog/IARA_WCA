@@ -26,7 +26,11 @@
 
 import { useEffect, useState } from 'react';
 import { EsteAparelho } from './EsteAparelho';
-import { lerManifestoBraco, type MaquinaDoOperador } from '../lib/execucao';
+import {
+  lerManifestoBraco,
+  lerStatusDaMaquina,
+  type MaquinaDoOperador,
+} from '../lib/execucao';
 
 /** Lida uma vez por módulo — as três variáveis são estáticas de build, não
  *  mudam durante a vida do processo do navegador. */
@@ -66,12 +70,24 @@ function Maquina({
   aoEsquecer,
   aoAtualizar,
   aoRenomear,
+  aoEscolher,
+  escolhida,
+  maisDeUma,
 }: {
   maquina: MaquinaDoOperador;
   podeAgir: boolean;
   aoEsquecer: (id: string) => void;
   aoAtualizar: (id: string) => void;
   aoRenomear: (id: string, nome: string) => void;
+  /**
+   * "Trabalhar nesta" — o gate multi-desktop (20/08/2026). `id: null` desfaz.
+   * Ver `EscolhaDeMaquina`: sem escolha, o último que conectou atende.
+   */
+  aoEscolher: (id: string | null, nome?: string) => void;
+  /** Qual máquina está escolhida agora. `null` = nenhuma, vale o padrão. */
+  escolhida: string | null;
+  /** O quadro tem mais de uma máquina? Só aí existe escolha a fazer. */
+  maisDeUma: boolean;
 }) {
   /**
    * Confirmação em dois toques, no próprio botão. Um `window.confirm` seria uma
@@ -79,6 +95,7 @@ function Maquina({
    * não pertence ao escritório da IARA. E desconectar sem confirmar nenhuma vez
    * é um clique errado que tira as mãos da pessoa sem ela entender por quê.
    */
+  const status = lerStatusDaMaquina(maquina, escolhida);
   const [confirmando, setConfirmando] = useState(false);
   useEffect(() => {
     if (!confirmando) return;
@@ -109,7 +126,7 @@ function Maquina({
     <li className="maquina">
       <span
         aria-hidden
-        className={maquina.conectada ? 'maquina-sinal ligado' : 'maquina-sinal'}
+        className={status.conexao === 'atendendo' ? 'maquina-sinal ligado' : 'maquina-sinal'}
       />
       <div className="maquina-corpo">
         {editando ? (
@@ -149,8 +166,26 @@ function Maquina({
         <span className="maquina-detalhe">
           {sistemaLegivel(maquina.plataforma)}
           {' · '}
-          {maquina.conectada ? 'atendendo agora' : `desligado — ${quandoFoi(maquina.vista_em)}`}
-          {maquina.versao && ` · v${maquina.versao}`}
+          {/*
+            A FRASE VEM DE `lerStatusDaMaquina`, e ela é ESCOPADA — corrigido em
+            20/08/2026, na auditoria do gate multi-desktop.
+
+            Aqui estava `'desligado — <quando>'`, que afirma sobre o COMPUTADOR
+            o que esta tela só sabe sobre ESTE servidor. O pareamento mora no
+            banco compartilhado; a conexão é por processo. Um braço ligado ao
+            Railway aparecia "desligado" numa tela apontada para o localhost, e
+            a pessoa não tinha como distinguir "está desligado" de "o braço
+            caiu", "o backend caiu" ou "está atendendo outra IARA".
+
+            A versão só aparece quando alguém a LEU. Ausente é desconhecida —
+            nunca atual, nunca antiga.
+          */}
+          {status.frase}
+          {status.conexao !== 'atendendo' && maquina.vista_em !== null &&
+            ` — visto ${quandoFoi(maquina.vista_em)}`}
+          {status.versao.tipo === 'conhecida'
+            ? ` · v${status.versao.valor}`
+            : ' · versão desconhecida'}
         </span>
         {/*
           Achado em auditoria (14/08/2026): o braço, uma vez instalado, ficava
@@ -178,7 +213,7 @@ function Maquina({
                 não consegui atualizar: {maquina.erroAtualizacao}
               </span>
             )}
-            {maquina.desatualizada && (
+            {status.desatualizada && (
               <span className="maquina-detalhe maquina-desatualizada">
                 versão do programa desatualizada
                 {MANIFESTO.notas && <span className="maquina-notas-versao"> — {MANIFESTO.notas}</span>}
@@ -195,7 +230,7 @@ function Maquina({
           </>
         )}
       </div>
-      {maquina.desatualizada && maquina.conectada && maquina.atualizando === null && (
+      {status.desatualizada && maquina.conectada && maquina.atualizando === null && (
         <button
           className="maquina-atualizar"
           disabled={!podeAgir}
@@ -203,6 +238,36 @@ function Maquina({
           onClick={() => aoAtualizar(maquina.id)}
         >
           Atualizar agora
+        </button>
+      )}
+      {/*
+        "TRABALHAR NESTA" — o gate multi-desktop (20/08/2026), pedido pela
+        operadora: *"confira se consigo de fato conectar o braço em vários
+        computadores e escolher qual quero mover/trabalhar"*.
+
+        SÓ APARECE COM MAIS DE UMA MÁQUINA. Quem tem um computador só não tem
+        escolha a fazer, e um botão que não decide nada é ruído que ensina a
+        pessoa a ignorar botões.
+
+        O BOTÃO DA ESCOLHIDA DESFAZ a escolha em vez de sumir: um estado que só
+        dá para entrar é uma armadilha, e "voltar ao normal" precisa de um
+        gesto tão visível quanto escolher.
+      */}
+      {maisDeUma && (
+        <button
+          type="button"
+          className={status.selecionada ? 'maquina-escolher ativa' : 'maquina-escolher'}
+          disabled={!podeAgir}
+          title={
+            status.selecionada
+              ? 'A IARA está trabalhando aqui — clique para voltar ao normal'
+              : `A IARA passa a executar em ${maquina.nome}, e em mais nenhum`
+          }
+          onClick={() =>
+            status.selecionada ? aoEscolher(null) : aoEscolher(maquina.id, maquina.nome)
+          }
+        >
+          {status.selecionada ? 'Trabalhando aqui' : 'Trabalhar nesta'}
         </button>
       )}
       {maquina.pareada ? (
@@ -241,6 +306,8 @@ export function Dispositivos({
   aoEsquecer,
   aoAtualizar,
   aoRenomear,
+  aoEscolher,
+  escolhida,
   aoAbrirAutomacao,
   aoFechar,
 }: {
@@ -260,6 +327,13 @@ export function Dispositivos({
   aoAtualizar: (id: string) => void;
   /** Etapa 4 (14/08/2026) — dar um nome à máquina, escolhido pela operadora. */
   aoRenomear: (id: string, nome: string) => void;
+  /**
+   * "Trabalhar nesta" — o gate multi-desktop (20/08/2026). `id: null` desfaz.
+   * Ver `EscolhaDeMaquina`: sem escolha, o último que conectou atende.
+   */
+  aoEscolher: (id: string | null, nome?: string) => void;
+  /** Qual máquina está escolhida agora. `null` = nenhuma, vale o padrão. */
+  escolhida: string | null;
   /** O download do programa mora na folha de Automação — o assistente aponta
    *  para lá em vez de duplicar o botão (um caminho só, 15/08/2026). */
   aoAbrirAutomacao: () => void;
@@ -341,8 +415,41 @@ export function Dispositivos({
 
   return (
     <section className="ficha" aria-label="Computadores conectados">
+      {/*
+        SEM TÍTULO NA LISTA — pedido da operadora em 20/08/2026.
+
+        "Onde a IARA tem mãos" era uma frase bonita explicando uma gaveta que a
+        pessoa acabou de abrir DE PROPÓSITO, clicando no ícone de mãos. Quem
+        chegou aqui já sabe o que veio fazer; o título gastava a primeira linha
+        para contar isso de novo. O `aria-label` da seção guarda o nome para
+        quem navega por leitor de tela — ele não some, só deixa de ocupar
+        espaço.
+
+        No assistente de pareamento o título FICA: ali a pessoa foi levada para
+        outra vista, e uma tela que troca de conteúdo sem dizer o que virou é
+        onde alguém se perde.
+      */}
       <header className="ficha-cabecalho">
-        <h2>{vista === 'conectar' ? 'Parear novo dispositivo' : 'Onde a IARA tem mãos'}</h2>
+        {vista === 'conectar' ? (
+          <h2>Parear novo dispositivo</h2>
+        ) : (
+          /* O PAREAR MORA AQUI, no canto esquerdo e do tamanho de um controle —
+             não de uma faixa. Ele era um botão de linha inteira no pé da lista,
+             com o peso visual de ação principal; parear é coisa que se faz uma
+             vez por computador, e o que a pessoa vem fazer aqui na maioria das
+             vezes é OLHAR a lista. */
+          pareamentoDisponivel && (
+            <button
+              type="button"
+              className="dispositivos-parear-pequeno"
+              onClick={() => setVista('conectar')}
+              disabled={!conectado}
+              title="Ligar mais um computador a esta conta"
+            >
+              + Parear
+            </button>
+          )
+        )}
         {vista === 'lista' && (
           <button
             type="button"
@@ -385,21 +492,17 @@ export function Dispositivos({
                   aoEsquecer={aoEsquecer}
                   aoAtualizar={aoAtualizar}
                   aoRenomear={aoRenomear}
+                  aoEscolher={aoEscolher}
+                  escolhida={escolhida}
+                  maisDeUma={(maquinas ?? []).length > 1}
                 />
               ))}
             </ul>
           )}
 
-          {pareamentoDisponivel ? (
-            <button
-              type="button"
-              className="dispositivos-conectar-novo"
-              onClick={() => setVista('conectar')}
-              disabled={!conectado}
-            >
-              + Parear novo dispositivo
-            </button>
-          ) : (
+          {/* O botão de parear subiu para o cabeçalho, pequeno. Aqui ficava uma
+              faixa de linha inteira — ver o comentário lá em cima. */}
+          {!pareamentoDisponivel && (
             <small>
               Esta instalação da IARA está sem banco configurado, então não há onde
               guardar o par. Quem publicou o sistema precisa configurar o Supabase

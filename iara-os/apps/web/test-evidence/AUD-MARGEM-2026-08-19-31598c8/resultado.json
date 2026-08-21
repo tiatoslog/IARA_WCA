@@ -1,0 +1,19 @@
+{
+  "baseline_id": "AUD-MARGEM-2026-08-19-31598c8",
+  "commit": "31598c8",
+  "ambiente": "localhost:3000, planilha viva via MS Graph, Supabase Auth ativo",
+  "contaminacao_declarada": "arvore com alteracoes nao commitadas de outra sessao; motor reiniciou varias vezes durante a campanha",
+  "qa": "agente independente, sem permissao de editar codigo",
+  "casos": { "PASS": 14, "FAIL": 0, "INCONCLUSIVO": 0, "NAO_EXECUTADO": 1 },
+  "nao_executado": ["MG-017 (rota sem preco) — nao observavel pela interface: 2026 tem 0 rotas sem preco"],
+  "p0_abertos": 0,
+  "p1_abertos": ["OBS-1 — mensagem perdida em silencio com o indicador dizendo 'barramento aberto'"],
+  "divergencia_de_valor": {
+    "observada": "MG-001 R$ 1.428.342,09 -> MG-013/014/016 R$ 1.428.929,02",
+    "explicacao_do_qa": "carga nova entrou na planilha viva durante a campanha",
+    "validacao_independente": "oraculo reexecutado apos a campanha devolveu EXATAMENTE R$ 1.428.929,02 e receita R$ 4.740.229,52; cargas 2688 -> 2689",
+    "veredito": "diferenca justificada por mudanca de dados, verificada por fonte independente"
+  },
+  "veredito_qa": "APROVADO",
+  "veredito_assurance": "APROVADO PARA A MARGEM, com P1 aberto fora do escopo da margem"
+}

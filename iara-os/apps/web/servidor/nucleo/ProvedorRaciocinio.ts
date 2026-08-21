@@ -23,13 +23,34 @@ export class ProvedorIndisponivel extends Error {}
  *  dentro do snapshot, e `lib/` não pode importar de `servidor/`. */
 export type { OrigemRaciocinio } from '../../lib/estado';
 
+/**
+ * O PEDIDO AO CÉREBRO.
+ *
+ * TRÊS CAMPOS SÃO OPCIONAIS AQUI E ERAM OBRIGATÓRIOS ATÉ 19/08/2026 — a mudança
+ * fecha uma classe de defeito, não afrouxa um contrato.
+ *
+ * `historico`, `overridePersona` e `camadaGlobal` estavam declarados
+ * obrigatórios e havia chamador que não os passava (a bateria de roteamento,
+ * entre outros). O tipo dizia uma coisa e o mundo fazia outra, e TODA peça nova
+ * que lesse esses campos tropeçava — três vezes na mesma semana, sempre com o
+ * mesmo formato de acidente:
+ *
+ *   `AbortSignal.any([pedido.sinal, ...])`   → ERR_INVALID_ARG_TYPE, 6 cenários
+ *   `pedido.historico.reduce(...)`            → Cannot read properties, 6 cenários
+ *   `apelido.toUpperCase()`                   → TypeError, 8 cenários
+ *
+ * Cada uma foi consertada no consumidor, defensivamente, e a quarta viria. O
+ * conserto que mata a classe é este: o tipo passa a dizer a verdade, e o
+ * compilador passa a cobrar o tratamento de ausência de quem lê.
+ */
 export interface PedidoRaciocinio {
   mensagem: string;
-  historico: RegistroMemoria[];
+  /** Ausente = conversa sem passado. Ver o cabeçalho: era obrigatório e não era. */
+  historico?: RegistroMemoria[];
   /** Anexado ao system DEPOIS do breakpoint de cache. */
-  overridePersona: string;
+  overridePersona?: string;
   /** Fatos públicos da empresa. Parte do prefixo estável. */
-  camadaGlobal: string;
+  camadaGlobal?: string;
   /**
    * O catálogo de habilidades, já redigido pelo `GerenciadorHabilidades`.
    *
@@ -39,10 +60,29 @@ export interface PedidoRaciocinio {
    * `testes/fronteira-interna.test.ts` derruba a suíte se isso acontecer. É a
    * mesma injeção que o `MotorAnalise` recebe para saber o que sabe fechar.
    *
-   * Vazio no modo planejador, que monta a própria lista com outro recorte.
+   * O modo planejador passa um RECORTE diferente — só `custo: 'zero'`, sem
+   * sigilo, só o que o porteiro deixa planejar —, mas pelo mesmo campo e pela
+   * mesma razão: é aqui que o bloco entra no prefixo cacheado. Até 19/08/2026
+   * ele mandava a lista dentro de `mensagem`, fora do breakpoint, e pagava
+   * ~5.400 tokens de escrita em todo turno. Ver `MotorRaciocinio.planejar`.
    */
   capacidades?: string;
-  sinal: AbortSignal;
+  /**
+   * QUE TIPO DE TRABALHO ISTO É — e existe para o roteamento, não para o prompt.
+   *
+   * `plano` exige JSON parseável e nada mais: `interpretarPlano` descarta
+   * qualquer outra coisa e a chamada inteira vira token gasto. `resposta` exige
+   * português para gente ler. São exigências diferentes, e um elo pode atender
+   * uma e não a outra.
+   *
+   * Ausente significa `resposta`, que é o caso comum e o mais tolerante.
+   */
+  tarefa?: 'plano' | 'resposta';
+  /**
+   * O sinal do turno. Opcional pelo mesmo motivo dos três acima: quem chama fora
+   * de um turno (sonda, diagnóstico) não tem um, e a cadeia já trata a ausência.
+   */
+  sinal?: AbortSignal;
   /**
    * O ORÇAMENTO DO TURNO, PERGUNTADO — não importado.
    *
@@ -84,6 +124,37 @@ export interface ProvedorRaciocinio {
   readonly apelido: string;
   /** 'nuvem' (Anthropic, Groq, Gemini) ou 'local' (Ollama) — telemetria e snapshot. */
   readonly origem: 'nuvem' | 'local';
+  /**
+   * A CAMADA DE CAPACIDADE — para onde a escalada por verificação aponta.
+   *
+   * `origem` responde "roda aqui ou na nuvem", que é pergunta de infraestrutura.
+   * Esta responde "vale gastar mais por uma resposta melhor", que é pergunta de
+   * qualidade — e são coisas diferentes: o Ollama é local e fraco, a Groq é
+   * nuvem e barata, a Anthropic é nuvem e cara.
+   *
+   * Ausente significa `padrao`. Só quem é declaradamente premium recebe a
+   * escalada; sem isso a IARA "escalaria" para um cérebro igual e gastaria
+   * orçamento para receber o mesmo erro.
+   */
+  readonly camada?: 'padrao' | 'premium';
+  /**
+   * QUANTO CABE NUM PEDIDO, em tokens. `undefined` = não medido — e aí a cadeia
+   * tenta, porque ausência de medição nunca pode virar recusa.
+   *
+   * É o primeiro degrau do roteamento por MODELO: hoje a cadeia escolhe por
+   * saúde ("funcionou da última vez") e por camada ("vale gastar mais"). Falta
+   * a pergunta mais barata das três, que é *cabe?* — e ela é a única
+   * respondível antes de gastar a ida à rede.
+   */
+  readonly limite_entrada_tokens?: number;
+  /**
+   * Existe camada premium utilizável AGORA? Opcional porque um provedor único
+   * não tem para onde escalar — e `undefined` é a resposta honesta ali, não
+   * `false` disfarçado de política.
+   */
+  premiumSaudavel?(): boolean;
+  /** Refaz o pedido no elo premium. Só a cadeia implementa. */
+  raciocinarNoPremium?(pedido: PedidoRaciocinio): Promise<RespostaRaciocinio>;
   readonly modelo: string;
   readonly disponivel: boolean;
   /**
@@ -108,10 +179,10 @@ export interface ProvedorRaciocinio {
  * `user` (registro da própria mensagem já gravado), funde em vez de duplicar.
  */
 export function normalizarHistorico(
-  historico: RegistroMemoria[],
+  historico: RegistroMemoria[] | undefined,
   mensagem: string,
 ): Array<{ role: 'user' | 'assistant'; content: string }> {
-  const brutas = historico.map((r) => ({
+  const brutas = (historico ?? []).map((r) => ({
     role: r.papel === 'operador' ? ('user' as const) : ('assistant' as const),
     content: r.texto,
   }));

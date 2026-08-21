@@ -1,0 +1,42 @@
+  ...
+# Subtest: E3. RBAC: `somente_leitura` não aciona escrita, e a restrição vence a concessão
+ok 1893 - E3. RBAC: `somente_leitura` não aciona escrita, e a restrição vence a concessão
+  ---
+  duration_ms: 1.1856
+  type: 'test'
+  ...
+# Subtest: F1. sondagem entre shards é barrada por regra, não por prompt
+ok 1894 - F1. sondagem entre shards é barrada por regra, não por prompt
+  ---
+  duration_ms: 4.4709
+  type: 'test'
+  ...
+# Subtest: F2. e o assunto técnico não vira recusa de sigilo por engano
+ok 1895 - F2. e o assunto técnico não vira recusa de sigilo por engano
+  ---
+  duration_ms: 2.2571
+  type: 'test'
+  ...
+# Subtest: F3. o socket não aceita pacote malformado nem campo a mais
+ok 1896 - F3. o socket não aceita pacote malformado nem campo a mais
+  ---
+  duration_ms: 1.1786
+  type: 'test'
+  ...
+# Subtest: G1. a janela deslizante barra a enxurrada e libera depois
+ok 1897 - G1. a janela deslizante barra a enxurrada e libera depois
+  ---
+  duration_ms: 0.2616
+  type: 'test'
+  ...
+1..1897
+# tests 1897
+# suites 0
+# pass 1894
+# fail 0
+# cancelled 0
+# skipped 3
+# todo 0
+# duration_ms 98412.3089
+
+[exited with code 0]

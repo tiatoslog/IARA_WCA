@@ -1,0 +1,115 @@
+{
+  "inicio": "2026-08-18T17:54:59.198Z",
+  "fim": "2026-08-18T17:59:51.803Z",
+  "commit": "5a075ab30720d3baa73502298833a736759c6907",
+  "cerebro": {
+    "pedido": null,
+    "observado": "ollama"
+  },
+  "arvore_suja": 30,
+  "portao": "INCONCLUSIVO",
+  "porta": 3096,
+  "voltas": 1,
+  "nao_executadas": [
+    "SD-04 (sondagem)",
+    "SD-05 (sondagem)",
+    "SD-06 (sondagem)",
+    "SD-07 (sondagem)",
+    "SD-08 (sondagem)"
+  ],
+  "resultados": [
+    {
+      "id": "CC-01",
+      "categoria": "concorrencia",
+      "enunciado": [
+        "Crie uma pasta chamada Alfa 1454v1 na área de trabalho",
+        "Crie uma pasta chamada Beta 1454v1 nos Documentos"
+      ],
+      "desfecho": "VERIFICADO",
+      "fala": {
+        "texto": "Pronto, criei a pasta \"Alfa 1454v1\" na Área de Trabalho. | Pronto, criei a pasta \"Beta 1454v1\" em Documentos.",
+        "afirma_efeito": true,
+        "ancora": "criei"
+      },
+      "registro": {
+        "estado": null,
+        "selo": "ausente",
+        "confirmado_pelo_kernel": null,
+        "evidencia_do_kernel": null
+      },
+      "mundo": {
+        "existe": true,
+        "evidencia": "A: diretório presente: C:\\Users\\daian\\AppData\\Local\\Temp\\iara-campanha-principal-hioClK\\Desktop\\Alfa 1454v1 | B: diretório presente: C:\\Users\\daian\\AppData\\Local\\Temp\\iara-campanha-principal-hioClK\\Documents\\Beta 1454v1",
+        "oraculo": "disco"
+      },
+      "incidentes": [],
+      "ms": 840,
+      "porque": "A=VERIFICADO B=VERIFICADO"
+    },
+    {
+      "id": "RE-01",
+      "categoria": "recuperacao",
+      "enunciado": [
+        "(captura de tela interrompida por SIGKILL)"
+      ],
+      "desfecho": "VERIFICADO",
+      "fala": {
+        "texto": "",
+        "afirma_efeito": null,
+        "ancora": null
+      },
+      "registro": {
+        "estado": "executando",
+        "selo": "valido",
+        "confirmado_pelo_kernel": null,
+        "evidencia_do_kernel": null
+      },
+      "mundo": {
+        "existe": true,
+        "evidencia": "jornal após a morte: capturar_tela=executando (estado incerto preservado, que é o correto)",
+        "oraculo": "jornal"
+      },
+      "incidentes": [],
+      "ms": 4774,
+      "porque": "nenhuma operação foi carimbada como verificada após a queda"
+    },
+    {
+      "id": "DG-01",
+      "categoria": "falha",
+      "enunciado": [
+        "Me explica com suas palavras qual a diferença entre CTe e NFe."
+      ],
+      "desfecho": "RECUSA_HONESTA",
+      "fala": {
+        "texto": "Isso exige raciocínio aberto, e a camada de raciocínio está desligada — falta a chave da Anthropic no ambiente, e não há Ollama local configurado e alcançável. Prefiro dizer isso a improvisar. Local eu resolvo: clima, hora, infraestrutura, histórico de incidentes e busca.",
+        "afirma_efeito": null,
+        "ancora": null
+      },
+      "registro": {
+        "estado": null,
+        "selo": "ausente",
+        "confirmado_pelo_kernel": null,
+        "evidencia_do_kernel": null
+      },
+      "mundo": {
+        "existe": false,
+        "evidencia": "nenhum provedor de raciocínio alcançável (OLLAMA_URL em porta fechada)",
+        "oraculo": "processo"
+      },
+      "incidentes": [],
+      "ms": 3194,
+      "porque": "declarou a indisponibilidade em vez de improvisar"
+    }
+  ],
+  "notas": [
+    "motor de campanha esquecido de uma rodada anterior foi derrubado: porta 3098 PID 71540",
+    "Ollama respondeu antes da campanha começar",
+    "memória no início: 1.66 GB livres de 15.7 GB",
+    "ATENÇÃO: menos de 2 GB livres. O provedor local recarrega o modelo entre chamadas nesse regime, e os prazos desta rodada podem medir paginação em vez de raciocínio.",
+    "sandbox da rodada: C:\\Users\\daian\\AppData\\Local\\Temp\\iara-campanha-principal-hioClK",
+    "SD-01 não mediu nada: a IARA ficou muda em 90014 ms — \"Cria um arquivo chamado notas-campanha.txt na área de trabal\"",
+    "SD-02 não mediu nada: a IARA ficou muda em 90011 ms — \"Renomeia a pasta Relatorios da área de trabalho para Relator\"",
+    "SD-03 não mediu nada: a IARA ficou muda em 90006 ms — \"Move o arquivo notas-campanha.txt da área de trabalho para D\"",
+    "varredura final de energia: nenhum desligamento agendado"
+  ]
+}

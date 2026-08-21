@@ -1,0 +1,131 @@
+{
+  "instante": "2026-08-19T11:42:15.105Z",
+  "declarados": [
+    "openrouter",
+    "groq",
+    "gemini",
+    "anthropic"
+  ],
+  "amostras": [
+    {
+      "provedor": "openrouter",
+      "modelo": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "volta": 1,
+      "ate_primeiro_pedaco_ms": null,
+      "total_ms": 390,
+      "tokens_entrada": 0,
+      "tokens_saida": 0,
+      "erro": "openrouter respondeu 429: {\"error\":{\"message\":\"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests p"
+    },
+    {
+      "provedor": "openrouter",
+      "modelo": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "volta": 2,
+      "ate_primeiro_pedaco_ms": null,
+      "total_ms": 84,
+      "tokens_entrada": 0,
+      "tokens_saida": 0,
+      "erro": "openrouter respondeu 429: {\"error\":{\"message\":\"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests p"
+    },
+    {
+      "provedor": "openrouter",
+      "modelo": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "volta": 3,
+      "ate_primeiro_pedaco_ms": null,
+      "total_ms": 46,
+      "tokens_entrada": 0,
+      "tokens_saida": 0,
+      "erro": "openrouter respondeu 429: {\"error\":{\"message\":\"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests p"
+    },
+    {
+      "provedor": "groq",
+      "modelo": "openai/gpt-oss-120b",
+      "volta": 1,
+      "ate_primeiro_pedaco_ms": null,
+      "total_ms": 159,
+      "tokens_entrada": 0,
+      "tokens_saida": 0,
+      "erro": "groq respondeu 413: {\"error\":{\"message\":\"Request too large for model `openai/gpt-oss-120b` in organization `org_01m03zbsgfeshsnd9hn8ctdk3d` "
+    },
+    {
+      "provedor": "groq",
+      "modelo": "openai/gpt-oss-120b",
+      "volta": 2,
+      "ate_primeiro_pedaco_ms": null,
+      "total_ms": 121,
+      "tokens_entrada": 0,
+      "tokens_saida": 0,
+      "erro": "groq respondeu 413: {\"error\":{\"message\":\"Request too large for model `openai/gpt-oss-120b` in organization `org_01m03zbsgfeshsnd9hn8ctdk3d` "
+    },
+    {
+      "provedor": "groq",
+      "modelo": "openai/gpt-oss-120b",
+      "volta": 3,
+      "ate_primeiro_pedaco_ms": null,
+      "total_ms": 1656,
+      "tokens_entrada": 0,
+      "tokens_saida": 0,
+      "erro": "groq respondeu 413: {\"error\":{\"message\":\"Request too large for model `openai/gpt-oss-120b` in organization `org_01m03zbsgfeshsnd9hn8ctdk3d` "
+    },
+    {
+      "provedor": "gemini",
+      "modelo": "gemini-flash-latest",
+      "volta": 1,
+      "ate_primeiro_pedaco_ms": null,
+      "total_ms": 43574,
+      "tokens_entrada": 0,
+      "tokens_saida": 0,
+      "erro": "gemini respondeu 503: [{ \"error\": { \"code\": 503, \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually "
+    },
+    {
+      "provedor": "gemini",
+      "modelo": "gemini-flash-latest",
+      "volta": 2,
+      "ate_primeiro_pedaco_ms": null,
+      "total_ms": 5227,
+      "tokens_entrada": 0,
+      "tokens_saida": 0,
+      "erro": "gemini respondeu 503: [{ \"error\": { \"code\": 503, \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually "
+    },
+    {
+      "provedor": "gemini",
+      "modelo": "gemini-flash-latest",
+      "volta": 3,
+      "ate_primeiro_pedaco_ms": null,
+      "total_ms": 21882,
+      "tokens_entrada": 0,
+      "tokens_saida": 0,
+      "erro": "gemini respondeu 503: [{ \"error\": { \"code\": 503, \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually "
+    },
+    {
+      "provedor": "anthropic",
+      "modelo": "claude-sonnet-5",
+      "volta": 1,
+      "ate_primeiro_pedaco_ms": 1653,
+      "total_ms": 3519,
+      "tokens_entrada": 10226,
+      "tokens_saida": 73,
+      "erro": null
+    },
+    {
+      "provedor": "anthropic",
+      "modelo": "claude-sonnet-5",
+      "volta": 2,
+      "ate_primeiro_pedaco_ms": 1924,
+      "total_ms": 3873,
+      "tokens_entrada": 10226,
+      "tokens_saida": 91,
+      "erro": null
+    },
+    {
+      "provedor": "anthropic",
+      "modelo": "claude-sonnet-5",
+      "volta": 3,
+      "ate_primeiro_pedaco_ms": 1388,
+      "total_ms": 3060,
+      "tokens_entrada": 10226,
+      "tokens_saida": 70,
+      "erro": null
+    }
+  ]
+}

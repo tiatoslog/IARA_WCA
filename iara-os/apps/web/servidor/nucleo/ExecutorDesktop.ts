@@ -30,6 +30,17 @@ function local(parametros: Record<string, unknown>, padrao: LocalAutorizado): Lo
   return typeof v === 'string' && (LOCAIS as string[]).includes(v) ? (v as LocalAutorizado) : padrao;
 }
 
+/** O SEGUNDO local, para mover e copiar. `local()` lê sempre a chave `local`;
+ *  ler o destino com ela faria origem e destino serem sempre o mesmo. */
+function localDe(
+  parametros: Record<string, unknown>,
+  chave: string,
+  padrao: LocalAutorizado,
+): LocalAutorizado {
+  const v = parametros[chave];
+  return typeof v === 'string' && (LOCAIS as string[]).includes(v) ? (v as LocalAutorizado) : padrao;
+}
+
 function relato(
   ordem: OrdemExecucao,
   inicio: number,
@@ -82,6 +93,80 @@ export async function executarOrdem(
       case 'fechar_aplicativo': {
         const pedido = String(ordem.parametros.aplicativo ?? '');
         return relato(ordem, inicio, onde, dispositivo, await agenteLocal.fecharAplicativo(usuario, pedido));
+      }
+
+      case 'criar_arquivo': {
+        const nome = String(ordem.parametros.nome ?? '');
+        const conteudo = String(ordem.parametros.conteudo ?? '');
+        const onde_ = local(ordem.parametros, 'area_de_trabalho');
+        const texto = await agenteLocal.criarArquivo(usuario, nome, onde_, conteudo);
+        /* A prova confere EXISTÊNCIA e TAMANHO — `existsSync` sozinho não
+           distingue "escreveu" de "criou vazio e falhou no meio". */
+        const prova = agenteLocal.provaDoArquivo(nome, onde_, Buffer.byteLength(conteudo, 'utf8'));
+        return relato(ordem, inicio, onde, dispositivo, {
+          ok: prova.confirmado,
+          texto,
+          prova,
+          codigo_erro: prova.confirmado ? null : 'FALHA_NA_EXECUCAO',
+        });
+      }
+
+      case 'renomear_arquivo': {
+        const de = String(ordem.parametros.nome ?? '');
+        const para = String(ordem.parametros.nome_novo ?? '');
+        const onde_ = local(ordem.parametros, 'area_de_trabalho');
+        const texto = await agenteLocal.renomearArquivo(usuario, de, para, onde_);
+        /* DUAS pontas: o novo existe E o antigo sumiu. Conferir só o novo daria
+           sucesso a uma cópia que deixou o original para trás. */
+        const chegou = agenteLocal.provaDoArquivo(para, onde_);
+        const saiu = agenteLocal.provaDeAusencia(de, onde_);
+        const ok = chegou.confirmado && saiu.confirmado;
+        return relato(ordem, inicio, onde, dispositivo, {
+          ok,
+          texto,
+          prova: ok
+            ? { confirmado: true, evidencia: `${chegou.evidencia}; ${saiu.evidencia}` }
+            : { confirmado: false, evidencia: `${chegou.evidencia}; ${saiu.evidencia}`, motivo: 'divergente' },
+          codigo_erro: ok ? null : 'FALHA_NA_EXECUCAO',
+        });
+      }
+
+      case 'mover_arquivo': {
+        const nome = String(ordem.parametros.nome ?? '');
+        const origem = local(ordem.parametros, 'area_de_trabalho');
+        const destino = localDe(ordem.parametros, 'local_destino', 'documentos');
+        const texto = await agenteLocal.moverArquivo(usuario, nome, origem, destino);
+        const chegou = agenteLocal.provaDoArquivo(nome, destino);
+        const saiu = agenteLocal.provaDeAusencia(nome, origem);
+        const ok = chegou.confirmado && saiu.confirmado;
+        return relato(ordem, inicio, onde, dispositivo, {
+          ok,
+          texto,
+          prova: ok
+            ? { confirmado: true, evidencia: `${chegou.evidencia}; ${saiu.evidencia}` }
+            : { confirmado: false, evidencia: `${chegou.evidencia}; ${saiu.evidencia}`, motivo: 'divergente' },
+          codigo_erro: ok ? null : 'FALHA_NA_EXECUCAO',
+        });
+      }
+
+      case 'copiar_arquivo': {
+        const nome = String(ordem.parametros.nome ?? '');
+        const origem = local(ordem.parametros, 'area_de_trabalho');
+        const destino = localDe(ordem.parametros, 'local_destino', 'documentos');
+        const texto = await agenteLocal.copiarArquivo(usuario, nome, origem, destino);
+        /* Copiar exige os DOIS presentes — se o original sumiu, isso foi um
+           move disfarçado, e o relato tem de acusar. */
+        const chegou = agenteLocal.provaDoArquivo(nome, destino);
+        const ficou = agenteLocal.provaDoArquivo(nome, origem);
+        const ok = chegou.confirmado && ficou.confirmado;
+        return relato(ordem, inicio, onde, dispositivo, {
+          ok,
+          texto,
+          prova: ok
+            ? { confirmado: true, evidencia: `cópia: ${chegou.evidencia}; original: ${ficou.evidencia}` }
+            : { confirmado: false, evidencia: `cópia: ${chegou.evidencia}; original: ${ficou.evidencia}`, motivo: 'divergente' },
+          codigo_erro: ok ? null : 'FALHA_NA_EXECUCAO',
+        });
       }
 
       case 'criar_pasta': {

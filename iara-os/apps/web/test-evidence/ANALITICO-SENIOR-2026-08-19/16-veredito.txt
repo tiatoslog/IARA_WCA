@@ -1,0 +1,53 @@
+VEREDITO FINAL — camada analitica
+CHANGE-ID: ANALITICO-SENIOR-2026-08-19
+
+  npm test              2077 testes — 2074 pass, 0 FAIL, 3 skipped
+  baterias analiticas   101/101
+  benchmark             22/22
+  mutacao               16/16 mortas (4 rodadas)
+  tsc --noEmit          1 erro, de OUTRA sessao:
+                          testes/lacuna-de-valor.test.ts(35,8) TS5097
+                          mtime 2026-08-20 06:52 · 0 referencias a modulos desta sessao
+
+  BASELINE (31598c8)    1894/1897 pass
+  DELTA                 +180 testes, 0 falhas atribuiveis
+
+CICLO DE AUDITORIA INDEPENDENTE — 3 passadas
+  1a  BLOQUEADO             10 defeitos (4 P0)
+  2a  BLOQUEADO              5 defeitos, 2 P0 INTRODUZIDOS pelos consertos da 1a
+  3a  APROVADO COM RISCOS    3 defeitos (P1); revisao de expectativa julgada
+                             FORTALECIMENTO, nao afrouxamento
+                             BLOQUEADO para publicacao — main nao compila (nao e desta sessao)
+
+DEFEITOS FECHADOS: 26
+   8  pelas proprias baterias durante a implementacao
+  10  1a auditoria
+   5  2a auditoria
+   3  3a auditoria
+
+RISCOS RESIDUAIS DECLARADOS (nao sao PASS)
+  R1  T-1 parcial — a ressalva EXPLICITA de divergencia continua ausente em
+      pergunta comparativa/causal. O desfecho perigoso (confianca alta +
+      rodape vazio) esta fechado por teto de confianca (H22). Conserto de raiz:
+      dar chave canonica a `Recorte`, fora do escopo desta rodada.
+  R2  T-4 — "qual o motivo do email nao ter ido" e "explica a diferenca entre
+      as planilhas" seguem classificados como causal. Impacto hoje: nulo,
+      nenhuma habilidade desses dominios emite evidencia.
+  R3  Lacuna 1 — a camada engaja em 2 sitios, ambos no ramo de margem.
+  R4  Lacuna 4 — `comparar_anos_luft` nao emite evidencia tipada.
+  R5  Lacuna 5 — `sustentaAfirmacaoPopulacional`, `frasearCobertura` e
+      `alcanca` seguem sem chamador em servidor/.
+
+NAO VERIFICADO (UNKNOWN — nunca PASS)
+  RE-001  planilha LUFT real
+  BR-001  navegador real — ressalva visivel na bolha
+  BR-002  navegador real — abstencao na tela
+  MT-001  multi-turno com memoria entre turnos
+  Motivo: arvore editada ao vivo por sessao concorrente durante toda a sessao.
+
+BLOQUEIO DE PUBLICACAO (nao e desta sessao, mas depende dela)
+  main nao compila desde f674993. O commit varreu cargasLuft.ts levando
+  `import { deCoberturaDeJoin } from '../Cobertura'` e o bloco `evidencias:`,
+  enquanto Cobertura.ts segue untracked e os campos opcionais de
+  Investigacao.ts / Habilidade.ts nao existem no HEAD. Tres commits fundo.
+  Nada foi commitado por esta sessao, de proposito.

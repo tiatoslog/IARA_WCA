@@ -103,6 +103,10 @@ interface Props {
   onAtualizarComputador?: (id: string) => boolean;
   /** Etapa 4 (14/08/2026) — dar um nome à máquina, escolhido pela operadora. */
   onRenomearComputador?: (id: string, nome: string) => boolean;
+  /** "Trabalhar nesta" — o gate multi-desktop (20/08/2026). */
+  onEscolherComputador?: (id: string | null, nome?: string) => boolean;
+  /** Qual máquina o operador escolheu. `null` = nenhuma. */
+  computadorEscolhido?: string | null;
   /** Código lido do QR do braço (`?parear=`). `null` fora desse caminho. */
   codigoDePareamentoUrl?: string | null;
   /** Encerra a sessão. `null` no seletor local — não há sessão real para sair. */
@@ -140,6 +144,8 @@ export function PainelConversa({
   onEsquecerComputador,
   onAtualizarComputador,
   onRenomearComputador,
+  onEscolherComputador,
+  computadorEscolhido,
   codigoDePareamentoUrl = null,
   onSair = null,
 }: Props) {
@@ -485,6 +491,8 @@ export function PainelConversa({
             aoEsquecer={(id) => onEsquecerComputador?.(id)}
             aoAtualizar={(id) => onAtualizarComputador?.(id) ?? false}
             aoRenomear={(id, nome) => onRenomearComputador?.(id, nome) ?? false}
+            aoEscolher={(id, nome) => onEscolherComputador?.(id, nome)}
+            escolhida={computadorEscolhido ?? null}
             aoAbrirAutomacao={() => setGaveta('automacao')}
             aoFechar={() => setGaveta('nenhuma')}
           />
@@ -591,6 +599,29 @@ export function PainelConversa({
                   pedido de outra tela é indistinguível de um pedido lento — e a
                   pessoa não sabe se ainda dá tempo de desistir. */}
               {f.na_fila && <span className="balao-espera">esperando a vez</span>}
+              {/* A ENTREGA NÃO CONFIRMADA, dita na própria bolha. O log rola
+                  para fora da vista; a conversa fica. Sem isto, a mensagem que
+                  se perdeu numa reconexão fica indistinguível da que chegou —
+                  foi o OBS-1 de 19/08/2026. Ver `VigiaDoEco`. */}
+              {f.sem_confirmacao && (
+                <span className="balao-espera" title="O motor não devolveu o eco desta mensagem dentro do prazo">
+                  sem confirmação de entrega
+                </span>
+              )}
+              {/*
+                A HORA, como no WhatsApp: pequena, no canto, depois do texto.
+                Formatada no fuso de quem lê — o carimbo chega em ISO do
+                servidor, porque o relógio do navegador daria "agora" a toda
+                mensagem antiga depois de um recarregamento.
+              */}
+              {f.instante && (
+                <time className="balao-hora" dateTime={f.instante}>
+                  {new Date(f.instante).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </time>
+              )}
             </div>
           );
         })}

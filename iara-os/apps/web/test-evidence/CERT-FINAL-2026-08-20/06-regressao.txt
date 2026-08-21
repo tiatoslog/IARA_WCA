@@ -1,0 +1,33 @@
+REGRESSAO APOS AS TRES CORRECOES — 20/08/2026
+
+baseline (170a641):  2006 testes / 2003 pass / 0 fail / 3 skip
+depois:              2015 testes / 2012 pass / 0 fail / 3 skip
+delta: +9 testes novos, nenhuma regressao
+
+tsc --noEmit: exit 0
+
+--- controles de mutacao dos testes novos ---
+F4b  (portao)   : com a regra inline antiga -> not ok 60. CONFIRMADO que acusa.
+RD-01 (reidrat) : sem garantirCarregado    -> not ok 1 (chamadas=1). CONFIRMADO.
+NF-05 (negacao) : com a trava desligada     -> not ok 5. CONFIRMADO.
+
+--- SELO FINAL (apos todas as correcoes) ---
+npm run verificar  ->  GLSL ok · varredura de segredos: arvore rastreada limpa
+                       tsc --noEmit exit 0
+                       2023 testes · 2020 pass · 0 fail · 3 skip (Docker ausente)
+
+--- DOIS ACIDENTES DE FERRAMENTA, DECLARADOS ---
+
+1. `git checkout --` do verificador independente apagou trabalho NAO COMMITADO
+   em Kernel.ts (o bloco da trava de negacao e a chamada de garantirCarregado).
+   Detectado por `grep -c` que voltou 0 onde devia voltar 1; reaplicado. Regra
+   nova passada ao verificador: mutacao se reverte salvando/restaurando a
+   string, nunca pelo git, enquanto houver trabalho nao commitado na arvore.
+
+2. A worktree isolada de mutacao usava uma JUNCAO para node_modules. Ao remover
+   a worktree, a remocao seguiu a juncao e esvaziou o node_modules REAL
+   (de ~1000 pacotes para 69, .bin vazio). Nenhum arquivo versionado foi
+   perdido — `git status` nao acusou um unico ` D`. Restaurado com
+   `npm install`; suite e tsc reconferidos verdes DEPOIS da restauracao, e os
+   numeros acima sao os de depois.
+   Licao: nunca criar juncao dentro de uma worktree que sera removida.

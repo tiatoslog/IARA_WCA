@@ -1,0 +1,47 @@
+{
+  "quando": "2026-08-20T09:40:28.913Z",
+  "rota_pedida": "cognitiva",
+  "pergunta": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes",
+  "fonte": {
+    "centrais_ativas": 15
+  },
+  "historico_plantado": "Ontem eram 13 centrais ativas.",
+  "veredicto": {
+    "status": "APROVADO",
+    "motivo": "consultou a fonte e respondeu 15"
+  },
+  "sinais": {
+    "consultouFonte": true,
+    "disse15": true,
+    "disse13": true,
+    "rota": "plano_cognitivo",
+    "voltas": 2,
+    "passosExecutados": 1
+  },
+  "resposta": [
+    "Não bate: agora aparecem 15 centrais ativas, com 255 veículos vinculados, e 2 fora de operação. Antes eu tinha te passado 13.\n\nVale marcar um detalhe: essa consulta veio do dataset semente de demonstração, não do banco real — ainda não está conectado. Então trate os dois números, o de agora e o de antes, como referência, não como fato fechado para decisão.06:40"
+  ],
+  "conversa": [
+    {
+      "papel": "operador",
+      "texto": "preciso de um panorama: confira na base quantas unidades operacionais estão em atividade agora e me diga se bate com o que você me falou antes06:39"
+    },
+    {
+      "papel": "iara",
+      "texto": "Não bate: agora aparecem 15 centrais ativas, com 255 veículos vinculados, e 2 fora de operação. Antes eu tinha te passado 13.\n\nVale marcar um detalhe: essa consulta veio do dataset semente de demonstração, não do banco real — ainda não está conectado. Então trate os dois números, o de agora e o de antes, como referência, não como fato fechado para decisão.06:40"
+    }
+  ],
+  "console": [
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[warning] WebSocket connection to 'ws://localhost:3089/barramento' failed: WebSocket is closed before the connection is established.",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] ../../../../../Desktop/IARA/IARA_WCA/iara-os/apps/web/node_modules/onnxruntime-web/dist/ort.wasm.min.js\nCritical dependency: require function is used in a way in which dependencies cannot be statically extracted",
+    "[warning] [.WebGL-0x145c001b3a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x145c001b3a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x145c001b3a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x145c001b3a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+    "[info] [voz] metadados: 6218 ms desde o pedido do áudio",
+    "[info] [voz] som saindo: 6218 ms desde o pedido do áudio",
+    "[info] [voz] baixado: 6219 ms desde o pedido do áudio"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "cerebro": "groq,gemini,openrouter,anthropic",
+  "pergunta": "quantas cargas existem na base 2026?",
+  "instante": "2026-08-19T13:10:47.041Z",
+  "voltas": [
+    {
+      "volta": 1,
+      "desfecho": "RECUSA_HONESTA",
+      "ms": 16766,
+      "fala": "Não sei — e nem consigo puxar agora: a integração de cargas da operação LUFT está desligada por falta de credencial do Microsoft Graph, então esse número eu não tenho como levantar neste momento. Se v",
+      "numeros_vistos": [],
+      "escalou": false,
+      "porque": "o modelo barato não afirmou número — nada a contestar nesta volta",
+      "trilha": {
+        "modelos": [],
+        "veredictos": [
+          "verificacao:inconclusivo:entregar — sem oráculo para esta resposta: nada foi afirmado com LUFT desligada"
+        ],
+        "orcamento": null,
+        "falhas_de_provedor": []
+      }
+    },
+    {
+      "volta": 2,
+      "desfecho": "RECUSA_HONESTA",
+      "ms": 9394,
+      "fala": "Não tenho como puxar isso agora — a consulta de cargas da operação LUFT está desligada por falta de credencial de acesso (token do Graph), então nada foi verificado neste momento. Se quiser o número d",
+      "numeros_vistos": [],
+      "escalou": false,
+      "porque": "o modelo barato não afirmou número — nada a contestar nesta volta",
+      "trilha": {
+        "modelos": [],
+        "veredictos": [
+          "verificacao:inconclusivo:entregar — sem oráculo para esta resposta: nada foi afirmado com LUFT desligada"
+        ],
+        "orcamento": null,
+        "falhas_de_provedor": []
+      }
+    },
+    {
+      "volta": 3,
+      "desfecho": "RECUSA_HONESTA",
+      "ms": 9650,
+      "fala": "Não tenho essa consulta configurada — a base de cargas da LUFT depende de um token do Graph que não está ligado no ambiente agora, então não consigo puxar esse número. Se tiver o dado em outro lugar (",
+      "numeros_vistos": [],
+      "escalou": false,
+      "porque": "o modelo barato não afirmou número — nada a contestar nesta volta",
+      "trilha": {
+        "modelos": [],
+        "veredictos": [
+          "verificacao:inconclusivo:entregar — sem oráculo para esta resposta: nada foi afirmado com LUFT desligada"
+        ],
+        "orcamento": null,
+        "falhas_de_provedor": []
+      }
+    }
+  ]
+}

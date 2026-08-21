@@ -26,8 +26,8 @@
  * regra do resto do sistema — a IA propõe, o determinístico executa.
  */
 
-import { mkdir, readdir } from 'node:fs/promises';
-import { existsSync, statSync, statfs } from 'node:fs';
+import { copyFile, mkdir, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { constants as fsConstants, existsSync, statSync, statfs } from 'node:fs';
 import { execFile, spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { cpus, freemem, homedir, hostname, networkInterfaces, totalmem, uptime } from 'node:os';
@@ -149,6 +149,61 @@ export function validarNomePasta(nome: string): string | null {
   if (!/^[\p{L}\p{N}][\p{L}\p{N} _.-]*$/u.test(limpo)) return null;
   if (limpo.includes('..') || /[. ]$/.test(limpo)) return null;
   if (RESERVADOS_WINDOWS.test(limpo)) return null;
+  return limpo;
+}
+
+/**
+ * EXTENSÕES QUE ESTE VERBO NUNCA ESCREVE.
+ *
+ * `criar_arquivo` escreve conteúdo que a LLM redigiu, num lugar onde a pessoa
+ * confia no que encontra. Deixar `.exe`, `.bat`, `.ps1` ou `.lnk` passarem
+ * transformaria "criar arquivo" em "escrever programa e deixar na Área de
+ * Trabalho de alguém" — e o duplo clique seguinte é do operador, que acredita
+ * que aquilo veio da IARA porque veio.
+ *
+ * A lista é DENYLIST e não allowlist, e a escolha é consciente: o operador
+ * legitimamente cria `.txt`, `.md`, `.csv`, `.json`, `.yml`, `.log`, e
+ * enumerar tudo que é inofensivo é a lista que envelhece mal. O que precisa ser
+ * completo é o conjunto do que EXECUTA, e esse é fechado por natureza.
+ */
+const EXTENSOES_PROIBIDAS = new Set([
+  'exe', 'bat', 'cmd', 'com', 'ps1', 'psm1', 'vbs', 'vbe', 'js', 'jse', 'wsf',
+  'wsh', 'msi', 'msp', 'scr', 'lnk', 'reg', 'hta', 'cpl', 'jar', 'app', 'sh',
+  'dll', 'sys', 'pif', 'gadget', 'inf',
+]);
+
+/**
+ * O NOME DE UM ARQUIVO — a mesma porta de `validarNomePasta`, mais a extensão.
+ *
+ * NOME, NUNCA CAMINHO: não existe parâmetro de caminho em lugar nenhum desta
+ * família. O operador escolhe um dos três locais nomeados e um nome; barra,
+ * contrabarra, `..` e unidade (`C:`) são recusados aqui, e é isso que impede
+ * travessia de diretório sem depender de ninguém lembrar de checar depois.
+ *
+ * EXTENSÃO OBRIGATÓRIA: "notas" sem extensão é ambíguo — o Windows esconde
+ * extensão por padrão, e um arquivo sem ela vira um ícone que ninguém sabe
+ * abrir. Pedir o tipo é uma pergunta a mais e uma dúvida a menos.
+ */
+export function validarNomeArquivo(nome: string): string | null {
+  const limpo = nome.trim();
+  if (limpo.length === 0 || limpo.length > 80) return null;
+
+  /* Separador de caminho, unidade ou travessia: não é nome, é endereço. */
+  if (/[/\]/.test(limpo) || /^[A-Za-z]:/.test(limpo) || limpo.includes('..')) return null;
+
+  const ponto = limpo.lastIndexOf('.');
+  if (ponto <= 0 || ponto === limpo.length - 1) return null;
+
+  const base = limpo.slice(0, ponto);
+  const extensao = limpo.slice(ponto + 1).toLowerCase();
+
+  if (EXTENSOES_PROIBIDAS.has(extensao)) return null;
+  if (!/^[\p{L}\p{N}]+$/u.test(extensao)) return null;
+
+  /* A base passa pela MESMA regra da pasta — inclusive nomes reservados do
+     Windows, que valem para arquivo tanto quanto para diretório. */
+  if (!validarNomePasta(base)) return null;
+
   return limpo;
 }
 
@@ -1417,6 +1472,208 @@ export class AgenteLocal {
     return this.executorGit(argumentos, diretorio);
   }
 
+  /**
+   * O TETO DO CONTEÚDO. Dois milhões de caracteres é muito mais do que qualquer
+   * coisa que uma conversa produz, e pouco o bastante para que um plano
+   * defeituoso não encha o disco de alguém enquanto ninguém olha.
+   */
+  private static readonly TETO_CONTEUDO = 2_000_000;
+
+  /**
+   * CRIAR ARQUIVO COM CONTEÚDO — a habilidade que faltava, e a operadora achou
+   * o buraco antes da auditoria:
+   *
+   *     "Cria um arquivo chamado notas-1029v1.txt na área de trabalho com o
+   *      texto 'reuniao as 10h'."
+   *
+   * A IARA recusou com honestidade — *"não tenho ferramenta de criação de
+   * arquivo de texto no catálogo"* — e recusa honesta é melhor que função
+   * falsa. Mas a lacuna era de PRODUTO, e é este verbo que a fecha.
+   *
+   * NÃO SOBRESCREVE, e é a decisão que separa este verbo de um perigo: "criar"
+   * jamais pode significar "destruir o que estava lá". Arquivo existente devolve
+   * a mesma frase de `criarPasta` — "já existe, não mexi em nada".
+   */
+  async criarArquivo(
+    idUsuario: string,
+    nomePedido: string,
+    local: LocalAutorizado,
+    conteudo: string,
+  ): Promise<string> {
+    const nome = validarNomeArquivo(nomePedido);
+    if (!nome) {
+      this.auditar(idUsuario, 'criar_arquivo', false, 'nome inválido');
+      return (
+        'Esse nome de arquivo não passa na minha regra de segurança. Preciso de um nome simples ' +
+        'com extensão — "notas.txt", "relatorio.md" — e não escrevo programa executável: ' +
+        '.exe, .bat, .ps1 e afins ficam de fora por princípio.'
+      );
+    }
+
+    if (conteudo.length > AgenteLocal.TETO_CONTEUDO) {
+      this.auditar(idUsuario, 'criar_arquivo', false, `conteúdo de ${conteudo.length} caracteres`);
+      return (
+        `Esse conteúdo é grande demais para eu escrever de uma vez (${Math.round(conteudo.length / 1000)} mil ` +
+        'caracteres, e meu limite é 2 milhões). Não criei nada.'
+      );
+    }
+
+    const raiz = resolverRaiz(local);
+    if (!raiz) {
+      this.auditar(idUsuario, 'criar_arquivo', false, `raiz ${local} não encontrada`);
+      return `Não encontrei a pasta ${ROTULO_DO_LOCAL[local]} neste computador.`;
+    }
+
+    const destino = path.join(raiz, nome);
+    if (existsSync(destino)) {
+      this.auditar(idUsuario, 'criar_arquivo', true, 'já existia');
+      return `O arquivo "${nome}" já existe ${NO_LOCAL[local]}. Não mexi em nada — me diga outro nome.`;
+    }
+
+    /* `wx` cria e FALHA se o arquivo aparecer entre o `existsSync` e agora. A
+       checagem acima existe pela mensagem boa; esta é a que fecha a corrida. */
+    await writeFile(destino, conteudo, { encoding: 'utf8', flag: 'wx' });
+    this.auditar(idUsuario, 'criar_arquivo', true, destino);
+    return `Criei o arquivo "${nome}" ${NO_LOCAL[local]}.`;
+  }
+
+  /**
+   * A abertura comum de renomear, mover e copiar: validar os dois nomes, achar
+   * as duas raízes, conferir origem e destino.
+   *
+   * Escrita uma vez porque três cópias seriam três chances de uma delas
+   * esquecer a checagem do OCUPANTE — e essa é a que impede o verbo de apagar
+   * um arquivo que o operador nem mencionou na frase.
+   */
+  private async prepararMovimentacao(
+    idUsuario: string,
+    acao: string,
+    nomeOrigem: string,
+    nomeDestino: string,
+    localOrigem: LocalAutorizado,
+    localDestino: LocalAutorizado,
+  ): Promise<
+    { ok: true; origem: string; destino: string; nome: string } | { ok: false; texto: string }
+  > {
+    const origemNome = validarNomeArquivo(nomeOrigem);
+    const destinoNome = validarNomeArquivo(nomeDestino);
+    if (!origemNome || !destinoNome) {
+      this.auditar(idUsuario, acao, false, 'nome inválido');
+      return { ok: false, texto: 'Esse nome de arquivo não passa na minha regra de segurança.' };
+    }
+
+    const raizOrigem = resolverRaiz(localOrigem);
+    const raizDestino = resolverRaiz(localDestino);
+    if (!raizOrigem || !raizDestino) {
+      this.auditar(idUsuario, acao, false, 'raiz não encontrada');
+      return { ok: false, texto: 'Não encontrei uma das pastas neste computador.' };
+    }
+
+    const origem = path.join(raizOrigem, origemNome);
+    const destino = path.join(raizDestino, destinoNome);
+
+    if (!existsSync(origem)) {
+      this.auditar(idUsuario, acao, false, 'origem ausente');
+      return {
+        ok: false,
+        texto: `Não encontrei o arquivo "${origemNome}" ${NO_LOCAL[localOrigem]}. Confere o nome?`,
+      };
+    }
+
+    if (origem === destino) {
+      this.auditar(idUsuario, acao, true, 'origem e destino iguais');
+      return { ok: false, texto: `"${origemNome}" já está nesse mesmo lugar com esse mesmo nome.` };
+    }
+
+    if (existsSync(destino)) {
+      this.auditar(idUsuario, acao, false, 'destino ocupado');
+      return {
+        ok: false,
+        texto: `Já existe um "${destinoNome}" ${NO_LOCAL[localDestino]}. Não sobrescrevo nada — me diga outro nome.`,
+      };
+    }
+
+    return { ok: true, origem, destino, nome: destinoNome };
+  }
+
+  async renomearArquivo(
+    idUsuario: string,
+    nomeAtual: string,
+    nomeNovo: string,
+    local: LocalAutorizado,
+  ): Promise<string> {
+    const p = await this.prepararMovimentacao(
+      idUsuario,
+      'renomear_arquivo',
+      nomeAtual,
+      nomeNovo,
+      local,
+      local,
+    );
+    if (!p.ok) return p.texto;
+
+    await rename(p.origem, p.destino);
+    this.auditar(idUsuario, 'renomear_arquivo', true, p.destino);
+    return `Pronto: agora ele se chama "${p.nome}" ${NO_LOCAL[local]}.`;
+  }
+
+  async moverArquivo(
+    idUsuario: string,
+    nome: string,
+    localOrigem: LocalAutorizado,
+    localDestino: LocalAutorizado,
+  ): Promise<string> {
+    const p = await this.prepararMovimentacao(
+      idUsuario,
+      'mover_arquivo',
+      nome,
+      nome,
+      localOrigem,
+      localDestino,
+    );
+    if (!p.ok) return p.texto;
+
+    /**
+     * `rename` falha entre volumes (`EXDEV`), e os três locais PODEM estar em
+     * discos diferentes numa máquina com OneDrive ou HD secundário. Copiar e
+     * então apagar funciona nos dois casos — e a ordem importa: apagar antes de
+     * copiar é exatamente como se perde um arquivo.
+     */
+    try {
+      await rename(p.origem, p.destino);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'EXDEV') throw e;
+      await copyFile(p.origem, p.destino);
+      await rm(p.origem, { force: true });
+    }
+
+    this.auditar(idUsuario, 'mover_arquivo', true, p.destino);
+    return `Movi "${p.nome}" para ${ROTULO_DO_LOCAL[localDestino]}.`;
+  }
+
+  async copiarArquivo(
+    idUsuario: string,
+    nome: string,
+    localOrigem: LocalAutorizado,
+    localDestino: LocalAutorizado,
+  ): Promise<string> {
+    const p = await this.prepararMovimentacao(
+      idUsuario,
+      'copiar_arquivo',
+      nome,
+      nome,
+      localOrigem,
+      localDestino,
+    );
+    if (!p.ok) return p.texto;
+
+    /* `COPYFILE_EXCL` falha se o destino aparecer entre a checagem e agora — a
+       mesma disciplina do `wx` de `criarArquivo`. */
+    await copyFile(p.origem, p.destino, fsConstants.COPYFILE_EXCL);
+    this.auditar(idUsuario, 'copiar_arquivo', true, p.destino);
+    return `Copiei "${p.nome}" para ${ROTULO_DO_LOCAL[localDestino]}. O original continua ${NO_LOCAL[localOrigem]}.`;
+  }
+
   async criarPasta(
     idUsuario: string,
     nomePedido: string,
@@ -2010,6 +2267,63 @@ export class AgenteLocal {
     return existsSync(destino)
       ? { confirmado: true, evidencia: `diretório existe em ${destino}` }
       : { confirmado: false, evidencia: `${destino} não existe depois da execução`, motivo: 'divergente' };
+  }
+
+  /**
+   * A PROVA DE UM ARQUIVO — existe, e com o tamanho que o conteúdo pedia.
+   *
+   * O tamanho entra porque `existsSync` sozinho não distingue "escreveu" de
+   * "criou vazio e a escrita falhou no meio". Para conteúdo vazio, existir É a
+   * prova inteira — e é por isso que a comparação é contra o tamanho ESPERADO,
+   * e não contra "maior que zero".
+   */
+  provaDoArquivo(nomePedido: string, local: LocalAutorizado, bytesEsperados?: number): ProvaExecucao {
+    const nome = validarNomeArquivo(nomePedido);
+    if (!nome) {
+      return {
+        confirmado: false,
+        evidencia: 'nome recusado pela regra de segurança; nada foi escrito',
+        motivo: 'nao_encontrado',
+      };
+    }
+    const raiz = resolverRaiz(local);
+    if (!raiz) {
+      return {
+        confirmado: false,
+        evidencia: `raiz "${local}" não existe nesta máquina`,
+        motivo: 'nao_encontrado',
+      };
+    }
+    const destino = path.join(raiz, nome);
+    if (!existsSync(destino)) {
+      return {
+        confirmado: false,
+        evidencia: `${destino} não existe depois da execução`,
+        motivo: 'divergente',
+      };
+    }
+    const bytes = statSync(destino).size;
+    if (bytesEsperados !== undefined && bytes !== bytesEsperados) {
+      return {
+        confirmado: false,
+        evidencia: `${destino} tem ${bytes} bytes e o conteúdo pedido tinha ${bytesEsperados}`,
+        motivo: 'divergente',
+      };
+    }
+    return { confirmado: true, evidencia: `arquivo de ${bytes} bytes em ${destino}` };
+  }
+
+  /** O arquivo SAIU daqui? A prova de quem move e de quem renomeia. */
+  provaDeAusencia(nomePedido: string, local: LocalAutorizado): ProvaExecucao {
+    const nome = validarNomeArquivo(nomePedido);
+    const raiz = resolverRaiz(local);
+    if (!nome || !raiz) {
+      return { confirmado: false, evidencia: 'nome ou local inválido', motivo: 'nao_encontrado' };
+    }
+    const origem = path.join(raiz, nome);
+    return existsSync(origem)
+      ? { confirmado: false, evidencia: `${origem} continua lá depois da execução`, motivo: 'divergente' }
+      : { confirmado: true, evidencia: `${origem} não existe mais` };
   }
 
   provaDaCaptura(idUsuario: string): ProvaExecucao {

@@ -1,0 +1,19 @@
+TESTE DE MUTACAO — as baterias conseguem reprovar?
+
+Motivo: a auditoria independente mediu que 4 dos consertos reais eram
+INVISIVEIS para 80 testes verdes e um benchmark 13/13. Uma bateria que nao
+distingue o codigo certo do errado nao e evidencia de nada.
+
+Metodo: backup dos modulos no scratchpad, reverter UM conserto por vez no
+repositorio, rodar a bateria correspondente, restaurar.
+
+  MUTACAO                                                    RESULTADO
+  M-A  R1 volta a exigir valor===0 (D-01)                     MORTA  fail=1
+  M-B  R4 volta a ignorar o recorte (D-04)                    MORTA  fail=2
+  M-C  saoComparaveis volta a comparar balde (D-05)           MORTA  fail=2
+  M-D  travada volta a valer p/ qualquer impeditiva (FP-1)    MORTA  fail=1
+  M-E  portao do Kernel volta a contar qualquer evidencia     MORTA  fail=1
+  M-F  causal volta a ignorar pq/porq (D-02)                  MORTA  fail=1
+  CONTROLE  tudo restaurado                                   fail=0
+
+6 de 6 mortas. Antes destes casos, 4 destas 6 mutacoes eram INDIFERENTES.

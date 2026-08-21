@@ -41,6 +41,18 @@ export type AcaoDesktop =
   | 'abrir_aplicativo'
   | 'fechar_aplicativo'
   | 'criar_pasta'
+  /**
+   * ESCREVER ARQUIVO COM CONTEUDO — a familia que faltava, medida em
+   * 20/08/2026: a operadora pediu "cria notas.txt com o texto X" e a IARA
+   * recusou com honestidade porque a habilidade nao existia.
+   *
+   * Nome, nunca caminho — a mesma regra de `criar_pasta`, e a razao e a mesma:
+   * caminho livre transforma a allowlist de locais em decoracao.
+   */
+  | 'criar_arquivo'
+  | 'renomear_arquivo'
+  | 'mover_arquivo'
+  | 'copiar_arquivo'
   | 'listar_arquivos'
   | 'capturar_tela'
   | 'informacoes_sistema'
@@ -71,6 +83,10 @@ export const ACOES_DESKTOP: readonly AcaoDesktop[] = [
   'abrir_aplicativo',
   'fechar_aplicativo',
   'criar_pasta',
+  'criar_arquivo',
+  'renomear_arquivo',
+  'mover_arquivo',
+  'copiar_arquivo',
   'listar_arquivos',
   'capturar_tela',
   'informacoes_sistema',
@@ -256,6 +272,20 @@ export interface OrdemExecucao {
   readonly id_usuario: string;
   /** O diálogo de origem. O braço o devolve; nada dele é interpretado lá. */
   readonly sessao: string;
+  /**
+   * A MÁQUINA QUE O OPERADOR ESCOLHEU, quando ele escolheu uma.
+   *
+   * `null` quer dizer "não escolhi" — e aí vale o padrão de sempre: o último
+   * braço que conectou atende. Não quer dizer "qualquer uma": com o campo
+   * preenchido, a ordem vai para ELA ou não vai (ver `EscolhaDeMaquina` e
+   * `Braco.executar`).
+   *
+   * Viaja na ordem, e não só no roteamento, por duas razões: o jornal precisa
+   * registrar QUAL máquina era a pretendida — sem isso, "a ação rodou no
+   * escritório" não distingue escolha de acaso —, e o braço que recebe pode
+   * conferir que a ordem era mesmo para ele.
+   */
+  readonly id_dispositivo_alvo: string | null;
   /** Teto de vida desta ordem, contado do envio. */
   readonly prazo_ms: number;
   readonly emitida_em: number;
@@ -330,6 +360,147 @@ export interface DescricaoDispositivo {
  * computador desligado, e não uma falha. É exatamente o que a operadora precisa
  * ver para entender por que um comando não chegou.
  */
+/**
+ * O ESTADO DE UMA MÁQUINA, com as dimensões SEPARADAS.
+ *
+ * A auditoria de 20/08/2026 nomeou o erro conceitual melhor do que este arquivo
+ * o tinha nomeado:
+ *
+ *     versao == null  →  DESCONHECIDA
+ *     e NÃO
+ *     versao == null  →  desatualizada=false  →  a tela lê "atual"
+ *
+ * `pareada`, `conectada`, `selecionada` e `versão conhecida` são QUATRO
+ * perguntas, e a tela vinha respondendo as quatro com dois booleanos. Um
+ * vocabulário pobre demais para o que se quer dizer é como uma interface passa
+ * a mentir sem ninguém escrever uma mentira.
+ *
+ * ================= O ESCOPO DA CONEXÃO =================
+ *
+ * `nao_conectada_aqui`, e não `desligada`. A diferença não é preciosismo: o
+ * pareamento mora no banco COMPARTILHADO, e a conexão é por SERVIDOR. Um braço
+ * ligado ao `iara.up.railway.app` aparece desconectado numa tela apontada para
+ * o localhost — e "desligado" faria a tela afirmar sobre o computador o que ela
+ * só sabe sobre este processo. A pessoa não distingue "está desligado" de "o
+ * braço caiu", "o backend caiu" ou "está atendendo outra IARA".
+ *
+ * O QUE ESTE MÓDULO SE RECUSA A INVENTAR: `conectado_a_outro_backend`. O
+ * `ultimo_uso_em` é carimbado na APRESENTAÇÃO, não em heartbeat (ver
+ * `inventarioDeMaquinas`), então esta instalação NÃO TEM COMO SABER se a
+ * máquina está atendendo outro servidor agora. Dizer que está exigiria um dado
+ * que ninguém mede — o defeito que este módulo existe para fechar. O que dá
+ * para fazer honestamente é escopar a frase, e é o que ele faz.
+ *
+ * Puro. Testado em `testes/status-da-maquina.test.ts`.
+ */
+export type ConexaoDaMaquina =
+  /** Atendendo ESTE servidor agora. O único estado que autoriza o verde. */
+  | 'atendendo'
+  /** Pareada, já vista alguma vez, e não conectada a este servidor agora. */
+  | 'nao_conectada_aqui'
+  /** Pareada e nunca deu sinal. Diferente de "sumiu": nunca chegou. */
+  | 'nunca_vista';
+
+export type VersaoDaMaquina =
+  | { readonly tipo: 'conhecida'; readonly valor: string }
+  /** Ninguém leu. NÃO é "atual" e NÃO é "antiga". */
+  | { readonly tipo: 'desconhecida' };
+
+export interface StatusDaMaquina {
+  readonly conexao: ConexaoDaMaquina;
+  readonly versao: VersaoDaMaquina;
+  /** Só quando a versão é CONHECIDA e inferior ao mínimo. */
+  readonly desatualizada: boolean;
+  /** É a máquina que vai receber as ações? Ortogonal a estar conectada. */
+  readonly selecionada: boolean;
+  /** Progresso de atualização, quando há uma em curso. */
+  readonly atualizando: number | null;
+  /** A frase que a tela mostra. Escopada: nunca afirma sobre o mundo. */
+  readonly frase: string;
+}
+
+export function lerStatusDaMaquina(
+  maquina: MaquinaDoOperador,
+  selecionada: string | null,
+): StatusDaMaquina {
+  const versao: VersaoDaMaquina =
+    typeof maquina.versao === 'string' && maquina.versao !== ''
+      ? { tipo: 'conhecida', valor: maquina.versao }
+      : { tipo: 'desconhecida' };
+
+  const conexao: ConexaoDaMaquina = maquina.conectada
+    ? 'atendendo'
+    : maquina.vista_em === null
+      ? 'nunca_vista'
+      : 'nao_conectada_aqui';
+
+  /* `desatualizada` EXIGE versão conhecida. Um `true` chegando com versão nula
+     é contradição do contrato, e propagá-la seria acusar de antiga uma versão
+     que ninguém leu. */
+  const desatualizada = versao.tipo === 'conhecida' && maquina.desatualizada;
+
+  const frase =
+    conexao === 'atendendo'
+      ? 'atendendo agora'
+      : conexao === 'nunca_vista'
+        ? 'ainda não se apresentou a esta IARA'
+        : 'não está conectado a esta IARA';
+
+  return {
+    conexao,
+    versao,
+    desatualizada,
+    selecionada: selecionada !== null && selecionada === maquina.id,
+    atualizando: maquina.atualizando,
+    frase,
+  };
+}
+
+/**
+ * A FRASE SOBRE A VERSÃO INSTALADA — três estados, e não dois.
+ *
+ * O DEFEITO, visto pela operadora em 20/08/2026: a folha da Automação dizia
+ * *"Instalada em Homeoffice — na versão atual"* sobre uma máquina desligada
+ * desde o dia 16, cuja versão ninguém tinha lido.
+ *
+ * A causa é uma inversão sutil. `desatualizada` é `false` quando `versao` é
+ * `null` — o contrato se RECUSA, com razão, a acusar de antiga uma máquina que
+ * não reportou versão nenhuma. A tela lia `every(m => !m.desatualizada)` e
+ * concluía a afirmação OPOSTA sobre o mesmo dado inexistente. O silêncio
+ * honesto virava garantia.
+ *
+ * Custo real: a folha diz que está tudo em dia, o computador não atende, e a
+ * pessoa reinstala às cegas — que foi exatamente o que aconteceu.
+ *
+ * Puro, e por isso testável sem navegador: `testes/status-de-instalacao.test.ts`.
+ */
+export function frasearVersaoInstalada(maquinas: readonly MaquinaDoOperador[]): string {
+  if (maquinas.length === 0) return '';
+
+  /* Antiga vence tudo: é a única das três que pede uma ação da pessoa. */
+  if (maquinas.some((m) => m.desatualizada)) {
+    return ' — uma versão antiga espera o computador ligar';
+  }
+
+  /* SÓ QUEM REPORTOU VERSÃO foi conferido. `versao` só existe enquanto o
+     socket existe — ver `inventarioDeMaquinas`. */
+  const semConferir = maquinas.filter((m) => m.versao === null);
+  if (semConferir.length === 0) return ' — na versão atual';
+
+  if (semConferir.length === maquinas.length) {
+    return maquinas.length === 1
+      ? ' — não dá para conferir a versão enquanto ele estiver desligado'
+      : ' — não dá para conferir a versão enquanto estiverem desligados';
+  }
+
+  /* Mistura: nomear quem ficou de fora, em vez de generalizar sobre o grupo.
+     Uma máquina em dia não autoriza dizer que "estão" em dia — e a outra é
+     justamente a que a pessoa não está conseguindo usar. */
+  return ` — na versão atual onde deu para conferir; ${semConferir
+    .map((m) => m.nome)
+    .join(', ')} está desligado e não dá para saber`;
+}
+
 export interface MaquinaDoOperador {
   /** `id_credencial` quando pareada; o id de sessão quando não há credencial. */
   readonly id: string;
@@ -703,6 +874,9 @@ export function lerPacoteMotor(bruto: string): PacoteMotor | null {
           parametros: o.parametros,
           id_usuario: o.id_usuario,
           sessao: o.sessao,
+          /* O ALVO ATRAVESSA A VALIDAÇÃO. Ausente vira `null` — pacote de um
+             braço antigo, de antes da escolha existir, continua entrando. */
+          id_dispositivo_alvo: texto(o.id_dispositivo_alvo, 120) ? (o.id_dispositivo_alvo as string) : null,
           prazo_ms: o.prazo_ms,
           emitida_em: typeof o.emitida_em === 'number' ? o.emitida_em : Date.now(),
         },

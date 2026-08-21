@@ -1,0 +1,15 @@
+TESTE DE MUTACAO — RODADA 4 (sobre os consertos da 2a auditoria)
+
+Motivo: a 2a passada da auditoria independente mediu que 4 mutacoes
+sobreviviam, entre elas anular `instrucaoDoDegrau` INTEIRA (o conserto de
+D-07 embarcou com cobertura zero).
+
+  MUTACAO                                                    RESULTADO
+  N-1  R1 volta a ter teto global                             MORTA  fail=1
+  N-2  guarda de recorte volta a apagar em silencio           MORTA  fail=3
+  N-3  instrucaoDoDegrau anulada (SOBREVIVIA antes)           MORTA  fail=3
+  N-3b instrucao volta a prometer ressalva sempre             MORTA  fail=3
+  N-5  causal de estado volta a ignorar a dimensao            MORTA  fail=3
+  CONTROLE                                                    fail=0
+
+ACUMULADO: 11 mutacoes, 11 mortas.
