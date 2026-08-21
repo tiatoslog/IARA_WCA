@@ -45,12 +45,14 @@
     "listar_arquivos|baixo|leitura|verificador=false",
     "listar_lembretes|baixo|leitura|verificador=false",
     "mover_arquivo|medio|escrita_nao_idempotente|verificador=true",
+    "observar_tela|medio|escrita_idempotente|verificador=true",
     "pesquisar_web|baixo|leitura|verificador=false",
     "recusar_por_sigilo|baixo|leitura|verificador=false",
     "relatorio_executivo_luft|baixo|leitura|verificador=true",
     "renomear_arquivo|medio|escrita_nao_idempotente|verificador=true",
     "resolver_confirmacao|alto|escrita_nao_idempotente|verificador=true",
     "revisar_lacunas|baixo|leitura|verificador=false",
+    "treinar_procedimento|baixo|escrita_idempotente|verificador=true",
     "ver_agenda_calendario|baixo|leitura|verificador=true"
   ],
   "integracoes": [

@@ -56,7 +56,21 @@ export type OrigemDaLacuna =
   /** Nenhuma habilidade cobriu o pedido. */
   | 'capacidade'
   /** Nenhum POP oficial respondeu "como faço isso". */
-  | 'procedimento';
+  | 'procedimento'
+  /**
+   * O operador contestou o POP — "isto está errado", "aqui fazemos diferente".
+   *
+   * ENTRA NESTA FILA, e não numa fila nova, porque é o mesmo destino: material
+   * para quem revisa procedimento. Uma segunda fila teria de repetir a
+   * partição por operador, a assinatura mascarada, o teto e a contagem — e a
+   * segunda cópia de uma política de privacidade é como as duas passam a
+   * discordar.
+   *
+   * O QUE ELA NÃO É: aprendizado. Nada aqui reescreve POP nem vira orientação.
+   * A divergência fica REGISTRADA como relato do operador, com a contagem que
+   * distingue tropeço isolado de documento realmente defasado.
+   */
+  | 'divergencia';
 
 export interface LacunaCapacidade {
   /** sha1 truncado de operador+assinatura. Identidade estável entre ocorrências. */

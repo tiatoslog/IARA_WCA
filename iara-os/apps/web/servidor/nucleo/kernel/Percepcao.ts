@@ -22,6 +22,21 @@ import {
   VOCABULARIO_GW,
 } from './IntencaoProcedimento';
 import {
+  CONTESTA_O_POP,
+  ELEMENTO_AUSENTE,
+  PEDE_AVALIACAO,
+  PEDE_CONCEITO,
+  PEDE_ENSINO,
+  PEDE_PRATICA,
+  PEDE_RETOMADA,
+} from './IntencaoPedagogica';
+import {
+  AUTORIZA_OBSERVACAO,
+  PEDE_OBSERVACAO,
+  PEDE_PARAR,
+  PERGUNTA_SE_OBSERVA,
+} from './IntencaoDePercepcao';
+import {
   ehPerguntaSobreResolver,
   periodoEhIrrealis,
   separarVozes,
@@ -524,6 +539,62 @@ const ANCORAS: ReadonlyArray<Ancora> = [
    * solto capturaria toda frase que mencionasse "coleta", que é a doença que a
    * âncora `infraestrutura` já pagou caro com `frota`.
    */
+  /**
+   * OBSERVAÇÃO DA TELA — a âncora que vem antes de todas as do SOS.
+   *
+   * A PRECEDÊNCIA É A DECISÃO. "Me acompanha fazendo esse procedimento" casa
+   * `treinamento` (por `me acompanh\w+`) e casa esta. A resposta certa é ligar a
+   * observação, não recitar o POP — quem pediu para ser acompanhado FAZENDO já
+   * está com o sistema aberto na frente.
+   *
+   * E `PEDE_PARAR` casa antes de tudo por dentro do próprio classificador: uma
+   * frase que manda parar de olhar nunca pode ligar a câmera de ninguém.
+   *
+   * Os regexes são IMPORTADOS de `IntencaoDePercepcao.ts`. Uma cópia aqui seria
+   * a terceira vez que este arquivo paga por copiar regra — e desta vez o preço
+   * seria uma captura de tela ligada por engano.
+   */
+  {
+    re: new RegExp(
+      `${PEDE_PARAR.source}|${AUTORIZA_OBSERVACAO.source}|${PEDE_OBSERVACAO.source}` +
+        `|${PERGUNTA_SE_OBSERVA.source}`,
+    ),
+    nome: 'percepcao_de_tela',
+    acionavel: true,
+  },
+  /**
+   * TREINAMENTO — a âncora da instrutora, e ela vem ANTES de `procedimento_gw`.
+   *
+   * A ordem entre as duas é a decisão: "me ensina a encerrar o manifesto" casa
+   * as duas, e a resposta certa é a instrutora, não a consulta. Consultar
+   * devolve o passo a passo a quem pediu para APRENDER — que é a diferença entre
+   * um manual interativo e alguém que ensina.
+   *
+   * O QUE FICOU DE FORA, e a omissão é medida: `RELATA_ERRO` ("deu erro") e
+   * `HESITACAO` ("acho que fiz") são genéricas demais para virar âncora. "Deu
+   * erro no meu computador" é assunto de `lentidao`/`sistema`, âncoras que vêm
+   * antes desta e continuariam vencendo — mas "deu erro" solto, sem
+   * procedimento em curso, cairia aqui e a IARA responderia sobre POP a quem
+   * falava de outra coisa. Dentro de um procedimento em curso o caso é coberto
+   * por `avancar_procedimento`, que lê a mesma classificação pedagógica antes de
+   * redigir a recusa.
+   *
+   * Os regexes são IMPORTADOS de `IntencaoPedagogica.ts`, nunca copiados — a
+   * mesma disciplina que este arquivo já aplica a `IntencaoProcedimento`.
+   */
+  {
+    re: new RegExp(
+      `${PEDE_RETOMADA.source}|${PEDE_AVALIACAO.source}|${PEDE_PRATICA.source}` +
+        `|${CONTESTA_O_POP.source}|${ELEMENTO_AUSENTE.source}` +
+        // Ensinar e explicar só contam com vocabulário do GW: "me ensina a
+        // fazer café" não é procedimento operacional.
+        `|(?=[\\s\\S]*(?:${PEDE_ENSINO.source}|${PEDE_CONCEITO.source}))(?=[\\s\\S]*${VOCABULARIO_GW.source})`,
+    ),
+    nome: 'treinamento',
+    acionavel: true,
+    /** "Quantas OCIs temos hoje" é a planilha — mesma exclusão da irmã. */
+    exceto: PERGUNTA_DE_DADO,
+  },
   {
     re: new RegExp(
       // Dispensam intenção: só existem nesta conversa para pedir procedimento.

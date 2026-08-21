@@ -29,6 +29,8 @@
 // O que pode ser pedido a um par de mãos
 // ---------------------------------------------------------------------------
 
+import { TIPOS_EVENTO_VISUAL, type EventoVisual, type JanelaObservada } from './percepcao';
+
 /**
  * O catálogo FECHADO de ações que atravessam a ponte.
  *
@@ -703,7 +705,17 @@ export type PacoteBraco =
    * ANTES de repassar a `Braco.ts`, que só entende relato de execução.
    */
   | { tipo: 'progresso_atualizacao'; percentual: number }
-  | { tipo: 'atualizacao_falhou'; motivo: string };
+  | { tipo: 'atualizacao_falhou'; motivo: string }
+  /**
+   * PERCEPÇÃO DE TELA (P0, 21/08/2026) — o único pacote que o laço de percepção
+   * produz, e ele NUNCA carrega imagem.
+   *
+   * O quadro não chega nem ao processo do Braço: o helper devolve 32×32 tons de
+   * cinza, o hash é calculado ali e o resto é descartado. Este pacote leva hash,
+   * metadado mascarado e motivo. `lerEventoVisual` recusa qualquer chave fora da
+   * lista — é assim que "não mande frame" deixa de ser combinado e vira porta.
+   */
+  | { tipo: 'percepcao'; evento: EventoVisual };
 
 /** Motor → braço. */
 export type PacoteMotor =
@@ -716,7 +728,34 @@ export type PacoteMotor =
    * e a versão antiga continua rodando. Ver `manifestoAtualizacaoDisponivel`.
    */
   | { tipo: 'atualizar'; url: string; sha256: string; versao: string }
-  | { tipo: 'executar'; ordem: OrdemExecucao };
+  | { tipo: 'executar'; ordem: OrdemExecucao }
+  /**
+   * O PEDIDO de percepção. **Não é uma ordem** — é um pedido, e a diferença é o
+   * §8 inteiro: quem decide é a pessoa na frente da máquina, no console do
+   * Braço. O motor pode pedir; ligar a observação da tela de alguém não é uma
+   * coisa que se comanda de longe.
+   *
+   * `processos` é o escopo autorizado. Vem do motor porque é lá que se sabe qual
+   * sistema o procedimento usa; vale no Braço porque é lá que ele é aplicado
+   * antes de qualquer pixel ser lido.
+   */
+  | {
+      tipo: 'percepcao_iniciar';
+      sessao_percepcao: string;
+      processos: readonly string[];
+      /**
+       * QUANDO O OPERADOR AUTORIZOU, na conversa. Ausente = ninguém autorizou
+       * ainda, e o Braço PERGUNTA no próprio console antes de capturar.
+       *
+       * O campo existe para não perguntar duas vezes. Quando o consentimento já
+       * foi dado no produto — e ele fica no jornal, com hora —, repetir a
+       * pergunta no console do Braço treina a pessoa a aceitar sem ler, que é o
+       * oposto do que um consentimento serve para fazer. Sem o campo, o caminho
+       * antigo continua de pé: pergunta e espera.
+       */
+      autorizado_em?: string;
+    }
+  | { tipo: 'percepcao_encerrar'; sessao_percepcao: string; motivo: string };
 
 const objeto = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -735,6 +774,10 @@ const texto = (v: unknown, max = 200): v is string =>
  * caracteres; esta fronteira estava sem o equivalente, e ela é a que executa
  * coisas.
  */
+/** Teto do escopo de percepcao. Uma lista longa de processos e o escopo se
+ *  dissolvendo: autorizar quinze aplicacoes e autorizar a tela. */
+const MAX_PROCESSOS_NO_ESCOPO = 5;
+
 const MAX_TEXTO_RELATO = 8_000;
 const MAX_EVIDENCIA = 2_000;
 
@@ -795,6 +838,123 @@ function lerRelato(bruto: unknown): RelatoExecucao | null {
 }
 
 /**
+ * As chaves que um `EventoVisual` pode ter. LISTA FECHADA, e é ela que impede
+ * um quadro de atravessar a rede.
+ *
+ * O requisito era "quero um teste que impeça o evento de carregar PNG, base64,
+ * buffer ou screenshot". Procurar por esses nomes seria a defesa fraca — a lista
+ * de formas de escrever "imagem" não tem fim, e é a mesma lição que fez `G4b` da
+ * fronteira interna checar a IMPORTAÇÃO em vez do nome do método. Aqui a porta é
+ * estreita e conhecida: se aparecer chave que não está nesta lista, o pacote
+ * inteiro é recusado — não importa como ela se chame.
+ */
+const CHAVES_EVENTO_VISUAL: readonly string[] = [
+  'tipo',
+  'sessao_percepcao',
+  'instante',
+  'janela',
+  'hash',
+  'distancia',
+  'origem',
+  'motivo',
+  'texto',
+];
+
+/**
+ * Teto do texto observado num evento.
+ *
+ * `prepararTextoDaTela` já corta em 12 linhas de 120 caracteres; este é o teto
+ * da FRONTEIRA, que não confia no que o outro lado prometeu cortar. Um braço de
+ * outra versão — ou adulterado — não sobe a tela inteira como texto.
+ */
+const MAX_TEXTO_OBSERVADO = 2_000;
+
+const CHAVES_JANELA: readonly string[] = ['processo', 'assinatura', 'largura', 'altura'];
+
+const ORIGENS_OBSERVACAO: readonly string[] = ['hash_de_quadro', 'metadado_de_janela', 'ocr'];
+
+/** Bits de um dHash de 64. Um `distancia` fora disto não veio deste sistema. */
+const MAX_DISTANCIA = 64;
+
+function lerJanelaObservada(bruto: unknown): JanelaObservada | null {
+  if (!objeto(bruto)) return null;
+  if (Object.keys(bruto).some((k) => !CHAVES_JANELA.includes(k))) return null;
+  if (!texto(bruto.processo, 60)) return null;
+  if (typeof bruto.assinatura !== 'string' || bruto.assinatura.length > 80) return null;
+  const l = bruto.largura;
+  const a = bruto.altura;
+  if (typeof l !== 'number' || !Number.isFinite(l) || l < 0) return null;
+  if (typeof a !== 'number' || !Number.isFinite(a) || a < 0) return null;
+  return { processo: bruto.processo, assinatura: bruto.assinatura, largura: l, altura: a };
+}
+
+/**
+ * O evento visual, campo a campo. `null` para qualquer desvio.
+ *
+ * NENHUM `as EventoVisual` sobre o que veio do socket: este pacote nasce num
+ * processo que roda no computador de outra pessoa e pode ser de outra versão —
+ * o mesmo argumento que já governa `lerRelato` logo acima.
+ */
+export function lerEventoVisual(bruto: unknown): EventoVisual | null {
+  if (!objeto(bruto)) return null;
+  if (Object.keys(bruto).some((k) => !CHAVES_EVENTO_VISUAL.includes(k))) return null;
+
+  if (typeof bruto.tipo !== 'string') return null;
+  if (!(TIPOS_EVENTO_VISUAL as readonly string[]).includes(bruto.tipo)) return null;
+  if (!texto(bruto.sessao_percepcao, 80)) return null;
+  if (!texto(bruto.instante, 40)) return null;
+  if (typeof bruto.origem !== 'string' || !ORIGENS_OBSERVACAO.includes(bruto.origem)) return null;
+  if (typeof bruto.motivo !== 'string' || bruto.motivo.length > 200) return null;
+  if (bruto.texto !== undefined && bruto.texto !== null) {
+    if (typeof bruto.texto !== 'string' || bruto.texto.length > MAX_TEXTO_OBSERVADO) return null;
+  }
+  const textoObservado = typeof bruto.texto === 'string' ? bruto.texto : '';
+
+  let janela: JanelaObservada | null = null;
+  if (bruto.janela !== null && bruto.janela !== undefined) {
+    janela = lerJanelaObservada(bruto.janela);
+    if (!janela) return null;
+  }
+
+  let hash: string | null = null;
+  if (bruto.hash !== null && bruto.hash !== undefined) {
+    if (typeof bruto.hash !== 'string' || !/^[0-9a-f]{16}$/.test(bruto.hash)) return null;
+    hash = bruto.hash;
+  }
+
+  let distancia: number | null = null;
+  if (bruto.distancia !== null && bruto.distancia !== undefined) {
+    const d = bruto.distancia;
+    if (typeof d !== 'number' || !Number.isFinite(d) || d < 0 || d > MAX_DISTANCIA) return null;
+    distancia = d;
+  }
+
+  /* SÓ `mudanca_visual` CARREGA HASH. Um `sessao_encerrada` com hash é um
+     pacote que não nasceu deste laço — e um evento de ciclo de vida não tem
+     nada que dizer sobre o conteúdo da tela de ninguém. */
+  if (bruto.tipo !== 'mudanca_visual' && (hash !== null || distancia !== null)) return null;
+
+  /* SÓ OS DOIS EVENTOS DE CONTEÚDO CARREGAM TEXTO. Um `sessao_encerrada` com o
+     texto da tela dentro é um pacote que não nasceu deste laço — e um evento de
+     ciclo de vida não tem nada que dizer sobre o que estava escrito na tela. */
+  if (textoObservado && bruto.tipo !== 'mudanca_visual' && bruto.tipo !== 'mensagem_detectada') {
+    return null;
+  }
+
+  return {
+    tipo: bruto.tipo as EventoVisual['tipo'],
+    sessao_percepcao: bruto.sessao_percepcao,
+    instante: bruto.instante,
+    janela,
+    hash,
+    distancia,
+    origem: bruto.origem as EventoVisual['origem'],
+    motivo: bruto.motivo,
+    texto: textoObservado,
+  };
+}
+
+/**
  * Validação estrutural na fronteira, nos DOIS sentidos.
  *
  * O braço valida o que vem do motor pela mesma razão que o motor valida o que
@@ -837,6 +997,10 @@ export function lerPacoteBraco(bruto: string): PacoteBraco | null {
         : null;
     case 'atualizacao_falhou':
       return texto(v.motivo, 500) ? { tipo: 'atualizacao_falhou', motivo: v.motivo } : null;
+    case 'percepcao': {
+      const evento = lerEventoVisual(v.evento);
+      return evento ? { tipo: 'percepcao', evento } : null;
+    }
     default:
       return null;
   }
@@ -860,6 +1024,30 @@ export function lerPacoteMotor(bruto: string): PacoteMotor | null {
       if (!texto(v.url, 500) || !texto(v.versao, 60)) return null;
       if (typeof v.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(v.sha256)) return null;
       return { tipo: 'atualizar', url: v.url, sha256: v.sha256, versao: v.versao };
+    case 'percepcao_iniciar': {
+      if (!texto(v.sessao_percepcao, 80)) return null;
+      if (!Array.isArray(v.processos) || v.processos.length === 0) return null;
+      if (v.processos.length > MAX_PROCESSOS_NO_ESCOPO) return null;
+      const processos: string[] = [];
+      for (const item of v.processos) {
+        /* Nome de processo, nao caminho e nao curinga: o escopo e uma lista de
+           aplicacoes autorizadas, e aceitar padrao livre aqui transformaria
+           "observe o GW" em "observe tudo" com uma linha de configuracao. */
+        if (typeof item !== 'string' || !/^[a-z0-9._-]{1,60}$/i.test(item)) return null;
+        processos.push(item.toLowerCase());
+      }
+      if (v.autorizado_em !== undefined && !texto(v.autorizado_em, 40)) return null;
+      return {
+        tipo: 'percepcao_iniciar',
+        sessao_percepcao: v.sessao_percepcao,
+        processos,
+        ...(typeof v.autorizado_em === 'string' ? { autorizado_em: v.autorizado_em } : {}),
+      };
+    }
+    case 'percepcao_encerrar':
+      return texto(v.sessao_percepcao, 80) && typeof v.motivo === 'string' && v.motivo.length <= 200
+        ? { tipo: 'percepcao_encerrar', sessao_percepcao: v.sessao_percepcao, motivo: v.motivo }
+        : null;
     case 'executar': {
       const o = v.ordem;
       if (!objeto(o) || !texto(o.execucao_id, 80) || !ehAcaoDesktop(o.acao)) return null;

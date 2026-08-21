@@ -67,6 +67,23 @@ const DECLARA_CONCLUSAO =
   /\b(fiz|feito|fez|pronto|prontinho|ok|okay|consegui|terminei|termin[ao]u|conclui|concluido|realizado|deu certo|funcionou|proximo|proxima|avanca|avancar|segue|seguinte|continua|continuar)\b/;
 
 /**
+ * A PESSOA NAO AFIRMA QUE FEZ - e "acho que fiz" nao e "fiz".
+ *
+ * O DEFEITO QUE ESTA CONSTANTE FECHA: `DECLARA_CONCLUSAO` casa a palavra `fiz`,
+ * e ela casava dentro de "acho que fiz" e "nao sei se fiz certo". A etapa
+ * avancava como `declarada` - evidencia de que a pessoa afirmou ter feito - a
+ * partir de uma frase em que ela disse o contrario disso. Era a unica forma de
+ * o registro de auditoria guardar uma declaracao que ninguem fez.
+ *
+ * VERIFICADA ANTES de `DECLARA_CONCLUSAO` e devolve `nenhuma`, nao um tipo
+ * novo: hesitar e nao ter evidencia, e um `TipoDeEvidencia` a mais aqui seria um
+ * degrau intermediario entre "nada" e "declarada" que nenhuma porta saberia
+ * tratar.
+ */
+export const HESITACAO =
+  /\b(acho\s+que\s+(?:fiz|foi|deu|consegui|terminei)|nao\s+sei\s+se\s+(?:fiz|foi|deu|consegui|esta|ta)|acredito\s+que\s+(?:fiz|foi)|talvez\s+(?:eu\s+)?tenha\s+feito|sera\s+que\s+(?:fiz|deu|esta|ta)\s+cert\w+|confirma\s+(?:se|que)\s+(?:esta|ta|eu)\s*\w*\s*cert\w+|me\s+confirma\s+se)\b/;
+
+/**
  * O que sustenta "esta etapa foi feita".
  *
  * A FONTE É O `enunciado` — o texto original do operador —, nunca um parâmetro
@@ -101,6 +118,11 @@ export function classificarEvidencia(
    */
   if (opcoes.conferencia?.situacao === 'na_etapa') return 'anexada';
   const t = normalizar(enunciado ?? '');
+  /* HESITAÇÃO VENCE TUDO QUE VEM DO TEXTO — inclusive um dado informado, porque
+     "acho que preenchi 123" continua sendo alguém que não afirma ter preenchido.
+     Só a conferência de tela, verificada acima, sobrevive a ela: ali quem
+     afirmou não foi a pessoa. */
+  if (HESITACAO.test(t)) return 'nenhuma';
   if (opcoes.dadoInformado && opcoes.dadoInformado.trim().length > 0) return 'informada';
   if (DECLARA_CONCLUSAO.test(t)) return 'declarada';
   return 'nenhuma';

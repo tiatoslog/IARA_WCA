@@ -37,11 +37,13 @@ import {
   type Posicao,
   type Procedimento,
 } from '../../../../lib/procedimento';
+import type { NivelDeExplicacao } from '../../../../lib/treinamento';
 import {
   classificarIntencao,
   type IntencaoDeProcedimento,
 } from '../IntencaoProcedimento';
 import * as guardiao from '../GuardiaoDoProcedimento';
+import { classificarPedagogica } from '../IntencaoPedagogica';
 import { classificarEvidencia } from '../GuardiaoDoProcedimento';
 import { contar } from '../../texto';
 
@@ -57,11 +59,51 @@ function codigosConhecidos(): string[] {
  * escrito", e nestes 11 POPs a data não existe. Dizer "conforme o documento
  * interno" é o mínimo honesto.
  */
-export function redigirParada(p: Procedimento, pos: Posicao, modo: ModoDoProcedimento): string {
+export function redigirParada(
+  p: Procedimento,
+  pos: Posicao,
+  modo: ModoDoProcedimento,
+  /**
+   * A PROFUNDIDADE, derivada pelo progresso pedagógico. Ver `lib/treinamento.ts`.
+   *
+   * O QUE O NÍVEL NUNCA MUDA: o texto do POP. Em `avancado` some o andaime
+   * didático — a explicação do objetivo e o lembrete de que estamos treinando —,
+   * nunca a instrução. Encurtar a instrução para quem "já sabe" é como um
+   * procedimento passa a ser executado de memória, que é exatamente o que o SOS
+   * existe para não deixar acontecer.
+   *
+   * O padrão é `intermediario`, que reproduz o comportamento anterior a esta
+   * camada: quem chamar sem saber de progresso nenhum continua recebendo o que
+   * recebia.
+   */
+  nivel: NivelDeExplicacao = 'intermediario',
+  /**
+   * A IARA ESTÁ ACOMPANHANDO A TELA AGORA?
+   *
+   * O lembrete de modo treinamento diz, desde 19/08/2026, "eu não fico vendo sua
+   * tela". Isso era verdade quando a única visão era o print que a pessoa
+   * anexava. Com a percepção contínua autorizada, a frase passou a ser FALSA
+   * exatamente para quem autorizou — e uma IARA que nega estar observando
+   * enquanto observa é o pior defeito que esta camada poderia ter.
+   *
+   * O padrão é `false`, que reproduz o comportamento anterior para todo chamador
+   * que não sabe de percepção nenhuma.
+   */
+  observando = false,
+): string {
   const linhas: string[] = [];
 
   linhas.push(`**${p.titulo}** — ${pos.indice} de ${pos.total}`);
   linhas.push(`Etapa ${pos.etapa.numero}: ${pos.etapa.titulo}`);
+
+  if (nivel === 'iniciante') {
+    linhas.push('');
+    if (pos.indice === 1 && p.objetivo) {
+      linhas.push(`O procedimento inteiro serve para: ${p.objetivo}`);
+    }
+    linhas.push(`Nesta etapa o objetivo é **${pos.etapa.titulo.toLowerCase()}**.`);
+  }
+
   linhas.push('');
 
   /**
@@ -99,9 +141,13 @@ export function redigirParada(p: Procedimento, pos: Posicao, modo: ModoDoProcedi
     linhas.push('_Esta etapa não tem captura de tela no POP._');
   }
 
-  if (modo === 'treinar') {
+  if (modo === 'treinar' && nivel !== 'avancado') {
     linhas.push('');
     linhas.push(
+      observando
+        ? '🎓 Modo treinamento. **Estou acompanhando sua tela agora** — vejo quando ela muda, ' +
+            'e não vejo que você cumpriu a etapa. Quando terminar, me diga.'
+        : 
       /* A frase mudou em 19/08/2026, quando a conferência de screenshot passou a
          existir: dizer "não enxergo sua tela" virou meia verdade, e meia verdade
          sobre o que a IARA consegue ver é a que faz alguém confiar demais ou de
@@ -523,12 +569,31 @@ export const avancarProcedimento: Habilidade = {
          * justamente para ser a frase do operador; usá-la é o que mantém a porta
          * e a explicação em concordância quando a próxima recusa aparecer.
          */
+        /**
+         * A RECUSA CONTINUA A MESMA; a FRASE é que passa a ouvir o operador.
+         *
+         * O guardião já decidiu — nada aqui reabre a porta, e o teste adversarial
+         * confere que a posição não anda em nenhum destes ramos. O defeito que
+         * este bloco fecha é de resposta: *"ninguém me confirmou que ela foi
+         * feita"* era o que a IARA dizia a quem tinha acabado de escrever "deu
+         * erro" ou "acho que fiz". Tecnicamente verdadeiro, e a leitura que a
+         * pessoa faz é que a IARA não leu o que ela escreveu — que é como um
+         * operador aprende a parar de contar o que aconteceu.
+         */
+        const pedagogica = classificarPedagogica(ctx.enunciado);
+        const recado =
+          pedagogica.dificuldade === 'evidencia_insuficiente'
+            ? ' Você não me disse que fez — disse que acha que fez, e isso eu não registro como ' +
+              'declaração. Me confirme com todas as letras, ou me mande um print desta tela.'
+            : pedagogica.modo === 'diagnostico'
+              ? ' Pelo que você escreveu, houve um problema — não uma conclusão. Sua posição ' +
+                'continua nesta parada. Me conte o que apareceu que eu ajudo a separar o que o ' +
+                'POP manda do que você está vendo.'
+              : evidencia === 'nenhuma'
+                ? ' Me diga que terminou, ou me mande um print da tela desta etapa.'
+                : '';
         return {
-          texto:
-            `Não vou marcar esta etapa como feita: ${veredito.motivo}.` +
-            (evidencia === 'nenhuma'
-              ? ' Me diga que terminou, ou me mande um print da tela desta etapa.'
-              : ''),
+          texto: `Não vou marcar esta etapa como feita: ${veredito.motivo}.${recado}`,
           detalhe:
             `${veredito.desvio?.tipo ?? 'recusado'}; evidencia=${evidencia}; ` +
             `parada mantida em ${emCurso.etapa}/${emCurso.slide}`,

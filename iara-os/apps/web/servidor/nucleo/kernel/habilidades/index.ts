@@ -27,6 +27,8 @@ import { HABILIDADES_AUDITORIA } from './auditoria';
 import { HABILIDADES_PLANILHA_OCIS } from './cargasLuft';
 import { HABILIDADES_PLANILHA_GENERICA } from './planilhaGenerica';
 import { HABILIDADES_PROCEDIMENTOS } from './procedimentos';
+import { HABILIDADES_TREINAMENTO } from './treinamento';
+import { HABILIDADES_PERCEPCAO } from './percepcao';
 
 export const CATALOGO: readonly Habilidade[] = [
   ...HABILIDADES_OPERACIONAIS,
@@ -43,6 +45,8 @@ export const CATALOGO: readonly Habilidade[] = [
   ...HABILIDADES_PLANILHA_OCIS,
   ...HABILIDADES_PLANILHA_GENERICA,
   ...HABILIDADES_PROCEDIMENTOS,
+  ...HABILIDADES_TREINAMENTO,
+  ...HABILIDADES_PERCEPCAO,
 ];
 
 export { prepararOperacionais };

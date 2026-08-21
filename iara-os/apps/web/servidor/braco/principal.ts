@@ -76,6 +76,10 @@ import {
 carregarEnv({ path: '.env.local' });
 carregarEnv();
 
+import { CapturaDeQuadro, percepcaoIndisponivelPorque } from './CapturaDeQuadro';
+import { PercepcaoLocal, type Consentimento } from './PercepcaoLocal';
+import { TETO_DA_SESSAO_MS, type EventoVisual, type JanelaObservada } from '../../lib/percepcao';
+
 const VERSAO = '1.3.0';
 
 /**
@@ -429,12 +433,23 @@ function assinaturaDa(ordem: OrdemExecucao): string {
   return [ordem.acao, parametros].join('\0');
 }
 
-function enviar(pacote: PacoteBraco): void {
-  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+/**
+ * Devolve se o pacote de fato SAIU — e passou a devolver por causa da percepção.
+ *
+ * Os relatos de execução ignoram este valor de propósito: uma ordem cujo relato
+ * se perdeu tem o prazo do Braço para resolvê-la, e insistir daqui duplicaria
+ * efeito. A percepção é o oposto: um evento que não saiu não pode ser
+ * enfileirado nem reenviado — ele é sobre a tela de alguém, e acumular é o que
+ * transforma observação em dossiê. Quem chama decide o que fazer com o `false`.
+ */
+function enviar(pacote: PacoteBraco): boolean {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return false;
   try {
     socket.send(JSON.stringify(pacote));
+    return true;
   } catch (erro) {
     console.warn(`[IARA] não consegui responder ao motor: ${(erro as Error).message}`);
+    return false;
   }
 }
 
@@ -693,6 +708,181 @@ async function atender(ordem: OrdemExecucao): Promise<void> {
 
 /** Agenda a próxima tentativa e alarga o recuo. Um lugar só, para que nenhum
  *  caminho de falha esqueça de reagendar — ou reagende duas vezes. */
+/* -------------------------------------------------------------------------
+ * PERCEPCAO DE TELA — P0
+ *
+ * O QUE ESTE BLOCO GARANTE, e nenhuma parte dele e negociavel:
+ *
+ *   1. NADA comeca sem o operador digitar "sim" NESTE console. O motor PEDE;
+ *      quem autoriza esta na frente da maquina. Um pedido remoto que ligasse a
+ *      observacao sozinho seria vigilancia com passo extra.
+ *   2. O indicador aparece e FICA aparecendo enquanto a percepcao estiver
+ *      ativa. A pessoa consegue responder "minha tela esta sendo observada
+ *      agora?" olhando o terminal.
+ *   3. Nenhum pixel atravessa a rede: o que sai daqui e `EventoVisual`, com
+ *      hash e metadado mascarado.
+ * ------------------------------------------------------------------------- */
+
+const captura = new CapturaDeQuadro();
+
+/** Repete o indicador a cada N ms para ele nao sumir no meio do log. */
+const INTERVALO_INDICADOR_MS = 15_000;
+let relogioIndicador: ReturnType<typeof setInterval> | null = null;
+let ultimoIndicador = '';
+
+function mostrarIndicador(estado: {
+  ativa: boolean;
+  suspensa: boolean;
+  janela: JanelaObservada | null;
+  mudancas: number;
+  motivo: string;
+}): void {
+  if (!estado.ativa) {
+    ultimoIndicador = '';
+    if (relogioIndicador) clearInterval(relogioIndicador);
+    relogioIndicador = null;
+    console.log('[IARA] ==== PERCEPCAO DE TELA DESLIGADA ====');
+    return;
+  }
+  const alvo = estado.janela ? `${estado.janela.processo}` : 'aguardando janela autorizada';
+  ultimoIndicador = estado.suspensa
+    ? `[IARA] (||) PERCEPCAO SUSPENSA — ${estado.motivo}`
+    : `[IARA] (o) PERCEPCAO ATIVA — observando ${alvo} — ${estado.mudancas} mudanca(s)`;
+  console.log(`${ultimoIndicador}   [Ctrl+C encerra]`);
+  if (!relogioIndicador) {
+    relogioIndicador = setInterval(() => {
+      if (ultimoIndicador) console.log(`${ultimoIndicador}   [Ctrl+C encerra]`);
+    }, INTERVALO_INDICADOR_MS);
+    relogioIndicador.unref?.();
+  }
+}
+
+/**
+ * QUEDA DE REDE NAO VIRA FILA (§26).
+ *
+ * `enviar` devolve `false` quando o socket nao esta aberto. A resposta certa e
+ * PARAR de observar, nao acumular: uma fila de eventos visuais de uma pessoa que
+ * ficou dez minutos sem rede e um dossie sobre o que ela fez enquanto ninguem
+ * podia ver — exatamente o que a arquitetura recusa. Tres falhas seguidas
+ * encerram a sessao; a IARA pede de novo quando voltar.
+ */
+const MAX_FALHAS_DE_ENVIO = 3;
+let falhasDeEnvio = 0;
+
+const percepcao = new PercepcaoLocal({
+  janela: () => captura.janela(),
+  quadro: (handle) => captura.quadro(handle),
+  /* O OCR LOCAL. Se esta maquina nao tiver o pacote de idioma do Windows,
+     `texto()` devolve `null` e a percepcao continua detectando mudanca de tela
+     sem ler nada — degradacao explicita, nunca silenciosa. */
+  texto: (handle) => captura.texto(handle),
+  agora: () => Date.now(),
+  emitir: (evento: EventoVisual) => {
+    const foi = enviar({ tipo: 'percepcao', evento });
+    if (foi) {
+      falhasDeEnvio = 0;
+      return;
+    }
+    falhasDeEnvio += 1;
+    if (falhasDeEnvio >= MAX_FALHAS_DE_ENVIO) {
+      console.warn('[IARA] sem conexao com a IARA; parando de observar em vez de acumular eventos');
+      encerrarPercepcao('conexao com a IARA perdida');
+    }
+  },
+  indicar: mostrarIndicador,
+});
+
+/** Um consentimento por sessao. Encerrou, some — nunca fica valendo "para sempre". */
+let consentimentoDaSessao: { sessao: string; consentimento: Consentimento } | null = null;
+
+/**
+ * TETO LOCAL DA SESSAO — a trava que nao depende do motor estar vivo.
+ *
+ * O motor tem o dele (`TETO_DA_SESSAO_MS`), e os dois existem de proposito: o de
+ * la mata a sessao no registro, o daqui PARA A CAPTURA. Se o motor cair, o dele
+ * nao roda — e o unico que sobra e este. Uma observacao que sobrevive a morte de
+ * quem a pediu e exatamente o que nao pode existir.
+ */
+let relogioDoTeto: ReturnType<typeof setTimeout> | null = null;
+
+function armarTeto(): void {
+  if (relogioDoTeto) clearTimeout(relogioDoTeto);
+  relogioDoTeto = setTimeout(() => {
+    if (percepcao.ativa) {
+      console.log('[IARA] teto de tempo da sessao de percepcao atingido; parando de observar');
+      encerrarPercepcao('teto de tempo local do Braco');
+    }
+  }, TETO_DA_SESSAO_MS);
+  relogioDoTeto.unref?.();
+}
+
+async function pedirPercepcao(
+  sessao: string,
+  processos: readonly string[],
+  autorizadoEm?: string,
+): Promise<void> {
+  const indisponivel = percepcaoIndisponivelPorque();
+  if (indisponivel) {
+    console.warn(`[IARA] percepcao de tela indisponivel: ${indisponivel}`);
+    return;
+  }
+  if (percepcao.ativa) {
+    console.log('[IARA] ja existe percepcao ativa; ignorando o pedido novo');
+    return;
+  }
+
+  console.log('');
+  console.log('[IARA] ------------------------------------------------------------');
+  console.log('[IARA] A IARA vai acompanhar a sua tela.');
+  console.log(`[IARA] Aplicacao(oes) observadas: ${processos.join(', ')}`);
+  console.log('[IARA] Ela NAO envia imagem da sua tela: so um resumo numerico do');
+  console.log('[IARA] que mudou. Fora dessas aplicacoes ela para de observar.');
+  console.log('[IARA] Para parar: diga "para de observar" para a IARA, ou feche este programa.');
+  console.log('[IARA] ------------------------------------------------------------');
+
+  /**
+   * DUAS PORTAS DE CONSENTIMENTO, e a escolha entre elas e do CAMINHO, nao do
+   * operador.
+   *
+   * `autorizadoEm` presente significa que a pessoa autorizou NA CONVERSA, e o
+   * motor guardou a hora. Perguntar de novo aqui treinaria a aceitar sem ler.
+   * Ausente significa que ninguem autorizou nada ainda — e ai o Braco pergunta,
+   * que e o caminho de quem aciona por fora do produto.
+   */
+  let consentimento: Consentimento;
+  if (autorizadoEm) {
+    consentimento = { concedido: true, em: autorizadoEm, via: 'conversa com a IARA' };
+    console.log(`[IARA] autorizado por voce na conversa em ${autorizadoEm}`);
+  } else {
+    const resposta = (await perguntar('[IARA] Autoriza? (digite SIM para autorizar) ')).toLowerCase();
+    const concedido = resposta === 'sim' || resposta === 's';
+    consentimento = { concedido, em: new Date().toISOString(), via: 'console do Braco' };
+    if (!concedido) {
+      console.log('[IARA] Percepcao NAO autorizada. Nada foi observado.');
+      return;
+    }
+  }
+
+  consentimentoDaSessao = { sessao, consentimento };
+  captura.iniciar();
+  const ligou = percepcao.iniciar(sessao, { processos }, consentimento);
+  if (!ligou) {
+    console.warn('[IARA] percepcao nao ligou (escopo vazio ou consentimento ausente)');
+    consentimentoDaSessao = null;
+    return;
+  }
+  armarTeto();
+}
+
+function encerrarPercepcao(motivo: string): void {
+  if (relogioDoTeto) clearTimeout(relogioDoTeto);
+  relogioDoTeto = null;
+  if (!percepcao.ativa) return;
+  percepcao.encerrar(motivo);
+  consentimentoDaSessao = null;
+  captura.encerrar();
+}
+
 function tentarDeNovo(): void {
   if (encerrando) return;
   setTimeout(() => void conectar(), recuo);
@@ -793,6 +983,21 @@ async function conectar(): Promise<void> {
 
     if (pacote.tipo === 'atualizar') {
       void atualizar(pacote);
+      return;
+    }
+
+    if (pacote.tipo === 'percepcao_iniciar') {
+      void pedirPercepcao(pacote.sessao_percepcao, pacote.processos, pacote.autorizado_em);
+      return;
+    }
+
+    if (pacote.tipo === 'percepcao_encerrar') {
+      /* SO A PROPRIA SESSAO SE ENCERRA. Um pedido com outra sessao e de um
+         estado que este Braco nao tem — obedecer seria deixar o motor desligar
+         uma observacao que ele nao sabe que existe. */
+      if (consentimentoDaSessao?.sessao === pacote.sessao_percepcao) {
+        encerrarPercepcao(pacote.motivo || 'encerrada pelo motor');
+      }
       return;
     }
 

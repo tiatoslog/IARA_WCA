@@ -1,0 +1,195 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1080
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Iara,Segoe UI,44,&H00FFFFFF,&H00FFFFFF,&HDC231E1B,&HDC231E1B,-1,0,0,0,100,100,0,0,3,14,0,2,64,64,150,1
+
+[Events]
+Format: Layer, Start, End, Style, MarginL, MarginR, MarginV, Effect, Text
+
+Dialogue: 0,0:00:04.84,0:00:06.51,Iara,0,0,0,,Ao final deste treinamento,
+Dialogue: 0,0:00:06.51,0:00:10.39,Iara,0,0,0,,você vai conseguir agendar uma coleta da LUFT do começo ao fim:
+Dialogue: 0,0:00:10.39,0:00:13.16,Iara,0,0,0,,desde a ordem de coleta que chega por e-mail,
+Dialogue: 0,0:00:13.16,0:00:15.68,Iara,0,0,0,,até o envio do documento para assinatura.
+Dialogue: 0,0:00:15.68,0:00:19.19,Iara,0,0,0,,E, mais importante, você vai saber conferir se fez certo.
+Dialogue: 0,0:00:20.19,0:00:23.20,Iara,0,0,0,,O agendamento é o primeiro elo da operação LUFT.
+Dialogue: 0,0:00:23.20,0:00:27.03,Iara,0,0,0,,Tudo que vem depois — a emissão do CTE, o CIOT, o manifesto —
+Dialogue: 0,0:00:27.03,0:00:30.54,Iara,0,0,0,,depende de uma coleta marcada e registrada corretamente.
+Dialogue: 0,0:00:30.54,0:00:35.43,Iara,0,0,0,,Um agendamento sem registro é um caminhão que ninguém sabe explicar onde está.
+Dialogue: 0,0:00:36.43,0:00:40.11,Iara,0,0,0,,Uma coisa antes de começar: aqui você aprende a agendar.
+Dialogue: 0,0:00:40.11,0:00:44.37,Iara,0,0,0,,Emitir a ordem de coleta no sistema, usar o Autentique e o SMBOT,
+Dialogue: 0,0:00:44.37,0:00:49.69,Iara,0,0,0,,emitir CTE ou manifesto — cada um desses tem a sua própria instrução de trabalho.
+Dialogue: 0,0:00:50.69,0:00:54.76,Iara,0,0,0,,Antes de agendar qualquer coisa, confira se você tem estes acessos.
+Dialogue: 0,0:00:54.76,0:00:58.65,Iara,0,0,0,,Se faltar algum, resolva agora — no meio do agendamento é tarde,
+Dialogue: 0,0:00:58.65,0:01:01.69,Iara,0,0,0,,porque tem gente do outro lado da linha esperando.
+Dialogue: 0,0:01:02.69,0:01:05.84,Iara,0,0,0,,Etapa um: o recebimento da ordem de coleta.
+Dialogue: 0,0:01:06.84,0:01:09.59,Iara,0,0,0,,A LUFT envia a ordem de coleta por e-mail,
+Dialogue: 0,0:01:09.59,0:01:12.54,Iara,0,0,0,,para a caixa da analista responsável na Atos.
+Dialogue: 0,0:01:12.54,0:01:15.81,Iara,0,0,0,,Repare no que interessa nessa mensagem: o assunto,
+Dialogue: 0,0:01:15.81,0:01:20.14,Iara,0,0,0,,que diz de onde sai e para onde vai a carga, e a numeração da OCI,
+Dialogue: 0,0:01:20.14,0:01:21.38,Iara,0,0,0,,destacada no corpo.
+Dialogue: 0,0:01:21.38,0:01:23.93,Iara,0,0,0,,Pode vir mais de uma na mesma mensagem.
+Dialogue: 0,0:01:24.93,0:01:28.79,Iara,0,0,0,,Assim que você tem essa numeração, já pode agendar a viagem.
+Dialogue: 0,0:01:28.79,0:01:30.71,Iara,0,0,0,,Não precisa esperar mais nada.
+Dialogue: 0,0:01:30.71,0:01:33.35,Iara,0,0,0,,A numeração é a autorização para começar.
+Dialogue: 0,0:01:34.35,0:01:37.08,Iara,0,0,0,,Mas atenção: cada região tem o seu jeito.
+Dialogue: 0,0:01:37.08,0:01:39.34,Iara,0,0,0,,A central de Piedade, por exemplo,
+Dialogue: 0,0:01:39.34,0:01:43.73,Iara,0,0,0,,avisa na sexta-feira quais ordens vai carregar na semana seguinte.
+Dialogue: 0,0:01:43.73,0:01:47.66,Iara,0,0,0,,Ou seja, nem sempre você agenda no mesmo dia em que recebe.
+Dialogue: 0,0:01:47.66,0:01:51.39,Iara,0,0,0,,Antes de ligar, saiba com qual região você está lidando.
+Dialogue: 0,0:01:52.39,0:01:57.57,Iara,0,0,0,,Antes de seguir: você tem a numeração da OCI em mãos e sabe de qual região ela é?
+Dialogue: 0,0:01:58.57,0:02:02.33,Iara,0,0,0,,Etapa dois: o preenchimento da planilha e o agendamento.
+Dialogue: 0,0:02:02.33,0:02:04.21,Iara,0,0,0,,É a maior parte do trabalho.
+Dialogue: 0,0:02:05.21,0:02:10.31,Iara,0,0,0,,A planilha de controle não fica no seu computador: ela mora no caminho de rede,
+Dialogue: 0,0:02:10.31,0:02:12.25,Iara,0,0,0,,na pasta de controle de frete.
+Dialogue: 0,0:02:12.25,0:02:14.58,Iara,0,0,0,,É sempre a planilha do ano corrente.
+Dialogue: 0,0:02:14.58,0:02:18.97,Iara,0,0,0,,Abrir a cópia errada é o tipo de erro que só aparece semanas depois.
+Dialogue: 0,0:02:19.97,0:02:21.08,Iara,0,0,0,,Agora é sua vez.
+Dialogue: 0,0:02:21.08,0:02:25.47,Iara,0,0,0,,Na planilha, lance a OCI preenchendo cinco campos, nesta ordem:
+Dialogue: 0,0:02:25.47,0:02:29.24,Iara,0,0,0,,o número da OCI que você recebeu; a origem; o destino;
+Dialogue: 0,0:02:29.24,0:02:33.91,Iara,0,0,0,,a data em que você recebeu a OCI — a data de hoje, não a da coleta;
+Dialogue: 0,0:02:33.91,0:02:36.42,Iara,0,0,0,,e o motorista que faz aquela região.
+Dialogue: 0,0:02:37.42,0:02:39.49,Iara,0,0,0,,O campo rota você não preenche.
+Dialogue: 0,0:02:39.49,0:02:43.32,Iara,0,0,0,,Ele se preenche sozinho, a partir da origem e do destino.
+Dialogue: 0,0:02:43.32,0:02:46.94,Iara,0,0,0,,Seu trabalho aqui é conferir: olhe se a rota apareceu.
+Dialogue: 0,0:02:46.94,0:02:49.82,Iara,0,0,0,,Se apareceu, o lançamento está consistente.
+Dialogue: 0,0:02:50.82,0:02:53.06,Iara,0,0,0,,Erro comum: digitar a rota na mão.
+Dialogue: 0,0:02:53.06,0:02:57.53,Iara,0,0,0,,Parece inofensivo, mas você sobrescreve o preenchimento automático —
+Dialogue: 0,0:02:57.53,0:03:01.94,Iara,0,0,0,,e a rota deixa de refletir a origem e o destino que estão na linha.
+Dialogue: 0,0:03:01.94,0:03:04.84,Iara,0,0,0,,Se digitou, apague e deixe o campo calcular.
+Dialogue: 0,0:03:05.84,0:03:10.40,Iara,0,0,0,,Antes de ligar, uma decisão: essa carga pode ser agendada de imediato,
+Dialogue: 0,0:03:10.40,0:03:13.39,Iara,0,0,0,,ou é uma região que agenda uma vez por semana?
+Dialogue: 0,0:03:13.39,0:03:15.74,Iara,0,0,0,,A resposta muda o seu próximo passo.
+Dialogue: 0,0:03:15.74,0:03:20.50,Iara,0,0,0,,Definido isso, você liga para o posto, para a central e para o motorista.
+Dialogue: 0,0:03:21.50,0:03:26.06,Iara,0,0,0,,Os contatos também ficam na rede, numa planilha própria: contatos LUFT,
+Dialogue: 0,0:03:26.06,0:03:27.22,Iara,0,0,0,,postos e centrais.
+Dialogue: 0,0:03:27.22,0:03:30.96,Iara,0,0,0,,Nela você encontra, para cada central, o contato do posto,
+Dialogue: 0,0:03:30.96,0:03:34.37,Iara,0,0,0,,quem é o motorista daquela rota e como falar com ele.
+Dialogue: 0,0:03:34.37,0:03:36.10,Iara,0,0,0,,É a sua agenda de trabalho.
+Dialogue: 0,0:03:37.10,0:03:38.84,Iara,0,0,0,,Feita a ligação, registre.
+Dialogue: 0,0:03:38.84,0:03:40.65,Iara,0,0,0,,E registre nos três blocos.
+Dialogue: 0,0:03:40.65,0:03:45.60,Iara,0,0,0,,No bloco de postos: a data, a hora e o nome da pessoa com quem você falou.
+Dialogue: 0,0:03:45.60,0:03:50.28,Iara,0,0,0,,No bloco da central: a data, a hora e o nome de quem agendou com você.
+Dialogue: 0,0:03:50.28,0:03:54.36,Iara,0,0,0,,No bloco TAC: a data e a hora em que você avisou o motorista.
+Dialogue: 0,0:03:54.36,0:03:57.84,Iara,0,0,0,,Repare que nos dois primeiros o nome é obrigatório —
+Dialogue: 0,0:03:57.84,0:04:00.85,Iara,0,0,0,,é ele que transforma uma ligação em registro.
+Dialogue: 0,0:04:01.85,0:04:06.56,Iara,0,0,0,,O POP traz uma dica: sempre que puder, agende pelo BOT ou pelo WhatsApp,
+Dialogue: 0,0:04:06.56,0:04:09.17,Iara,0,0,0,,porque assim fica registro do combinado.
+Dialogue: 0,0:04:09.17,0:04:13.42,Iara,0,0,0,,Vale dizer que o documento pede a ligação e recomenda a mensagem,
+Dialogue: 0,0:04:13.42,0:04:16.16,Iara,0,0,0,,mas não diz qual das duas tem precedência.
+Dialogue: 0,0:04:16.16,0:04:20.21,Iara,0,0,0,,Na dúvida, faça as duas: ligue e deixe registrado por escrito.
+Dialogue: 0,0:04:21.21,0:04:25.57,Iara,0,0,0,,Erro comum: combinar tudo por telefone e não registrar em lugar nenhum.
+Dialogue: 0,0:04:25.57,0:04:28.94,Iara,0,0,0,,Quando o combinado é questionado, não há o que mostrar.
+Dialogue: 0,0:04:28.94,0:04:31.27,Iara,0,0,0,,Corrigir é simples: depois da ligação,
+Dialogue: 0,0:04:31.27,0:04:34.52,Iara,0,0,0,,mande a confirmação por escrito e preencha os blocos.
+Dialogue: 0,0:04:35.52,0:04:38.12,Iara,0,0,0,,Faltam duas datas, e elas são diferentes.
+Dialogue: 0,0:04:38.12,0:04:41.48,Iara,0,0,0,,A data de coleta é o dia em que a carga sai do posto.
+Dialogue: 0,0:04:41.48,0:04:46.17,Iara,0,0,0,,A data de descarga é o dia em que ela chega na central. Preencha as duas —
+Dialogue: 0,0:04:46.17,0:04:51.30,Iara,0,0,0,,quem acompanha a operação depois usa exatamente esses dois campos para saber se a
+Dialogue: 0,0:04:51.30,0:04:52.57,Iara,0,0,0,,carga está no prazo.
+Dialogue: 0,0:04:53.57,0:04:56.84,Iara,0,0,0,,E tem um último passo, que não termina na planilha.
+Dialogue: 0,0:04:56.84,0:05:00.62,Iara,0,0,0,,Depois do agendamento, e sempre até um dia antes da coleta,
+Dialogue: 0,0:05:00.62,0:05:05.10,Iara,0,0,0,,o analista envia o documento da OCI gerado no sistema para assinatura,
+Dialogue: 0,0:05:05.10,0:05:06.64,Iara,0,0,0,,pelo site do Autentique.
+Dialogue: 0,0:05:06.64,0:05:10.74,Iara,0,0,0,,Assinado, o link vai para o motorista e para o posto pelo SMBOT.
+Dialogue: 0,0:05:10.74,0:05:14.52,Iara,0,0,0,,Esse é o único prazo fixo deste procedimento: um dia antes.
+Dialogue: 0,0:05:14.52,0:05:19.33,Iara,0,0,0,,Como operar o Autentique e o SMBOT é assunto da instrução de trabalho dois.
+Dialogue: 0,0:05:20.33,0:05:24.58,Iara,0,0,0,,Confira a etapa dois: planilha lançada, rota preenchida sozinha,
+Dialogue: 0,0:05:24.58,0:05:29.69,Iara,0,0,0,,três blocos registrados, duas datas preenchidas e documento enviado no prazo.
+Dialogue: 0,0:05:30.69,0:05:32.54,Iara,0,0,0,,Até aqui, o fluxo normal.
+Dialogue: 0,0:05:32.54,0:05:35.57,Iara,0,0,0,,Agora as três exceções que o POP declara.
+Dialogue: 0,0:05:36.57,0:05:38.58,Iara,0,0,0,,Primeira: motorista esporádico.
+Dialogue: 0,0:05:38.58,0:05:43.77,Iara,0,0,0,,Nesses casos, o agendamento normalmente começa pelo motorista, e não pelo posto.
+Dialogue: 0,0:05:43.77,0:05:49.02,Iara,0,0,0,,O POP usa a palavra normalmente e não define o que conta como esporádico — então,
+Dialogue: 0,0:05:49.02,0:05:50.70,Iara,0,0,0,,se você não tiver certeza,
+Dialogue: 0,0:05:50.70,0:05:54.85,Iara,0,0,0,,confirme com o responsável pela conta antes de inverter a ordem.
+Dialogue: 0,0:05:55.85,0:05:57.61,Iara,0,0,0,,Segunda: cargas da Adicer.
+Dialogue: 0,0:05:57.61,0:06:00.05,Iara,0,0,0,,Aqui a ordem se inverte de verdade —
+Dialogue: 0,0:06:00.05,0:06:03.37,Iara,0,0,0,,você agenda antes de solicitar a ordem de coleta.
+Dialogue: 0,0:06:03.37,0:06:07.71,Iara,0,0,0,,E a solicitação é feita pelo WhatsApp do responsável, o Geraldo.
+Dialogue: 0,0:06:07.71,0:06:13.00,Iara,0,0,0,,Uma observação importante: isso não está escrito na revisão dois do documento.
+Dialogue: 0,0:06:13.00,0:06:17.61,Iara,0,0,0,,Foi informado pela área, e precisa entrar na próxima revisão do POP.
+Dialogue: 0,0:06:18.61,0:06:19.81,Iara,0,0,0,,Terceira: Sorriso.
+Dialogue: 0,0:06:19.81,0:06:21.67,Iara,0,0,0,,Sorriso não tem agendamento.
+Dialogue: 0,0:06:21.67,0:06:24.99,Iara,0,0,0,,A própria central passa as notas e informa a data.
+Dialogue: 0,0:06:24.99,0:06:28.11,Iara,0,0,0,,Você não liga para o motorista: só envia a OCI.
+Dialogue: 0,0:06:28.11,0:06:32.17,Iara,0,0,0,,E, ao lançar na planilha, deixe o campo motorista em branco —
+Dialogue: 0,0:06:32.17,0:06:36.95,Iara,0,0,0,,porque aquela região tem dois motoristas, e escolher um seria adivinhar.
+Dialogue: 0,0:06:36.95,0:06:41.14,Iara,0,0,0,,O POP também não diz por qual canal a OCI é enviada nesse caso.
+Dialogue: 0,0:06:42.14,0:06:45.46,Iara,0,0,0,,Erro comum, e ele decorre direto da exceção anterior:
+Dialogue: 0,0:06:45.46,0:06:48.09,Iara,0,0,0,,lançar um motorista numa carga de Sorriso.
+Dialogue: 0,0:06:48.09,0:06:52.48,Iara,0,0,0,,Como a região tem dois, qualquer nome que você escrever é um palpite —
+Dialogue: 0,0:06:52.48,0:06:55.74,Iara,0,0,0,,e vira informação errada para quem acompanha depois.
+Dialogue: 0,0:06:55.74,0:06:58.05,Iara,0,0,0,,Corrigir é apagar e deixar em branco.
+Dialogue: 0,0:06:59.05,0:07:02.74,Iara,0,0,0,,Etapa três: particularidades do envio de documentos.
+Dialogue: 0,0:07:03.74,0:07:07.53,Iara,0,0,0,,Nem tudo é automático, e essa distinção evita retrabalho.
+Dialogue: 0,0:07:07.53,0:07:10.60,Iara,0,0,0,,Apenas as minutas são geradas automaticamente.
+Dialogue: 0,0:07:10.60,0:07:15.99,Iara,0,0,0,,O CIOT e o manifesto precisam ser autorizados manualmente — se ninguém autorizar,
+Dialogue: 0,0:07:15.99,0:07:17.79,Iara,0,0,0,,eles simplesmente não saem.
+Dialogue: 0,0:07:18.79,0:07:21.31,Iara,0,0,0,,E o que sai junto com o agendamento?
+Dialogue: 0,0:07:21.31,0:07:24.31,Iara,0,0,0,,A OCI, em cem por cento dos casos — sempre.
+Dialogue: 0,0:07:24.31,0:07:28.92,Iara,0,0,0,,Além dela, CTE e MDFe nos trechos interestaduais e no Mato Grosso.
+Dialogue: 0,0:07:28.92,0:07:34.02,Iara,0,0,0,,O critério de emissão do CTE é esse: Mato Grosso e cargas interestaduais.
+Dialogue: 0,0:07:34.02,0:07:39.12,Iara,0,0,0,,Uma última particularidade: o posto de Sorriso envia a nota no mesmo dia,
+Dialogue: 0,0:07:39.12,0:07:40.66,Iara,0,0,0,,para a emissão do CTE.
+Dialogue: 0,0:07:41.66,0:07:43.30,Iara,0,0,0,,Terminou um agendamento?
+Dialogue: 0,0:07:43.30,0:07:45.07,Iara,0,0,0,,Confira estes seis pontos.
+Dialogue: 0,0:07:45.07,0:07:48.76,Iara,0,0,0,,Se todos estiverem marcados, o trabalho está completo.
+Dialogue: 0,0:07:48.76,0:07:52.17,Iara,0,0,0,,Se algum falhar, você sabe exatamente onde voltar.
+Dialogue: 0,0:07:53.17,0:07:57.00,Iara,0,0,0,,Em resumo: a OCI chega por e-mail e libera o agendamento.
+Dialogue: 0,0:07:57.00,0:08:02.29,Iara,0,0,0,,Você lança na planilha, agenda com posto, central e motorista, e registra tudo.
+Dialogue: 0,0:08:02.29,0:08:04.91,Iara,0,0,0,,Preenche as datas de coleta e descarga.
+Dialogue: 0,0:08:04.91,0:08:08.46,Iara,0,0,0,,E envia o documento para assinatura até um dia antes.
+Dialogue: 0,0:08:08.46,0:08:13.36,Iara,0,0,0,,Três exceções mudam esse caminho: motorista esporádico, Adicer e Sorriso.
+Dialogue: 0,0:08:14.36,0:08:16.20,Iara,0,0,0,,Cinco perguntas para fixar.
+Dialogue: 0,0:08:16.20,0:08:18.93,Iara,0,0,0,,Pense na resposta antes que ela apareça.
+Dialogue: 0,0:08:19.93,0:08:20.93,Iara,0,0,0,,Pergunta um.
+Dialogue: 0,0:08:20.93,0:08:23.85,Iara,0,0,0,,O que autoriza você a começar o agendamento?
+Dialogue: 0,0:08:23.85,0:08:29.14,Iara,0,0,0,,A confirmação do motorista por telefone; a numeração da OCI recebida por e-mail;
+Dialogue: 0,0:08:29.14,0:08:31.93,Iara,0,0,0,,ou a data de coleta definida pela central?
+Dialogue: 0,0:08:34.93,0:08:38.45,Iara,0,0,0,,A resposta é a numeração da OCI recebida por e-mail.
+Dialogue: 0,0:08:38.45,0:08:41.97,Iara,0,0,0,,Recebida a numeração, você já pode agendar a viagem.
+Dialogue: 0,0:08:42.97,0:08:43.97,Iara,0,0,0,,Pergunta dois.
+Dialogue: 0,0:08:43.97,0:08:47.30,Iara,0,0,0,,Onde ficam a planilha de controle e a de contatos?
+Dialogue: 0,0:08:47.30,0:08:51.70,Iara,0,0,0,,No seu computador, na área de trabalho; anexadas ao e-mail da OCI;
+Dialogue: 0,0:08:51.70,0:08:55.23,Iara,0,0,0,,ou no caminho de rede, na pasta de controle de frete?
+Dialogue: 0,0:08:58.23,0:09:01.46,Iara,0,0,0,,No caminho de rede, na pasta de controle de frete.
+Dialogue: 0,0:09:01.46,0:09:05.73,Iara,0,0,0,,As duas vivem na rede, e a de controle é sempre a do ano corrente.
+Dialogue: 0,0:09:06.73,0:09:07.73,Iara,0,0,0,,Pergunta três.
+Dialogue: 0,0:09:07.73,0:09:10.25,Iara,0,0,0,,Qual destes campos você não preenche?
+Dialogue: 0,0:09:10.25,0:09:14.88,Iara,0,0,0,,O campo rota, que se preenche sozinho; a data de recebimento da OCI;
+Dialogue: 0,0:09:14.88,0:09:17.06,Iara,0,0,0,,ou o motorista que faz a região?
+Dialogue: 0,0:09:20.06,0:09:21.06,Iara,0,0,0,,O campo rota.
+Dialogue: 0,0:09:21.06,0:09:24.32,Iara,0,0,0,,Ele é calculado a partir da origem e do destino —
+Dialogue: 0,0:09:24.32,0:09:26.92,Iara,0,0,0,,digitar por cima sobrescreve o cálculo.
+Dialogue: 0,0:09:27.92,0:09:29.04,Iara,0,0,0,,Pergunta quatro.
+Dialogue: 0,0:09:29.04,0:09:32.24,Iara,0,0,0,,No bloco de postos, o que deve ser registrado?
+Dialogue: 0,0:09:32.24,0:09:37.61,Iara,0,0,0,,Apenas a data da coleta; data, hora e o nome da pessoa com quem você agendou;
+Dialogue: 0,0:09:37.61,0:09:40.04,Iara,0,0,0,,ou data, hora e a placa do veículo?
+Dialogue: 0,0:09:43.04,0:09:46.33,Iara,0,0,0,,Data, hora e o nome da pessoa com quem você agendou.
+Dialogue: 0,0:09:46.33,0:09:50.37,Iara,0,0,0,,É o nome do interlocutor que transforma uma ligação em registro.
+Dialogue: 0,0:09:51.37,0:09:52.37,Iara,0,0,0,,Pergunta cinco.
+Dialogue: 0,0:09:52.37,0:09:56.36,Iara,0,0,0,,Numa carga de Sorriso, o que muda na hora de lançar na planilha?
+Dialogue: 0,0:09:56.36,0:10:01.09,Iara,0,0,0,,Preencher o motorista com os dois nomes; deixar o campo motorista em branco;
+Dialogue: 0,0:10:01.09,0:10:03.59,Iara,0,0,0,,ou preencher com o motorista da central?
+Dialogue: 0,0:10:06.59,0:10:08.74,Iara,0,0,0,,Deixar o campo motorista em branco,
+Dialogue: 0,0:10:08.74,0:10:12.78,Iara,0,0,0,,porque a região tem dois motoristas e escolher um seria adivinhar.
+Dialogue: 0,0:10:12.78,0:10:13.89,Iara,0,0,0,,E lembre do prazo:
+Dialogue: 0,0:10:13.89,0:10:17.94,Iara,0,0,0,,o documento vai para assinatura sempre até um dia antes da coleta.
+Dialogue: 0,0:10:18.94,0:10:21.63,Iara,0,0,0,,Por último, e isso é parte do treinamento:
+Dialogue: 0,0:10:21.63,0:10:24.58,Iara,0,0,0,,ainda há coisas que este documento não define.
+Dialogue: 0,0:10:24.58,0:10:28.05,Iara,0,0,0,,Ele não diz por qual canal a OCI é enviada em Sorriso,
+Dialogue: 0,0:10:28.05,0:10:33.44,Iara,0,0,0,,não descreve nenhuma mensagem de erro e não registra desde quando esta revisão vale.
+Dialogue: 0,0:10:33.44,0:10:37.61,Iara,0,0,0,,O aprovador e a solicitação da OCI na Adicer você acabou de ver —
+Dialogue: 0,0:10:37.61,0:10:42.94,Iara,0,0,0,,mas os dois vieram da área, não do documento, e precisam entrar na próxima revisão.
+Dialogue: 0,0:10:42.94,0:10:48.26,Iara,0,0,0,,Diante de qualquer situação que o POP não cobre, a resposta certa não é improvisar:
+Dialogue: 0,0:10:48.26,0:10:50.70,Iara,0,0,0,,é perguntar ao responsável pela conta.
+Dialogue: 0,0:10:51.70,0:10:57.04,Iara,0,0,0,,Você concluiu o treinamento de agendamento de coleta, aprovado pelo senhor Joaquim.
+Dialogue: 0,0:10:57.04,0:11:00.71,Iara,0,0,0,,O próximo passo na trilha é a instrução de trabalho dois:
+Dialogue: 0,0:11:00.71,0:11:03.29,Iara,0,0,0,,a emissão da ordem de coleta no sistema,
+Dialogue: 0,0:11:03.29,0:11:07.28,Iara,0,0,0,,que é onde o Autentique e o SMBOT são ensinados. Bom trabalho.

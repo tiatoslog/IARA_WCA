@@ -643,6 +643,16 @@ export class Braco {
      * pacote sem `execucao_id`.
      */
     if (pacote.tipo === 'progresso_atualizacao' || pacote.tipo === 'atualizacao_falhou') return;
+    /**
+     * PERCEPÇÃO NÃO É EXECUÇÃO, e este `return` é a fronteira dita em código.
+     *
+     * `PonteDispositivos` já desvia o pacote antes daqui; o guarda fica pela
+     * mesma razão dos dois acima — este método aceita `PacoteBraco` inteiro. E
+     * fica também porque é a linha que alguém lê ao se perguntar se um evento
+     * visual pode virar `RelatoExecucao`: não pode. Uma mudança de tela não tem
+     * `execucao_id`, não conclui ordem nenhuma e não produz prova.
+     */
+    if (pacote.tipo === 'percepcao') return;
 
     const id = pacote.tipo === 'concluida' ? pacote.relato.execucao_id : pacote.execucao_id;
     const c = this.emCurso.get(id);

@@ -53,6 +53,15 @@ export const ESTADO_INTERNO: readonly string[] = [
    */
   'servidor/nucleo/ProcedimentosEmCurso.ts',
   /**
+   * O que cada operador já aprendeu de cada POP. Mesma pergunta, mesma resposta
+   * que o ponteiro ao lado: alguém fora da IARA percebe? Não. Escreve um JSON
+   * por pessoa em `dados/progresso-treinamento/`, e é estado PEDAGÓGICO — não
+   * move etapa, não conclui nada, não sai do processo. A separação entre este
+   * arquivo e o de cima é o contrato da camada de treinamento; ver
+   * `docs/prd/instrutor-operacional-adaptativo.md`.
+   */
+  'servidor/nucleo/ProgressoDeTreinamento.ts',
+  /**
    * A fila de dúvidas que a IARA não soube responder, por operador. Mesma
    * natureza do shard de memória: são frases de uma pessoa, guardadas em
    * `dados/lacunas/`, que ninguém fora da IARA lê. Escreve desde 19/08/2026,
@@ -404,6 +413,28 @@ export const PONTE_DE_EXECUCAO: readonly string[] = [
   'servidor/barramento/PonteDispositivos.ts',
   // O processo que roda na máquina do operador e tem as mãos de verdade.
   'servidor/braco/principal.ts',
+  /**
+   * A CAPTURA DE QUADRO EM MEMÓRIA — percepção de tela, P0 (21/08/2026).
+   *
+   * Está nesta lista, e não em `EFEITO_EXTERNO`, por uma distinção que custou
+   * ser pensada: ela abre `child_process`, e `spawn` é o que define aquela
+   * lista. Mas o que ela roda é um helper que LÊ a tela da própria máquina em
+   * que já está rodando, e devolve 32×32 tons de cinza. Não escreve arquivo,
+   * não alcança terceiro, não é irreversível, e — decisivo — não passa nem pode
+   * passar pelo `PortalEfeitos`: como `principal.ts` logo acima, ela não é uma
+   * habilidade, é o processo cliente que mora no computador do operador.
+   *
+   * O que a mantém honesta não é esta classificação: é `dentroDoEscopo`, que
+   * decide antes de qualquer pixel ser lido, e o consentimento que `iniciar`
+   * exige. Ver `testes/percepcao-p0.test.ts`.
+   */
+  'servidor/braco/CapturaDeQuadro.ts',
+  /**
+   * O laço que compara os quadros e decide o que é mudança. Não abre nada — está
+   * declarado porque é a outra metade do par acima, e separá-los na declaração
+   * faria parecer que a percepção é só o helper.
+   */
+  'servidor/braco/PercepcaoLocal.ts',
 ];
 
 /**

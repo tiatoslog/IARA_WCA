@@ -28,6 +28,7 @@ import { config as carregarEnv } from 'dotenv';
 import { origemNaLista, temCuringa } from '../lib/origens';
 import { conectarOperador, encerrarResidentes, prepararMotor } from './barramento/Porta';
 import { ponteDispositivos } from './barramento/PonteDispositivos';
+import { ligarPercepcaoNaPonte } from './nucleo/PercepcaoDeTela';
 import { motorTemMaos } from './nucleo/Braco';
 import { persistenciaEmUso } from './nucleo/ClienteSupabase';
 import { autenticacaoAtiva, verificarToken } from './nucleo/Autenticacao';
@@ -859,6 +860,17 @@ async function subir(): Promise<void> {
       conectarOperador(ws);
     });
   });
+
+  /**
+   * PERCEPÇÃO DE TELA (P0, 21/08/2026) — a camada se inscreve na ponte AQUI, e
+   * não por efeito de importação.
+   *
+   * Um módulo que se inscreve sozinho ao ser importado transforma um `import`
+   * de tipo numa assinatura de socket, e quem lê a linha do `import` não
+   * desconfia disso. A ponte continua burra: ela publica `PacoteBraco` e não
+   * sabe o que é percepção — o filtro mora do outro lado.
+   */
+  ligarPercepcaoNaPonte(ponteDispositivos);
 
   servidorHttp.listen(PORTA, () => {
     console.log(

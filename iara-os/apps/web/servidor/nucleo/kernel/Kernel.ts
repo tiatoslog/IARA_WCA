@@ -874,7 +874,7 @@ export class Kernel {
          */
         const textoVisual =
           situacaoPop.tipo === 'parada'
-            ? redigirConferencia(situacaoPop, { texto: resultado.texto, situacao: resultado.situacao })
+            ? redigirConferencia(situacaoPop, { texto: resultado.texto, situacao: resultado.situacao }, texto)
             : situacaoPop.tipo === 'revisado'
               ? `${resultado.texto}${avisoDeRevisao(situacaoPop.codigo)}`
               : resultado.texto;

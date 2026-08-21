@@ -38,6 +38,8 @@
 import { baseProcedimentos } from './BaseProcedimentos';
 import { procedimentosEmCurso, type ModoDoProcedimento } from './ProcedimentosEmCurso';
 import { redigirParada } from './kernel/habilidades/procedimentos';
+import { HESITACAO, classificarEvidencia } from './kernel/GuardiaoDoProcedimento';
+import { normalizar } from './texto';
 import { RESSALVA } from './kernel/Verdade';
 
 import {
@@ -191,6 +193,25 @@ function frasePelaSituacao(situacao: SituacaoNaParada | null, posicao: Posicao):
 export function redigirConferencia(
   situacao: Extract<SituacaoDoOperador, { tipo: 'parada' }>,
   leitura: LeituraDaTela,
+  /**
+   * O QUE O OPERADOR ESCREVEU JUNTO DO PRINT — e por que ele muda a resposta.
+   *
+   * O caso real é `print + "pronto, fiz"`. O turno de visão é um short-circuit
+   * do Kernel: ele responde à imagem e RETORNA, então essa declaração nunca
+   * chega ao planejador e o avanço acontece no turno seguinte. Isso está certo —
+   * quem avança é `avancar_procedimento`, pelo guardião, e deixar o turno visual
+   * mover a posição criaria um segundo chamador na frente da única porta que
+   * vigia o avanço.
+   *
+   * O que estava errado era a RESPOSTA: ela dizia "a captura fica guardada para
+   * quando você disser próximo" a quem tinha acabado de dizer que fez. A pessoa
+   * lê isso como "a IARA não me ouviu" e repete a frase. Reconhecer a declaração
+   * e dizer exatamente o que falta é a costura honesta entre os dois turnos.
+   *
+   * Ver `docs/prd/instrutor-operacional-adaptativo.md` §10 para as três opções
+   * avaliadas e por que esta é a que não abre caminho paralelo.
+   */
+  enunciado = '',
 ): string {
   const linhas: string[] = [];
 
@@ -222,7 +243,29 @@ export function redigirConferencia(
    * etapa à frente de onde realmente está.
    */
   linhas.push('');
-  linhas.push('_Conferir não avança — a captura fica guardada para quando você disser "próximo"._');
+  /**
+   * A COSTURA DOS DOIS TURNOS, dita com precisão em cada caso.
+   *
+   * As três frases dizem a mesma verdade — conferir não avança — mas cada uma
+   * responde ao que a pessoa de fato escreveu. A genérica sobrou para quem só
+   * mandou a imagem; quem declarou conclusão recebe o reconhecimento da
+   * declaração, e quem hesitou recebe o motivo pelo qual ela não conta.
+   */
+  const evidencia = classificarEvidencia(enunciado);
+  if (evidencia === 'declarada' && leitura.situacao === 'na_etapa') {
+    linhas.push(
+      '_Eu li que você concluiu, e a captura bate com esta parada. Ainda assim não avanço no ' +
+        'mesmo movimento em que confiro: mover a etapa é outra porta, e ela precisa da sua ' +
+        'palavra. Responda **"próximo"** e eu movo usando esta captura como evidência._',
+    );
+  } else if (evidencia === 'nenhuma' && HESITACAO.test(normalizar(enunciado))) {
+    linhas.push(
+      '_Você disse que ACHA que fez — isso eu não registro como declaração, e a captura sozinha ' +
+        'não avança nada. Se concluiu, me diga com todas as letras._',
+    );
+  } else {
+    linhas.push('_Conferir não avança — a captura fica guardada para quando você disser "próximo"._');
+  }
 
   return linhas.join('\n');
 }
