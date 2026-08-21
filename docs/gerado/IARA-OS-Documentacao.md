@@ -1,6 +1,6 @@
 # IARA OS — Documentação Técnica
 
-> Gerado de `npm run docs` no commit `6f86600`. Não editar: as seções derivadas do código são reescritas a cada execução.
+> Gerado de `npm run docs` no commit `57a8cb6`. Não editar: as seções derivadas do código são reescritas a cada execução.
 
 ## Visão geral
 
@@ -926,6 +926,7 @@ Todos rodam a partir de `iara-os/apps/web`.
 | `npm run inventario` | `node --import tsx scripts/inventario-habilidades.ts` |
 | `npm run importacoes` | `node scripts/verificar-importacoes.mjs` |
 | `npm run invariancia` | `node --import tsx testes/invariancia/executar.ts` |
+| `npm run operacional` | `node --import tsx testes/operacional/executar.ts` |
 
 ### Organização de `scripts/`
 
